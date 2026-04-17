@@ -35,6 +35,8 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="visitante" options={{ presentation: 'modal', headerShown: true, title: 'Cadastro de Visitante' }} />
+        <Stack.Screen name="perfil"    options={{ presentation: 'modal' }} />
+        <Stack.Screen name="checkin"   options={{ presentation: 'modal' }} />
       </Stack>
     </>
   );
