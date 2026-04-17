@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "CBRio",
+    "slug": "cbrio-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#00B39D",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "io.cbrio.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#00B39D"
+      },
+      "package": "io.cbrio.app"
+    },
+    "scheme": "cbrio",
+    "plugins": ["expo-router", "expo-font"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
