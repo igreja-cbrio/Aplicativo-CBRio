@@ -8,6 +8,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
+      "image": "./assets/splash.png",
       "backgroundColor": "#00B39D",
       "resizeMode": "contain"
     },
@@ -17,12 +18,20 @@
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#00B39D"
       },
       "package": "io.cbrio.app"
     },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
     "scheme": "cbrio",
-    "plugins": ["expo-router", "expo-font"],
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-asset"
+    ],
     "experiments": {
       "typedRoutes": true
     }
