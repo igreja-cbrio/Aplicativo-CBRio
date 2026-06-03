@@ -10,7 +10,7 @@ import {
 import { useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { CodeInput } from "@/components/ui/CodeInput";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
 import { colors, font, radius, spacing } from "@/constants/theme";
@@ -23,16 +23,17 @@ export default function VerificarTelefoneScreen() {
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleVerify() {
+  async function handleVerify(submitted?: string) {
+    const value = submitted ?? code;
     setError(null);
     setInfo(null);
-    if (!code) {
-      setError("Digite o código recebido por SMS.");
+    if (value.length < 6) {
+      setError("Digite os 6 dígitos recebidos por SMS.");
       return;
     }
     setLoading(true);
     try {
-      await verifyPhoneOtp(phone ?? "", code);
+      await verifyPhoneOtp(phone ?? "", value);
       // O guard de rotas redireciona para a área autenticada.
     } catch (e) {
       setError(e instanceof Error ? e.message : "Código inválido.");
@@ -72,19 +73,21 @@ export default function VerificarTelefoneScreen() {
             </Text>
 
             <View style={styles.form}>
-              <Input
-                label="Código SMS"
+              <CodeInput
                 value={code}
                 onChangeText={setCode}
-                placeholder="000000"
-                keyboardType="number-pad"
-                maxLength={6}
+                cellCount={6}
+                onFilled={(value) => handleVerify(value)}
               />
 
               {error && <Text style={styles.error}>{error}</Text>}
               {info && <Text style={styles.info}>{info}</Text>}
 
-              <Button title="Confirmar" onPress={handleVerify} loading={loading} />
+              <Button
+                title="Confirmar"
+                onPress={() => handleVerify()}
+                loading={loading}
+              />
               <Button
                 title="Reenviar código"
                 variant="ghost"

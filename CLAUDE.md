@@ -17,6 +17,10 @@ módulo**. Roda em **Android e iOS**.
 - **Estilização:** `StyleSheet` nativo (decisão: melhor performance/confiabilidade
   no celular; sem Tailwind/NativeWind). Tema central em `constants/theme.ts`.
 - Ícones: `@expo/vector-icons` (bundled com Expo).
+- **Navegação autenticada:** abas via `expo-router` `Tabs` com **Dock glass**
+  custom (`components/ui/Dock.tsx`) — vidro fosco real com `expo-blur`, leve
+  flutuação, ícone ativo destacado e ponto indicador. Abas: Início, Eventos,
+  Bíblia, Perfil.
 
 ## Estrutura de pastas
 
@@ -29,11 +33,14 @@ app/
     cadastro.tsx       # nome, e-mail, telefone, senha -> dispara SMS
     verificar-telefone.tsx  # confirmação do código SMS (OTP)
     recuperar-senha.tsx
-  (app)/               # área autenticada (próximos módulos entram aqui)
-    _layout.tsx
-    index.tsx
+  (app)/               # área autenticada — navegação por abas (dock glass)
+    _layout.tsx        # Tabs do expo-router com o Dock como tabBar custom
+    index.tsx          # Início
+    eventos.tsx        # placeholder (em breve)
+    biblia.tsx         # placeholder (em breve)
+    perfil.tsx         # dados do usuário + Sair
 components/
-  ui/                  # Button, Input, SocialButton, Checkbox
+  ui/                  # Button, Input, SocialButton, Checkbox, CodeInput, Dock, ComingSoon
 contexts/
   AuthContext.tsx      # sessão e todos os métodos de auth
 lib/
@@ -57,7 +64,9 @@ Métodos em `contexts/AuthContext.tsx`:
   a persistência da sessão (storage híbrido).
 - `signUpWithPhone(nome, email, phone, password)` — cria a conta e envia código
   por SMS. O usuário vai para `verificar-telefone`.
-- `verifyPhoneOtp(phone, token)` — confirma o código SMS e abre a sessão.
+- `verifyPhoneOtp(phone, token)` — confirma o código SMS e abre a sessão. A tela
+  `verificar-telefone` usa o `CodeInput` (células OTP segmentadas e animadas —
+  pop ao preencher + caret piscando; auto-confirma ao completar os 6 dígitos).
 - `signInWithGoogle()` — OAuth via Supabase + `expo-web-browser`.
 - `signInWithApple()` — `expo-apple-authentication` + `signInWithIdToken` (iOS).
 - `resetPassword(email)` — envia link de recuperação.
