@@ -50,6 +50,10 @@ export default function AppLayout() {
       <Tabs.Screen name="menu" />
       <Tabs.Screen name="perfil" options={{ href: null }} />
       <Tabs.Screen name="cartoes" options={{ href: null }} />
+      <Tabs.Screen name="inscricoes" options={{ href: null }} />
+      <Tabs.Screen name="inscricao-batismo" options={{ href: null }} />
+      <Tabs.Screen name="inscricao-grupos" options={{ href: null }} />
+      <Tabs.Screen name="inscricao-next" options={{ href: null }} />
     </Tabs>
   );
 }

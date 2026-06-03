@@ -43,8 +43,16 @@ app/
     voluntariado.tsx   # placeholder (em breve)
     generosidade.tsx   # placeholder (em breve)
     menu.tsx           # demais opções, aparência (tema) + Sair
-    perfil.tsx         # editar e-mail/telefone/nascimento (CPF travado) + foto + cartões; fora do dock
+    perfil.tsx         # editar e-mail/telefone/nascimento + CPF (vincula ao membro) + foto + cartões
     cartoes.tsx        # cartões de membresia/voluntariado (mesmo Supabase); fora do dock
+    voluntariado.tsx   # inscrição de voluntariado (+ escalas em breve)
+    inscricoes.tsx     # hub: Batismo, Grupos, NEXT, Voluntariado; fora do dock
+    inscricao-batismo.tsx / inscricao-grupos.tsx / inscricao-next.tsx
+components/
+  inscricoes/FormScaffold.tsx  # layout comum dos formulários de inscrição
+lib/
+  inscricoes.ts        # criarInscricao(tipo, dados) -> grava em app_inscricoes
+  useMembro.ts         # carrega dados do membro logado p/ pré-preencher
 components/
   ui/                  # Button, Input, SocialButton, Checkbox, CodeInput, PhoneInput, Dock, ComingSoon
 constants/
@@ -65,6 +73,8 @@ constants/
 | Status | Módulo           | Descrição                                                        |
 | :----: | ---------------- | ---------------------------------------------------------------- |
 |   ✅   | **Autenticação** | Login/cadastro e-mail/senha, Google, Apple, "lembrar de mim", recuperação de senha (SMS pronto, desligado até ter remetente BR) |
+|   🚧   | **Inscrições**   | Formulários no app gravando em `app_inscricoes` (tipo + dados jsonb): Batismo, Grupos, NEXT, Voluntariado prontos. Decisão fica só na web. ⚠️ depende do sistema processar `app_inscricoes` nas tabelas finais. |
+|   ⬜   | **Voluntariado** | Aba self-service: ver/confirmar **escalas** (`mem_escalas`/`vw_culto_voluntarios`), **notificação push** ao ser escalado (expo-notifications + trigger no backend). |
 |   ⬜   | _Próximos_       | A definir, construídos um a um                                   |
 
 ## Módulo 1 — Autenticação (detalhes)

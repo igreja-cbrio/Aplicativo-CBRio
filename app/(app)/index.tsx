@@ -19,11 +19,17 @@ function primeiroNome(nomeCompleto?: string, email?: string | null) {
 type Atalho = {
   label: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
-  href: "/cuidados" | "/voluntariado" | "/generosidade" | "/perfil";
+  href:
+    | "/cuidados"
+    | "/voluntariado"
+    | "/generosidade"
+    | "/perfil"
+    | "/inscricoes";
   desc: string;
 };
 
 const ATALHOS: Atalho[] = [
+  { label: "Inscrições", icon: "create", href: "/inscricoes", desc: "Batismo, grupos, NEXT…" },
   { label: "Cuidados", icon: "heart", href: "/cuidados", desc: "Oração e apoio" },
   { label: "Voluntariado", icon: "hand-left", href: "/voluntariado", desc: "Sirva com a gente" },
   { label: "Generosidade", icon: "gift", href: "/generosidade", desc: "Dízimos e ofertas" },
