@@ -41,12 +41,13 @@ export default function PerfilScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
 
-  const [nome, setNome] = useState("");
+  const [name, setName] = useState("");
   const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState(user?.email ?? "");
   const [telefone, setTelefone] = useState("");
   const [nascimento, setNascimento] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [membroId, setMembroId] = useState<string | number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -58,17 +59,33 @@ export default function PerfilScreen() {
       return;
     }
     (async () => {
-      const { data } = await supabase
+      // profiles (sistema): name, email, telefone, avatar_url, membro_id
+      const { data: prof } = await supabase
         .from("profiles")
-        .select("nome, cpf, telefone, data_nascimento, avatar_url")
+        .select("name, email, telefone, avatar_url, membro_id")
         .eq("id", user.id)
-        .single();
-      if (data) {
-        setNome(data.nome ?? "");
-        setCpf(data.cpf ? maskCPF(data.cpf) : "");
-        setTelefone(data.telefone ?? "");
-        setNascimento(isoToBR(data.data_nascimento));
-        setAvatarUrl(data.avatar_url ?? null);
+        .maybeSingle();
+      if (prof) {
+        setName(prof.name ?? "");
+        setEmail(prof.email ?? user.email ?? "");
+        setTelefone(prof.telefone ?? "");
+        setAvatarUrl(prof.avatar_url ?? null);
+        setMembroId(prof.membro_id ?? null);
+      }
+      // mem_membros: cpf, data_nascimento, etc. (via membro_id)
+      if (prof?.membro_id != null) {
+        const { data: m } = await supabase
+          .from("mem_membros")
+          .select("nome, cpf, data_nascimento, telefone, foto_url")
+          .eq("id", prof.membro_id)
+          .maybeSingle();
+        if (m) {
+          setCpf(m.cpf ? maskCPF(m.cpf) : "");
+          setNascimento(isoToBR(m.data_nascimento));
+          if (!prof.name && m.nome) setName(m.nome);
+          if (!prof.telefone && m.telefone) setTelefone(m.telefone);
+          if (!prof.avatar_url && m.foto_url) setAvatarUrl(m.foto_url);
+        }
       }
       setLoading(false);
     })();
@@ -115,7 +132,10 @@ export default function PerfilScreen() {
     } catch (e) {
       setMsg({
         type: "err",
-        text: e instanceof Error ? e.message : "Falha ao enviar a foto.",
+        text:
+          e instanceof Error
+            ? `Falha ao enviar a foto: ${e.message}`
+            : "Falha ao enviar a foto.",
       });
     } finally {
       setUploading(false);
@@ -134,17 +154,26 @@ export default function PerfilScreen() {
     }
     setSaving(true);
     try {
-      // Atualiza dados do perfil (telefone e nascimento)
+      // Atualiza profiles (telefone)
       const { error: pErr } = await supabase
         .from("profiles")
-        .update({
-          telefone: telefone.trim() || null,
-          data_nascimento: nascimento ? dateBRToISO(nascimento) : null,
-        })
+        .update({ telefone: telefone.trim() || null })
         .eq("id", user.id);
       if (pErr) throw pErr;
 
-      // Atualiza e-mail (se mudou) — pode exigir confirmação por e-mail
+      // Atualiza mem_membros (telefone + nascimento) se vinculado
+      if (membroId != null) {
+        const { error: mErr } = await supabase
+          .from("mem_membros")
+          .update({
+            telefone: telefone.trim() || null,
+            data_nascimento: nascimento ? dateBRToISO(nascimento) : null,
+          })
+          .eq("id", membroId);
+        if (mErr) throw mErr;
+      }
+
+      // E-mail (via auth — pode exigir confirmação)
       let emailAviso = false;
       if (email.trim() && email.trim() !== user.email) {
         const { error: eErr } = await supabase.auth.updateUser({
@@ -182,7 +211,6 @@ export default function PerfilScreen() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Cabeçalho com voltar + avatar */}
           <View style={styles.topRow}>
             <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
               <Ionicons name="chevron-back" size={24} color={colors.text} />
@@ -223,12 +251,7 @@ export default function PerfilScreen() {
           </Pressable>
 
           <View style={styles.form}>
-            <Input
-              label="Nome completo"
-              value={nome}
-              onChangeText={setNome}
-              editable={false}
-            />
+            <Input label="Nome completo" value={name} editable={false} />
             <View>
               <Input label="CPF" value={cpf} editable={false} />
               <Text style={styles.lockHint}>O CPF não pode ser alterado.</Text>
