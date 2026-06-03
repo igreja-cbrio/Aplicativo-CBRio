@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/Input";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { FormScaffold } from "@/components/inscricoes/FormScaffold";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMembro } from "@/lib/useMembro";
@@ -14,6 +15,8 @@ export default function InscricaoBatismoScreen() {
   const [email, setEmail] = useState("");
   const [nascimento, setNascimento] = useState("");
   const [camisa, setCamisa] = useState("");
+  const [deficiencia, setDeficiencia] = useState(false);
+  const [deficienciaDesc, setDeficienciaDesc] = useState("");
   const [obs, setObs] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -49,6 +52,8 @@ export default function InscricaoBatismoScreen() {
           email: email.trim() || null,
           data_nascimento: nascimento ? dateBRToISO(nascimento) : null,
           tamanho_camisa: camisa.trim() || null,
+          possui_deficiencia: deficiencia,
+          deficiencia_descricao: deficiencia ? deficienciaDesc.trim() || null : null,
           observacoes: obs.trim() || null,
           cpf: membro?.cpf || null,
           membro_id: membro?.membroId ?? null,
@@ -86,6 +91,19 @@ export default function InscricaoBatismoScreen() {
         maxLength={10}
       />
       <Input label="Tamanho da camisa (opcional)" value={camisa} onChangeText={setCamisa} placeholder="P / M / G / GG" />
+      <Checkbox
+        checked={deficiencia}
+        onChange={setDeficiencia}
+        label="Possui alguma deficiência ou limitação física?"
+      />
+      {deficiencia && (
+        <Input
+          label="Descreva a limitação"
+          value={deficienciaDesc}
+          onChangeText={setDeficienciaDesc}
+          placeholder="Conte como podemos te ajudar"
+        />
+      )}
       <Input label="Observações (opcional)" value={obs} onChangeText={setObs} />
     </FormScaffold>
   );
