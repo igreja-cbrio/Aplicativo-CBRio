@@ -2,9 +2,19 @@ import { useEffect } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import * as Notifications from "expo-notifications";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { SplashPulse } from "@/components/brand/SplashPulse";
+import { registerForPush } from "@/lib/push";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 function RootNavigator() {
   const { session, loading, preview } = useAuth();
@@ -24,6 +34,11 @@ function RootNavigator() {
       router.replace("/(app)");
     }
   }, [authed, loading, segments]);
+
+  // Registra o dispositivo para push quando há sessão real.
+  useEffect(() => {
+    if (session?.user?.id) registerForPush(session.user.id);
+  }, [session?.user?.id]);
 
   if (loading) {
     return <SplashPulse />;

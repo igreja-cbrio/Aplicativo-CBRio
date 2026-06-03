@@ -74,7 +74,7 @@ constants/
 | :----: | ---------------- | ---------------------------------------------------------------- |
 |   ✅   | **Autenticação** | Login/cadastro e-mail/senha, Google, Apple, "lembrar de mim", recuperação de senha (SMS pronto, desligado até ter remetente BR) |
 |   🚧   | **Inscrições**   | Formulários no app gravando em `app_inscricoes` (tipo + dados jsonb): Batismo, Grupos, NEXT, Voluntariado prontos. Decisão fica só na web. ⚠️ depende do sistema processar `app_inscricoes` nas tabelas finais. |
-|   ⬜   | **Voluntariado** | Aba self-service: ver/confirmar **escalas** (`mem_escalas`/`vw_culto_voluntarios`), **notificação push** ao ser escalado (expo-notifications + trigger no backend). |
+|   🚧   | **Voluntariado** | Aba self-service: ver/confirmar **escalas** (`mem_escalas`) ✅. **Push** ao ser escalado: `lib/push.ts` salva token em `app_push_tokens`; Edge Function `supabase/functions/notify-escala` dispara (precisa EAS projectId + device físico + deploy da function/webhook). |
 |   ⬜   | _Próximos_       | A definir, construídos um a um                                   |
 
 ## Módulo 1 — Autenticação (detalhes)
