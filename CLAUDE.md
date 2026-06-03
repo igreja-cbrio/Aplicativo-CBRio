@@ -19,8 +19,8 @@ módulo**. Roda em **Android e iOS**.
 - Ícones: `@expo/vector-icons` (bundled com Expo).
 - **Navegação autenticada:** abas via `expo-router` `Tabs` com **Dock glass**
   custom (`components/ui/Dock.tsx`) — vidro fosco real com `expo-blur`, leve
-  flutuação, ícone ativo destacado e ponto indicador. Abas: Início, Eventos,
-  Bíblia, Perfil.
+  flutuação, ícone ativo destacado e ponto indicador. Abas: Home, Cuidados,
+  Voluntariado, Generosidade, Menu (o Menu reúne perfil e demais opções).
 
 ## Estrutura de pastas
 
@@ -35,10 +35,11 @@ app/
     recuperar-senha.tsx
   (app)/               # área autenticada — navegação por abas (dock glass)
     _layout.tsx        # Tabs do expo-router com o Dock como tabBar custom
-    index.tsx          # Início
-    eventos.tsx        # placeholder (em breve)
-    biblia.tsx         # placeholder (em breve)
-    perfil.tsx         # dados do usuário + Sair
+    index.tsx          # Home
+    cuidados.tsx       # placeholder (em breve)
+    voluntariado.tsx   # placeholder (em breve)
+    generosidade.tsx   # placeholder (em breve)
+    menu.tsx           # perfil do usuário + demais opções + Sair
 components/
   ui/                  # Button, Input, SocialButton, Checkbox, CodeInput, Dock, ComingSoon
 contexts/

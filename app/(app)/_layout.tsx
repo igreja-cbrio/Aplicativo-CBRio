@@ -3,10 +3,11 @@ import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Dock, type DockItem } from "@/components/ui/Dock";
 
 const META: Record<string, { label: string; icon: DockItem["icon"] }> = {
-  index: { label: "Início", icon: "home" },
-  eventos: { label: "Eventos", icon: "calendar" },
-  biblia: { label: "Bíblia", icon: "book" },
-  perfil: { label: "Perfil", icon: "person" },
+  index: { label: "Home", icon: "home" },
+  cuidados: { label: "Cuidados", icon: "heart" },
+  voluntariado: { label: "Voluntariado", icon: "hand-left" },
+  generosidade: { label: "Generosidade", icon: "gift" },
+  menu: { label: "Menu", icon: "menu" },
 };
 
 function DockTabBar({ state, navigation }: BottomTabBarProps) {
@@ -43,9 +44,10 @@ export default function AppLayout() {
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="index" />
-      <Tabs.Screen name="eventos" />
-      <Tabs.Screen name="biblia" />
-      <Tabs.Screen name="perfil" />
+      <Tabs.Screen name="cuidados" />
+      <Tabs.Screen name="voluntariado" />
+      <Tabs.Screen name="generosidade" />
+      <Tabs.Screen name="menu" />
     </Tabs>
   );
 }
