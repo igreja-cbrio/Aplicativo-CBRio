@@ -29,10 +29,14 @@ type AuthContextValue = {
   enterPreview: () => void;
   signIn: (email: string, password: string, remember: boolean) => Promise<void>;
   signUp: (
-    nome: string,
     email: string,
     password: string,
-    phone?: string
+    profile: {
+      nome: string;
+      cpf: string;
+      dataNascimento: string; // ISO AAAA-MM-DD
+      telefone: string; // E.164, ex.: +5521999999999
+    }
   ) => Promise<{ needsEmailConfirmation: boolean }>;
   signUpWithPhone: (
     nome: string,
@@ -95,14 +99,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         if (error) throw error;
       },
-      async signUp(nome, email, password, phone) {
-        // Cadastro por e-mail/senha (sem SMS). O telefone, se informado,
-        // fica nos metadados para o perfil.
+      async signUp(email, password, profile) {
+        // Cadastro por e-mail/senha (sem SMS). Dados do perfil vão nos
+        // metadados e caem na tabela `profiles` pelo trigger.
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
           options: {
-            data: { nome: nome.trim(), telefone: phone?.trim() || null },
+            data: {
+              nome: profile.nome.trim(),
+              cpf: profile.cpf,
+              data_nascimento: profile.dataNascimento,
+              telefone: profile.telefone,
+            },
           },
         });
         if (error) throw error;

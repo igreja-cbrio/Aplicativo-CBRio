@@ -12,24 +12,45 @@ import { Link, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
+import { DEFAULT_COUNTRY, type Country } from "@/constants/countries";
+import {
+  dateBRToISO,
+  isValidCPF,
+  isValidDateBR,
+  maskCPF,
+  maskDateBR,
+  onlyDigits,
+} from "@/lib/validators";
 import { colors, font, radius, spacing } from "@/constants/theme";
 
 export default function CadastroScreen() {
   const { signUp } = useAuth();
   const router = useRouter();
   const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [nascimento, setNascimento] = useState("");
+  const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSignUp() {
     setError(null);
-    if (!nome || !email || !password) {
-      setError("Preencha nome, e-mail e senha.");
+    if (!nome || !cpf || !nascimento || !phone || !email || !password) {
+      setError("Preencha todos os campos.");
+      return;
+    }
+    if (!isValidCPF(cpf)) {
+      setError("CPF inválido.");
+      return;
+    }
+    if (!isValidDateBR(nascimento)) {
+      setError("Data de nascimento inválida (use DD/MM/AAAA).");
       return;
     }
     if (password.length < 6) {
@@ -38,12 +59,12 @@ export default function CadastroScreen() {
     }
     setLoading(true);
     try {
-      const { needsEmailConfirmation } = await signUp(
+      const { needsEmailConfirmation } = await signUp(email, password, {
         nome,
-        email,
-        password,
-        phone
-      );
+        cpf: onlyDigits(cpf),
+        dataNascimento: dateBRToISO(nascimento)!,
+        telefone: `+${country.dial}${onlyDigits(phone)}`,
+      });
       if (needsEmailConfirmation) {
         Alert.alert(
           "Confirme seu e-mail",
@@ -81,8 +102,31 @@ export default function CadastroScreen() {
                 label="Nome completo"
                 value={nome}
                 onChangeText={setNome}
-                placeholder="Seu nome"
+                placeholder="Seu nome completo"
                 autoCapitalize="words"
+              />
+              <Input
+                label="CPF"
+                value={cpf}
+                onChangeText={(t) => setCpf(maskCPF(t))}
+                placeholder="000.000.000-00"
+                keyboardType="number-pad"
+                maxLength={14}
+              />
+              <Input
+                label="Data de nascimento"
+                value={nascimento}
+                onChangeText={(t) => setNascimento(maskDateBR(t))}
+                placeholder="DD/MM/AAAA"
+                keyboardType="number-pad"
+                maxLength={10}
+              />
+              <PhoneInput
+                label="Celular"
+                country={country}
+                onChangeCountry={setCountry}
+                number={phone}
+                onChangeNumber={setPhone}
               />
               <Input
                 label="E-mail"
@@ -90,13 +134,6 @@ export default function CadastroScreen() {
                 onChangeText={setEmail}
                 placeholder="voce@exemplo.com"
                 keyboardType="email-address"
-              />
-              <Input
-                label="Telefone (opcional)"
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="+55 21 99999-9999"
-                keyboardType="phone-pad"
               />
               <Input
                 label="Senha"
@@ -163,11 +200,6 @@ const styles = StyleSheet.create({
   },
   form: { width: "100%", gap: spacing.md },
   error: { color: colors.danger, fontSize: font.size.sm },
-  hint: {
-    color: colors.textMuted,
-    fontSize: font.size.sm,
-    textAlign: "center",
-  },
   footer: {
     flexDirection: "row",
     justifyContent: "center",

@@ -7,12 +7,18 @@
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   nome text,
+  cpf text,
+  data_nascimento date,
   telefone text,
   email text,
   avatar_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Para bases já existentes (idempotente):
+alter table public.profiles add column if not exists cpf text;
+alter table public.profiles add column if not exists data_nascimento date;
 
 -- 2) Row Level Security: cada usuário só acessa o próprio perfil
 alter table public.profiles enable row level security;
@@ -51,11 +57,13 @@ create trigger trg_profiles_updated_at
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.profiles (id, nome, telefone, email)
+  insert into public.profiles (id, nome, cpf, data_nascimento, telefone, email)
   values (
     new.id,
     new.raw_user_meta_data ->> 'nome',
-    new.phone,
+    new.raw_user_meta_data ->> 'cpf',
+    (nullif(new.raw_user_meta_data ->> 'data_nascimento', ''))::date,
+    coalesce(new.phone, new.raw_user_meta_data ->> 'telefone'),
     new.email
   )
   on conflict (id) do nothing;

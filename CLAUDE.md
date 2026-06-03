@@ -41,7 +41,11 @@ app/
     generosidade.tsx   # placeholder (em breve)
     menu.tsx           # perfil do usuário + demais opções + Sair
 components/
-  ui/                  # Button, Input, SocialButton, Checkbox, CodeInput, Dock, ComingSoon
+  ui/                  # Button, Input, SocialButton, Checkbox, CodeInput, PhoneInput, Dock, ComingSoon
+constants/
+  countries.ts         # lista de países (bandeira via emoji + DDI) p/ o PhoneInput
+lib/
+  validators.ts        # máscaras/validações: CPF, data (DD/MM/AAAA)
 contexts/
   AuthContext.tsx      # sessão e todos os métodos de auth
 lib/
@@ -63,8 +67,11 @@ Métodos em `contexts/AuthContext.tsx`:
 
 - `signIn(email, password, remember)` — login e-mail/senha; `remember` controla
   a persistência da sessão (storage híbrido).
-- `signUp(nome, email, password, phone?)` — **cadastro atual**: e-mail/senha
-  (telefone opcional vai p/ os metadados). Retorna `needsEmailConfirmation`.
+- `signUp(email, password, profile)` — **cadastro atual** (e-mail/senha). O
+  `profile` traz **nome completo, CPF, data de nascimento e telefone** (todos
+  obrigatórios), que vão p/ os metadados e caem na tabela `profiles`. O cadastro
+  usa `PhoneInput` (seletor de país com bandeira + DDI) e máscaras de CPF/data
+  (`lib/validators.ts`). Retorna `needsEmailConfirmation`.
 - `signUpWithPhone` / `verifyPhoneOtp` / `resendPhoneOtp` — fluxo de **SMS (OTP)**,
   pronto no código mas **desativado por enquanto** (Twilio não entrega SMS p/ BR
   sem remetente registrado na Anatel). A tela `verificar-telefone` (com o
