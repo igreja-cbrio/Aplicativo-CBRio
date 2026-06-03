@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -9,6 +11,7 @@ import {
   Text,
   View,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -43,8 +46,10 @@ export default function PerfilScreen() {
   const [email, setEmail] = useState(user?.email ?? "");
   const [telefone, setTelefone] = useState("");
   const [nascimento, setNascimento] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   useEffect(() => {
@@ -55,7 +60,7 @@ export default function PerfilScreen() {
     (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("nome, cpf, telefone, data_nascimento")
+        .select("nome, cpf, telefone, data_nascimento, avatar_url")
         .eq("id", user.id)
         .single();
       if (data) {
@@ -63,10 +68,59 @@ export default function PerfilScreen() {
         setCpf(data.cpf ? maskCPF(data.cpf) : "");
         setTelefone(data.telefone ?? "");
         setNascimento(isoToBR(data.data_nascimento));
+        setAvatarUrl(data.avatar_url ?? null);
       }
       setLoading(false);
     })();
   }, [user?.id]);
+
+  async function escolherFoto() {
+    if (!user?.id) return;
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert(
+        "Permissão necessária",
+        "Permita o acesso às fotos para escolher um avatar."
+      );
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (res.canceled || !res.assets?.[0]) return;
+
+    const asset = res.assets[0];
+    setMsg(null);
+    setUploading(true);
+    try {
+      const resp = await fetch(asset.uri);
+      const arrayBuffer = await resp.arrayBuffer();
+      const ext = (asset.uri.split(".").pop() || "jpg").toLowerCase();
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("avatars")
+        .upload(path, arrayBuffer, {
+          contentType: asset.mimeType ?? `image/${ext}`,
+          upsert: true,
+        });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
+      await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id);
+      setAvatarUrl(publicUrl);
+      setMsg({ type: "ok", text: "Foto de perfil atualizada." });
+    } catch (e) {
+      setMsg({
+        type: "err",
+        text: e instanceof Error ? e.message : "Falha ao enviar a foto.",
+      });
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function handleSave() {
     setMsg(null);
@@ -138,11 +192,35 @@ export default function PerfilScreen() {
           </View>
 
           <View style={styles.avatarWrap}>
-            <View style={styles.avatar}>
-              <CbrioHeart size={48} color={colors.brandPale} />
-            </View>
-            <Text style={styles.avatarHint}>Foto de perfil em breve</Text>
+            <Pressable
+              style={styles.avatar}
+              onPress={escolherFoto}
+              disabled={uploading || !user?.id}
+            >
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
+              ) : (
+                <CbrioHeart size={48} color={colors.brandPale} />
+              )}
+              <View style={styles.avatarBadge}>
+                {uploading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="camera" size={16} color="#fff" />
+                )}
+              </View>
+            </Pressable>
+            <Text style={styles.avatarHint}>Toque para trocar a foto</Text>
           </View>
+
+          <Pressable
+            style={styles.cartoesRow}
+            onPress={() => router.navigate("/cartoes")}
+          >
+            <Ionicons name="card-outline" size={22} color={colors.brandMid} />
+            <Text style={styles.cartoesText}>Meus cartões</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </Pressable>
 
           <View style={styles.form}>
             <Input
@@ -219,7 +297,33 @@ const makeStyles = (colors: Palette) =>
       alignItems: "center",
       justifyContent: "center",
     },
+    avatarImg: { width: 96, height: 96, borderRadius: radius.full },
+    avatarBadge: {
+      position: "absolute",
+      right: -2,
+      bottom: -2,
+      width: 30,
+      height: 30,
+      borderRadius: radius.full,
+      backgroundColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 2,
+      borderColor: colors.background,
+    },
     avatarHint: { color: colors.textMuted, fontSize: font.size.sm },
+    cartoesRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+    },
+    cartoesText: { flex: 1, color: colors.text, fontSize: font.size.md, fontWeight: "600" },
     form: { gap: spacing.md },
     lockHint: {
       color: colors.textMuted,

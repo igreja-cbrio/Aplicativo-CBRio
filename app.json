@@ -28,7 +28,16 @@
       "bundler": "metro",
       "output": "static"
     },
-    "plugins": ["expo-router", "expo-apple-authentication"],
+    "plugins": [
+      "expo-router",
+      "expo-apple-authentication",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O CBRio usa suas fotos para definir o avatar do seu perfil."
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
     }

@@ -43,7 +43,8 @@ app/
     voluntariado.tsx   # placeholder (em breve)
     generosidade.tsx   # placeholder (em breve)
     menu.tsx           # demais opções, aparência (tema) + Sair
-    perfil.tsx         # editar e-mail/telefone/nascimento (CPF travado); fora do dock
+    perfil.tsx         # editar e-mail/telefone/nascimento (CPF travado) + foto + cartões; fora do dock
+    cartoes.tsx        # cartões de membresia/voluntariado (mesmo Supabase); fora do dock
 components/
   ui/                  # Button, Input, SocialButton, Checkbox, CodeInput, PhoneInput, Dock, ComingSoon
 constants/

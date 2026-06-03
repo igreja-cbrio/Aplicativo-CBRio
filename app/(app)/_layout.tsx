@@ -49,6 +49,7 @@ export default function AppLayout() {
       <Tabs.Screen name="generosidade" />
       <Tabs.Screen name="menu" />
       <Tabs.Screen name="perfil" options={{ href: null }} />
+      <Tabs.Screen name="cartoes" options={{ href: null }} />
     </Tabs>
   );
 }

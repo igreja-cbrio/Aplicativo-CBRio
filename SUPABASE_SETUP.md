@@ -29,6 +29,21 @@ automaticamente no cadastro (puxando o `nome` enviado no signUp).
 
 ---
 
+## 2b. Foto de perfil (Storage)
+
+1. **Storage → New bucket** → nome **`avatars`** → **Public: ON** → criar.
+2. No **SQL Editor**, rode [`supabase/storage.sql`](./supabase/storage.sql) (políticas:
+   leitura pública + cada usuário gerencia a própria pasta `<uid>/...`).
+
+O app envia a foto para `avatars/<user_id>/avatar.<ext>` e salva a URL pública
+em `profiles.avatar_url`. (Requer `expo-image-picker` → **rebuild** do app.)
+
+## 2c. Cartões (membresia/voluntariado)
+
+A tela de Cartões lê do mesmo Supabase. Hoje ela assume a tabela **`cartoes`**
+com colunas `user_id, tipo, numero, status, wallet_url`. **Ajustar** estes nomes
+em `app/(app)/cartoes.tsx` conforme a estrutura real do `SISTEMA_INTEGRADO_CBRIO`.
+
 ## 3. Deep link / Redirect URLs (necessário p/ Google e Apple)
 
 **Authentication → URL Configuration**:

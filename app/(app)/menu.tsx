@@ -33,7 +33,7 @@ export default function MenuScreen() {
 
   const options: Option[] = [
     { label: "Meu perfil", icon: "person-outline", onPress: () => router.navigate("/perfil") },
-    { label: "Cartões", icon: "card-outline" },
+    { label: "Cartões", icon: "card-outline", onPress: () => router.navigate("/cartoes") },
     { label: "Eventos", icon: "calendar-outline" },
     { label: "Bíblia e devocionais", icon: "book-outline" },
     { label: "Notificações", icon: "notifications-outline" },
