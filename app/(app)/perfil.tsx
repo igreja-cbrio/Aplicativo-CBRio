@@ -151,6 +151,10 @@ export default function PerfilScreen() {
       return;
     }
     const cpfDigits = onlyDigits(cpf);
+    if (!name.trim()) {
+      setMsg({ type: "err", text: "Informe seu nome completo." });
+      return;
+    }
     if (cpf && !isValidCPF(cpf)) {
       setMsg({ type: "err", text: "CPF inválido." });
       return;
@@ -205,12 +209,13 @@ export default function PerfilScreen() {
       // 2) Edição normal do próprio cadastro
       const { error: pErr } = await supabase
         .from("profiles")
-        .update({ telefone: telefone.trim() || null })
+        .update({ name: name.trim(), telefone: telefone.trim() || null })
         .eq("id", user.id);
       if (pErr) throw pErr;
 
       if (targetId != null) {
         const upd: Record<string, unknown> = {
+          nome: name.trim(),
           telefone: telefone.trim() || null,
           data_nascimento: nascimento ? dateBRToISO(nascimento) : null,
         };
@@ -300,7 +305,12 @@ export default function PerfilScreen() {
           </Pressable>
 
           <View style={styles.form}>
-            <Input label="Nome completo" value={name} editable={false} />
+            <Input
+              label="Nome completo"
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+            />
             <View>
               <Input
                 label="CPF"
