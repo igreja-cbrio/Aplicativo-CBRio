@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -7,33 +8,46 @@ import {
   Text,
   View,
 } from "react-native";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useAuth } from "@/contexts/AuthContext";
 import { colors, font, spacing } from "@/constants/theme";
 
-export default function LoginScreen() {
-  const { signIn } = useAuth();
+export default function CadastroScreen() {
+  const { signUp } = useAuth();
+  const router = useRouter();
+  const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleLogin() {
+  async function handleSignUp() {
     setError(null);
-    if (!email || !password) {
-      setError("Preencha e-mail e senha.");
+    if (!nome || !email || !password) {
+      setError("Preencha todos os campos.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("A senha deve ter pelo menos 6 caracteres.");
       return;
     }
     setLoading(true);
     try {
-      await signIn(email, password);
-      // O redirecionamento é feito pelo guard de rotas no layout raiz.
+      const { needsConfirmation } = await signUp(email, password, nome);
+      if (needsConfirmation) {
+        Alert.alert(
+          "Confirme seu e-mail",
+          "Enviamos um link de confirmação. Verifique sua caixa de entrada para ativar a conta."
+        );
+        router.replace("/(auth)/login");
+      }
+      // Se já houver sessão, o guard de rotas redireciona automaticamente.
     } catch (e) {
       setError(
-        e instanceof Error ? traduzErro(e.message) : "Não foi possível entrar."
+        e instanceof Error ? e.message : "Não foi possível criar a conta."
       );
     } finally {
       setLoading(false);
@@ -51,55 +65,52 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Text style={styles.brand}>CBRio</Text>
-            <Text style={styles.subtitle}>Bem-vindo de volta</Text>
+            <Text style={styles.title}>Criar conta</Text>
+            <Text style={styles.subtitle}>Faça parte da comunidade CBRio</Text>
           </View>
 
           <View style={styles.form}>
+            <Input
+              label="Nome completo"
+              value={nome}
+              onChangeText={setNome}
+              placeholder="Seu nome"
+              autoCapitalize="words"
+            />
             <Input
               label="E-mail"
               value={email}
               onChangeText={setEmail}
               placeholder="voce@exemplo.com"
               keyboardType="email-address"
-              autoComplete="email"
             />
             <Input
               label="Senha"
               value={password}
               onChangeText={setPassword}
-              placeholder="••••••••"
+              placeholder="Mínimo 6 caracteres"
               secure
-              autoComplete="password"
             />
 
             {error && <Text style={styles.error}>{error}</Text>}
 
-            <Link href="/(auth)/recuperar-senha" style={styles.forgot}>
-              Esqueci minha senha
-            </Link>
-
-            <Button title="Entrar" onPress={handleLogin} loading={loading} />
+            <Button
+              title="Criar conta"
+              onPress={handleSignUp}
+              loading={loading}
+            />
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Ainda não tem conta?</Text>
-            <Link href="/(auth)/cadastro" style={styles.footerLink}>
-              Criar conta
+            <Text style={styles.footerText}>Já tem conta?</Text>
+            <Link href="/(auth)/login" style={styles.footerLink}>
+              Entrar
             </Link>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
-}
-
-function traduzErro(msg: string) {
-  if (msg.includes("Invalid login credentials"))
-    return "E-mail ou senha incorretos.";
-  if (msg.includes("Email not confirmed"))
-    return "Confirme seu e-mail antes de entrar.";
-  return msg;
 }
 
 const styles = StyleSheet.create({
@@ -111,22 +122,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: spacing.xl,
   },
-  header: { alignItems: "center", gap: spacing.xs },
-  brand: {
-    color: colors.primary,
-    fontSize: font.size.xxl,
-    fontWeight: "800",
-    letterSpacing: 1,
-  },
+  header: { gap: spacing.xs },
+  title: { color: colors.text, fontSize: font.size.xl, fontWeight: "800" },
   subtitle: { color: colors.textMuted, fontSize: font.size.md },
   form: { gap: spacing.md },
   error: { color: colors.danger, fontSize: font.size.sm },
-  forgot: {
-    color: colors.primary,
-    fontSize: font.size.sm,
-    fontWeight: "600",
-    alignSelf: "flex-end",
-  },
   footer: {
     flexDirection: "row",
     justifyContent: "center",
