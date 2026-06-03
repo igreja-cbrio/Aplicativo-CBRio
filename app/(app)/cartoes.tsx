@@ -195,7 +195,7 @@ const makeStyles = (colors: Palette) =>
     wordmark: {
       width: 92,
       height: 30,
-      tintColor: "#FFFFFF",
+      tintColor: brand.sand, // wordmark claro (#eae3da) sobre o fundo teal
       marginBottom: spacing.lg,
     },
     label: {
