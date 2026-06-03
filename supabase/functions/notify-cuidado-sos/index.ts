@@ -11,8 +11,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // >>> EDITE AQUI: CPFs dos pastores (somente dígitos) <<<
 const CPFS_PASTORES = [
-  "00000000000", // Marcílio
-  "00000000000", // Nélio
+  "00000000000", // Marcílio Nélio Paiva
   "00000000000", // Wesley Ramos
 ];
 
