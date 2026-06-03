@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   Pressable,
   ScrollView,
@@ -17,21 +18,18 @@ import { supabase } from "@/lib/supabase";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 /**
- * Cartões de membresia/voluntariado (mesmo Supabase do sistema existente).
- * Schema ASSUMIDO — ajustar os nomes de tabela/colunas conforme o sistema:
- *   tabela: cartoes | colunas: user_id, tipo, numero, status, wallet_url
+ * Cartões (membresia/voluntariado) do SISTEMA_INTEGRADO_CBRIO.
+ * Modelo real: profiles.membro_id -> mem_membros; QR em mem_qrcodes (por cpf).
+ * O passe da Wallet (.pkpass) é gerado por um endpoint do sistema — defina abaixo.
  */
-type Cartao = {
-  id: string;
-  tipo?: string | null;
-  numero?: string | null;
-  status?: string | null;
-  wallet_url?: string | null;
-};
+const WALLET_PASS_URL: string | null = null; // ex.: "https://sistema.cbrio.com.br/wallet/pass"
 
-const TIPO_META: Record<string, { label: string; icon: React.ComponentProps<typeof Ionicons>["name"] }> = {
-  membresia: { label: "Cartão de Membresia", icon: "id-card" },
-  voluntariado: { label: "Cartão de Voluntariado", icon: "hand-left" },
+type Membro = {
+  id: string;
+  nome: string;
+  cpf: string | null;
+  status: string | null;
+  voluntario: boolean | null;
 };
 
 export default function CartoesScreen() {
@@ -40,7 +38,8 @@ export default function CartoesScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
 
-  const [cartoes, setCartoes] = useState<Cartao[]>([]);
+  const [membro, setMembro] = useState<Membro | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -50,14 +49,33 @@ export default function CartoesScreen() {
       return;
     }
     setErro(null);
-    const { data, error } = await supabase
-      .from("cartoes")
-      .select("*")
-      .eq("user_id", user.id);
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("membro_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (!prof?.membro_id) {
+      setLoading(false);
+      return;
+    }
+    const { data: m, error } = await supabase
+      .from("mem_membros")
+      .select("id, nome, cpf, status, voluntario")
+      .eq("id", prof.membro_id)
+      .maybeSingle();
     if (error) {
       setErro(error.message);
-    } else {
-      setCartoes((data as Cartao[]) ?? []);
+      setLoading(false);
+      return;
+    }
+    setMembro(m as Membro);
+    if (m?.cpf) {
+      const { data: qr } = await supabase
+        .from("mem_qrcodes")
+        .select("token")
+        .eq("cpf", m.cpf)
+        .maybeSingle();
+      setToken(qr?.token ?? null);
     }
     setLoading(false);
   }, [user?.id]);
@@ -65,6 +83,25 @@ export default function CartoesScreen() {
   useEffect(() => {
     carregar();
   }, [carregar]);
+
+  function addWallet(tipo: string) {
+    if (WALLET_PASS_URL && token) {
+      Linking.openURL(`${WALLET_PASS_URL}?token=${encodeURIComponent(token)}&tipo=${tipo}`);
+    } else {
+      Alert.alert(
+        "Em breve",
+        "A geração do passe para a Wallet ainda será conectada ao sistema."
+      );
+    }
+  }
+
+  const cards: { tipo: "membresia" | "voluntariado"; label: string; icon: React.ComponentProps<typeof Ionicons>["name"] }[] = [];
+  if (membro) {
+    cards.push({ tipo: "membresia", label: "Cartão de Membresia", icon: "id-card" });
+    if (membro.voluntario) {
+      cards.push({ tipo: "voluntariado", label: "Cartão de Voluntariado", icon: "hand-left" });
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
@@ -83,49 +120,41 @@ export default function CartoesScreen() {
         ) : erro ? (
           <View style={styles.empty}>
             <Ionicons name="alert-circle-outline" size={40} color={colors.textMuted} />
-            <Text style={styles.emptyText}>
-              Não consegui carregar os cartões. Confirme o nome da tabela/colunas
-              no Supabase para eu ajustar.
-            </Text>
+            <Text style={styles.emptyText}>Não consegui carregar os cartões.</Text>
             <Text style={styles.emptyHint}>{erro}</Text>
           </View>
-        ) : cartoes.length === 0 ? (
+        ) : !membro ? (
           <View style={styles.empty}>
             <Ionicons name="card-outline" size={40} color={colors.textMuted} />
             <Text style={styles.emptyText}>
-              Você ainda não tem cartões disponíveis.
+              Sua conta ainda não está vinculada a um membro da CBRio.
             </Text>
           </View>
         ) : (
-          cartoes.map((c) => {
-            const meta = TIPO_META[(c.tipo ?? "").toLowerCase()] ?? {
-              label: c.tipo ?? "Cartão",
-              icon: "card" as const,
-            };
-            return (
-              <View key={c.id} style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <Ionicons name={meta.icon} size={22} color={colors.brandPale} />
-                  <Text style={styles.cardTipo}>{meta.label}</Text>
-                </View>
-                {!!c.numero && <Text style={styles.cardNumero}>{c.numero}</Text>}
-                {!!c.status && (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{c.status}</Text>
-                  </View>
-                )}
-                {!!c.wallet_url && (
-                  <Pressable
-                    style={styles.walletBtn}
-                    onPress={() => Linking.openURL(c.wallet_url!)}
-                  >
-                    <Ionicons name="wallet" size={18} color="#fff" />
-                    <Text style={styles.walletText}>Adicionar à Wallet</Text>
-                  </Pressable>
-                )}
+          cards.map((c) => (
+            <View
+              key={c.tipo}
+              style={[
+                styles.card,
+                c.tipo === "voluntariado" && { backgroundColor: colors.primaryDark },
+              ]}
+            >
+              <View style={styles.cardHeader}>
+                <Ionicons name={c.icon} size={22} color={colors.brandPale} />
+                <Text style={styles.cardTipo}>{c.label}</Text>
               </View>
-            );
-          })
+              <Text style={styles.cardNome}>{membro.nome}</Text>
+              {!!membro.status && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{membro.status}</Text>
+                </View>
+              )}
+              <Pressable style={styles.walletBtn} onPress={() => addWallet(c.tipo)}>
+                <Ionicons name="wallet" size={18} color="#fff" />
+                <Text style={styles.walletText}>Adicionar à Wallet</Text>
+              </Pressable>
+            </View>
+          ))
         )}
       </ScrollView>
     </SafeAreaView>
@@ -155,12 +184,7 @@ const makeStyles = (colors: Palette) =>
     },
     cardHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
     cardTipo: { color: "#fff", fontSize: font.size.md, fontWeight: "700" },
-    cardNumero: {
-      color: "#fff",
-      fontSize: font.size.lg,
-      letterSpacing: 2,
-      fontWeight: "600",
-    },
+    cardNome: { color: "#fff", fontSize: font.size.lg, fontWeight: "700" },
     badge: {
       alignSelf: "flex-start",
       backgroundColor: "rgba(255,255,255,0.2)",
