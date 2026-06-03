@@ -1,6 +1,5 @@
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
-import * as Device from "expo-device";
 import Constants from "expo-constants";
 import { supabase } from "./supabase";
 
@@ -10,14 +9,12 @@ import { supabase } from "./supabase";
  * dispara o push ao criar uma escala (ver supabase/functions/notify-escala).
  *
  * Observações:
- * - Push **não funciona no simulador iOS** (precisa de device físico).
+ * - Push **não funciona no simulador iOS** (a obtenção do token falha e é
+ *   ignorada silenciosamente).
  * - Requer um `projectId` do EAS (app.json extra.eas.projectId, via `eas init`).
- * Falhas são silenciosas (apenas log) para nunca quebrar o app.
  */
 export async function registerForPush(userId: string): Promise<string | null> {
   try {
-    if (!Device.isDevice) return null; // simulador não recebe push remoto
-
     const { status: existing } = await Notifications.getPermissionsAsync();
     let status = existing;
     if (existing !== "granted") {
