@@ -24,6 +24,9 @@ type AuthContextValue = {
   user: User | null;
   loading: boolean;
   rememberPref: boolean;
+  /** Preview só em dev: visualizar a área logada sem Supabase. */
+  preview: boolean;
+  enterPreview: () => void;
   signIn: (email: string, password: string, remember: boolean) => Promise<void>;
   signUpWithPhone: (
     nome: string,
@@ -45,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [rememberPref, setRememberPref] = useState(true);
+  const [preview, setPreview] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -71,6 +75,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user: session?.user ?? null,
       loading,
       rememberPref,
+      preview,
+      enterPreview() {
+        if (__DEV__) setPreview(true);
+      },
       async signIn(email, password, remember) {
         setRememberSession(remember);
         setRememberPref(remember);
@@ -159,11 +167,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error;
       },
       async signOut() {
+        setPreview(false);
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
       },
     }),
-    [session, loading, rememberPref]
+    [session, loading, rememberPref, preview]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

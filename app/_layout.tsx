@@ -7,21 +7,22 @@ import { SplashPulse } from "@/components/brand/SplashPulse";
 import { colors } from "@/constants/theme";
 
 function RootNavigator() {
-  const { session, loading } = useAuth();
+  const { session, loading, preview } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const authed = !!session || preview;
 
   useEffect(() => {
     if (loading) return;
 
     const inAuthGroup = segments[0] === "(auth)";
 
-    if (!session && !inAuthGroup) {
+    if (!authed && !inAuthGroup) {
       router.replace("/(auth)/login");
-    } else if (session && inAuthGroup) {
+    } else if (authed && inAuthGroup) {
       router.replace("/(app)");
     }
-  }, [session, loading, segments]);
+  }, [authed, loading, segments]);
 
   if (loading) {
     return <SplashPulse />;

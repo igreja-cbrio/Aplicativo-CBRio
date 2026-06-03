@@ -18,7 +18,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { colors, font, radius, spacing } from "@/constants/theme";
 
 export default function LoginScreen() {
-  const { signIn, signInWithGoogle, signInWithApple, rememberPref } = useAuth();
+  const { signIn, signInWithGoogle, signInWithApple, rememberPref, enterPreview } =
+    useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(rememberPref);
@@ -138,6 +139,14 @@ export default function LoginScreen() {
               Criar conta
             </Link>
           </View>
+
+          {__DEV__ && (
+            <Button
+              title="Entrar como visitante (preview)"
+              variant="ghost"
+              onPress={enterPreview}
+            />
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
