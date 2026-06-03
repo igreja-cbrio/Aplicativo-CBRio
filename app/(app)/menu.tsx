@@ -1,11 +1,12 @@
 import { useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
+import { useMembro } from "@/lib/useMembro";
 import {
   useTheme,
   type ThemePreference,
@@ -26,10 +27,12 @@ const TEMA_OPCOES: { key: ThemePreference; label: string; icon: React.ComponentP
 
 export default function MenuScreen() {
   const { user, signOut } = useAuth();
+  const { membro } = useMembro();
   const { colors, preference, setPreference } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
-  const nome = (user?.user_metadata?.nome as string) || "Membro CBRio";
+  const nome =
+    membro?.nome || (user?.user_metadata?.nome as string) || "Membro CBRio";
 
   const options: Option[] = [
     { label: "Meu perfil", icon: "person-outline", onPress: () => router.navigate("/perfil") },
@@ -51,7 +54,11 @@ export default function MenuScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <View style={styles.avatar}>
-            <CbrioHeart size={32} color={colors.brandPale} />
+            {membro?.avatarUrl ? (
+              <Image source={{ uri: membro.avatarUrl }} style={styles.avatarImg} />
+            ) : (
+              <CbrioHeart size={32} color={colors.brandPale} />
+            )}
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.name}>{nome}</Text>
@@ -129,7 +136,9 @@ const makeStyles = (colors: Palette) =>
       borderColor: colors.glassBorder,
       alignItems: "center",
       justifyContent: "center",
+      overflow: "hidden",
     },
+    avatarImg: { width: 64, height: 64, borderRadius: radius.full },
     name: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
     meta: { color: colors.textMuted, fontSize: font.size.sm },
     sectionLabel: {

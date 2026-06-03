@@ -11,6 +11,7 @@ export type MembroBasico = {
   telefone: string;
   dataNascimento: string | null; // ISO
   voluntario: boolean;
+  avatarUrl: string | null;
 };
 
 /** Carrega dados básicos do membro logado (profiles + mem_membros). Recarrega ao focar a tela. */
@@ -26,7 +27,7 @@ export function useMembro() {
     }
     const { data: prof } = await supabase
       .from("profiles")
-      .select("name, email, telefone, membro_id")
+      .select("name, email, telefone, membro_id, avatar_url")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -38,12 +39,13 @@ export function useMembro() {
       telefone: prof?.telefone ?? "",
       dataNascimento: null,
       voluntario: false,
+      avatarUrl: prof?.avatar_url ?? null,
     };
 
     if (prof?.membro_id) {
       const { data: m } = await supabase
         .from("mem_membros")
-        .select("nome, cpf, email, telefone, data_nascimento, voluntario")
+        .select("nome, cpf, email, telefone, data_nascimento, voluntario, foto_url")
         .eq("id", prof.membro_id)
         .maybeSingle();
       if (m) {
@@ -55,6 +57,7 @@ export function useMembro() {
           telefone: m.telefone ?? base.telefone,
           dataNascimento: m.data_nascimento ?? null,
           voluntario: !!m.voluntario,
+          avatarUrl: base.avatarUrl ?? m.foto_url ?? null,
         };
       }
     }

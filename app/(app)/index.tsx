@@ -1,11 +1,12 @@
 import { useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
+import { useMembro } from "@/lib/useMembro";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 function primeiroNome(nomeCompleto?: string, email?: string | null) {
@@ -38,11 +39,12 @@ const ATALHOS: Atalho[] = [
 
 export default function InicioScreen() {
   const { user } = useAuth();
+  const { membro } = useMembro();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const nome = primeiroNome(
-    user?.user_metadata?.nome as string | undefined,
+    membro?.nome || (user?.user_metadata?.nome as string | undefined),
     user?.email
   );
 
@@ -61,7 +63,11 @@ export default function InicioScreen() {
             accessibilityRole="button"
             accessibilityLabel="Abrir perfil"
           >
-            <CbrioHeart size={28} color={colors.brandPale} />
+            {membro?.avatarUrl ? (
+              <Image source={{ uri: membro.avatarUrl }} style={styles.avatarImg} />
+            ) : (
+              <CbrioHeart size={28} color={colors.brandPale} />
+            )}
           </Pressable>
         </View>
 
@@ -109,7 +115,9 @@ const makeStyles = (colors: Palette) =>
       borderColor: colors.glassBorder,
       alignItems: "center",
       justifyContent: "center",
+      overflow: "hidden",
     },
+    avatarImg: { width: 52, height: 52, borderRadius: radius.full },
     sectionTitle: {
       color: colors.text,
       fontSize: font.size.lg,
