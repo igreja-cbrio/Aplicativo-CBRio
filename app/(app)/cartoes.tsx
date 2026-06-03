@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,24 +18,29 @@ import { useColors } from "@/contexts/ThemeContext";
 import { supabase } from "@/lib/supabase";
 import { adicionarWalletMembresia } from "@/lib/wallet";
 import { onlyDigits } from "@/lib/validators";
-import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { brand, font, radius, spacing, type Palette } from "@/constants/theme";
 
-/**
- * Cartão ÚNICO da CBRio: um QR (mem_qrcodes.token) que serve para tudo —
- * identificação de membro e check-in de voluntário (o leitor decide a ação).
- * O QR aparece na tela (lê na hora) e dá para adicionar à Wallet (.pkpass do ERP).
- */
+function statusLabel(s?: string | null) {
+  // Espelha o passe do ERP: "Ativo" ou "Cadastro pendente".
+  return s === "membro_ativo" || s === "membro" ? "Ativo" : "Cadastro pendente";
+}
+
+function cartaoId(membroId?: string | null) {
+  if (!membroId) return "";
+  return `CBR-M-${membroId.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+}
+
 export default function CartoesScreen() {
   const { user } = useAuth();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
 
+  const [membroId, setMembroId] = useState<string | null>(null);
   const [nome, setNome] = useState<string | null>(null);
   const [cpf, setCpf] = useState<string | null>(null);
   const [nascimento, setNascimento] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const [voluntario, setVoluntario] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [vinculado, setVinculado] = useState(true);
@@ -57,9 +63,10 @@ export default function CartoesScreen() {
       setLoading(false);
       return;
     }
+    setMembroId(prof.membro_id);
     const { data: m } = await supabase
       .from("mem_membros")
-      .select("nome, cpf, status, data_nascimento, voluntario")
+      .select("nome, cpf, status, data_nascimento")
       .eq("id", prof.membro_id)
       .maybeSingle();
     if (m) {
@@ -67,19 +74,7 @@ export default function CartoesScreen() {
       setCpf(m.cpf ?? null);
       setStatus(m.status ?? null);
       setNascimento(m.data_nascimento ?? null);
-      let vol = !!m.voluntario;
-      if (!vol) {
-        const { data: vols } = await supabase
-          .from("mem_voluntarios")
-          .select("id")
-          .eq("membro_id", prof.membro_id)
-          .is("deleted_at", null)
-          .limit(1);
-        vol = !!vols && vols.length > 0;
-      }
-      setVoluntario(vol);
     }
-    // token do QR (cria se faltar, via função no servidor)
     const { data: tk } = await supabase.rpc("app_meu_qrcode");
     setToken((tk as string) ?? null);
     setLoading(false);
@@ -129,35 +124,40 @@ export default function CartoesScreen() {
             <Button title="Vincular pelo CPF" onPress={() => router.navigate("/perfil")} />
           </View>
         ) : (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Ionicons name="id-card" size={22} color={colors.brandPale} />
-              <Text style={styles.cardTipo}>Cartão CBRio</Text>
-            </View>
-            <Text style={styles.cardNome}>{nome ?? "Membro"}</Text>
-            <View style={styles.badges}>
-              {!!status && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{status}</Text>
-                </View>
-              )}
-              {voluntario && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>voluntário</Text>
-                </View>
-              )}
-            </View>
+          <>
+            {/* Cartão idêntico ao passe da Wallet (fundo teal #408097) */}
+            <View style={styles.card}>
+              <Image
+                source={require("../../assets/images/cbrio-wordmark.png")}
+                style={styles.wordmark}
+                resizeMode="contain"
+              />
 
-            <View style={styles.qrBox}>
-              {token ? (
-                <QRCode value={token} size={196} backgroundColor="#ffffff" color="#0B1F26" />
-              ) : (
-                <Text style={styles.qrMissing}>QR indisponível</Text>
-              )}
+              <Text style={styles.label}>MEMBRO</Text>
+              <Text style={styles.nome}>{nome ?? "Membro"}</Text>
+
+              <View style={styles.row}>
+                <View>
+                  <Text style={styles.label}>IGREJA</Text>
+                  <Text style={styles.value}>CBRio</Text>
+                </View>
+                <View style={{ alignItems: "flex-end" }}>
+                  <Text style={styles.label}>STATUS</Text>
+                  <Text style={styles.value}>{statusLabel(status)}</Text>
+                </View>
+              </View>
+
+              <Text style={[styles.label, { marginTop: spacing.md }]}>ID</Text>
+              <Text style={styles.value}>{cartaoId(membroId)}</Text>
+
+              <View style={styles.qrBox}>
+                {token ? (
+                  <QRCode value={token} size={196} backgroundColor="#ffffff" color="#0B1F26" />
+                ) : (
+                  <Text style={styles.qrMissing}>QR indisponível</Text>
+                )}
+              </View>
             </View>
-            <Text style={styles.qrHint}>
-              Mostre este QR para identificação e check-in.
-            </Text>
 
             <Button
               title="Adicionar à Wallet"
@@ -165,7 +165,7 @@ export default function CartoesScreen() {
               loading={walletLoading}
             />
             {erro && <Text style={styles.erro}>{erro}</Text>}
-          </View>
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -186,31 +186,43 @@ const makeStyles = (colors: Palette) =>
     title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
     empty: { alignItems: "center", gap: spacing.sm, marginTop: spacing.xl, paddingHorizontal: spacing.lg },
     emptyText: { color: colors.textMuted, fontSize: font.size.md, textAlign: "center", lineHeight: 22 },
+
     card: {
-      backgroundColor: colors.primary,
-      borderRadius: radius.xl,
+      backgroundColor: brand.primary, // azul/teal principal #408097
+      borderRadius: 22,
       padding: spacing.lg,
-      gap: spacing.md,
-      alignItems: "center",
     },
-    cardHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm, alignSelf: "flex-start" },
-    cardTipo: { color: "#fff", fontSize: font.size.md, fontWeight: "700" },
-    cardNome: { color: "#fff", fontSize: font.size.lg, fontWeight: "700", alignSelf: "flex-start" },
-    badges: { flexDirection: "row", gap: spacing.xs, alignSelf: "flex-start", flexWrap: "wrap" },
-    badge: {
-      backgroundColor: "rgba(255,255,255,0.2)",
-      borderRadius: radius.full,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 2,
+    wordmark: {
+      width: 92,
+      height: 30,
+      tintColor: "#FFFFFF",
+      marginBottom: spacing.lg,
     },
-    badgeText: { color: "#fff", fontSize: font.size.sm, fontWeight: "600" },
+    label: {
+      color: "rgba(255,255,255,0.7)",
+      fontSize: 12,
+      fontWeight: "700",
+      letterSpacing: 1,
+    },
+    nome: {
+      color: "#FFFFFF",
+      fontSize: 30,
+      fontWeight: "700",
+      marginTop: 2,
+    },
+    row: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: spacing.xl,
+    },
+    value: { color: "#FFFFFF", fontSize: font.size.lg, marginTop: 2 },
     qrBox: {
+      alignSelf: "center",
       backgroundColor: "#fff",
       padding: spacing.md,
       borderRadius: radius.lg,
-      marginTop: spacing.sm,
+      marginTop: spacing.xl,
     },
     qrMissing: { color: colors.textMuted, padding: spacing.xl },
-    qrHint: { color: "rgba(255,255,255,0.85)", fontSize: font.size.sm, textAlign: "center" },
-    erro: { color: "#fff", fontSize: font.size.sm, textAlign: "center" },
+    erro: { color: colors.danger, fontSize: font.size.sm, textAlign: "center" },
   });
