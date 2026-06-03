@@ -41,6 +41,7 @@ export default function CartoesScreen() {
 
   const [membro, setMembro] = useState<Membro | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [ehVoluntario, setEhVoluntario] = useState(false);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -70,6 +71,20 @@ export default function CartoesScreen() {
       return;
     }
     setMembro(m as Membro);
+
+    // É voluntário? (flag no membro OU vínculo ativo em mem_voluntarios)
+    let vol = !!m?.voluntario;
+    if (!vol) {
+      const { data: vols } = await supabase
+        .from("mem_voluntarios")
+        .select("id")
+        .eq("membro_id", prof.membro_id)
+        .is("deleted_at", null)
+        .limit(1);
+      vol = !!vols && vols.length > 0;
+    }
+    setEhVoluntario(vol);
+
     if (m?.cpf) {
       const { data: qr } = await supabase
         .from("mem_qrcodes")
@@ -99,7 +114,7 @@ export default function CartoesScreen() {
   const cards: { tipo: "membresia" | "voluntariado"; label: string; icon: React.ComponentProps<typeof Ionicons>["name"] }[] = [];
   if (membro) {
     cards.push({ tipo: "membresia", label: "Cartão de Membresia", icon: "id-card" });
-    if (membro.voluntario) {
+    if (ehVoluntario) {
       cards.push({ tipo: "voluntariado", label: "Cartão de Voluntariado", icon: "hand-left" });
     }
   }
