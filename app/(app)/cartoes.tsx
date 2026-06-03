@@ -12,6 +12,7 @@ import {
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { supabase } from "@/lib/supabase";
@@ -127,8 +128,10 @@ export default function CartoesScreen() {
           <View style={styles.empty}>
             <Ionicons name="card-outline" size={40} color={colors.textMuted} />
             <Text style={styles.emptyText}>
-              Sua conta ainda não está vinculada a um membro da CBRio.
+              Sua conta ainda não está vinculada a um membro da CBRio. Informe seu
+              CPF no perfil para liberar seus cartões.
             </Text>
+            <Button title="Vincular pelo CPF" onPress={() => router.navigate("/perfil")} />
           </View>
         ) : (
           cards.map((c) => (
