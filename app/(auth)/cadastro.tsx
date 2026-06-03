@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,22 +11,28 @@ import { Link, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
-import { colors, font, spacing } from "@/constants/theme";
+import { colors, font, radius, spacing } from "@/constants/theme";
 
 export default function CadastroScreen() {
-  const { signUp } = useAuth();
+  const { signUpWithPhone } = useAuth();
   const router = useRouter();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSignUp() {
     setError(null);
-    if (!nome || !email || !password) {
+    if (!nome || !email || !phone || !password) {
       setError("Preencha todos os campos.");
+      return;
+    }
+    if (!phone.startsWith("+")) {
+      setError("Use o telefone no formato internacional, ex.: +5521999999999");
       return;
     }
     if (password.length < 6) {
@@ -36,19 +41,13 @@ export default function CadastroScreen() {
     }
     setLoading(true);
     try {
-      const { needsConfirmation } = await signUp(email, password, nome);
-      if (needsConfirmation) {
-        Alert.alert(
-          "Confirme seu e-mail",
-          "Enviamos um link de confirmação. Verifique sua caixa de entrada para ativar a conta."
-        );
-        router.replace("/(auth)/login");
-      }
-      // Se já houver sessão, o guard de rotas redireciona automaticamente.
+      await signUpWithPhone(nome, email, phone, password);
+      router.push({
+        pathname: "/(auth)/verificar-telefone",
+        params: { phone },
+      });
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Não foi possível criar a conta."
-      );
+      setError(e instanceof Error ? e.message : "Não foi possível criar a conta.");
     } finally {
       setLoading(false);
     }
@@ -61,44 +60,57 @@ export default function CadastroScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.header}>
+          <View style={styles.card}>
+            <View style={styles.logoCircle}>
+              <CbrioHeart size={40} color={colors.brandPale} strokeWidth={10} />
+            </View>
             <Text style={styles.title}>Criar conta</Text>
             <Text style={styles.subtitle}>Faça parte da comunidade CBRio</Text>
-          </View>
 
-          <View style={styles.form}>
-            <Input
-              label="Nome completo"
-              value={nome}
-              onChangeText={setNome}
-              placeholder="Seu nome"
-              autoCapitalize="words"
-            />
-            <Input
-              label="E-mail"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="voce@exemplo.com"
-              keyboardType="email-address"
-            />
-            <Input
-              label="Senha"
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Mínimo 6 caracteres"
-              secure
-            />
+            <View style={styles.form}>
+              <Input
+                label="Nome completo"
+                value={nome}
+                onChangeText={setNome}
+                placeholder="Seu nome"
+                autoCapitalize="words"
+              />
+              <Input
+                label="E-mail"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="voce@exemplo.com"
+                keyboardType="email-address"
+              />
+              <Input
+                label="Telefone (com DDI)"
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="+55 21 99999-9999"
+                keyboardType="phone-pad"
+              />
+              <Input
+                label="Senha"
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Mínimo 6 caracteres"
+                secure
+              />
 
-            {error && <Text style={styles.error}>{error}</Text>}
+              {error && <Text style={styles.error}>{error}</Text>}
 
-            <Button
-              title="Criar conta"
-              onPress={handleSignUp}
-              loading={loading}
-            />
+              <Button
+                title="Criar conta"
+                onPress={handleSignUp}
+                loading={loading}
+              />
+              <Text style={styles.hint}>
+                Enviaremos um código por SMS para confirmar seu número.
+              </Text>
+            </View>
           </View>
 
           <View style={styles.footer}>
@@ -116,17 +128,43 @@ export default function CadastroScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
-  content: {
+  scroll: {
     flexGrow: 1,
     padding: spacing.lg,
     justifyContent: "center",
-    gap: spacing.xl,
+    gap: spacing.lg,
   },
-  header: { gap: spacing.xs },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: spacing.xl,
+    alignItems: "center",
+  },
+  logoCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.full,
+    backgroundColor: colors.glass,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.md,
+  },
   title: { color: colors.text, fontSize: font.size.xl, fontWeight: "800" },
-  subtitle: { color: colors.textMuted, fontSize: font.size.md },
-  form: { gap: spacing.md },
+  subtitle: {
+    color: colors.textMuted,
+    fontSize: font.size.md,
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  form: { width: "100%", gap: spacing.md },
   error: { color: colors.danger, fontSize: font.size.sm },
+  hint: {
+    color: colors.textMuted,
+    fontSize: font.size.sm,
+    textAlign: "center",
+  },
   footer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -134,7 +172,7 @@ const styles = StyleSheet.create({
   },
   footerText: { color: colors.textMuted, fontSize: font.size.md },
   footerLink: {
-    color: colors.primary,
+    color: colors.brandMid,
     fontSize: font.size.md,
     fontWeight: "700",
   },

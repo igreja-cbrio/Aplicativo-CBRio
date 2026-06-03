@@ -9,11 +9,12 @@
     "newArchEnabled": true,
     "splash": {
       "resizeMode": "contain",
-      "backgroundColor": "#0B1220"
+      "backgroundColor": "#0B1F26"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "br.com.cbrio.app"
+      "bundleIdentifier": "br.com.cbrio.app",
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "br.com.cbrio.app"
@@ -22,7 +23,7 @@
       "bundler": "metro",
       "output": "static"
     },
-    "plugins": ["expo-router"],
+    "plugins": ["expo-router", "expo-apple-authentication"],
     "experiments": {
       "typedRoutes": true
     }

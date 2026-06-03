@@ -5,19 +5,36 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import { Platform } from "react-native";
+import * as WebBrowser from "expo-web-browser";
+import * as AuthSession from "expo-auth-session";
+import * as AppleAuthentication from "expo-apple-authentication";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
+import {
+  supabase,
+  setRememberSession,
+  REMEMBER_PREF_KEY,
+} from "@/lib/supabase";
+
+WebBrowser.maybeCompleteAuthSession();
 
 type AuthContextValue = {
   session: Session | null;
   user: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (
+  rememberPref: boolean;
+  signIn: (email: string, password: string, remember: boolean) => Promise<void>;
+  signUpWithPhone: (
+    nome: string,
     email: string,
-    password: string,
-    nome: string
-  ) => Promise<{ needsConfirmation: boolean }>;
+    phone: string,
+    password: string
+  ) => Promise<void>;
+  verifyPhoneOtp: (phone: string, token: string) => Promise<void>;
+  resendPhoneOtp: (phone: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signInWithApple: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -27,19 +44,24 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [rememberPref, setRememberPref] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    (async () => {
+      const pref = await AsyncStorage.getItem(REMEMBER_PREF_KEY);
+      if (pref !== null) {
+        const value = pref === "true";
+        setRememberPref(value);
+        setRememberSession(value);
+      }
+      const { data } = await supabase.auth.getSession();
       setSession(data.session);
       setLoading(false);
-    });
+    })();
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
-        setSession(newSession);
-      }
+      (_event, newSession) => setSession(newSession)
     );
-
     return () => listener.subscription.unsubscribe();
   }, []);
 
@@ -48,22 +70,87 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       user: session?.user ?? null,
       loading,
-      async signIn(email, password) {
+      rememberPref,
+      async signIn(email, password, remember) {
+        setRememberSession(remember);
+        setRememberPref(remember);
+        await AsyncStorage.setItem(REMEMBER_PREF_KEY, String(remember));
         const { error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
         });
         if (error) throw error;
       },
-      async signUp(email, password, nome) {
-        const { data, error } = await supabase.auth.signUp({
+      async signUpWithPhone(nome, email, phone, password) {
+        // Cria a conta com e-mail/senha e telefone; o Supabase envia o SMS.
+        const { error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
+          phone: phone.trim(),
           options: { data: { nome: nome.trim() } },
         });
         if (error) throw error;
-        // Sem sessão = projeto exige confirmação de e-mail.
-        return { needsConfirmation: !data.session };
+      },
+      async verifyPhoneOtp(phone, token) {
+        const { error } = await supabase.auth.verifyOtp({
+          phone: phone.trim(),
+          token: token.trim(),
+          type: "sms",
+        });
+        if (error) throw error;
+      },
+      async resendPhoneOtp(phone) {
+        const { error } = await supabase.auth.resend({
+          type: "sms",
+          phone: phone.trim(),
+        });
+        if (error) throw error;
+      },
+      async signInWithGoogle() {
+        const redirectTo = AuthSession.makeRedirectUri({ scheme: "cbrio" });
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: { redirectTo, skipBrowserRedirect: true },
+        });
+        if (error) throw error;
+        if (!data.url) throw new Error("Não foi possível iniciar o login.");
+
+        const result = await WebBrowser.openAuthSessionAsync(
+          data.url,
+          redirectTo
+        );
+        if (result.type !== "success") return; // usuário cancelou
+
+        const params = new URL(result.url).hash.replace(/^#/, "");
+        const search = new URLSearchParams(params);
+        const access_token = search.get("access_token");
+        const refresh_token = search.get("refresh_token");
+        if (access_token && refresh_token) {
+          const { error: sessErr } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          });
+          if (sessErr) throw sessErr;
+        }
+      },
+      async signInWithApple() {
+        if (Platform.OS !== "ios") {
+          throw new Error("Login com Apple disponível apenas no iOS.");
+        }
+        const credential = await AppleAuthentication.signInAsync({
+          requestedScopes: [
+            AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+            AppleAuthentication.AppleAuthenticationScope.EMAIL,
+          ],
+        });
+        if (!credential.identityToken) {
+          throw new Error("Não foi possível obter o token da Apple.");
+        }
+        const { error } = await supabase.auth.signInWithIdToken({
+          provider: "apple",
+          token: credential.identityToken,
+        });
+        if (error) throw error;
       },
       async resetPassword(email) {
         const { error } = await supabase.auth.resetPasswordForEmail(
@@ -76,7 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error;
       },
     }),
-    [session, loading]
+    [session, loading, rememberPref]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

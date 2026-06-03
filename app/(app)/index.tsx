@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
+import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
 import { colors, font, spacing } from "@/constants/theme";
 
@@ -12,6 +13,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.content}>
         <View style={styles.header}>
+          <CbrioHeart size={56} color={colors.brandMid} />
           <Text style={styles.hello}>Olá, {nome} 👋</Text>
           <Text style={styles.note}>
             Autenticação concluída. Os próximos módulos do app entram aqui.

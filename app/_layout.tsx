@@ -1,9 +1,9 @@
 import { useEffect } from "react";
-import { ActivityIndicator, View } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { SplashPulse } from "@/components/brand/SplashPulse";
 import { colors } from "@/constants/theme";
 
 function RootNavigator() {
@@ -24,11 +24,7 @@ function RootNavigator() {
   }, [session, loading, segments]);
 
   if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", backgroundColor: colors.background }}>
-        <ActivityIndicator color={colors.primary} size="large" />
-      </View>
-    );
+    return <SplashPulse />;
   }
 
   return (
