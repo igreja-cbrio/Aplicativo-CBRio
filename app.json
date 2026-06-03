@@ -15,7 +15,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "br.com.cbrio.app",
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSMotionUsageDescription": "O CBRio usa o sensor de movimento para o efeito holográfico do seu cartão."
+      }
     },
     "android": {
       "package": "br.com.cbrio.app",

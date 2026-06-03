@@ -1,5 +1,7 @@
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
+import { Platform } from "react-native";
+import PassKit from "react-native-wallet-pass";
 
 // API do ERP CBRio (mesma app). O .pkpass é gerado on-demand e devolvido binário.
 const API = "https://cbrio.org/api";
@@ -33,6 +35,20 @@ async function abrirPkpass(resp: Response, nome: string) {
   }
   const buf = await resp.arrayBuffer();
   const b64 = toBase64(new Uint8Array(buf));
+
+  // iOS: abre direto a tela nativa "Adicionar à Apple Wallet" (PassKit /
+  // PKAddPassesViewController) a partir do passe em base64. Adicionar um passe
+  // não exige entitlement — funciona até com Apple ID gratuito.
+  if (Platform.OS === "ios") {
+    const podeAdicionar = await PassKit.canAddPasses();
+    if (!podeAdicionar) {
+      throw new Error("Este dispositivo não suporta a Apple Wallet.");
+    }
+    await PassKit.addPass(b64);
+    return;
+  }
+
+  // Android (sem Apple Wallet): mantém o compartilhamento como fallback.
   const fileUri = `${FileSystem.cacheDirectory}${nome}.pkpass`;
   await FileSystem.writeAsStringAsync(fileUri, b64, {
     encoding: FileSystem.EncodingType.Base64,

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   Image,
   Pressable,
   ScrollView,
@@ -13,12 +14,19 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import QRCode from "react-native-qrcode-svg";
 import { Button } from "@/components/ui/Button";
+import { CbrioHeart } from "@/components/brand/CbrioHeart";
+import { HoloTicket } from "@/components/cartao/HoloTicket";
+import { AddToWalletButton } from "@/components/cartao/AddToWalletButton";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { supabase } from "@/lib/supabase";
 import { adicionarWalletMembresia } from "@/lib/wallet";
 import { onlyDigits } from "@/lib/validators";
 import { brand, font, radius, spacing, type Palette } from "@/constants/theme";
+
+const CARD_RADIUS = 22;
+const CARD_WIDTH = Dimensions.get("window").width - spacing.lg * 2;
+const CARD_HEIGHT = 500;
 
 function statusLabel(s?: string | null) {
   // Espelha o passe do ERP: "Ativo" ou "Cadastro pendente".
@@ -125,45 +133,65 @@ export default function CartoesScreen() {
           </View>
         ) : (
           <>
-            {/* Cartão idêntico ao passe da Wallet (fundo teal #408097) */}
-            <View style={styles.card}>
-              <Image
-                source={require("../../assets/images/cbrio-wordmark.png")}
-                style={styles.wordmark}
-                resizeMode="contain"
+            {/* Cartão holográfico — toque para virar (efeito holo reage à
+                inclinação do aparelho). Fundo teal #408097 desenhado em Skia. */}
+            <View style={styles.cardWrap}>
+              <HoloTicket
+                width={CARD_WIDTH}
+                height={CARD_HEIGHT}
+                radius={CARD_RADIUS}
+                color={brand.primary}
+                frontSide={
+                  <View style={styles.face}>
+                    <Image
+                      source={require("../../assets/images/cbrio-wordmark.png")}
+                      style={styles.wordmark}
+                      resizeMode="contain"
+                    />
+
+                    <Text style={styles.label}>MEMBRO</Text>
+                    <Text style={styles.nome} numberOfLines={1}>
+                      {nome ?? "Membro"}
+                    </Text>
+
+                    <View style={styles.row}>
+                      <View>
+                        <Text style={styles.label}>IGREJA</Text>
+                        <Text style={styles.value}>CBRio</Text>
+                      </View>
+                      <View style={{ alignItems: "flex-end" }}>
+                        <Text style={styles.label}>STATUS</Text>
+                        <Text style={styles.value}>{statusLabel(status)}</Text>
+                      </View>
+                    </View>
+
+                    <Text style={[styles.label, { marginTop: spacing.md }]}>ID</Text>
+                    <Text style={styles.value}>{cartaoId(membroId)}</Text>
+
+                    <View style={styles.qrBox}>
+                      {token ? (
+                        <QRCode value={token} size={150} backgroundColor="#ffffff" color="#0B1F26" />
+                      ) : (
+                        <Text style={styles.qrMissing}>QR indisponível</Text>
+                      )}
+                    </View>
+                  </View>
+                }
+                backSide={
+                  <View style={styles.backFace}>
+                    <CbrioHeart size={96} color={brand.sand} />
+                    <Text style={styles.backTitle}>CARTÃO DE MEMBRO</Text>
+                    <Text style={styles.backNome} numberOfLines={1}>
+                      {nome ?? "Membro"}
+                    </Text>
+                    <Text style={styles.backId}>{cartaoId(membroId)}</Text>
+                  </View>
+                }
               />
-
-              <Text style={styles.label}>MEMBRO</Text>
-              <Text style={styles.nome}>{nome ?? "Membro"}</Text>
-
-              <View style={styles.row}>
-                <View>
-                  <Text style={styles.label}>IGREJA</Text>
-                  <Text style={styles.value}>CBRio</Text>
-                </View>
-                <View style={{ alignItems: "flex-end" }}>
-                  <Text style={styles.label}>STATUS</Text>
-                  <Text style={styles.value}>{statusLabel(status)}</Text>
-                </View>
-              </View>
-
-              <Text style={[styles.label, { marginTop: spacing.md }]}>ID</Text>
-              <Text style={styles.value}>{cartaoId(membroId)}</Text>
-
-              <View style={styles.qrBox}>
-                {token ? (
-                  <QRCode value={token} size={196} backgroundColor="#ffffff" color="#0B1F26" />
-                ) : (
-                  <Text style={styles.qrMissing}>QR indisponível</Text>
-                )}
-              </View>
             </View>
+            <Text style={styles.hint}>Toque no cartão para virar</Text>
 
-            <Button
-              title="Adicionar à Wallet"
-              onPress={addWallet}
-              loading={walletLoading}
-            />
+            <AddToWalletButton onPress={addWallet} loading={walletLoading} />
             {erro && <Text style={styles.erro}>{erro}</Text>}
           </>
         )}
@@ -187,10 +215,30 @@ const makeStyles = (colors: Palette) =>
     empty: { alignItems: "center", gap: spacing.sm, marginTop: spacing.xl, paddingHorizontal: spacing.lg },
     emptyText: { color: colors.textMuted, fontSize: font.size.md, textAlign: "center", lineHeight: 22 },
 
-    card: {
-      backgroundColor: brand.primary, // azul/teal principal #408097
-      borderRadius: 22,
+    cardWrap: { alignSelf: "center" },
+    // Fundo (teal) é desenhado pelo HolographicCard em Skia; o conteúdo é transparente.
+    face: { flex: 1, padding: spacing.lg },
+    backFace: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.sm,
       padding: spacing.lg,
+    },
+    backTitle: {
+      color: "rgba(255,255,255,0.7)",
+      fontSize: 12,
+      fontWeight: "700",
+      letterSpacing: 2,
+      marginTop: spacing.md,
+    },
+    backNome: { color: "#FFFFFF", fontSize: 22, fontWeight: "700" },
+    backId: { color: brand.sand, fontSize: font.size.md, letterSpacing: 1 },
+    hint: {
+      color: colors.textMuted,
+      fontSize: font.size.sm,
+      textAlign: "center",
+      marginTop: -spacing.xs,
     },
     wordmark: {
       width: 92,

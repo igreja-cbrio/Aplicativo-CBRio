@@ -20,6 +20,15 @@ módulo**. Roda em **Android e iOS**.
   sistema por padrão + opção de fixar claro/escuro no Menu). Componentes/telas
   usam `useColors()` + `makeStyles(colors)`.
 - Ícones: `@expo/vector-icons` (bundled com Expo).
+- **Animação / gráficos:** `react-native-reanimated` (v3) +
+  `react-native-gesture-handler` (gestos do cartão), `@shopify/react-native-skia`
+  (brilho holográfico do cartão) e `expo-haptics`. O plugin do Reanimated está no
+  `babel.config.js` (deve ser o **último**) e a raiz é envolvida por
+  `GestureHandlerRootView` (`app/_layout.tsx`). ⚠️ Por usarem código nativo,
+  **Expo Go não roda mais** — é preciso **development build** (`npx expo run:ios`).
+- **Apple Wallet:** `react-native-wallet-pass` expõe `PassKit.addPass(base64)`
+  (abre a tela nativa de adicionar passe) e o componente `AddPassButton`
+  (`PKAddPassButton` — botão oficial da Apple, HIG).
 - **Navegação autenticada:** abas via `expo-router` `Tabs` com **Dock glass**
   custom (`components/ui/Dock.tsx`) — vidro fosco real com `expo-blur`, leve
   flutuação, ícone ativo destacado e ponto indicador. Abas: Home, Cuidados,
@@ -44,7 +53,7 @@ app/
     generosidade.tsx   # placeholder (em breve)
     menu.tsx           # demais opções, aparência (tema) + Sair
     perfil.tsx         # editar e-mail/telefone/nascimento + CPF (vincula ao membro) + foto + cartões
-    cartoes.tsx        # CARTÃO ÚNICO: QR (mem_qrcodes.token) na tela + Adicionar à Wallet
+    cartoes.tsx        # CARTÃO ÚNICO holográfico (toque vira; brilho holo reage ao giroscópio) + QR (mem_qrcodes.token) + botão oficial "Add to Apple Wallet"
     voluntariado.tsx   # inscrição de voluntariado (+ escalas em breve)
     inscricoes.tsx     # hub: Batismo, Grupos, NEXT, Voluntariado; fora do dock
     inscricao-batismo.tsx / inscricao-grupos.tsx / inscricao-next.tsx
@@ -53,8 +62,9 @@ components/
 lib/
   inscricoes.ts        # criarInscricao(tipo, dados) -> grava em app_inscricoes
   useMembro.ts         # carrega dados do membro logado p/ pré-preencher
-  wallet.ts            # baixa o .pkpass (API do ERP) e abre "Adicionar à Wallet"
+  wallet.ts            # baixa o .pkpass (API do ERP); iOS adiciona direto via PassKit (react-native-wallet-pass), Android compartilha
 components/
+  cartao/              # HoloTicket + HolographicCard (Skia) + useDeviceTilt (giroscópio) + AddToWalletButton (PKAddPassButton oficial)
   ui/                  # Button, Input, SocialButton, Checkbox, CodeInput, PhoneInput, Dock, ComingSoon
 constants/
   countries.ts         # lista de países (bandeira via emoji + DDI) p/ o PhoneInput
