@@ -5,7 +5,14 @@ import { supabase } from "./supabase";
  * (tipo + dados jsonb). O SISTEMA_INTEGRADO_CBRIO processa essas inscrições
  * para as tabelas finais (batismo_inscricoes, next_inscricoes, vol_inscricoes…).
  */
-export type TipoInscricao = "batismo" | "grupo" | "next" | "voluntariado";
+export type TipoInscricao =
+  | "batismo"
+  | "grupo"
+  | "next"
+  | "voluntariado"
+  | "oracao"
+  | "aconselhamento"
+  | "sos";
 
 export async function criarInscricao(
   tipo: TipoInscricao,
