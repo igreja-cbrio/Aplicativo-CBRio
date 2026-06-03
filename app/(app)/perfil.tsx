@@ -23,9 +23,11 @@ import { useColors } from "@/contexts/ThemeContext";
 import { supabase } from "@/lib/supabase";
 import {
   dateBRToISO,
+  isValidCPF,
   isValidDateBR,
   maskCPF,
   maskDateBR,
+  onlyDigits,
 } from "@/lib/validators";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
@@ -148,28 +150,75 @@ export default function PerfilScreen() {
       setMsg({ type: "err", text: "Faça login para editar o perfil." });
       return;
     }
+    const cpfDigits = onlyDigits(cpf);
+    if (cpf && !isValidCPF(cpf)) {
+      setMsg({ type: "err", text: "CPF inválido." });
+      return;
+    }
     if (nascimento && !isValidDateBR(nascimento)) {
       setMsg({ type: "err", text: "Data de nascimento inválida (DD/MM/AAAA)." });
       return;
     }
     setSaving(true);
     try {
-      // Atualiza profiles (telefone)
+      let targetId = membroId;
+
+      // 1) Vincular ao cadastro existente pelo CPF (se houver outro membro com esse CPF)
+      if (cpfDigits.length === 11) {
+        const { data: existente } = await supabase
+          .from("mem_membros")
+          .select("id")
+          .eq("cpf", cpfDigits)
+          .is("deleted_at", null)
+          .limit(1)
+          .maybeSingle();
+        if (existente?.id && existente.id !== membroId) {
+          const { error: linkErr } = await supabase
+            .from("profiles")
+            .update({ membro_id: existente.id })
+            .eq("id", user.id);
+          if (linkErr) throw linkErr;
+          setMembroId(existente.id);
+
+          // Recarrega os dados do cadastro existente (sem sobrescrever)
+          const { data: m } = await supabase
+            .from("mem_membros")
+            .select("nome, cpf, data_nascimento, telefone, foto_url")
+            .eq("id", existente.id)
+            .maybeSingle();
+          if (m) {
+            setName(m.nome ?? name);
+            setCpf(m.cpf ? maskCPF(m.cpf) : cpf);
+            setNascimento(isoToBR(m.data_nascimento));
+            if (m.telefone) setTelefone(m.telefone);
+            if (m.foto_url) setAvatarUrl((prev) => prev ?? m.foto_url);
+          }
+          setMsg({
+            type: "ok",
+            text: "Pronto! Vinculamos seu login ao seu cadastro na CBRio.",
+          });
+          setSaving(false);
+          return;
+        }
+      }
+
+      // 2) Edição normal do próprio cadastro
       const { error: pErr } = await supabase
         .from("profiles")
         .update({ telefone: telefone.trim() || null })
         .eq("id", user.id);
       if (pErr) throw pErr;
 
-      // Atualiza mem_membros (telefone + nascimento) se vinculado
-      if (membroId != null) {
+      if (targetId != null) {
+        const upd: Record<string, unknown> = {
+          telefone: telefone.trim() || null,
+          data_nascimento: nascimento ? dateBRToISO(nascimento) : null,
+        };
+        if (cpfDigits.length === 11) upd.cpf = cpfDigits;
         const { error: mErr } = await supabase
           .from("mem_membros")
-          .update({
-            telefone: telefone.trim() || null,
-            data_nascimento: nascimento ? dateBRToISO(nascimento) : null,
-          })
-          .eq("id", membroId);
+          .update(upd)
+          .eq("id", targetId);
         if (mErr) throw mErr;
       }
 
@@ -253,8 +302,17 @@ export default function PerfilScreen() {
           <View style={styles.form}>
             <Input label="Nome completo" value={name} editable={false} />
             <View>
-              <Input label="CPF" value={cpf} editable={false} />
-              <Text style={styles.lockHint}>O CPF não pode ser alterado.</Text>
+              <Input
+                label="CPF"
+                value={cpf}
+                onChangeText={(t) => setCpf(maskCPF(t))}
+                placeholder="000.000.000-00"
+                keyboardType="number-pad"
+                maxLength={14}
+              />
+              <Text style={styles.lockHint}>
+                Informe seu CPF e salve para vincular ao seu cadastro na CBRio.
+              </Text>
             </View>
             <Input
               label="E-mail"
