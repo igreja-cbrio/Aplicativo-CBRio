@@ -4,12 +4,21 @@ import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
 import { colors, font, radius, spacing } from "@/constants/theme";
 
+function primeiroNome(nomeCompleto?: string, email?: string | null) {
+  const nome = nomeCompleto?.trim();
+  if (nome) return nome.split(/\s+/)[0];
+  // Sem nome: deriva do e-mail (matheus@... -> Matheus)
+  const local = (email ?? "").split("@")[0]?.split(/[._-]/)[0] ?? "";
+  if (local) return local.charAt(0).toUpperCase() + local.slice(1);
+  return "membro";
+}
+
 export default function InicioScreen() {
   const { user } = useAuth();
-  const nome =
-    (user?.user_metadata?.nome as string)?.split(" ")[0] ||
-    user?.email ||
-    "membro";
+  const nome = primeiroNome(
+    user?.user_metadata?.nome as string | undefined,
+    user?.email
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
