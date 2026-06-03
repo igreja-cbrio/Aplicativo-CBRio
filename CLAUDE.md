@@ -77,18 +77,18 @@ Métodos em `contexts/AuthContext.tsx`:
 a sessão é gravada no `AsyncStorage` (persiste após fechar o app); quando
 desligado, fica só em memória (some ao reiniciar o app).
 
-### ⚠️ Configuração necessária no painel do Supabase
+### ⚠️ Configuração do Supabase
 
-O código cliente está pronto, mas estes provedores precisam ser configurados no
-dashboard do Supabase para funcionarem de verdade:
+Projeto: `https://otzemqmlprwhtvfxbvkj.supabase.co`. Passo a passo completo em
+[`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md). Resumo:
 
-1. **Google**: Authentication → Providers → Google (Client ID/Secret). Adicionar
-   a redirect URL do app (`cbrio://`).
-2. **Apple**: Authentication → Providers → Apple (Service ID, Team ID, Key). Só
-   funciona em build iOS real/simulador, não no Expo Go.
-3. **Phone/SMS**: Authentication → Providers → Phone, com provedor de SMS
-   (ex.: Twilio/MessageBird) e credenciais.
-4. Variáveis `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY` no `.env`.
+1. `.env` com `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
+2. **Perfis**: rodar `supabase/profiles.sql` (tabela `profiles` + RLS + trigger
+   que cria o perfil no cadastro a partir do `nome`).
+3. **Redirect URLs**: `cbrio://` (Authentication → URL Configuration) — p/ OAuth.
+4. **Google**: Providers → Google (Client ID/Secret; callback do Supabase no Google Cloud).
+5. **Apple**: Providers → Apple (Authorized Client ID = `br.com.cbrio.app`); só em build iOS.
+6. **Phone/SMS**: Providers → Phone + provedor (ex.: Twilio).
 
 ## Como rodar
 
