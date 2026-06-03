@@ -1,4 +1,4 @@
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 
 // API do ERP CBRio (mesma app). O .pkpass é gerado on-demand e devolvido binário.

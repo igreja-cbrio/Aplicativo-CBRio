@@ -13,7 +13,7 @@ type Props = {
 
 const CONFIG = {
   google: { icon: "google" as const, label: "Continuar com Google" },
-  apple: { icon: "apple1" as const, label: "Continuar com Apple" },
+  apple: { icon: "apple" as const, label: "Continuar com Apple" },
 };
 
 export function SocialButton({ provider, onPress, loading, disabled }: Props) {
