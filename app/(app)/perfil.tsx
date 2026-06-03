@@ -165,87 +165,26 @@ export default function PerfilScreen() {
     }
     setSaving(true);
     try {
-      let targetId = membroId;
-
-      // 1) Vincular ao cadastro existente pelo CPF (testa com e sem pontuação)
-      if (cpfDigits.length === 11) {
-        const masked = maskCPF(cpfDigits);
-        const { data: existente } = await supabase
-          .from("mem_membros")
-          .select("id")
-          .or(`cpf.eq.${cpfDigits},cpf.eq.${masked}`)
-          .is("deleted_at", null)
-          .limit(1)
-          .maybeSingle();
-        if (!existente?.id && membroId == null) {
-          setMsg({
-            type: "err",
-            text: "Não encontramos um cadastro com esse CPF no sistema. Confira o número ou fale com a equipe da CBRio.",
-          });
-          setSaving(false);
-          return;
-        }
-        if (existente?.id && existente.id !== membroId) {
-          const { error: linkErr } = await supabase
-            .from("profiles")
-            .update({ membro_id: existente.id })
-            .eq("id", user.id);
-          if (linkErr) throw linkErr;
-          setMembroId(existente.id);
-
-          // Recarrega os dados do cadastro existente (sem sobrescrever)
-          const { data: m } = await supabase
-            .from("mem_membros")
-            .select("nome, cpf, data_nascimento, telefone, foto_url")
-            .eq("id", existente.id)
-            .maybeSingle();
-          if (m) {
-            setName(m.nome ?? name);
-            setCpf(m.cpf ? maskCPF(m.cpf) : cpf);
-            setNascimento(isoToBR(m.data_nascimento));
-            if (m.telefone) setTelefone(m.telefone);
-            if (m.foto_url) setAvatarUrl((prev) => prev ?? m.foto_url);
-          }
-          setMsg({
-            type: "ok",
-            text: "Pronto! Vinculamos seu login ao seu cadastro na CBRio.",
-          });
-          setSaving(false);
-          return;
-        }
-      }
-
-      // 2) Edição normal do próprio cadastro
+      // 1) Atualiza a própria linha em profiles (nome + telefone)
       const { error: pErr } = await supabase
         .from("profiles")
         .update({ name: name.trim(), telefone: telefone.trim() || null })
         .eq("id", user.id);
       if (pErr) throw pErr;
 
-      if (targetId != null) {
-        const upd: Record<string, unknown> = {
-          nome: name.trim(),
-          telefone: telefone.trim() || null,
-          data_nascimento: nascimento ? dateBRToISO(nascimento) : null,
-        };
-        if (cpfDigits.length === 11) upd.cpf = cpfDigits;
-        const { data: atualizado, error: mErr } = await supabase
-          .from("mem_membros")
-          .update(upd)
-          .eq("id", targetId)
-          .select("id");
-        if (mErr) throw mErr;
-        if (!atualizado || atualizado.length === 0) {
-          setMsg({
-            type: "err",
-            text: "Seu e-mail/telefone foram salvos, mas os dados do cadastro de membro (nascimento) não puderam ser alterados por permissão do sistema. Estamos ajustando isso.",
-          });
-          setSaving(false);
-          return;
-        }
-      }
+      // 2) Vincula/cria/atualiza o membro no servidor (cruza CPF, telefone ou
+      //    nome; contorna o RLS com segurança, só no próprio cadastro).
+      const { data: vId, error: rErr } = await supabase.rpc("app_salvar_membro", {
+        p_cpf: cpfDigits || null,
+        p_nome: name.trim() || null,
+        p_telefone: telefone.trim() || null,
+        p_email: email.trim() || null,
+        p_nascimento: nascimento ? dateBRToISO(nascimento) : null,
+      });
+      if (rErr) throw rErr;
+      if (vId) setMembroId(vId as string);
 
-      // E-mail (via auth — pode exigir confirmação)
+      // 3) E-mail (via auth — pode exigir confirmação)
       let emailAviso = false;
       if (email.trim() && email.trim() !== user.email) {
         const { error: eErr } = await supabase.auth.updateUser({
@@ -255,7 +194,23 @@ export default function PerfilScreen() {
         emailAviso = true;
       }
 
-      setMsg({ type: "ok", text: "Perfil atualizado com sucesso." });
+      // 4) Recarrega os dados do membro vinculado
+      if (vId) {
+        const { data: m } = await supabase
+          .from("mem_membros")
+          .select("nome, cpf, data_nascimento, telefone, foto_url")
+          .eq("id", vId as string)
+          .maybeSingle();
+        if (m) {
+          if (m.nome) setName(m.nome);
+          setCpf(m.cpf ? maskCPF(m.cpf) : cpf);
+          setNascimento(isoToBR(m.data_nascimento));
+          if (m.telefone) setTelefone(m.telefone);
+          if (m.foto_url) setAvatarUrl((prev) => prev ?? m.foto_url);
+        }
+      }
+
+      setMsg({ type: "ok", text: "Perfil salvo e vinculado ao seu cadastro." });
       if (emailAviso) {
         Alert.alert(
           "Confirme o novo e-mail",

@@ -122,6 +122,11 @@ Schema relevante do sistema:
 metadados do signup (`nome, cpf, telefone, data_nascimento`). Versão aplicada em
 [`supabase/handle_new_user_membro.sql`](./supabase/handle_new_user_membro.sql).
 
+**Vínculo do membro:** o perfil chama a função `app_salvar_membro(cpf,nome,telefone,email,nascimento)`
+(`SECURITY DEFINER`, em `supabase/app_salvar_membro.sql`) que **cruza por CPF, telefone OU
+nome**, cria o membro se for novo, atualiza os dados (contornando o RLS com segurança) e
+vincula `profiles.membro_id`. Resolve o caso de contas antigas e o save de nascimento.
+
 **Foto de perfil:** bucket `avatars` (Storage) neste projeto + `supabase/storage.sql`.
 
 > Os arquivos `supabase/profiles.sql` e a config antiga referem-se ao projeto
