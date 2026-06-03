@@ -101,14 +101,17 @@ Paleta oficial (em `constants/theme.ts` → `brand`):
 
 Fundo do app: teal escuro `#0B1F26` (mantém o visual "glass" alinhado à marca).
 
-**Logos:** wordmark "cbrio", heart+wordmark e o **coração** isolado. O coração
-está recriado como **vetor SVG** em `components/brand/CbrioHeart.tsx` (cor,
-tamanho e espessura configuráveis) — não depende de arquivo de imagem. Para
-fidelidade pixel-perfect, substituir por arte oficial em `assets/`.
+**Logos:** arte **oficial** em `assets/images/` (ver `assets/images/README.md`):
+`cbrio-heart.png` (coração teal), `cbrio-vertical-light.png` (logo clara),
+`cbrio-vertical.png`, `cbrio-wordmark.png`. O ícone do app (`app-icon.png`) e a
+splash nativa (`splash.png`) são compostos com `sharp` e referenciados no
+`app.json`.
 
-- **Splash / carregamento** (`components/brand/SplashPulse.tsx`): coração da
-  CBRio **pulsando** (scale + opacity em loop) enquanto a sessão é restaurada.
-  Usado em `app/_layout.tsx`.
+- **Componente** `components/brand/CbrioHeart.tsx`: renderiza `cbrio-heart.png`
+  via `Image` (prop `size`; prop `color` = `tintColor` para recolorir).
+- **Splash / carregamento** (`components/brand/SplashPulse.tsx`): logo clara da
+  CBRio **pulsando** (scale + opacity em loop) sobre o fundo teal escuro,
+  enquanto a sessão é restaurada. Usado em `app/_layout.tsx`.
 - **Header dos formulários** (login, cadastro, etc.): coração dentro de um
   círculo "glass".
 

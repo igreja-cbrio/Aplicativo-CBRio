@@ -1,27 +1,25 @@
 # Logos e imagens da CBRio
 
-Coloque os arquivos **oficiais** aqui com **exatamente** estes nomes. Assim que
-estiverem no repositório, o app passa a usar a arte oficial no lugar do vetor.
+Arte **oficial** da marca usada pelo app.
 
-## Logos da marca
+## Arquivos em uso
 
-| Arquivo                      | O que é                                  | Uso no app                       |
-| ---------------------------- | ---------------------------------------- | -------------------------------- |
-| `cbrio-heart.png`            | Coração (teal `#408097`)                 | header dos formulários, home     |
-| `cbrio-heart-light.png`      | Coração na cor areia/claro (`#eae3da`)   | splash sobre fundo escuro        |
-| `cbrio-heart-wordmark.png`   | Coração + "cbrio" (versão teal)          | telas de marca / sobre           |
-| `cbrio-wordmark.png`         | Apenas a palavra "cbrio" (teal)          | cabeçalhos                       |
+| Arquivo                     | Conteúdo                              | Onde é usado                          |
+| --------------------------- | ------------------------------------- | ------------------------------------- |
+| `cbrio-heart.png`           | Coração (teal `#408097`)              | header dos formulários, home, ícone Android, base do ícone do app |
+| `cbrio-vertical-light.png`  | Coração + "cbrio" (areia `#eae3da`)   | **splash** pulsante (fundo escuro)    |
+| `cbrio-vertical.png`        | Coração + "cbrio" (teal)              | uso geral / telas claras              |
+| `cbrio-wordmark.png`        | Apenas "cbrio" (teal)                 | cabeçalhos                            |
+| `paleta-cores.png`          | Referência da paleta                  | documentação                          |
 
-> Use **PNG com fundo transparente**, quadrado quando possível, ~1024×1024px
-> (ou maior). SVG também serve — me avise que ajusto o carregamento.
+## Gerados automaticamente (não editar à mão)
 
-## Ícone e splash do app (opcional, recomendado)
+| Arquivo         | Como é gerado                                                        |
+| --------------- | ------------------------------------------------------------------- |
+| `app-icon.png`  | coração sobre fundo areia, 1024×1024, opaco (ícone iOS/Android)     |
+| `splash.png`    | logo vertical claro sobre fundo teal `#0B1F26`, 1284×1284           |
 
-| Arquivo               | Tamanho      | Uso                                  |
-| --------------------- | ------------ | ------------------------------------ |
-| `icon.png`            | 1024×1024    | ícone do app (iOS/Android)           |
-| `adaptive-icon.png`   | 1024×1024    | ícone adaptativo Android (só o símbolo) |
-| `splash.png`          | ~1284×2778   | imagem da splash nativa              |
-
-Depois que subir, me avise — eu aponto o `app.json` e o componente
-`CbrioHeart`/`SplashPulse` para os arquivos.
+> Esses dois são compostos a partir das artes acima. Para regerar após trocar
+> uma logo, rode um script com `sharp` compondo coração+fundo (ver histórico do
+> commit "logos oficiais"). Referenciados em `app.json` (`icon`, `splash`,
+> `android.adaptiveIcon`).

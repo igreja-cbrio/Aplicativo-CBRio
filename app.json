@@ -7,7 +7,9 @@
     "scheme": "cbrio",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "icon": "./assets/images/app-icon.png",
     "splash": {
+      "image": "./assets/images/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#0B1F26"
     },
@@ -17,7 +19,11 @@
       "usesAppleSignIn": true
     },
     "android": {
-      "package": "br.com.cbrio.app"
+      "package": "br.com.cbrio.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/cbrio-heart.png",
+        "backgroundColor": "#eae3da"
+      }
     },
     "web": {
       "bundler": "metro",

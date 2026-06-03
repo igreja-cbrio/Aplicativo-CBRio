@@ -64,7 +64,7 @@ export default function VerificarTelefoneScreen() {
         >
           <View style={styles.card}>
             <View style={styles.logoCircle}>
-              <CbrioHeart size={40} color={colors.brandPale} strokeWidth={10} />
+              <CbrioHeart size={40} color={colors.brandPale} />
             </View>
             <Text style={styles.title}>Confirme seu número</Text>
             <Text style={styles.subtitle}>

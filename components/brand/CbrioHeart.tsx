@@ -1,33 +1,21 @@
-import Svg, { Path } from "react-native-svg";
-import { brand } from "@/constants/theme";
+import { Image } from "react-native";
 
 type Props = {
   size?: number;
+  /** Recolore o coração (tintColor). Sem valor, usa o teal original da arte. */
   color?: string;
-  strokeWidth?: number;
 };
 
 /**
- * Coração da marca CBRio recriado como vetor (traço aberto com cauda).
- * Usado no splash (pulsando) e no cabeçalho do formulário de login.
- *
- * Para fidelidade total à arte oficial, basta substituir este componente
- * pelo SVG/PNG oficial em assets/ e apontar para ele.
+ * Coração da marca CBRio (arte oficial — assets/images/cbrio-heart.png).
+ * Usado no cabeçalho dos formulários e na home.
  */
-export function CbrioHeart({
-  size = 96,
-  color = brand.primary,
-  strokeWidth = 11,
-}: Props) {
+export function CbrioHeart({ size = 96, color }: Props) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-      <Path
-        d="M22 60 C8 44 16 24 36 30 C46 33 50 40 52 46 C55 30 70 18 84 30 C96 41 90 62 70 76 C62 82 56 87 52 93"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
+    <Image
+      source={require("../../assets/images/cbrio-heart.png")}
+      style={{ width: size, height: size, tintColor: color }}
+      resizeMode="contain"
+    />
   );
 }

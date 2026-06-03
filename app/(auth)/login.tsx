@@ -69,7 +69,7 @@ export default function LoginScreen() {
           <View style={styles.card}>
             {/* Header com a logo do coração CBRio */}
             <View style={styles.logoCircle}>
-              <CbrioHeart size={44} color={colors.brandPale} strokeWidth={10} />
+              <CbrioHeart size={44} color={colors.brandPale} />
             </View>
             <Text style={styles.brand}>CBRio</Text>
             <Text style={styles.subtitle}>Bem-vindo de volta</Text>
