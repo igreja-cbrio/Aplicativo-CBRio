@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,7 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { colors, font, radius, spacing } from "@/constants/theme";
 
 export default function CadastroScreen() {
-  const { signUpWithPhone } = useAuth();
+  const { signUp } = useAuth();
   const router = useRouter();
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -27,12 +28,8 @@ export default function CadastroScreen() {
 
   async function handleSignUp() {
     setError(null);
-    if (!nome || !email || !phone || !password) {
-      setError("Preencha todos os campos.");
-      return;
-    }
-    if (!phone.startsWith("+")) {
-      setError("Use o telefone no formato internacional, ex.: +5521999999999");
+    if (!nome || !email || !password) {
+      setError("Preencha nome, e-mail e senha.");
       return;
     }
     if (password.length < 6) {
@@ -41,11 +38,20 @@ export default function CadastroScreen() {
     }
     setLoading(true);
     try {
-      await signUpWithPhone(nome, email, phone, password);
-      router.push({
-        pathname: "/(auth)/verificar-telefone",
-        params: { phone },
-      });
+      const { needsEmailConfirmation } = await signUp(
+        nome,
+        email,
+        password,
+        phone
+      );
+      if (needsEmailConfirmation) {
+        Alert.alert(
+          "Confirme seu e-mail",
+          "Enviamos um link de confirmação para o seu e-mail. Confirme para entrar.",
+          [{ text: "OK", onPress: () => router.replace("/(auth)/login") }]
+        );
+      }
+      // Com a sessão criada, o guard de rotas leva direto para a área logada.
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível criar a conta.");
     } finally {
@@ -86,7 +92,7 @@ export default function CadastroScreen() {
                 keyboardType="email-address"
               />
               <Input
-                label="Telefone (com DDI)"
+                label="Telefone (opcional)"
                 value={phone}
                 onChangeText={setPhone}
                 placeholder="+55 21 99999-9999"
@@ -107,9 +113,6 @@ export default function CadastroScreen() {
                 onPress={handleSignUp}
                 loading={loading}
               />
-              <Text style={styles.hint}>
-                Enviaremos um código por SMS para confirmar seu número.
-              </Text>
             </View>
           </View>
 

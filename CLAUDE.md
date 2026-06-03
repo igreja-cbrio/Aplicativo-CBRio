@@ -54,7 +54,7 @@ constants/
 
 | Status | Módulo           | Descrição                                                        |
 | :----: | ---------------- | ---------------------------------------------------------------- |
-|   ✅   | **Autenticação** | Login e-mail/senha, Google, Apple, "lembrar de mim", cadastro com SMS, recuperação de senha |
+|   ✅   | **Autenticação** | Login/cadastro e-mail/senha, Google, Apple, "lembrar de mim", recuperação de senha (SMS pronto, desligado até ter remetente BR) |
 |   ⬜   | _Próximos_       | A definir, construídos um a um                                   |
 
 ## Módulo 1 — Autenticação (detalhes)
@@ -63,11 +63,12 @@ Métodos em `contexts/AuthContext.tsx`:
 
 - `signIn(email, password, remember)` — login e-mail/senha; `remember` controla
   a persistência da sessão (storage híbrido).
-- `signUpWithPhone(nome, email, phone, password)` — cria a conta e envia código
-  por SMS. O usuário vai para `verificar-telefone`.
-- `verifyPhoneOtp(phone, token)` — confirma o código SMS e abre a sessão. A tela
-  `verificar-telefone` usa o `CodeInput` (células OTP segmentadas e animadas —
-  pop ao preencher + caret piscando; auto-confirma ao completar os 6 dígitos).
+- `signUp(nome, email, password, phone?)` — **cadastro atual**: e-mail/senha
+  (telefone opcional vai p/ os metadados). Retorna `needsEmailConfirmation`.
+- `signUpWithPhone` / `verifyPhoneOtp` / `resendPhoneOtp` — fluxo de **SMS (OTP)**,
+  pronto no código mas **desativado por enquanto** (Twilio não entrega SMS p/ BR
+  sem remetente registrado na Anatel). A tela `verificar-telefone` (com o
+  `CodeInput` animado) fica guardada para quando o SMS for religado.
 - `signInWithGoogle()` — OAuth via Supabase + `expo-web-browser`.
 - `signInWithApple()` — `expo-apple-authentication` + `signInWithIdToken` (iOS).
 - `resetPassword(email)` — envia link de recuperação.

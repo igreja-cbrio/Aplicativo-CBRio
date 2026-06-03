@@ -28,6 +28,12 @@ type AuthContextValue = {
   preview: boolean;
   enterPreview: () => void;
   signIn: (email: string, password: string, remember: boolean) => Promise<void>;
+  signUp: (
+    nome: string,
+    email: string,
+    password: string,
+    phone?: string
+  ) => Promise<{ needsEmailConfirmation: boolean }>;
   signUpWithPhone: (
     nome: string,
     email: string,
@@ -88,6 +94,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           password,
         });
         if (error) throw error;
+      },
+      async signUp(nome, email, password, phone) {
+        // Cadastro por e-mail/senha (sem SMS). O telefone, se informado,
+        // fica nos metadados para o perfil.
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: { nome: nome.trim(), telefone: phone?.trim() || null },
+          },
+        });
+        if (error) throw error;
+        // Sem sessão = o projeto exige confirmação de e-mail.
+        return { needsEmailConfirmation: !data.session };
       },
       async signUpWithPhone(nome, email, phone, password) {
         // Cria a conta com e-mail/senha e telefone; o Supabase envia o SMS.
