@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,7 +16,21 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { criarInscricao } from "@/lib/inscricoes";
+import { supabase } from "@/lib/supabase";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+
+type Escala = {
+  id: string;
+  data: string;
+  papel: string | null;
+  confirmado: boolean | null;
+  ministerio: string | null;
+};
+
+function fmtData(iso: string) {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+}
 
 export default function VoluntariadoScreen() {
   const { user } = useAuth();
@@ -23,6 +38,65 @@ export default function VoluntariadoScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
+  // ---- Minhas escalas ----
+  const [escalas, setEscalas] = useState<Escala[]>([]);
+  const [carregandoEscalas, setCarregandoEscalas] = useState(false);
+  const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
+
+  const carregarEscalas = useCallback(async () => {
+    if (!membro?.membroId) return;
+    setCarregandoEscalas(true);
+    const hoje = new Date().toISOString().slice(0, 10);
+    const { data } = await supabase
+      .from("mem_escalas")
+      .select("id, data, papel, confirmado, ministerio_id")
+      .eq("membro_id", membro.membroId)
+      .gte("data", hoje)
+      .order("data", { ascending: true });
+
+    const rows = (data as { id: string; data: string; papel: string | null; confirmado: boolean | null; ministerio_id: string | null }[]) ?? [];
+    const ids = [...new Set(rows.map((r) => r.ministerio_id).filter(Boolean))] as string[];
+    let nomes: Record<string, string> = {};
+    if (ids.length) {
+      const { data: mins } = await supabase
+        .from("mem_ministerios")
+        .select("id, nome")
+        .in("id", ids);
+      (mins as { id: string; nome: string }[] | null)?.forEach((m) => {
+        nomes[m.id] = m.nome;
+      });
+    }
+    setEscalas(
+      rows.map((r) => ({
+        id: r.id,
+        data: r.data,
+        papel: r.papel,
+        confirmado: r.confirmado,
+        ministerio: r.ministerio_id ? nomes[r.ministerio_id] ?? null : null,
+      }))
+    );
+    setCarregandoEscalas(false);
+  }, [membro?.membroId]);
+
+  useEffect(() => {
+    carregarEscalas();
+  }, [carregarEscalas]);
+
+  async function confirmar(id: string) {
+    setConfirmandoId(id);
+    const { error } = await supabase
+      .from("mem_escalas")
+      .update({ confirmado: true })
+      .eq("id", id);
+    if (!error) {
+      setEscalas((prev) =>
+        prev.map((e) => (e.id === id ? { ...e, confirmado: true } : e))
+      );
+    }
+    setConfirmandoId(null);
+  }
+
+  // ---- Inscrição de voluntariado ----
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [email, setEmail] = useState("");
@@ -72,76 +146,95 @@ export default function VoluntariadoScreen() {
     }
   }
 
+  const ehVoluntario = !!membro?.voluntario || escalas.length > 0;
+
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-        >
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <View style={styles.badge}>
               <Ionicons name="hand-left" size={28} color={colors.brandPale} />
             </View>
             <Text style={styles.title}>Voluntariado</Text>
-            <Text style={styles.subtitle}>
-              Sirva com a gente na CBRio. Preencha e nossa equipe entra em contato.
-            </Text>
           </View>
 
-          {enviado ? (
-            <View style={styles.card}>
+          {ehVoluntario ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Minhas escalas</Text>
+              {carregandoEscalas ? (
+                <Text style={styles.muted}>Carregando…</Text>
+              ) : escalas.length === 0 ? (
+                <View style={styles.emptyCard}>
+                  <Ionicons name="calendar-outline" size={28} color={colors.textMuted} />
+                  <Text style={styles.muted}>
+                    Você não tem escalas futuras no momento.
+                  </Text>
+                </View>
+              ) : (
+                escalas.map((e) => (
+                  <View key={e.id} style={styles.escala}>
+                    <View style={styles.escalaInfo}>
+                      <Text style={styles.escalaMin}>
+                        {e.ministerio ?? "Ministério"}
+                      </Text>
+                      <Text style={styles.escalaMeta}>
+                        {fmtData(e.data)}
+                        {e.papel ? ` · ${e.papel}` : ""}
+                      </Text>
+                    </View>
+                    {e.confirmado ? (
+                      <View style={styles.confirmado}>
+                        <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                        <Text style={styles.confirmadoTxt}>Confirmada</Text>
+                      </View>
+                    ) : (
+                      <Pressable
+                        style={styles.confirmarBtn}
+                        onPress={() => confirmar(e.id)}
+                        disabled={confirmandoId === e.id}
+                      >
+                        <Text style={styles.confirmarTxt}>
+                          {confirmandoId === e.id ? "..." : "Confirmar"}
+                        </Text>
+                      </Pressable>
+                    )}
+                  </View>
+                ))
+              )}
+              <View style={styles.soon}>
+                <Ionicons name="notifications-outline" size={18} color={colors.textMuted} />
+                <Text style={styles.soonText}>
+                  Em breve: aviso no celular quando você for escalado.
+                </Text>
+              </View>
+            </View>
+          ) : enviado ? (
+            <View style={styles.emptyCard}>
               <Ionicons name="checkmark-circle" size={40} color={colors.success} />
-              <Text style={styles.okTitle}>Inscrição enviada!</Text>
-              <Text style={styles.okText}>
-                Recebemos sua inscrição de voluntariado. Em breve a equipe da CBRio
-                fala com você. 💙
+              <Text style={styles.title}>Inscrição enviada!</Text>
+              <Text style={styles.muted}>
+                Recebemos sua inscrição de voluntariado. Em breve a equipe fala com
+                você. 💙
               </Text>
             </View>
           ) : (
-            <View style={styles.form}>
+            <View style={styles.section}>
+              <Text style={styles.subtitle}>
+                Sirva com a gente na CBRio. Preencha e nossa equipe entra em contato.
+              </Text>
               <Input label="Nome completo" value={nome} onChangeText={setNome} autoCapitalize="words" />
-              <Input
-                label="Telefone"
-                value={telefone}
-                onChangeText={setTelefone}
-                keyboardType="phone-pad"
-                placeholder="+55 21 99999-9999"
-              />
+              <Input label="Telefone" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="+55 21 99999-9999" />
               <Input label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" />
-              <Input
-                label="Área de interesse (opcional)"
-                value={area}
-                onChangeText={setArea}
-                placeholder="Ex.: louvor, recepção, kids, mídia…"
-              />
-              <Input
-                label="Disponibilidade (opcional)"
-                value={disponibilidade}
-                onChangeText={setDisponibilidade}
-                placeholder="Ex.: domingos à noite"
-              />
-
+              <Input label="Área de interesse (opcional)" value={area} onChangeText={setArea} placeholder="Ex.: louvor, recepção, kids…" />
+              <Input label="Disponibilidade (opcional)" value={disponibilidade} onChangeText={setDisponibilidade} placeholder="Ex.: domingos à noite" />
               {error && <Text style={styles.error}>{error}</Text>}
-
-              <Button
-                title="Quero ser voluntário"
-                onPress={enviar}
-                loading={enviando || loading}
-              />
+              <Button title="Quero ser voluntário" onPress={enviar} loading={enviando || loading} />
             </View>
           )}
-
-          {/* Self-service de escalas (em breve) */}
-          <View style={styles.soon}>
-            <Ionicons name="calendar-outline" size={20} color={colors.textMuted} />
-            <Text style={styles.soonText}>
-              Em breve: suas escalas e avisos quando você for escalado.
-            </Text>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -153,7 +246,7 @@ const makeStyles = (colors: Palette) =>
     safe: { flex: 1, backgroundColor: colors.background },
     flex: { flex: 1 },
     content: { padding: spacing.lg, paddingBottom: 120, gap: spacing.lg },
-    header: { alignItems: "center", gap: spacing.xs, marginTop: spacing.md },
+    header: { alignItems: "center", gap: spacing.sm, marginTop: spacing.md },
     badge: {
       width: 72,
       height: 72,
@@ -163,18 +256,14 @@ const makeStyles = (colors: Palette) =>
       borderColor: colors.glassBorder,
       alignItems: "center",
       justifyContent: "center",
-      marginBottom: spacing.xs,
     },
-    title: { color: colors.text, fontSize: font.size.xl, fontWeight: "800" },
-    subtitle: {
-      color: colors.textMuted,
-      fontSize: font.size.md,
-      textAlign: "center",
-      lineHeight: 22,
-    },
-    form: { gap: spacing.md },
+    title: { color: colors.text, fontSize: font.size.xl, fontWeight: "800", textAlign: "center" },
+    subtitle: { color: colors.textMuted, fontSize: font.size.md, textAlign: "center", lineHeight: 22 },
+    section: { gap: spacing.md },
+    sectionTitle: { color: colors.text, fontSize: font.size.lg, fontWeight: "700" },
+    muted: { color: colors.textMuted, fontSize: font.size.md, textAlign: "center", lineHeight: 22 },
     error: { color: colors.danger, fontSize: font.size.sm },
-    card: {
+    emptyCard: {
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
       borderWidth: 1,
@@ -183,8 +272,28 @@ const makeStyles = (colors: Palette) =>
       alignItems: "center",
       gap: spacing.sm,
     },
-    okTitle: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
-    okText: { color: colors.textMuted, fontSize: font.size.md, textAlign: "center", lineHeight: 22 },
+    escala: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      padding: spacing.lg,
+    },
+    escalaInfo: { flex: 1, gap: 2 },
+    escalaMin: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
+    escalaMeta: { color: colors.textMuted, fontSize: font.size.sm },
+    confirmarBtn: {
+      backgroundColor: colors.primary,
+      borderRadius: radius.full,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    confirmarTxt: { color: "#fff", fontSize: font.size.sm, fontWeight: "700" },
+    confirmado: { flexDirection: "row", alignItems: "center", gap: 4 },
+    confirmadoTxt: { color: colors.success, fontSize: font.size.sm, fontWeight: "600" },
     soon: {
       flexDirection: "row",
       alignItems: "center",
