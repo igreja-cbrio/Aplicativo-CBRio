@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -5,7 +6,8 @@ import {
   Text,
   type PressableProps,
 } from "react-native";
-import { colors, font, radius, spacing } from "@/constants/theme";
+import { useColors } from "@/contexts/ThemeContext";
+import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Props = PressableProps & {
   title: string;
@@ -20,6 +22,8 @@ export function Button({
   disabled,
   ...rest
 }: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const isDisabled = disabled || loading;
   return (
     <Pressable
@@ -33,7 +37,7 @@ export function Button({
       {...rest}
     >
       {loading ? (
-        <ActivityIndicator color={colors.text} />
+        <ActivityIndicator color={variant === "ghost" ? colors.primary : "#fff"} />
       ) : (
         <Text
           style={[
@@ -48,26 +52,17 @@ export function Button({
   );
 }
 
-const styles = StyleSheet.create({
-  base: {
-    height: 52,
-    borderRadius: radius.full,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing.lg,
-  },
-  primary: {
-    backgroundColor: colors.primary,
-  },
-  ghost: {
-    backgroundColor: "transparent",
-  },
-  dimmed: {
-    opacity: 0.6,
-  },
-  label: {
-    color: colors.text,
-    fontSize: font.size.md,
-    fontWeight: "600",
-  },
-});
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+    base: {
+      height: 52,
+      borderRadius: radius.full,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: spacing.lg,
+    },
+    primary: { backgroundColor: colors.primary },
+    ghost: { backgroundColor: "transparent" },
+    dimmed: { opacity: 0.6 },
+    label: { color: "#fff", fontSize: font.size.md, fontWeight: "600" },
+  });

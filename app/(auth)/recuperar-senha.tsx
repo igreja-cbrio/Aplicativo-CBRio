@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -13,10 +13,13 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
-import { colors, font, radius, spacing } from "@/constants/theme";
+import { useColors } from "@/contexts/ThemeContext";
+import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 export default function RecuperarSenhaScreen() {
   const { resetPassword } = useAuth();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
@@ -89,7 +92,8 @@ export default function RecuperarSenhaScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   scroll: {

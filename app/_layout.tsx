@@ -3,11 +3,12 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { SplashPulse } from "@/components/brand/SplashPulse";
-import { colors } from "@/constants/theme";
 
 function RootNavigator() {
   const { session, loading, preview } = useAuth();
+  const { colors, mode } = useTheme();
   const segments = useSegments();
   const router = useRouter();
   const authed = !!session || preview;
@@ -29,20 +30,29 @@ function RootNavigator() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
-      <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(app)" />
-    </Stack>
+    <>
+      <StatusBar style={mode === "light" ? "dark" : "light"} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(app)" />
+      </Stack>
+    </>
   );
 }
 
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <StatusBar style="light" />
-        <RootNavigator />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <RootNavigator />
+        </AuthProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

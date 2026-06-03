@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -7,7 +7,8 @@ import {
   View,
   type TextInputProps,
 } from "react-native";
-import { colors, font, radius, spacing } from "@/constants/theme";
+import { useColors } from "@/contexts/ThemeContext";
+import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Props = TextInputProps & {
   label: string;
@@ -15,6 +16,8 @@ type Props = TextInputProps & {
 };
 
 export function Input({ label, secure, ...rest }: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [hidden, setHidden] = useState(!!secure);
 
   return (
@@ -38,33 +41,32 @@ export function Input({ label, secure, ...rest }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    gap: spacing.xs,
-  },
-  label: {
-    color: colors.textMuted,
-    fontSize: font.size.sm,
-    fontWeight: "600",
-  },
-  field: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-  },
-  input: {
-    flex: 1,
-    height: 52,
-    color: colors.text,
-    fontSize: font.size.md,
-  },
-  toggle: {
-    color: colors.primary,
-    fontSize: font.size.sm,
-    fontWeight: "600",
-  },
-});
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+    wrapper: { gap: spacing.xs },
+    label: {
+      color: colors.textMuted,
+      fontSize: font.size.sm,
+      fontWeight: "600",
+    },
+    field: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surfaceAlt,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: spacing.md,
+    },
+    input: {
+      flex: 1,
+      height: 52,
+      color: colors.text,
+      fontSize: font.size.md,
+    },
+    toggle: {
+      color: colors.primary,
+      fontSize: font.size.sm,
+      fontWeight: "600",
+    },
+  });

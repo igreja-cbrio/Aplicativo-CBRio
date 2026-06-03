@@ -15,7 +15,10 @@ módulo**. Roda em **Android e iOS**.
 - **React Native 0.74** / React 18 / **TypeScript** (strict)
 - **Supabase** para autenticação (e futuramente dados)
 - **Estilização:** `StyleSheet` nativo (decisão: melhor performance/confiabilidade
-  no celular; sem Tailwind/NativeWind). Tema central em `constants/theme.ts`.
+  no celular; sem Tailwind/NativeWind). **Tema claro/escuro** com paletas em
+  `constants/theme.ts` (`lightColors`/`darkColors`) e `ThemeContext` (segue o
+  sistema por padrão + opção de fixar claro/escuro no Menu). Componentes/telas
+  usam `useColors()` + `makeStyles(colors)`.
 - Ícones: `@expo/vector-icons` (bundled com Expo).
 - **Navegação autenticada:** abas via `expo-router` `Tabs` com **Dock glass**
   custom (`components/ui/Dock.tsx`) — vidro fosco real com `expo-blur`, leve
@@ -48,6 +51,7 @@ lib/
   validators.ts        # máscaras/validações: CPF, data (DD/MM/AAAA)
 contexts/
   AuthContext.tsx      # sessão e todos os métodos de auth
+  ThemeContext.tsx     # tema claro/escuro (segue o sistema + override); useColors()/useTheme()
 lib/
   supabase.ts          # cliente Supabase + storage híbrido (lembrar de mim)
 constants/

@@ -1,11 +1,8 @@
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-} from "react-native";
+import { useMemo } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
 import { AntDesign } from "@expo/vector-icons";
-import { colors, font, radius, spacing } from "@/constants/theme";
+import { useColors } from "@/contexts/ThemeContext";
+import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Props = {
   provider: "google" | "apple";
@@ -20,6 +17,8 @@ const CONFIG = {
 };
 
 export function SocialButton({ provider, onPress, loading, disabled }: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { icon, label } = CONFIG[provider];
   const isDisabled = disabled || loading;
 
@@ -45,18 +44,19 @@ export function SocialButton({ provider, onPress, loading, disabled }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  base: {
-    height: 52,
-    borderRadius: radius.full,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    backgroundColor: colors.glass,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-  },
-  dimmed: { opacity: 0.6 },
-  label: { color: colors.text, fontSize: font.size.md, fontWeight: "600" },
-});
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+    base: {
+      height: 52,
+      borderRadius: radius.full,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.sm,
+      backgroundColor: colors.glass,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+    },
+    dimmed: { opacity: 0.6 },
+    label: { color: colors.text, fontSize: font.size.md, fontWeight: "600" },
+  });

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Animated,
   Easing,
@@ -7,7 +7,8 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { colors, font, radius } from "@/constants/theme";
+import { useColors } from "@/contexts/ThemeContext";
+import { font, radius, type Palette } from "@/constants/theme";
 
 type Props = {
   value: string;
@@ -19,11 +20,7 @@ type Props = {
 
 /**
  * Entrada de código (OTP) em células segmentadas com animação:
- * - cada célula dá um "pop" (scale) ao ser preenchida
- * - a célula em foco fica destacada com um caret piscando
- *
- * Inspirado no layout de verification-code (enzomanuelmangano/demos),
- * recriado com a API Animated nativa do React Native.
+ * pop ao preencher + caret piscando na célula em foco.
  */
 export function CodeInput({
   value,
@@ -32,6 +29,8 @@ export function CodeInput({
   onFilled,
   autoFocus = true,
 }: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const inputRef = useRef<TextInput>(null);
 
   function handleChange(text: string) {
@@ -45,6 +44,7 @@ export function CodeInput({
       {Array.from({ length: cellCount }).map((_, i) => (
         <Cell
           key={i}
+          styles={styles}
           digit={value[i] ?? ""}
           focused={i === value.length}
           filled={i < value.length}
@@ -71,15 +71,16 @@ function Cell({
   digit,
   focused,
   filled,
+  styles,
 }: {
   digit: string;
   focused: boolean;
   filled: boolean;
+  styles: ReturnType<typeof makeStyles>;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
   const caret = useRef(new Animated.Value(0)).current;
 
-  // "Pop" ao preencher a célula.
   useEffect(() => {
     if (digit) {
       scale.setValue(1.18);
@@ -93,7 +94,6 @@ function Cell({
     }
   }, [digit, scale]);
 
-  // Caret piscando na célula em foco e vazia.
   useEffect(() => {
     if (focused && !digit) {
       const loop = Animated.loop(
@@ -136,31 +136,27 @@ function Cell({
   );
 }
 
-const styles = StyleSheet.create({
-  row: { flexDirection: "row", justifyContent: "center", gap: 10 },
-  cell: {
-    width: 46,
-    height: 56,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cellFilled: { borderColor: colors.brandMid },
-  cellFocused: { borderColor: colors.primary, backgroundColor: colors.glass },
-  digit: { color: colors.text, fontSize: font.size.xl, fontWeight: "700" },
-  caret: {
-    width: 2,
-    height: 24,
-    borderRadius: 1,
-    backgroundColor: colors.primary,
-  },
-  hiddenInput: {
-    position: "absolute",
-    width: 1,
-    height: 1,
-    opacity: 0,
-  },
-});
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
+    row: { flexDirection: "row", justifyContent: "center", gap: 10 },
+    cell: {
+      width: 46,
+      height: 56,
+      borderRadius: radius.md,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      backgroundColor: colors.surfaceAlt,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    cellFilled: { borderColor: colors.brandMid },
+    cellFocused: { borderColor: colors.primary, backgroundColor: colors.glass },
+    digit: { color: colors.text, fontSize: font.size.xl, fontWeight: "700" },
+    caret: {
+      width: 2,
+      height: 24,
+      borderRadius: 1,
+      backgroundColor: colors.primary,
+    },
+    hiddenInput: { position: "absolute", width: 1, height: 1, opacity: 0 },
+  });

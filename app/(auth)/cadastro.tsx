@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/Input";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
+import { useColors } from "@/contexts/ThemeContext";
 import { DEFAULT_COUNTRY, type Country } from "@/constants/countries";
 import {
   dateBRToISO,
@@ -24,10 +25,12 @@ import {
   maskDateBR,
   onlyDigits,
 } from "@/lib/validators";
-import { colors, font, radius, spacing } from "@/constants/theme";
+import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 export default function CadastroScreen() {
   const { signUp } = useAuth();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
@@ -165,7 +168,8 @@ export default function CadastroScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   scroll: {

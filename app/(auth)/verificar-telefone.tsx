@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -13,11 +13,14 @@ import { Button } from "@/components/ui/Button";
 import { CodeInput } from "@/components/ui/CodeInput";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
-import { colors, font, radius, spacing } from "@/constants/theme";
+import { useColors } from "@/contexts/ThemeContext";
+import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 export default function VerificarTelefoneScreen() {
   const { phone } = useLocalSearchParams<{ phone: string }>();
   const { verifyPhoneOtp, resendPhoneOtp } = useAuth();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -101,7 +104,8 @@ export default function VerificarTelefoneScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   scroll: {

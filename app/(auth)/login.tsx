@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -15,11 +15,14 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { SocialButton } from "@/components/ui/SocialButton";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
-import { colors, font, radius, spacing } from "@/constants/theme";
+import { useColors } from "@/contexts/ThemeContext";
+import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 export default function LoginScreen() {
   const { signIn, signInWithGoogle, signInWithApple, rememberPref, enterPreview } =
     useAuth();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(rememberPref);
@@ -161,7 +164,8 @@ function traduzErro(msg: string) {
   return msg;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   scroll: {

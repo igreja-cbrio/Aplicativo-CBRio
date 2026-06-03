@@ -1,17 +1,17 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Animated,
   Easing,
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, radius, spacing } from "@/constants/theme";
+import { useTheme } from "@/contexts/ThemeContext";
+import { radius, spacing, type Palette } from "@/constants/theme";
 
 export type DockItem = {
   key: string;
@@ -28,6 +28,8 @@ export type DockItem = {
  * - ícone ativo destacado, anel de brilho e ponto indicador
  */
 export function Dock({ items }: { items: DockItem[] }) {
+  const { colors, mode } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const bob = useRef(new Animated.Value(0)).current;
 
@@ -60,12 +62,12 @@ export function Dock({ items }: { items: DockItem[] }) {
       <Animated.View style={{ transform: [{ translateY: bob }] }}>
         <BlurView
           intensity={40}
-          tint="dark"
+          tint={mode}
           experimentalBlurMethod={Platform.OS === "android" ? "dimezisBlurView" : undefined}
           style={styles.dock}
         >
           {items.map((item) => (
-            <DockButton key={item.key} item={item} />
+            <DockButton key={item.key} item={item} colors={colors} styles={styles} />
           ))}
         </BlurView>
       </Animated.View>
@@ -73,7 +75,15 @@ export function Dock({ items }: { items: DockItem[] }) {
   );
 }
 
-function DockButton({ item }: { item: DockItem }) {
+function DockButton({
+  item,
+  colors,
+  styles,
+}: {
+  item: DockItem;
+  colors: Palette;
+  styles: ReturnType<typeof makeStyles>;
+}) {
   const scale = useRef(new Animated.Value(item.active ? 1 : 0.92)).current;
 
   useEffect(() => {
@@ -113,7 +123,8 @@ function DockButton({ item }: { item: DockItem }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   wrapper: {
     position: "absolute",
     left: 0,
@@ -132,7 +143,7 @@ const styles = StyleSheet.create({
     borderColor: colors.glassBorder,
     overflow: "hidden",
     // fallback caso o blur não pegue (mantém o look glass)
-    backgroundColor: "rgba(16,42,51,0.55)",
+    backgroundColor: colors.dockBg,
   },
   item: { alignItems: "center", justifyContent: "center" },
   iconWrap: {

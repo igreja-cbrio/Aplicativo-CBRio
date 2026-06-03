@@ -1,12 +1,13 @@
 import { useEffect, useRef } from "react";
 import { Animated, Easing, Image, StyleSheet, View } from "react-native";
-import { colors } from "@/constants/theme";
+import { useColors } from "@/contexts/ThemeContext";
 
 /**
  * Tela de carregamento do app: a logo da CBRio (versão clara) pulsando
  * sobre o fundo teal escuro, enquanto a sessão do usuário é restaurada.
  */
 export function SplashPulse() {
+  const colors = useColors();
   const scale = useRef(new Animated.Value(0.9)).current;
   const opacity = useRef(new Animated.Value(0.65)).current;
 
@@ -48,10 +49,14 @@ export function SplashPulse() {
   }, [scale, opacity]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Animated.View style={{ transform: [{ scale }], opacity }}>
         <Image
-          source={require("../../assets/images/cbrio-vertical-light.png")}
+          source={
+            colors.background === "#0B1F26"
+              ? require("../../assets/images/cbrio-vertical-light.png")
+              : require("../../assets/images/cbrio-vertical.png")
+          }
           style={styles.logo}
           resizeMode="contain"
         />
@@ -65,7 +70,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.background,
   },
   logo: { width: 180, height: 180 },
 });

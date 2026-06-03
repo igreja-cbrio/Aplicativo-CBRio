@@ -11,7 +11,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COUNTRIES, flagEmoji, type Country } from "@/constants/countries";
 import { onlyDigits } from "@/lib/validators";
-import { colors, font, radius, spacing } from "@/constants/theme";
+import { useColors } from "@/contexts/ThemeContext";
+import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Props = {
   label: string;
@@ -28,6 +29,8 @@ export function PhoneInput({
   number,
   onChangeNumber,
 }: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -107,7 +110,8 @@ export function PhoneInput({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   wrapper: { gap: spacing.xs },
   label: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "600" },
   row: { flexDirection: "row", gap: spacing.sm },
