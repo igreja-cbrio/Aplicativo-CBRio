@@ -4,6 +4,22 @@ Objetivo: **um único cartão/QR por pessoa**. O mesmo QR serve para
 identificação de membresia e para check-in de voluntário — **quem decide a ação
 é o leitor** (o app só mostra o QR e oferece "Adicionar à Wallet").
 
+## Cor do passe na Wallet (azul) — mudança no ERP
+
+A cor do `.pkpass` é definida no ERP (`backend/services/appleWallet.js`,
+`buildMembroPass`). Para o passe entrar **azul** na Wallet (igual ao app), trocar
+no `pass.json`:
+
+```js
+backgroundColor: 'rgb(64,128,151)',   // #408097
+foregroundColor: 'rgb(255,255,255)',  // texto branco
+labelColor:      'rgb(213,228,230)',  // #D5E4E6
+```
+
+E trocar o `logo`/`logo@2x` do passe por uma **versão clara/branca** do wordmark
+(o logo petróleo some no fundo azul). O app não controla essas cores — só baixa o
+arquivo gerado pelo ERP.
+
 ## O que o APP já faz (pronto)
 - Tela **Meu cartão** (`app/(app)/cartoes.tsx`): mostra **um** cartão com o **QR
   na tela** (valor = `mem_qrcodes.token` do membro logado) + botão **Adicionar à
