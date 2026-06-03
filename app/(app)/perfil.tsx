@@ -167,15 +167,24 @@ export default function PerfilScreen() {
     try {
       let targetId = membroId;
 
-      // 1) Vincular ao cadastro existente pelo CPF (se houver outro membro com esse CPF)
+      // 1) Vincular ao cadastro existente pelo CPF (testa com e sem pontuação)
       if (cpfDigits.length === 11) {
+        const masked = maskCPF(cpfDigits);
         const { data: existente } = await supabase
           .from("mem_membros")
           .select("id")
-          .eq("cpf", cpfDigits)
+          .or(`cpf.eq.${cpfDigits},cpf.eq.${masked}`)
           .is("deleted_at", null)
           .limit(1)
           .maybeSingle();
+        if (!existente?.id && membroId == null) {
+          setMsg({
+            type: "err",
+            text: "Não encontramos um cadastro com esse CPF no sistema. Confira o número ou fale com a equipe da CBRio.",
+          });
+          setSaving(false);
+          return;
+        }
         if (existente?.id && existente.id !== membroId) {
           const { error: linkErr } = await supabase
             .from("profiles")
