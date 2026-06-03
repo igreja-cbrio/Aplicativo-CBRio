@@ -11,8 +11,10 @@ módulo**. Roda em **Android e iOS**.
 
 ## Stack
 
-- **Expo SDK 51** + **Expo Router** (rotas tipadas)
-- **React Native 0.74** / React 18 / **TypeScript** (strict)
+- **Expo SDK 54** + **Expo Router** (rotas tipadas)
+- **React Native 0.81** / React 19 / **TypeScript** (strict)
+- **Liquid Glass (iOS 26)** via `expo-glass-effect` (`GlassView`) no Dock; fallback
+  `expo-blur` em iOS antigo/Android (`isLiquidGlassAvailable()`).
 - **Supabase** para autenticação (e futuramente dados)
 - **Estilização:** `StyleSheet` nativo (decisão: melhor performance/confiabilidade
   no celular; sem Tailwind/NativeWind). **Tema claro/escuro** com paletas em

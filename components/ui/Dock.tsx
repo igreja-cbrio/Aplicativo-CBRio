@@ -8,10 +8,13 @@ import {
   View,
 } from "react-native";
 import { BlurView } from "expo-blur";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/contexts/ThemeContext";
 import { radius, spacing, type Palette } from "@/constants/theme";
+
+const LIQUID = isLiquidGlassAvailable();
 
 export type DockItem = {
   key: string;
@@ -60,16 +63,29 @@ export function Dock({ items }: { items: DockItem[] }) {
       style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}
     >
       <Animated.View style={{ transform: [{ translateY: bob }] }}>
-        <BlurView
-          intensity={40}
-          tint={mode}
-          experimentalBlurMethod={Platform.OS === "android" ? "dimezisBlurView" : undefined}
-          style={styles.dock}
-        >
-          {items.map((item) => (
-            <DockButton key={item.key} item={item} colors={colors} styles={styles} />
-          ))}
-        </BlurView>
+        {LIQUID ? (
+          <GlassView
+            glassEffectStyle="regular"
+            isInteractive
+            colorScheme={mode}
+            style={styles.dock}
+          >
+            {items.map((item) => (
+              <DockButton key={item.key} item={item} colors={colors} styles={styles} />
+            ))}
+          </GlassView>
+        ) : (
+          <BlurView
+            intensity={40}
+            tint={mode}
+            experimentalBlurMethod={Platform.OS === "android" ? "dimezisBlurView" : undefined}
+            style={[styles.dock, { backgroundColor: colors.dockBg }]}
+          >
+            {items.map((item) => (
+              <DockButton key={item.key} item={item} colors={colors} styles={styles} />
+            ))}
+          </BlurView>
+        )}
       </Animated.View>
     </View>
   );
@@ -139,11 +155,9 @@ const makeStyles = (colors: Palette) =>
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.xl,
-    borderWidth: 1,
+    borderWidth: LIQUID ? 0 : 1,
     borderColor: colors.glassBorder,
     overflow: "hidden",
-    // fallback caso o blur não pegue (mantém o look glass)
-    backgroundColor: colors.dockBg,
   },
   item: { alignItems: "center", justifyContent: "center" },
   iconWrap: {
