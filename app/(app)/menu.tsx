@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
@@ -27,10 +28,11 @@ export default function MenuScreen() {
   const { user, signOut } = useAuth();
   const { colors, preference, setPreference } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const router = useRouter();
   const nome = (user?.user_metadata?.nome as string) || "Membro CBRio";
 
   const options: Option[] = [
-    { label: "Meu perfil", icon: "person-outline" },
+    { label: "Meu perfil", icon: "person-outline", onPress: () => router.navigate("/perfil") },
     { label: "Cartões", icon: "card-outline" },
     { label: "Eventos", icon: "calendar-outline" },
     { label: "Bíblia e devocionais", icon: "book-outline" },

@@ -42,7 +42,8 @@ app/
     cuidados.tsx       # placeholder (em breve)
     voluntariado.tsx   # placeholder (em breve)
     generosidade.tsx   # placeholder (em breve)
-    menu.tsx           # perfil do usuário + demais opções + Sair
+    menu.tsx           # demais opções, aparência (tema) + Sair
+    perfil.tsx         # editar e-mail/telefone/nascimento (CPF travado); fora do dock
 components/
   ui/                  # Button, Input, SocialButton, Checkbox, CodeInput, PhoneInput, Dock, ComingSoon
 constants/

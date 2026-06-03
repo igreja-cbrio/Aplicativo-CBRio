@@ -19,7 +19,7 @@ function primeiroNome(nomeCompleto?: string, email?: string | null) {
 type Atalho = {
   label: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
-  href: "/cuidados" | "/voluntariado" | "/generosidade" | "/menu";
+  href: "/cuidados" | "/voluntariado" | "/generosidade" | "/perfil";
   desc: string;
 };
 
@@ -27,7 +27,7 @@ const ATALHOS: Atalho[] = [
   { label: "Cuidados", icon: "heart", href: "/cuidados", desc: "Oração e apoio" },
   { label: "Voluntariado", icon: "hand-left", href: "/voluntariado", desc: "Sirva com a gente" },
   { label: "Generosidade", icon: "gift", href: "/generosidade", desc: "Dízimos e ofertas" },
-  { label: "Meu perfil", icon: "person", href: "/menu", desc: "Conta e cartões" },
+  { label: "Meu perfil", icon: "person", href: "/perfil", desc: "Conta e cartões" },
 ];
 
 export default function InicioScreen() {
@@ -51,7 +51,7 @@ export default function InicioScreen() {
           </View>
           <Pressable
             style={styles.avatar}
-            onPress={() => router.navigate("/menu")}
+            onPress={() => router.navigate("/perfil")}
             accessibilityRole="button"
             accessibilityLabel="Abrir perfil"
           >
