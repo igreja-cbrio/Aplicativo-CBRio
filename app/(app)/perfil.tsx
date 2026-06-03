@@ -229,11 +229,20 @@ export default function PerfilScreen() {
           data_nascimento: nascimento ? dateBRToISO(nascimento) : null,
         };
         if (cpfDigits.length === 11) upd.cpf = cpfDigits;
-        const { error: mErr } = await supabase
+        const { data: atualizado, error: mErr } = await supabase
           .from("mem_membros")
           .update(upd)
-          .eq("id", targetId);
+          .eq("id", targetId)
+          .select("id");
         if (mErr) throw mErr;
+        if (!atualizado || atualizado.length === 0) {
+          setMsg({
+            type: "err",
+            text: "Seu e-mail/telefone foram salvos, mas os dados do cadastro de membro (nascimento) não puderam ser alterados por permissão do sistema. Estamos ajustando isso.",
+          });
+          setSaving(false);
+          return;
+        }
       }
 
       // E-mail (via auth — pode exigir confirmação)
