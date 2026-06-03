@@ -44,7 +44,7 @@ app/
     generosidade.tsx   # placeholder (em breve)
     menu.tsx           # demais opções, aparência (tema) + Sair
     perfil.tsx         # editar e-mail/telefone/nascimento + CPF (vincula ao membro) + foto + cartões
-    cartoes.tsx        # cartões de membresia/voluntariado (mesmo Supabase); fora do dock
+    cartoes.tsx        # CARTÃO ÚNICO: QR (mem_qrcodes.token) na tela + Adicionar à Wallet
     voluntariado.tsx   # inscrição de voluntariado (+ escalas em breve)
     inscricoes.tsx     # hub: Batismo, Grupos, NEXT, Voluntariado; fora do dock
     inscricao-batismo.tsx / inscricao-grupos.tsx / inscricao-next.tsx
@@ -53,6 +53,7 @@ components/
 lib/
   inscricoes.ts        # criarInscricao(tipo, dados) -> grava em app_inscricoes
   useMembro.ts         # carrega dados do membro logado p/ pré-preencher
+  wallet.ts            # baixa o .pkpass (API do ERP) e abre "Adicionar à Wallet"
 components/
   ui/                  # Button, Input, SocialButton, Checkbox, CodeInput, PhoneInput, Dock, ComingSoon
 constants/

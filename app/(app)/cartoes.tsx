@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
-  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,37 +10,35 @@ import {
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import QRCode from "react-native-qrcode-svg";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { supabase } from "@/lib/supabase";
+import { adicionarWalletMembresia } from "@/lib/wallet";
+import { onlyDigits } from "@/lib/validators";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 /**
- * Cartões (membresia/voluntariado) do SISTEMA_INTEGRADO_CBRIO.
- * Modelo real: profiles.membro_id -> mem_membros; QR em mem_qrcodes (por cpf).
- * O passe da Wallet (.pkpass) é gerado por um endpoint do sistema — defina abaixo.
+ * Cartão ÚNICO da CBRio: um QR (mem_qrcodes.token) que serve para tudo —
+ * identificação de membro e check-in de voluntário (o leitor decide a ação).
+ * O QR aparece na tela (lê na hora) e dá para adicionar à Wallet (.pkpass do ERP).
  */
-const WALLET_PASS_URL: string | null = null; // ex.: "https://sistema.cbrio.com.br/wallet/pass"
-
-type Membro = {
-  id: string;
-  nome: string;
-  cpf: string | null;
-  status: string | null;
-  voluntario: boolean | null;
-};
-
 export default function CartoesScreen() {
   const { user } = useAuth();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
 
-  const [membro, setMembro] = useState<Membro | null>(null);
+  const [nome, setNome] = useState<string | null>(null);
+  const [cpf, setCpf] = useState<string | null>(null);
+  const [nascimento, setNascimento] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [voluntario, setVoluntario] = useState(false);
   const [token, setToken] = useState<string | null>(null);
-  const [ehVoluntario, setEhVoluntario] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [vinculado, setVinculado] = useState(true);
+  const [walletLoading, setWalletLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
@@ -57,42 +53,35 @@ export default function CartoesScreen() {
       .eq("id", user.id)
       .maybeSingle();
     if (!prof?.membro_id) {
+      setVinculado(false);
       setLoading(false);
       return;
     }
-    const { data: m, error } = await supabase
+    const { data: m } = await supabase
       .from("mem_membros")
-      .select("id, nome, cpf, status, voluntario")
+      .select("nome, cpf, status, data_nascimento, voluntario")
       .eq("id", prof.membro_id)
       .maybeSingle();
-    if (error) {
-      setErro(error.message);
-      setLoading(false);
-      return;
+    if (m) {
+      setNome(m.nome ?? null);
+      setCpf(m.cpf ?? null);
+      setStatus(m.status ?? null);
+      setNascimento(m.data_nascimento ?? null);
+      let vol = !!m.voluntario;
+      if (!vol) {
+        const { data: vols } = await supabase
+          .from("mem_voluntarios")
+          .select("id")
+          .eq("membro_id", prof.membro_id)
+          .is("deleted_at", null)
+          .limit(1);
+        vol = !!vols && vols.length > 0;
+      }
+      setVoluntario(vol);
     }
-    setMembro(m as Membro);
-
-    // É voluntário? (flag no membro OU vínculo ativo em mem_voluntarios)
-    let vol = !!m?.voluntario;
-    if (!vol) {
-      const { data: vols } = await supabase
-        .from("mem_voluntarios")
-        .select("id")
-        .eq("membro_id", prof.membro_id)
-        .is("deleted_at", null)
-        .limit(1);
-      vol = !!vols && vols.length > 0;
-    }
-    setEhVoluntario(vol);
-
-    if (m?.cpf) {
-      const { data: qr } = await supabase
-        .from("mem_qrcodes")
-        .select("token")
-        .eq("cpf", m.cpf)
-        .maybeSingle();
-      setToken(qr?.token ?? null);
-    }
+    // token do QR (cria se faltar, via função no servidor)
+    const { data: tk } = await supabase.rpc("app_meu_qrcode");
+    setToken((tk as string) ?? null);
     setLoading(false);
   }, [user?.id]);
 
@@ -100,22 +89,19 @@ export default function CartoesScreen() {
     carregar();
   }, [carregar]);
 
-  function addWallet(tipo: string) {
-    if (WALLET_PASS_URL && token) {
-      Linking.openURL(`${WALLET_PASS_URL}?token=${encodeURIComponent(token)}&tipo=${tipo}`);
-    } else {
-      Alert.alert(
-        "Em breve",
-        "A geração do passe para a Wallet ainda será conectada ao sistema."
-      );
+  async function addWallet() {
+    setErro(null);
+    if (!cpf) {
+      setErro("Cadastro sem CPF — atualize seu perfil para gerar o cartão.");
+      return;
     }
-  }
-
-  const cards: { tipo: "membresia" | "voluntariado"; label: string; icon: React.ComponentProps<typeof Ionicons>["name"] }[] = [];
-  if (membro) {
-    cards.push({ tipo: "membresia", label: "Cartão de Membresia", icon: "id-card" });
-    if (ehVoluntario) {
-      cards.push({ tipo: "voluntariado", label: "Cartão de Voluntariado", icon: "hand-left" });
+    setWalletLoading(true);
+    try {
+      await adicionarWalletMembresia(onlyDigits(cpf), nascimento);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível abrir a Wallet.");
+    } finally {
+      setWalletLoading(false);
     }
   }
 
@@ -127,52 +113,59 @@ export default function CartoesScreen() {
           <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>Meus cartões</Text>
+          <Text style={styles.title}>Meu cartão</Text>
           <View style={{ width: 24 }} />
         </View>
 
         {loading ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />
-        ) : erro ? (
-          <View style={styles.empty}>
-            <Ionicons name="alert-circle-outline" size={40} color={colors.textMuted} />
-            <Text style={styles.emptyText}>Não consegui carregar os cartões.</Text>
-            <Text style={styles.emptyHint}>{erro}</Text>
-          </View>
-        ) : !membro ? (
+        ) : !vinculado ? (
           <View style={styles.empty}>
             <Ionicons name="card-outline" size={40} color={colors.textMuted} />
             <Text style={styles.emptyText}>
               Sua conta ainda não está vinculada a um membro da CBRio. Informe seu
-              CPF no perfil para liberar seus cartões.
+              CPF no perfil para liberar seu cartão.
             </Text>
             <Button title="Vincular pelo CPF" onPress={() => router.navigate("/perfil")} />
           </View>
         ) : (
-          cards.map((c) => (
-            <View
-              key={c.tipo}
-              style={[
-                styles.card,
-                c.tipo === "voluntariado" && { backgroundColor: colors.primaryDark },
-              ]}
-            >
-              <View style={styles.cardHeader}>
-                <Ionicons name={c.icon} size={22} color={colors.brandPale} />
-                <Text style={styles.cardTipo}>{c.label}</Text>
-              </View>
-              <Text style={styles.cardNome}>{membro.nome}</Text>
-              {!!membro.status && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="id-card" size={22} color={colors.brandPale} />
+              <Text style={styles.cardTipo}>Cartão CBRio</Text>
+            </View>
+            <Text style={styles.cardNome}>{nome ?? "Membro"}</Text>
+            <View style={styles.badges}>
+              {!!status && (
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{membro.status}</Text>
+                  <Text style={styles.badgeText}>{status}</Text>
                 </View>
               )}
-              <Pressable style={styles.walletBtn} onPress={() => addWallet(c.tipo)}>
-                <Ionicons name="wallet" size={18} color="#fff" />
-                <Text style={styles.walletText}>Adicionar à Wallet</Text>
-              </Pressable>
+              {voluntario && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>voluntário</Text>
+                </View>
+              )}
             </View>
-          ))
+
+            <View style={styles.qrBox}>
+              {token ? (
+                <QRCode value={token} size={196} backgroundColor="#ffffff" color="#0B1F26" />
+              ) : (
+                <Text style={styles.qrMissing}>QR indisponível</Text>
+              )}
+            </View>
+            <Text style={styles.qrHint}>
+              Mostre este QR para identificação e check-in.
+            </Text>
+
+            <Button
+              title="Adicionar à Wallet"
+              onPress={addWallet}
+              loading={walletLoading}
+            />
+            {erro && <Text style={styles.erro}>{erro}</Text>}
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -193,33 +186,31 @@ const makeStyles = (colors: Palette) =>
     title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
     empty: { alignItems: "center", gap: spacing.sm, marginTop: spacing.xl, paddingHorizontal: spacing.lg },
     emptyText: { color: colors.textMuted, fontSize: font.size.md, textAlign: "center", lineHeight: 22 },
-    emptyHint: { color: colors.textMuted, fontSize: font.size.sm, opacity: 0.7, textAlign: "center" },
     card: {
       backgroundColor: colors.primary,
-      borderRadius: radius.lg,
+      borderRadius: radius.xl,
       padding: spacing.lg,
-      gap: spacing.sm,
+      gap: spacing.md,
+      alignItems: "center",
     },
-    cardHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+    cardHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm, alignSelf: "flex-start" },
     cardTipo: { color: "#fff", fontSize: font.size.md, fontWeight: "700" },
-    cardNome: { color: "#fff", fontSize: font.size.lg, fontWeight: "700" },
+    cardNome: { color: "#fff", fontSize: font.size.lg, fontWeight: "700", alignSelf: "flex-start" },
+    badges: { flexDirection: "row", gap: spacing.xs, alignSelf: "flex-start", flexWrap: "wrap" },
     badge: {
-      alignSelf: "flex-start",
       backgroundColor: "rgba(255,255,255,0.2)",
       borderRadius: radius.full,
       paddingHorizontal: spacing.sm,
       paddingVertical: 2,
     },
     badgeText: { color: "#fff", fontSize: font.size.sm, fontWeight: "600" },
-    walletBtn: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: spacing.sm,
-      backgroundColor: "#000",
-      borderRadius: radius.full,
-      height: 46,
+    qrBox: {
+      backgroundColor: "#fff",
+      padding: spacing.md,
+      borderRadius: radius.lg,
       marginTop: spacing.sm,
     },
-    walletText: { color: "#fff", fontSize: font.size.md, fontWeight: "600" },
+    qrMissing: { color: colors.textMuted, padding: spacing.xl },
+    qrHint: { color: "rgba(255,255,255,0.85)", fontSize: font.size.sm, textAlign: "center" },
+    erro: { color: "#fff", fontSize: font.size.sm, textAlign: "center" },
   });
