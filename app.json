@@ -1,28 +1,35 @@
 {
   "expo": {
     "name": "CBRio",
-    "slug": "cbrio-app",
+    "slug": "aplicativo-cbrio",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "scheme": "cbrio",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "icon": "./assets/images/app-icon.png",
     "splash": {
-      "backgroundColor": "#00B39D",
-      "resizeMode": "contain"
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B1F26"
     },
     "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "io.cbrio.app"
+      "supportsTablet": true,
+      "bundleIdentifier": "br.com.cbrio.app",
+      "usesAppleSignIn": true
     },
     "android": {
+      "package": "br.com.cbrio.app",
       "adaptiveIcon": {
-        "backgroundColor": "#00B39D"
-      },
-      "package": "io.cbrio.app"
+        "foregroundImage": "./assets/images/cbrio-heart.png",
+        "backgroundColor": "#eae3da"
+      }
     },
-    "scheme": "cbrio",
-    "plugins": ["expo-router", "expo-font"],
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": ["expo-router", "expo-apple-authentication"],
     "experiments": {
       "typedRoutes": true
     }

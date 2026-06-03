@@ -1,43 +1,47 @@
-import { useEffect, useState } from 'react';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { supabase } from '@/lib/supabase';
-import type { Session } from '@supabase/supabase-js';
-import { useRouter, useSegments } from 'expo-router';
+import { useEffect } from "react";
+import { Stack, useRouter, useSegments } from "expo-router";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { SplashPulse } from "@/components/brand/SplashPulse";
+import { colors } from "@/constants/theme";
 
-function Guard({ session }: { session: Session | null }) {
+function RootNavigator() {
+  const { session, loading } = useAuth();
   const segments = useSegments();
-  const router   = useRouter();
+  const router = useRouter();
 
   useEffect(() => {
-    const inAuth = segments[0] === '(auth)';
-    if (!session && !inAuth)   router.replace('/(auth)/login');
-    if (session  &&  inAuth)   router.replace('/(tabs)');
-  }, [session, segments]);
+    if (loading) return;
 
-  return null;
+    const inAuthGroup = segments[0] === "(auth)";
+
+    if (!session && !inAuthGroup) {
+      router.replace("/(auth)/login");
+    } else if (session && inAuthGroup) {
+      router.replace("/(app)");
+    }
+  }, [session, loading, segments]);
+
+  if (loading) {
+    return <SplashPulse />;
+  }
+
+  return (
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(app)" />
+    </Stack>
+  );
 }
 
 export default function RootLayout() {
-  const [session, setSession] = useState<Session | null>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    return () => subscription.unsubscribe();
-  }, []);
-
   return (
-    <>
-      <StatusBar style="auto" />
-      <Guard session={session} />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="visitante" options={{ presentation: 'modal', headerShown: true, title: 'Cadastro de Visitante' }} />
-        <Stack.Screen name="perfil"    options={{ presentation: 'modal' }} />
-        <Stack.Screen name="checkin"   options={{ presentation: 'modal' }} />
-      </Stack>
-    </>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <StatusBar style="light" />
+        <RootNavigator />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

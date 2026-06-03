@@ -1,116 +1,220 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
-  KeyboardAvoidingView, Platform, ScrollView,
-  StyleSheet, Text, TextInput, View, Alert,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { supabase } from '@/lib/supabase';
-import { Button } from '@/components/ui/Button';
-import { C } from '@/constants/Colors';
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { Link } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { SocialButton } from "@/components/ui/SocialButton";
+import { CbrioHeart } from "@/components/brand/CbrioHeart";
+import { useAuth } from "@/contexts/AuthContext";
+import { colors, font, radius, spacing } from "@/constants/theme";
 
-export default function Login() {
-  const [email, setEmail]   = useState('');
-  const [loading, setLoading] = useState(false);
-  const [sent, setSent]     = useState(false);
+export default function LoginScreen() {
+  const { signIn, signInWithGoogle, signInWithApple, rememberPref } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(rememberPref);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<null | "email" | "google" | "apple">(
+    null
+  );
 
-  const handleMagicLink = async () => {
-    if (!email.trim()) { Alert.alert('Informe seu e-mail'); return; }
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim().toLowerCase(),
-      options: { emailRedirectTo: 'cbrio://auth/callback' },
-    });
-    setLoading(false);
-    if (error) { Alert.alert('Erro', error.message); return; }
-    setSent(true);
-  };
+  async function handleLogin() {
+    setError(null);
+    if (!email || !password) {
+      setError("Preencha e-mail e senha.");
+      return;
+    }
+    setLoading("email");
+    try {
+      await signIn(email, password, remember);
+    } catch (e) {
+      setError(e instanceof Error ? traduzErro(e.message) : "Não foi possível entrar.");
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function handleProvider(provider: "google" | "apple") {
+    setError(null);
+    setLoading(provider);
+    try {
+      if (provider === "google") await signInWithGoogle();
+      else await signInWithApple();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Não foi possível entrar.");
+    } finally {
+      setLoading(null);
+    }
+  }
 
   return (
-    <LinearGradient colors={['#00B39D', '#008f7d']} style={s.gradient}>
+    <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
-          {/* Logo area */}
-          <View style={s.logoArea}>
-            <View style={s.logoCircle}>
-              <Text style={s.logoText}>CB</Text>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.card}>
+            {/* Header com a logo do coração CBRio */}
+            <View style={styles.logoCircle}>
+              <CbrioHeart size={44} color={colors.brandPale} />
             </View>
-            <Text style={s.appName}>CBRio</Text>
-            <Text style={s.tagline}>Bem-vindo à nossa comunidade</Text>
+            <Text style={styles.brand}>CBRio</Text>
+            <Text style={styles.subtitle}>Bem-vindo de volta</Text>
+
+            <View style={styles.form}>
+              <Input
+                label="E-mail"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="voce@exemplo.com"
+                keyboardType="email-address"
+                autoComplete="email"
+              />
+              <Input
+                label="Senha"
+                value={password}
+                onChangeText={setPassword}
+                placeholder="••••••••"
+                secure
+                autoComplete="password"
+              />
+
+              <View style={styles.rowBetween}>
+                <Checkbox
+                  checked={remember}
+                  onChange={setRemember}
+                  label="Lembrar de mim"
+                />
+                <Link href="/(auth)/recuperar-senha" style={styles.forgot}>
+                  Esqueci a senha
+                </Link>
+              </View>
+
+              {error && <Text style={styles.error}>{error}</Text>}
+
+              <Button
+                title="Entrar"
+                onPress={handleLogin}
+                loading={loading === "email"}
+              />
+
+              <View style={styles.dividerRow}>
+                <View style={styles.divider} />
+                <Text style={styles.dividerText}>ou continue com</Text>
+                <View style={styles.divider} />
+              </View>
+
+              <SocialButton
+                provider="google"
+                onPress={() => handleProvider("google")}
+                loading={loading === "google"}
+              />
+              {Platform.OS === "ios" && (
+                <SocialButton
+                  provider="apple"
+                  onPress={() => handleProvider("apple")}
+                  loading={loading === "apple"}
+                />
+              )}
+            </View>
           </View>
 
-          {/* Card */}
-          <View style={s.card}>
-            {!sent ? (
-              <>
-                <Text style={s.cardTitle}>Entrar</Text>
-                <Text style={s.cardSub}>
-                  Informe seu e-mail e enviaremos um link de acesso.
-                </Text>
-
-                <View style={s.inputWrap}>
-                  <Text style={s.label}>E-mail</Text>
-                  <TextInput
-                    style={s.input}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="seu@email.com"
-                    placeholderTextColor={C.text2}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-
-                <Button
-                  label="Enviar link de acesso"
-                  onPress={handleMagicLink}
-                  loading={loading}
-                  fullWidth
-                />
-
-                <Text style={s.hint}>
-                  Primeira vez aqui? Use o e-mail que você cadastrou na igreja.
-                </Text>
-              </>
-            ) : (
-              <View style={s.sentWrap}>
-                <Text style={s.sentIcon}>✉️</Text>
-                <Text style={s.sentTitle}>Verifique seu e-mail</Text>
-                <Text style={s.sentSub}>
-                  Enviamos um link para{'\n'}
-                  <Text style={{ fontWeight: '700', color: C.primary }}>{email}</Text>
-                  {'\n'}Abra-o no celular para entrar.
-                </Text>
-                <Button label="Usar outro e-mail" variant="ghost" onPress={() => setSent(false)} />
-              </View>
-            )}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Ainda não tem conta?</Text>
+            <Link href="/(auth)/cadastro" style={styles.footerLink}>
+              Criar conta
+            </Link>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </SafeAreaView>
   );
 }
 
-const s = StyleSheet.create({
-  gradient:   { flex: 1 },
-  scroll:     { flexGrow: 1, justifyContent: 'center', padding: 24 },
-  logoArea:   { alignItems: 'center', marginBottom: 36 },
-  logoCircle: { width: 80, height: 80, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  logoText:   { fontSize: 28, fontWeight: '800', color: '#fff' },
-  appName:    { fontSize: 32, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
-  tagline:    { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
-  card:       { backgroundColor: '#fff', borderRadius: 28, padding: 28, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 24, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
-  cardTitle:  { fontSize: 22, fontWeight: '700', color: C.text, marginBottom: 6 },
-  cardSub:    { fontSize: 14, color: C.text2, marginBottom: 24, lineHeight: 20 },
-  inputWrap:  { marginBottom: 20 },
-  label:      { fontSize: 12, fontWeight: '600', color: C.text2, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
-  input:      { height: 50, borderRadius: 14, borderWidth: 1.5, borderColor: C.border, paddingHorizontal: 16, fontSize: 15, color: C.text },
-  hint:       { fontSize: 12, color: C.text2, textAlign: 'center', marginTop: 16, lineHeight: 18 },
-  sentWrap:   { alignItems: 'center', paddingVertical: 8 },
-  sentIcon:   { fontSize: 48, marginBottom: 16 },
-  sentTitle:  { fontSize: 20, fontWeight: '700', color: C.text, marginBottom: 8 },
-  sentSub:    { fontSize: 14, color: C.text2, textAlign: 'center', lineHeight: 22, marginBottom: 24 },
+function traduzErro(msg: string) {
+  if (msg.includes("Invalid login credentials"))
+    return "E-mail ou senha incorretos.";
+  if (msg.includes("Email not confirmed"))
+    return "Confirme sua conta antes de entrar.";
+  return msg;
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
+  flex: { flex: 1 },
+  scroll: {
+    flexGrow: 1,
+    padding: spacing.lg,
+    justifyContent: "center",
+    gap: spacing.lg,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: spacing.xl,
+    alignItems: "center",
+  },
+  logoCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.full,
+    backgroundColor: colors.glass,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.md,
+  },
+  brand: {
+    color: colors.text,
+    fontSize: font.size.xxl,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  subtitle: {
+    color: colors.textMuted,
+    fontSize: font.size.md,
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  form: { width: "100%", gap: spacing.md },
+  rowBetween: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  forgot: { color: colors.brandMid, fontSize: font.size.sm, fontWeight: "600" },
+  error: { color: colors.danger, fontSize: font.size.sm },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginVertical: spacing.xs,
+  },
+  divider: { flex: 1, height: 1, backgroundColor: colors.border },
+  dividerText: { color: colors.textMuted, fontSize: font.size.sm },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: spacing.xs,
+  },
+  footerText: { color: colors.textMuted, fontSize: font.size.md },
+  footerLink: {
+    color: colors.brandMid,
+    fontSize: font.size.md,
+    fontWeight: "700",
+  },
 });

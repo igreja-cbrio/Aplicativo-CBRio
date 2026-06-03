@@ -1,34 +1,38 @@
 {
-  "name": "cbrio-app",
+  "name": "aplicativo-cbrio",
   "version": "1.0.0",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
-    "ios": "expo start --ios"
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "lint": "expo lint",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.2",
     "@react-native-async-storage/async-storage": "1.23.1",
-    "@supabase/supabase-js": "^2.39.3",
-    "expo": "~52.0.46",
-    "expo-constants": "~17.0.8",
-    "expo-font": "~13.0.4",
-    "expo-haptics": "~14.0.1",
-    "expo-linear-gradient": "~14.0.2",
-    "expo-linking": "~7.0.5",
-    "expo-router": "~4.0.20",
-    "expo-splash-screen": "~0.29.22",
-    "expo-status-bar": "~2.0.1",
-    "react": "18.3.2",
-    "react-native": "0.76.9",
-    "react-native-safe-area-context": "4.12.0",
-    "react-native-screens": "~4.4.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "expo": "~51.0.28",
+    "expo-apple-authentication": "~6.4.2",
+    "expo-auth-session": "~5.5.2",
+    "expo-constants": "~16.0.2",
+    "expo-crypto": "~13.0.2",
+    "expo-linking": "~6.3.1",
+    "expo-router": "~3.5.23",
+    "expo-status-bar": "~1.12.1",
+    "expo-web-browser": "~13.0.3",
+    "react": "18.2.0",
+    "react-native": "0.74.5",
+    "react-native-safe-area-context": "4.10.5",
+    "react-native-screens": "3.31.1",
     "react-native-url-polyfill": "^2.0.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.24.0",
-    "@types/react": "~18.3.21",
+    "@babel/core": "^7.20.0",
+    "@types/react": "~18.2.79",
     "typescript": "~5.3.3"
-  }
+  },
+  "private": true
 }

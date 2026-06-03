@@ -1,50 +1,73 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
-import { C } from '@/constants/Colors';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  type PressableProps,
+} from "react-native";
+import { colors, font, radius, spacing } from "@/constants/theme";
 
-type Variant = 'primary' | 'outline' | 'ghost';
-
-interface Props {
-  label: string;
-  onPress: () => void;
-  variant?: Variant;
+type Props = PressableProps & {
+  title: string;
   loading?: boolean;
-  disabled?: boolean;
-  fullWidth?: boolean;
-}
+  variant?: "primary" | "ghost";
+};
 
-export function Button({ label, onPress, variant = 'primary', loading, disabled, fullWidth }: Props) {
-  const isPrimary = variant === 'primary';
-  const isOutline = variant === 'outline';
-
+export function Button({
+  title,
+  loading,
+  variant = "primary",
+  disabled,
+  ...rest
+}: Props) {
+  const isDisabled = disabled || loading;
   return (
     <Pressable
-      onPress={onPress}
-      disabled={disabled || loading}
+      accessibilityRole="button"
+      disabled={isDisabled}
       style={({ pressed }) => [
-        s.base,
-        isPrimary && s.primary,
-        isOutline && s.outline,
-        variant === 'ghost' && s.ghost,
-        (disabled || loading) && s.disabled,
-        fullWidth && s.full,
-        pressed && { opacity: 0.8 },
+        styles.base,
+        variant === "primary" ? styles.primary : styles.ghost,
+        (pressed || isDisabled) && styles.dimmed,
       ]}
+      {...rest}
     >
-      {loading
-        ? <ActivityIndicator color={isPrimary ? '#fff' : C.primary} size="small" />
-        : <Text style={[s.label, !isPrimary && s.labelAlt]}>{label}</Text>
-      }
+      {loading ? (
+        <ActivityIndicator color={colors.text} />
+      ) : (
+        <Text
+          style={[
+            styles.label,
+            variant === "ghost" && { color: colors.primary },
+          ]}
+        >
+          {title}
+        </Text>
+      )}
     </Pressable>
   );
 }
 
-const s = StyleSheet.create({
-  base:     { height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
-  primary:  { backgroundColor: C.primary },
-  outline:  { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: C.primary },
-  ghost:    { backgroundColor: 'transparent' },
-  disabled: { opacity: 0.45 },
-  full:     { width: '100%' },
-  label:    { fontSize: 15, fontWeight: '600', color: '#fff', letterSpacing: 0.2 },
-  labelAlt: { color: C.primary },
+const styles = StyleSheet.create({
+  base: {
+    height: 52,
+    borderRadius: radius.full,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing.lg,
+  },
+  primary: {
+    backgroundColor: colors.primary,
+  },
+  ghost: {
+    backgroundColor: "transparent",
+  },
+  dimmed: {
+    opacity: 0.6,
+  },
+  label: {
+    color: colors.text,
+    fontSize: font.size.md,
+    fontWeight: "600",
+  },
 });
