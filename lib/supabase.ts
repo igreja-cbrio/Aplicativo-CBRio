@@ -8,9 +8,15 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(
     "[supabase] EXPO_PUBLIC_SUPABASE_URL ou EXPO_PUBLIC_SUPABASE_ANON_KEY ausentes. " +
-      "Copie .env.example para .env e preencha as credenciais."
+      "Copie .env.example para .env e preencha as credenciais. " +
+      "Sem elas o app sobe normalmente, mas a autenticação real não funciona."
   );
 }
+
+// Placeholders válidos para o app subir sem .env (ex.: preview da UI).
+// O cliente Supabase lança erro se a URL/Key forem vazias.
+const FALLBACK_URL = "https://placeholder.supabase.co";
+const FALLBACK_ANON_KEY = "placeholder-anon-key";
 
 /**
  * Storage híbrido para o "Lembrar de mim".
@@ -46,7 +52,10 @@ const hybridStorage = {
   },
 };
 
-export const supabase = createClient(supabaseUrl ?? "", supabaseAnonKey ?? "", {
+export const supabase = createClient(
+  supabaseUrl || FALLBACK_URL,
+  supabaseAnonKey || FALLBACK_ANON_KEY,
+  {
   auth: {
     storage: hybridStorage,
     autoRefreshToken: true,
