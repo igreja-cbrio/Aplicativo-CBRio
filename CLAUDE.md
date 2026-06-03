@@ -93,16 +93,29 @@ desligado, fica só em memória (some ao reiniciar o app).
 
 ### ⚠️ Configuração do Supabase
 
-Projeto: `https://otzemqmlprwhtvfxbvkj.supabase.co`. Passo a passo completo em
-[`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md). Resumo:
+**Banco unificado:** o app usa o **mesmo projeto Supabase do `SISTEMA_INTEGRADO_CBRIO`**
+(`https://hhntwfawfnxvuobhdfkb.supabase.co`) — definido no `.env` local. O sistema
+é o dono dos dados; o app alimenta ele direto. **NÃO** rodar `supabase/profiles.sql`
+nesse projeto (substituiria o trigger do sistema).
 
-1. `.env` com `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
-2. **Perfis**: rodar `supabase/profiles.sql` (tabela `profiles` + RLS + trigger
-   que cria o perfil no cadastro a partir do `nome`).
-3. **Redirect URLs**: `cbrio://` (Authentication → URL Configuration) — p/ OAuth.
-4. **Google**: Providers → Google (Client ID/Secret; callback do Supabase no Google Cloud).
-5. **Apple**: Providers → Apple (Authorized Client ID = `br.com.cbrio.app`); só em build iOS.
-6. **Phone/SMS**: Providers → Phone + provedor (ex.: Twilio).
+Schema relevante do sistema:
+- `profiles` (1:1 com `auth.users.id`): `name, email, telefone, avatar_url, role,
+  membro_id, is_membro_only`. `role` só aceita `assistente|admin|diretor` — **membro
+  = role 'assistente' + is_membro_only = true**.
+- `mem_membros`: ficha do membro (`nome, cpf, email, telefone, data_nascimento,
+  status, foto_url, voluntario, ...`); `status` ∈ visitante/frequentador/membro/...
+- `mem_qrcodes` (`token, cpf`): base do **cartão** (membresia/voluntariado) p/ Wallet.
+- `profiles.membro_id → mem_membros.id` é o vínculo usuário↔membro.
+
+**Cadastro de membro:** trigger `on_auth_user_created → handle_new_user()` cria
+`profiles` + `mem_membros` (status `visitante`, `is_membro_only`) a partir dos
+metadados do signup (`nome, cpf, telefone, data_nascimento`). Versão aplicada em
+[`supabase/handle_new_user_membro.sql`](./supabase/handle_new_user_membro.sql).
+
+**Foto de perfil:** bucket `avatars` (Storage) neste projeto + `supabase/storage.sql`.
+
+> Os arquivos `supabase/profiles.sql` e a config antiga referem-se ao projeto
+> inicial do app (`otzemqmlprwhtvfxbvkj`), antes da unificação.
 
 ## Como rodar
 
