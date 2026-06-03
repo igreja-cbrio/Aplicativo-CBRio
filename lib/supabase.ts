@@ -6,10 +6,11 @@ const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    "[supabase] EXPO_PUBLIC_SUPABASE_URL ou EXPO_PUBLIC_SUPABASE_ANON_KEY ausentes. " +
-      "Copie .env.example para .env e preencha as credenciais. " +
-      "Sem elas o app sobe normalmente, mas a autenticação real não funciona."
+  // Log discreto (não abre overlay de warning no dev). Sem .env o app sobe
+  // normalmente, mas a autenticação real não funciona — preencha .env quando for plugar o Supabase.
+  console.log(
+    "[supabase] Sem EXPO_PUBLIC_SUPABASE_URL/ANON_KEY (.env). " +
+      "App roda em modo sem backend; auth real desativada."
   );
 }
 
