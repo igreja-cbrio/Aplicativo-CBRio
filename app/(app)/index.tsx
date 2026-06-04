@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { BRAND_FONT } from "@/lib/fonts";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -12,6 +13,8 @@ import { destaquesAtivos, type Destaque } from "@/lib/destaques";
 import { proximosCultos, type CultoUpcoming } from "@/lib/cultos";
 import { Carrossel } from "@/components/home/Carrossel";
 import { ProximosCultos } from "@/components/home/ProximosCultos";
+import { AnimatedShortcut } from "@/components/anim/AnimatedShortcut";
+import { AnimatedBell } from "@/components/anim/AnimatedBell";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const LOGO_WORDMARK = require("../../assets/images/cbrio-wordmark.png");
@@ -77,22 +80,24 @@ export default function InicioScreen() {
             resizeMode="contain"
           />
           <View style={styles.actions}>
-            <Pressable
-              onPress={() => router.navigate("/notificacoes")}
-              style={styles.bellWrap}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Notificações"
-            >
-              <Ionicons name="notifications-outline" size={22} color={colors.text} />
-              {naoLidas > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeTxt}>
-                    {naoLidas > 9 ? "9+" : naoLidas}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
+            <AnimatedBell count={naoLidas}>
+              <Pressable
+                onPress={() => router.navigate("/notificacoes")}
+                style={styles.bellWrap}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Notificações"
+              >
+                <Ionicons name="notifications-outline" size={22} color={colors.text} />
+                {naoLidas > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeTxt}>
+                      {naoLidas > 9 ? "9+" : naoLidas}
+                    </Text>
+                  </View>
+                )}
+              </Pressable>
+            </AnimatedBell>
             <Pressable
               style={styles.avatar}
               onPress={() => router.navigate("/perfil")}
@@ -117,17 +122,18 @@ export default function InicioScreen() {
         {/* Atalhos para os módulos */}
         <Text style={styles.sectionTitle}>Atalhos</Text>
         <View style={styles.grid}>
-          {ATALHOS.map((a) => (
-            <Pressable
+          {ATALHOS.map((a, i) => (
+            <AnimatedShortcut
               key={a.href}
-              style={({ pressed }) => [styles.shortcut, pressed && styles.pressed]}
+              index={i}
+              style={styles.shortcut}
               onPress={() => router.navigate(a.href)}
             >
               <View style={styles.shortcutIcon}>
                 <Ionicons name={a.icon} size={22} color={colors.brandMid} />
               </View>
               <Text style={styles.shortcutLabel} numberOfLines={2}>{a.label}</Text>
-            </Pressable>
+            </AnimatedShortcut>
           ))}
         </View>
       </ScrollView>
@@ -170,7 +176,7 @@ const makeStyles = (colors: Palette) =>
       justifyContent: "center",
     },
     badgeTxt: { color: "#fff", fontSize: 10, fontWeight: "800" },
-    hello: { color: colors.text, fontSize: font.size.xxl, fontWeight: "800", marginTop: spacing.md },
+    hello: { color: colors.text, fontSize: font.size.xxl, fontFamily: BRAND_FONT, marginTop: spacing.md },
     avatar: {
       width: 40,
       height: 40,
@@ -186,7 +192,7 @@ const makeStyles = (colors: Palette) =>
     sectionTitle: {
       color: colors.text,
       fontSize: font.size.lg,
-      fontWeight: "700",
+      fontFamily: BRAND_FONT,
     },
     grid: {
       flexDirection: "row",

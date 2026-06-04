@@ -19,7 +19,14 @@ export const FONT_MAP = {
   "Gotham-Black": require("../assets/fonts/Gotham-Black.otf"),
   "Gotham-Italic": require("../assets/fonts/Gotham-Italic.otf"),
   "Gotham-BoldItalic": require("../assets/fonts/Gotham-BoldItalic.ttf"),
+  // Fonte de marca CBRio — usar em títulos/momentos de destaque
+  // (ex.: hero do batismo, contagem regressiva, headers fortes). Para
+  // body/UI normal, deixar a Gotham resolvida automaticamente.
+  iBrand: require("../assets/fonts/iBrand.otf"),
 } as const;
+
+/** Alias semântico pra usar nos estilos: `fontFamily: BRAND_FONT`. */
+export const BRAND_FONT = "iBrand" as const;
 
 export function useFontsCbrio(): boolean {
   const [loaded] = useFonts(FONT_MAP);

@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
 import { type CultoUpcoming, formatCultoDia, formatCultoHora } from "@/lib/cultos";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { BRAND_FONT } from "@/lib/fonts";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 const CARD_W = Math.round((SCREEN_W - spacing.lg * 2) * 0.74);
@@ -145,7 +146,7 @@ function CultoCard({
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     headerRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-    titulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800" },
+    titulo: { color: colors.text, fontSize: font.size.md, fontFamily: BRAND_FONT },
     card: {
       width: CARD_W,
       padding: spacing.md,

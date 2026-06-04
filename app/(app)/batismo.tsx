@@ -30,6 +30,10 @@ import {
 } from "@/lib/batismo";
 import { formatDataLonga } from "@/lib/cultos";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { BRAND_FONT } from "@/lib/fonts";
+import { AnimatedCountdown } from "@/components/anim/AnimatedCountdown";
+import { Breathing } from "@/components/anim/Breathing";
+import ConfettiCannon from "react-native-confetti-cannon";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 
@@ -53,6 +57,7 @@ export default function BatismoScreen() {
   const [fotosLoading, setFotosLoading] = useState(false);
   const [fotoAberta, setFotoAberta] = useState<FotoBatismo | null>(null);
   const [checkinFazendo, setCheckinFazendo] = useState(false);
+  const [confettiKey, setConfettiKey] = useState(0);
 
   const carregar = useCallback(async () => {
     if (!membro?.membroId) {
@@ -82,6 +87,7 @@ export default function BatismoScreen() {
     setCheckinFazendo(false);
     if (resp.ok) {
       setBatismo((b) => (b ? { ...b, checkin_em: resp.checkin_em } : b));
+      if (!resp.ja_checkado) setConfettiKey((k) => k + 1);
       Alert.alert(
         resp.ja_checkado ? "Check-in já feito" : "Check-in confirmado!",
         resp.ja_checkado
@@ -186,6 +192,18 @@ export default function BatismoScreen() {
           )}
         </View>
       </Modal>
+
+      {confettiKey > 0 && (
+        <ConfettiCannon
+          key={confettiKey}
+          count={140}
+          origin={{ x: SCREEN_W / 2, y: -10 }}
+          fallSpeed={3500}
+          fadeOut
+          autoStart
+          explosionSpeed={350}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -229,22 +247,24 @@ function BatismoConteudo({
 
   return (
     <>
-      {/* Hero com contagem regressiva */}
-      <View style={styles.hero}>
-        <Text style={styles.heroLabel}>Meu batismo</Text>
-        <Text style={styles.heroTitulo}>{topo}</Text>
-        {!ehHoje && !passou && (
-          <View style={styles.contagemRow}>
-            <Text style={styles.contagemNum}>{valor}</Text>
-            <Text style={styles.contagemUni}>{unidade}</Text>
+      {/* Hero com contagem regressiva — Breathing aplica scale loop sutil */}
+      <Breathing>
+        <View style={styles.hero}>
+          <Text style={styles.heroLabel}>Meu batismo</Text>
+          <Text style={styles.heroTitulo}>{topo}</Text>
+          {!ehHoje && !passou && (
+            <View style={styles.contagemRow}>
+              <AnimatedCountdown value={valor} style={styles.contagemNum} />
+              <Text style={styles.contagemUni}>{unidade}</Text>
+            </View>
+          )}
+          {(ehHoje || passou) && <Text style={styles.contagemNum}>{valor}</Text>}
+          <View style={styles.heroDataRow}>
+            <Ionicons name="calendar" size={16} color="#fff" />
+            <Text style={styles.heroData}>{formatDataLonga(batismo.data_batismo!)}</Text>
           </View>
-        )}
-        {(ehHoje || passou) && <Text style={styles.contagemNum}>{valor}</Text>}
-        <View style={styles.heroDataRow}>
-          <Ionicons name="calendar" size={16} color="#fff" />
-          <Text style={styles.heroData}>{formatDataLonga(batismo.data_batismo!)}</Text>
         </View>
-      </View>
+      </Breathing>
 
       {/* Check-in (no dia) */}
       {ehHoje && (
@@ -393,10 +413,10 @@ const makeStyles = (colors: Palette) =>
       alignItems: "flex-start",
     },
     heroLabel: { color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: "800", textTransform: "uppercase", letterSpacing: 1 },
-    heroTitulo: { color: "#fff", fontSize: font.size.xl, fontWeight: "900" },
+    heroTitulo: { color: "#fff", fontSize: font.size.xl, fontFamily: BRAND_FONT },
     heroSub: { color: "rgba(255,255,255,0.9)", fontSize: font.size.sm, marginTop: 4 },
     contagemRow: { flexDirection: "row", alignItems: "baseline", gap: 8, marginTop: spacing.xs },
-    contagemNum: { color: "#fff", fontSize: 56, fontWeight: "900", lineHeight: 60 },
+    contagemNum: { color: "#fff", fontSize: 64, fontFamily: BRAND_FONT, lineHeight: 68 },
     contagemUni: { color: "#fff", fontSize: font.size.lg, fontWeight: "700" },
     heroDataRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: spacing.sm },
     heroData: { color: "#fff", fontSize: font.size.sm, fontWeight: "600" },
