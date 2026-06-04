@@ -2,7 +2,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 
 // API do ERP CBRio (mesma app). O .pkpass é gerado on-demand e devolvido binário.
-const API = "https://cbrio.org/api";
+const API = "https://www.cbrio.org/api";
 
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 function toBase64(bytes: Uint8Array): string {

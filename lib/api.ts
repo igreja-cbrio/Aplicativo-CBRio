@@ -9,7 +9,9 @@
 
 import { supabase } from "./supabase";
 
-const BASE = "https://cbrio.org/api";
+// Usar `www.` direto: cbrio.org -> www.cbrio.org redireciona 307 e
+// alguns clients dropam o header Authorization na hora de seguir.
+const BASE = "https://www.cbrio.org/api";
 
 async function authHeaders(): Promise<Record<string, string>> {
   const {
