@@ -33,14 +33,13 @@ type Atalho = {
     | "/generosidade"
     | "/perfil"
     | "/inscricoes";
-  desc: string;
 };
 
 const ATALHOS: Atalho[] = [
-  { label: "Inscrições", icon: "create", href: "/inscricoes", desc: "Batismo, grupos, NEXT…" },
-  { label: "Cuidados", icon: "heart", href: "/cuidados", desc: "Oração e apoio" },
-  { label: "Voluntariado", icon: "hand-left", href: "/voluntariado", desc: "Sirva com a gente" },
-  { label: "Generosidade", icon: "gift", href: "/generosidade", desc: "Dízimos e ofertas" },
+  { label: "Inscrições", icon: "create", href: "/inscricoes" },
+  { label: "Cuidados", icon: "heart", href: "/cuidados" },
+  { label: "Voluntariado", icon: "hand-left", href: "/voluntariado" },
+  { label: "Generosidade", icon: "gift", href: "/generosidade" },
 ];
 
 export default function InicioScreen() {
@@ -123,8 +122,7 @@ export default function InicioScreen() {
               <View style={styles.shortcutIcon}>
                 <Ionicons name={a.icon} size={22} color={colors.brandMid} />
               </View>
-              <Text style={styles.shortcutLabel}>{a.label}</Text>
-              <Text style={styles.shortcutDesc}>{a.desc}</Text>
+              <Text style={styles.shortcutLabel} numberOfLines={1}>{a.label}</Text>
             </Pressable>
           ))}
         </View>
@@ -143,7 +141,7 @@ const makeStyles = (colors: Palette) =>
       justifyContent: "space-between",
       marginTop: spacing.sm,
     },
-    logo: { width: 110, height: 32, marginLeft: -spacing.sm },
+    logo: { width: 150, height: 42, marginLeft: -spacing.md },
     actions: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
     bellWrap: {
       width: 40,
@@ -188,33 +186,29 @@ const makeStyles = (colors: Palette) =>
     },
     grid: {
       flexDirection: "row",
-      flexWrap: "wrap",
-      gap: spacing.md,
+      justifyContent: "space-between",
+      gap: spacing.sm,
     },
     shortcut: {
-      width: "47%",
-      flexGrow: 1,
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      padding: spacing.lg,
-      gap: spacing.xs,
+      width: "22%",
+      alignItems: "center",
+      gap: 6,
     },
     pressed: { opacity: 0.7 },
     shortcutIcon: {
-      width: 44,
-      height: 44,
+      width: 56,
+      height: 56,
       borderRadius: radius.md,
-      backgroundColor: colors.glass,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
       alignItems: "center",
       justifyContent: "center",
-      marginBottom: spacing.xs,
     },
     shortcutLabel: {
       color: colors.text,
-      fontSize: font.size.md,
-      fontWeight: "700",
+      fontSize: 12,
+      fontWeight: "600",
+      textAlign: "center",
     },
-    shortcutDesc: { color: colors.textMuted, fontSize: font.size.sm },
   });
