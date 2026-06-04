@@ -1,13 +1,18 @@
-import { supabase } from "./supabase";
+import { criarInscricaoApi } from "./api";
 
 /**
- * Inscrições do app gravam na tabela genérica `app_inscricoes`
- * (tipo + dados jsonb). O SISTEMA_INTEGRADO_CBRIO processa essas inscrições
- * para as tabelas finais (batismo_inscricoes, next_inscricoes, vol_inscricoes…).
+ * Inscrições do app vão pelo endpoint genérico do backend CBRio:
+ *   POST https://cbrio.org/api/app/inscricoes
+ * O corpo é JSON plano com `tipo` no nível raiz + os demais campos juntos.
+ * O backend cria o registro em app_inscricoes (e dispara as triggers que
+ * preenchem as tabelas finais).
+ *
+ * NÃO inserir direto na tabela pelo cliente Supabase.
  */
 export type TipoInscricao =
   | "batismo"
-  | "grupo"
+  | "grupo"        // legado — algumas telas ainda usam "grupo" singular
+  | "grupos"       // novo nome canônico do backend
   | "next"
   | "voluntariado"
   | "oracao"
@@ -17,13 +22,8 @@ export type TipoInscricao =
 export async function criarInscricao(
   tipo: TipoInscricao,
   dados: Record<string, unknown>,
-  authUserId?: string | null
+  _authUserId?: string | null
 ) {
-  const { error } = await supabase.from("app_inscricoes").insert({
-    tipo,
-    auth_user_id: authUserId ?? null,
-    dados,
-    status: "pendente",
-  });
-  if (error) throw error;
+  const tipoFinal = tipo === "grupo" ? "grupos" : tipo;
+  await criarInscricaoApi({ tipo: tipoFinal, ...dados } as Record<string, unknown> & { tipo: string });
 }

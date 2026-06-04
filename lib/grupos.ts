@@ -1,61 +1,34 @@
-import { supabase } from "./supabase";
-
-const API = "https://cbrio.org/api";
-
-async function authHeader() {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  if (!token) throw new Error("Sessão expirada. Faça login novamente.");
-  return { Authorization: `Bearer ${token}` };
-}
+import { apiGet, criarInscricaoApi } from "./api";
 
 /** GET /api/grupos/meu — grupos que participo/lidero + meus pedidos pendentes. */
 export async function meusGrupos() {
-  const resp = await fetch(`${API}/grupos/meu`, { headers: await authHeader() });
-  if (!resp.ok) throw new Error("Não foi possível carregar seus grupos.");
-  return resp.json();
+  return apiGet("/grupos/meu");
 }
 
 /**
- * Pedido para entrar em um grupo. NÃO pode ser insert direto (RLS bloqueia) —
- * vai pelo backend, autenticado com o token do Supabase do membro.
- * O backend força status='pendente', deduplica (409) e notifica o líder.
+ * Pedido para entrar em um grupo. Usa o endpoint genérico de inscrições
+ * (tipo:"grupos"), que internamente cria mem_grupo_pedidos e notifica o
+ * líder. Sem grupo_id o backend recusa. 409 = já tem pedido ou já participa.
  */
 export async function pedirEntrarGrupo(
   grupoId: string,
-  body: { membro_id: string; nome: string; telefone?: string | null; email?: string | null; observacao?: string | null }
+  body: { membro_id: string; nome: string; telefone?: string | null; email?: string | null }
 ) {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  if (!token) throw new Error("Sessão expirada. Faça login novamente.");
-
-  const resp = await fetch(`${API}/grupos/${grupoId}/pedidos`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ ...body, origem: "app" }),
-  });
-
-  if (resp.status === 409) {
-    const e = new Error("Você já tem um pedido neste grupo ou já participa.") as Error & { code?: number };
-    e.code = 409;
-    throw e;
-  }
-  if (!resp.ok) {
-    let msg = "Não foi possível enviar o pedido.";
-    try {
-      const j = await resp.json();
-      msg = j.error || j.message || msg;
-    } catch {
-      /* ignore */
+  try {
+    return await criarInscricaoApi({
+      tipo: "grupos",
+      grupo_id: grupoId,
+      membro_id: body.membro_id,
+      nome: body.nome,
+      telefone: body.telefone ?? "",
+      email: body.email ?? "",
+    });
+  } catch (e) {
+    const err = e as Error & { status?: number; code?: number };
+    if (err.status === 409) {
+      err.code = 409;
+      err.message = "Você já tem um pedido neste grupo ou já participa.";
     }
-    throw new Error(msg);
+    throw err;
   }
-  return resp.json().catch(() => ({}));
 }

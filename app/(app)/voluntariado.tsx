@@ -15,44 +15,12 @@ import { Input } from "@/components/ui/Input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
-import { criarInscricao } from "@/lib/inscricoes";
+import { criarInscricaoApi, getVoluntariadoOpcoes, type VoluntariadoOpcao } from "@/lib/api";
 import { isValidCPF, maskCPF, onlyDigits } from "@/lib/validators";
 import { supabase } from "@/lib/supabase";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
-const AREAS = [
-  "Kids",
-  "AMI",
-  "Bridge",
-  "Online",
-  "Recepção - Integração",
-  "Estacionamento - Integração",
-  "Intercessão - Integração",
-  "Check-in do voluntariado",
-  "Cozinha do voluntariado",
-  "Cuidados",
-  "Louvor",
-  "Produção",
-  "Marketing - Fotografia",
-  "Marketing - Vídeo",
-  "Next",
-  "Grupos",
-  "Onde for mais necessário.",
-];
-
-// Áreas que exigem verificação de antecedentes (CPF + nome da mãe).
-const ANTECEDENTES: Record<string, { titulo: string; texto: string }> = {
-  Kids: {
-    titulo: "Para servir no CBKids, precisamos de algumas informações específicas",
-    texto:
-      "Prezamos pelo bem-estar e segurança das nossas crianças, e para garantir que estamos proporcionando um ambiente seguro e confiável, realizamos a verificação de antecedentes criminais de todos os envolvidos. Assim, reforçamos nosso compromisso com a proteção e o cuidado contínuo de nossos pequenos.",
-  },
-  Bridge: {
-    titulo: "Para servir no Bridge, precisamos de algumas informações específicas",
-    texto:
-      "Prezamos pelo bem-estar e segurança dos nossos adolescentes, e para garantir que estamos proporcionando um ambiente seguro e confiável, realizamos a verificação de antecedentes criminais de todos os envolvidos. Assim, reforçamos nosso compromisso com a proteção e o cuidado contínuo dos nossos jovens.",
-  },
-};
+const MAX_AREAS = 3;
 
 type Escala = {
   id: string;
@@ -136,6 +104,9 @@ export default function VoluntariadoScreen() {
   }
 
   // ---- Inscrição de voluntariado ----
+  const [opcoes, setOpcoes] = useState<VoluntariadoOpcao[]>([]);
+  const [opcoesLoading, setOpcoesLoading] = useState(true);
+  const [opcoesErro, setOpcoesErro] = useState<string | null>(null);
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [email, setEmail] = useState("");
@@ -145,6 +116,7 @@ export default function VoluntariadoScreen() {
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  const [sucessoMsg, setSucessoMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (membro) {
@@ -155,12 +127,38 @@ export default function VoluntariadoScreen() {
     }
   }, [membro]);
 
+  useEffect(() => {
+    let alive = true;
+    setOpcoesLoading(true);
+    getVoluntariadoOpcoes()
+      .then((data) => {
+        if (alive) setOpcoes(data);
+      })
+      .catch((e) => {
+        if (alive) setOpcoesErro(e instanceof Error ? e.message : "Falha ao carregar áreas.");
+      })
+      .finally(() => {
+        if (alive) setOpcoesLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   function toggleArea(a: string) {
-    setAreas((prev) => (prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]));
+    setAreas((prev) =>
+      prev.includes(a)
+        ? prev.filter((x) => x !== a)
+        : prev.length >= MAX_AREAS
+        ? prev
+        : [...prev, a]
+    );
   }
 
-  const areasAntecedentes = areas.filter((a) => ANTECEDENTES[a]);
-  const precisaAntecedentes = areasAntecedentes.length > 0;
+  const opcoesAntecedentes = opcoes.filter(
+    (o) => areas.includes(o.label) && o.exige_dados_menor
+  );
+  const precisaAntecedentes = opcoesAntecedentes.length > 0;
 
   async function enviar() {
     setError(null);
@@ -170,6 +168,10 @@ export default function VoluntariadoScreen() {
     }
     if (areas.length === 0) {
       setError("Escolha pelo menos uma área para servir.");
+      return;
+    }
+    if (areas.length > MAX_AREAS) {
+      setError(`Escolha no máximo ${MAX_AREAS} áreas.`);
       return;
     }
     if (precisaAntecedentes) {
@@ -185,21 +187,24 @@ export default function VoluntariadoScreen() {
     setEnviando(true);
     try {
       const partes = nome.trim().split(/\s+/);
-      await criarInscricao(
-        "voluntariado",
-        {
-          nome: partes[0],
-          sobrenome: partes.slice(1).join(" "),
-          nome_completo: nome.trim(),
-          telefone: telefone.trim(),
-          email: email.trim(),
-          areas,
-          cpf: precisaAntecedentes ? onlyDigits(cpf) : membro?.cpf || null,
-          nome_mae: precisaAntecedentes ? nomeMae.trim() : null,
-          membro_id: membro?.membroId ?? null,
-        },
-        user?.id
-      );
+      const cpfDigits = precisaAntecedentes
+        ? onlyDigits(cpf)
+        : membro?.cpf
+        ? onlyDigits(membro.cpf)
+        : "";
+      const resp = await criarInscricaoApi({
+        tipo: "voluntariado",
+        nome: partes[0],
+        sobrenome: partes.slice(1).join(" "),
+        nome_completo: nome.trim(),
+        telefone: telefone.trim(),
+        email: email.trim(),
+        cpf: cpfDigits,
+        nome_mae: precisaAntecedentes ? nomeMae.trim() : null,
+        areas,
+        membro_id: membro?.membroId ?? null,
+      });
+      setSucessoMsg(resp.message || "Inscrição recebida! Nossa equipe entrará em contato.");
       setEnviado(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível enviar.");
@@ -275,7 +280,7 @@ export default function VoluntariadoScreen() {
               <Ionicons name="checkmark-circle" size={40} color={colors.success} />
               <Text style={styles.title}>Inscrição enviada!</Text>
               <Text style={styles.muted}>
-                Recebemos sua inscrição de voluntariado. Em breve a equipe fala com você. 💙
+                {sucessoMsg ?? "Recebemos sua inscrição de voluntariado. Em breve a equipe fala com você. 💙"}
               </Text>
             </View>
           ) : (
@@ -287,27 +292,40 @@ export default function VoluntariadoScreen() {
               <Input label="Telefone" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="+55 21 99999-9999" />
               <Input label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" />
 
-              <Text style={styles.fieldLabel}>Onde você quer servir?</Text>
-              <View style={styles.chips}>
-                {AREAS.map((a) => {
-                  const sel = areas.includes(a);
-                  return (
-                    <Pressable
-                      key={a}
-                      style={[styles.chip, sel && styles.chipSel]}
-                      onPress={() => toggleArea(a)}
-                    >
-                      <Text style={[styles.chipTxt, sel && styles.chipTxtSel]}>{a}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              <Text style={styles.fieldLabel}>
+                Onde você quer servir? (até {MAX_AREAS})
+              </Text>
+              {opcoesLoading ? (
+                <Text style={styles.muted}>Carregando áreas…</Text>
+              ) : opcoesErro ? (
+                <Text style={styles.error}>{opcoesErro}</Text>
+              ) : (
+                <View style={styles.chips}>
+                  {opcoes.map((o) => {
+                    const sel = areas.includes(o.label);
+                    const disabled = !sel && areas.length >= MAX_AREAS;
+                    return (
+                      <Pressable
+                        key={o.label}
+                        style={[
+                          styles.chip,
+                          sel && styles.chipSel,
+                          disabled && { opacity: 0.4 },
+                        ]}
+                        onPress={() => !disabled && toggleArea(o.label)}
+                      >
+                        <Text style={[styles.chipTxt, sel && styles.chipTxtSel]}>{o.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
 
-              {/* Antecedentes (Kids/Bridge) */}
-              {areasAntecedentes.map((a) => (
-                <View key={a} style={styles.aviso}>
-                  <Text style={styles.avisoTitulo}>{ANTECEDENTES[a].titulo}</Text>
-                  <Text style={styles.avisoTexto}>{ANTECEDENTES[a].texto}</Text>
+              {/* Antecedentes (Kids/Bridge — vem do form-opcoes) */}
+              {opcoesAntecedentes.map((o) => (
+                <View key={o.label} style={styles.aviso}>
+                  {!!o.aviso_titulo && <Text style={styles.avisoTitulo}>{o.aviso_titulo}</Text>}
+                  {!!o.aviso_texto && <Text style={styles.avisoTexto}>{o.aviso_texto}</Text>}
                 </View>
               ))}
               {precisaAntecedentes && (
