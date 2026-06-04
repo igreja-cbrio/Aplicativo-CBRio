@@ -18,6 +18,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
+// Apple Sign-In e Push exigem conta paga Apple Developer. Religar quando tiver.
+const APPLE_SIGNIN_ENABLED = false;
+
 export default function LoginScreen() {
   const { signIn, signInWithGoogle, signInWithApple, rememberPref, enterPreview } =
     useAuth();
@@ -126,7 +129,8 @@ export default function LoginScreen() {
                 onPress={() => handleProvider("google")}
                 loading={loading === "google"}
               />
-              {Platform.OS === "ios" && (
+              {/* Apple Sign-In desativado até ter conta paga Apple Developer */}
+              {APPLE_SIGNIN_ENABLED && Platform.OS === "ios" && (
                 <SocialButton
                   provider="apple"
                   onPress={() => handleProvider("apple")}
