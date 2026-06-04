@@ -17,6 +17,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { supabase } from "@/lib/supabase";
 import { pedirEntrarGrupo } from "@/lib/grupos";
+import { useAdminGrupo } from "@/lib/useAdminGrupo";
 import { diaHorario } from "./grupos";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
@@ -44,6 +45,7 @@ export default function GrupoDetalheScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const { membro } = useMembro();
+  const { isAdmin } = useAdminGrupo(id);
 
   const [grupo, setGrupo] = useState<GrupoDetalhe | null>(null);
   const [estado, setEstado] = useState<Estado>("carregando");
@@ -197,6 +199,19 @@ export default function GrupoDetalheScreen() {
               <Button title="Quero participar" onPress={participar} loading={enviando || estado === "carregando"} />
             )}
             {erro && <Text style={styles.erro}>{erro}</Text>}
+
+            {isAdmin && (
+              <View style={styles.adminBox}>
+                <Text style={styles.adminTitle}>Administração</Text>
+                <Button
+                  title="Editar grupo"
+                  variant="ghost"
+                  onPress={() =>
+                    router.navigate({ pathname: "/grupo-editar", params: { id: grupo.id } })
+                  }
+                />
+              </View>
+            )}
           </>
         )}
       </ScrollView>
@@ -251,4 +266,14 @@ const makeStyles = (colors: Palette) =>
     statusOkTxt: { flex: 1, color: colors.text, fontSize: font.size.md },
     muted: { color: colors.textMuted, fontSize: font.size.md },
     erro: { color: colors.danger, fontSize: font.size.sm },
+    adminBox: {
+      marginTop: spacing.md,
+      padding: spacing.md,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      backgroundColor: colors.surface,
+      gap: spacing.sm,
+    },
+    adminTitle: { color: colors.text, fontSize: font.size.sm, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.5 },
   });

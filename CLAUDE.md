@@ -51,6 +51,7 @@ app/
     inscricoes.tsx     # hub: Batismo, Grupos, NEXT, Voluntariado; fora do dock
     inscricao-batismo.tsx / inscricao-grupos.tsx / inscricao-next.tsx
     grupos.tsx / grupo-detalhe.tsx  # lista/detalhe de grupos (mem_grupos) + pedido p/ entrar (mem_grupo_pedidos)
+    grupo-editar.tsx     # tela admin: edita info do grupo + upload de foto de capa (bucket 'grupos')
 components/
   inscricoes/FormScaffold.tsx  # layout comum dos formulários de inscrição
 lib/
@@ -133,6 +134,13 @@ nome**, cria o membro se for novo, atualiza os dados (contornando o RLS com segu
 vincula `profiles.membro_id`. Resolve o caso de contas antigas e o save de nascimento.
 
 **Foto de perfil:** bucket `avatars` (Storage) neste projeto + `supabase/storage.sql`.
+
+**Foto de capa dos grupos:** bucket `grupos` (Storage) + `supabase/storage_grupos.sql`.
+Path: `grupos/{grupo_id}.{ext}`. Leitura pública; upload/replace só para
+admin/diretor (via `profiles.role`) ou líder do grupo (via
+`mem_grupos.lider_id`, se a coluna existir — função SQL degrada gracefully).
+No app: `lib/useAdminGrupo.ts` gera o flag isAdmin, e `app/(app)/grupo-editar.tsx`
+é a tela protegida.
 
 > Os arquivos `supabase/profiles.sql` e a config antiga referem-se ao projeto
 > inicial do app (`otzemqmlprwhtvfxbvkj`), antes da unificação.
