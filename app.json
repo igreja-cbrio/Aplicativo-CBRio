@@ -14,7 +14,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "br.com.cbrio.app"
+      "bundleIdentifier": "br.com.cbrio.app",
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "br.com.cbrio.app",
@@ -29,6 +30,8 @@
     },
     "plugins": [
       "expo-router",
+      "expo-apple-authentication",
+      "expo-notifications",
       [
         "expo-image-picker",
         {

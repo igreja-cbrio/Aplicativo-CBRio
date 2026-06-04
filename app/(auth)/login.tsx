@@ -18,8 +18,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
-// Apple Sign-In e Push exigem conta paga Apple Developer. Religar quando tiver.
-const APPLE_SIGNIN_ENABLED = false;
+// Apple Sign-In requer App ID com "Sign in with Apple" (conta paga). Ativado.
+const APPLE_SIGNIN_ENABLED = true;
 
 export default function LoginScreen() {
   const { signIn, signInWithGoogle, signInWithApple, rememberPref, enterPreview } =
