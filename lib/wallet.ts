@@ -4,7 +4,30 @@ import { Platform } from "react-native";
 import PassKit from "react-native-wallet-pass";
 
 // API do ERP CBRio (mesma app). O .pkpass é gerado on-demand e devolvido binário.
-const API = "https://cbrio.org/api";
+// Usa o host canônico (www) direto: o apex cbrio.org responde 307 e o fetch do
+// React Native trava no redirect de POST (perde o corpo) -> spinner infinito.
+const API = "https://www.cbrio.org/api";
+
+// fetch com timeout: sem isso, uma resposta que nunca chega prende o botão pra
+// sempre. Com timeout, falha com erro claro.
+async function fetchComTimeout(
+  url: string,
+  options: RequestInit,
+  ms = 20000
+): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (e) {
+    if (e instanceof Error && e.name === "AbortError") {
+      throw new Error("Tempo esgotado ao gerar o cartão. Tente de novo.");
+    }
+    throw new Error("Falha de conexão ao gerar o cartão.");
+  } finally {
+    clearTimeout(id);
+  }
+}
 
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 function toBase64(bytes: Uint8Array): string {
@@ -67,7 +90,7 @@ export async function adicionarWalletMembresia(
   cpf: string,
   dataNascimentoISO: string | null
 ) {
-  const resp = await fetch(`${API}/public/membresia/wallet/apple`, {
+  const resp = await fetchComTimeout(`${API}/public/membresia/wallet/apple`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ cpf, data_nascimento: dataNascimentoISO }),
@@ -77,7 +100,7 @@ export async function adicionarWalletMembresia(
 
 /** Passe de voluntário (autenticado) — caso precise separado no futuro. */
 export async function adicionarWalletVoluntario(accessToken: string) {
-  const resp = await fetch(`${API}/voluntariado/me/wallet/apple`, {
+  const resp = await fetchComTimeout(`${API}/voluntariado/me/wallet/apple`, {
     method: "GET",
     headers: { Authorization: `Bearer ${accessToken}` },
   });
