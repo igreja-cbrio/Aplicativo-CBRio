@@ -16,10 +16,13 @@ import { radius, spacing, type Palette } from "@/constants/theme";
 
 const LIQUID = isLiquidGlassAvailable();
 
+export type IconName = React.ComponentProps<typeof Ionicons>["name"];
+
 export type DockItem = {
   key: string;
   label: string;
-  icon: React.ComponentProps<typeof Ionicons>["name"];
+  icon: IconName;             // padrão (inativo, outline)
+  iconActive?: IconName;      // variante preenchida quando ativo
   active: boolean;
   onPress: () => void;
 };
@@ -129,8 +132,8 @@ function DockButton({
         ]}
       >
         <Ionicons
-          name={item.icon}
-          size={24}
+          name={item.active ? item.iconActive ?? item.icon : item.icon}
+          size={26}
           color={item.active ? colors.brandPale : colors.textMuted}
         />
       </Animated.View>

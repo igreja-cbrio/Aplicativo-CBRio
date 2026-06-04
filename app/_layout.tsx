@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -8,6 +8,7 @@ import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { SplashPulse } from "@/components/brand/SplashPulse";
 import { registerForPush } from "@/lib/push";
 import { attachNotifTapListener } from "@/lib/notifTap";
+import { loadFontScale } from "@/lib/applyFontScale";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -17,6 +18,20 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
+
+// Carrega a escala de fonte salva ANTES dos providers renderizarem.
+let fontScaleLoaded = false;
+function useFontScaleBootstrap() {
+  const [ready, setReady] = useState(fontScaleLoaded);
+  useEffect(() => {
+    if (fontScaleLoaded) return;
+    loadFontScale().finally(() => {
+      fontScaleLoaded = true;
+      setReady(true);
+    });
+  }, []);
+  return ready;
+}
 
 function RootNavigator() {
   const { session, loading, preview } = useAuth();
@@ -69,6 +84,8 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  const fontReady = useFontScaleBootstrap();
+  if (!fontReady) return null;
   return (
     <SafeAreaProvider>
       <ThemeProvider>

@@ -69,8 +69,16 @@ export type VoluntariadoOpcao = {
   aviso_texto: string | null;
 };
 
-export function getVoluntariadoOpcoes(): Promise<VoluntariadoOpcao[]> {
-  return apiGet<VoluntariadoOpcao[]>("/public/voluntariado/form-opcoes", { auth: false });
+export async function getVoluntariadoOpcoes(): Promise<VoluntariadoOpcao[]> {
+  // Tolera diferentes formatos: array puro, { opcoes: [...] }, { data: [...] }.
+  const raw = await apiGet<unknown>("/public/voluntariado/form-opcoes", { auth: false });
+  if (Array.isArray(raw)) return raw as VoluntariadoOpcao[];
+  if (raw && typeof raw === "object") {
+    const obj = raw as { opcoes?: unknown; data?: unknown };
+    if (Array.isArray(obj.opcoes)) return obj.opcoes as VoluntariadoOpcao[];
+    if (Array.isArray(obj.data)) return obj.data as VoluntariadoOpcao[];
+  }
+  return [];
 }
 
 // ===== POST /app/inscricoes (genérico, todos os tipos) =====

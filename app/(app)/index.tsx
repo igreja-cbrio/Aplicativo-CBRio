@@ -5,9 +5,13 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
-import { useColors } from "@/contexts/ThemeContext";
+import { useColors, useTheme } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
+import { useNotificacoesNaoLidas } from "@/lib/useNotificacoes";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+
+const LOGO_LIGHT = require("../../assets/images/cbrio-wordmark.png");
+const LOGO_DARK = require("../../assets/images/cbrio-vertical-light.png");
 
 function primeiroNome(nomeCompleto?: string, email?: string | null) {
   const nome = nomeCompleto?.trim();
@@ -41,8 +45,10 @@ export default function InicioScreen() {
   const { user } = useAuth();
   const { membro } = useMembro();
   const colors = useColors();
+  const { mode } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const { count: naoLidas } = useNotificacoesNaoLidas();
   const nome = primeiroNome(
     membro?.nome || (user?.user_metadata?.nome as string | undefined),
     user?.email
@@ -51,25 +57,46 @@ export default function InicioScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Topo: saudação + avatar (abre o perfil) */}
-        <View style={styles.topRow}>
-          <View style={styles.greeting}>
-            <Text style={styles.hello}>Olá, {nome} 👋</Text>
-            <Text style={styles.subtitle}>Que bom ter você na CBRio.</Text>
+        {/* Logo + ações */}
+        <View style={styles.brandRow}>
+          <Image
+            source={mode === "light" ? LOGO_LIGHT : LOGO_DARK}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <View style={styles.actions}>
+            <Pressable
+              onPress={() => router.navigate("/notificacoes")}
+              style={styles.bellWrap}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Notificações"
+            >
+              <Ionicons name="notifications-outline" size={22} color={colors.text} />
+              {naoLidas > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeTxt}>
+                    {naoLidas > 9 ? "9+" : naoLidas}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+            <Pressable
+              style={styles.avatar}
+              onPress={() => router.navigate("/perfil")}
+              accessibilityRole="button"
+              accessibilityLabel="Abrir perfil"
+            >
+              {membro?.avatarUrl ? (
+                <Image source={{ uri: membro.avatarUrl }} style={styles.avatarImg} />
+              ) : (
+                <CbrioHeart size={22} color={colors.brandPale} />
+              )}
+            </Pressable>
           </View>
-          <Pressable
-            style={styles.avatar}
-            onPress={() => router.navigate("/perfil")}
-            accessibilityRole="button"
-            accessibilityLabel="Abrir perfil"
-          >
-            {membro?.avatarUrl ? (
-              <Image source={{ uri: membro.avatarUrl }} style={styles.avatarImg} />
-            ) : (
-              <CbrioHeart size={28} color={colors.brandPale} />
-            )}
-          </Pressable>
         </View>
+
+        <Text style={styles.hello}>Olá, {nome}</Text>
 
         {/* Atalhos para os módulos */}
         <Text style={styles.sectionTitle}>Atalhos</Text>
@@ -97,18 +124,41 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
     content: { padding: spacing.lg, paddingBottom: 120, gap: spacing.lg },
-    topRow: {
+    brandRow: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      marginTop: spacing.md,
+      marginTop: spacing.sm,
     },
-    greeting: { flex: 1, gap: 2 },
-    hello: { color: colors.text, fontSize: font.size.xxl, fontWeight: "800" },
-    subtitle: { color: colors.textMuted, fontSize: font.size.md },
+    logo: { width: 110, height: 32 },
+    actions: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+    bellWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: radius.full,
+      backgroundColor: colors.glass,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    badge: {
+      position: "absolute",
+      top: 2,
+      right: 2,
+      minWidth: 16,
+      height: 16,
+      paddingHorizontal: 4,
+      borderRadius: 8,
+      backgroundColor: colors.danger,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    badgeTxt: { color: "#fff", fontSize: 10, fontWeight: "800" },
+    hello: { color: colors.text, fontSize: font.size.xxl, fontWeight: "800", marginTop: spacing.md },
     avatar: {
-      width: 52,
-      height: 52,
+      width: 40,
+      height: 40,
       borderRadius: radius.full,
       backgroundColor: colors.glass,
       borderWidth: 1,
@@ -117,7 +167,7 @@ const makeStyles = (colors: Palette) =>
       justifyContent: "center",
       overflow: "hidden",
     },
-    avatarImg: { width: 52, height: 52, borderRadius: radius.full },
+    avatarImg: { width: 40, height: 40, borderRadius: radius.full },
     sectionTitle: {
       color: colors.text,
       fontSize: font.size.lg,

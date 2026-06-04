@@ -5,12 +5,10 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
+import Constants from "expo-constants";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMembro } from "@/lib/useMembro";
-import {
-  useTheme,
-  type ThemePreference,
-} from "@/contexts/ThemeContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Option = {
@@ -19,16 +17,10 @@ type Option = {
   onPress?: () => void;
 };
 
-const TEMA_OPCOES: { key: ThemePreference; label: string; icon: React.ComponentProps<typeof Ionicons>["name"] }[] = [
-  { key: "system", label: "Sistema", icon: "phone-portrait-outline" },
-  { key: "light", label: "Claro", icon: "sunny-outline" },
-  { key: "dark", label: "Escuro", icon: "moon-outline" },
-];
-
 export default function MenuScreen() {
   const { user, signOut } = useAuth();
   const { membro } = useMembro();
-  const { colors, preference, setPreference } = useTheme();
+  const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const nome =
@@ -46,7 +38,7 @@ export default function MenuScreen() {
     { label: "Eventos", icon: "calendar-outline" },
     { label: "Bíblia e devocionais", icon: "book-outline" },
     { label: "Notificações", icon: "notifications-outline", onPress: () => router.navigate("/notificacoes") },
-    { label: "Configurações", icon: "settings-outline" },
+    { label: "Configurações", icon: "settings-outline", onPress: () => router.navigate("/configuracoes") },
     { label: "Sobre a CBRio", icon: "information-circle-outline" },
   ];
 
@@ -65,32 +57,6 @@ export default function MenuScreen() {
             <Text style={styles.name}>{nome}</Text>
             {!!user?.email && <Text style={styles.meta}>{user.email}</Text>}
           </View>
-        </View>
-
-        {/* Aparência (tema claro/escuro) */}
-        <Text style={styles.sectionLabel}>Aparência</Text>
-        <View style={styles.segment}>
-          {TEMA_OPCOES.map((opt) => {
-            const active = preference === opt.key;
-            return (
-              <Pressable
-                key={opt.key}
-                style={[styles.segmentItem, active && styles.segmentItemActive]}
-                onPress={() => setPreference(opt.key)}
-              >
-                <Ionicons
-                  name={opt.icon}
-                  size={18}
-                  color={active ? "#fff" : colors.textMuted}
-                />
-                <Text
-                  style={[styles.segmentText, active && styles.segmentTextActive]}
-                >
-                  {opt.label}
-                </Text>
-              </Pressable>
-            );
-          })}
         </View>
 
         {/* Opções */}
@@ -113,6 +79,12 @@ export default function MenuScreen() {
         </View>
 
         <Button title="Sair" variant="ghost" onPress={() => signOut()} />
+
+        <View style={styles.versao}>
+          <Text style={styles.versaoTxt}>
+            CBRio · versão {Constants.expoConfig?.version ?? "1.0.0"}
+          </Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -142,33 +114,6 @@ const makeStyles = (colors: Palette) =>
     avatarImg: { width: 64, height: 64, borderRadius: radius.full },
     name: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
     meta: { color: colors.textMuted, fontSize: font.size.sm },
-    sectionLabel: {
-      color: colors.textMuted,
-      fontSize: font.size.sm,
-      fontWeight: "600",
-      marginBottom: -spacing.sm,
-    },
-    segment: {
-      flexDirection: "row",
-      gap: spacing.xs,
-      backgroundColor: colors.surface,
-      borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      padding: spacing.xs,
-    },
-    segmentItem: {
-      flex: 1,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 6,
-      paddingVertical: spacing.sm,
-      borderRadius: radius.sm,
-    },
-    segmentItemActive: { backgroundColor: colors.primary },
-    segmentText: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "600" },
-    segmentTextActive: { color: "#fff" },
     list: {
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
@@ -186,4 +131,9 @@ const makeStyles = (colors: Palette) =>
     rowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
     rowPressed: { backgroundColor: colors.surfaceAlt },
     rowLabel: { flex: 1, color: colors.text, fontSize: font.size.md },
+    versao: {
+      alignItems: "center",
+      paddingVertical: spacing.lg,
+    },
+    versaoTxt: { color: colors.textMuted, fontSize: 12 },
   });

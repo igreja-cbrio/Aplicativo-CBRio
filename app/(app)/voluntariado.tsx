@@ -155,7 +155,7 @@ export default function VoluntariadoScreen() {
     );
   }
 
-  const opcoesAntecedentes = opcoes.filter(
+  const opcoesAntecedentes = (Array.isArray(opcoes) ? opcoes : []).filter(
     (o) => areas.includes(o.label) && o.exige_dados_menor
   );
   const precisaAntecedentes = opcoesAntecedentes.length > 0;

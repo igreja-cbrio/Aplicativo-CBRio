@@ -2,12 +2,12 @@ import { Tabs } from "expo-router";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Dock, type DockItem } from "@/components/ui/Dock";
 
-const META: Record<string, { label: string; icon: DockItem["icon"] }> = {
-  index: { label: "Home", icon: "home" },
-  cuidados: { label: "Cuidados", icon: "heart" },
-  voluntariado: { label: "Voluntariado", icon: "hand-left" },
-  generosidade: { label: "Generosidade", icon: "gift" },
-  menu: { label: "Menu", icon: "menu" },
+const META: Record<string, { label: string; icon: DockItem["icon"]; iconActive: DockItem["icon"] }> = {
+  index: { label: "Home", icon: "home-outline", iconActive: "home" },
+  cuidados: { label: "Cuidados", icon: "heart-outline", iconActive: "heart" },
+  voluntariado: { label: "Voluntariado", icon: "hand-left-outline", iconActive: "hand-left" },
+  generosidade: { label: "Generosidade", icon: "gift-outline", iconActive: "gift" },
+  menu: { label: "Menu", icon: "grid-outline", iconActive: "grid" },
 };
 
 function DockTabBar({ state, navigation }: BottomTabBarProps) {
@@ -20,6 +20,7 @@ function DockTabBar({ state, navigation }: BottomTabBarProps) {
         key: route.key,
         label: META[route.name].label,
         icon: META[route.name].icon,
+        iconActive: META[route.name].iconActive,
         active,
         onPress: () => {
           const event = navigation.emit({
