@@ -50,7 +50,8 @@
           }
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      "@stripe/stripe-react-native"
     ],
     "experiments": {
       "typedRoutes": true
