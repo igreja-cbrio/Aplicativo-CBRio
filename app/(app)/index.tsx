@@ -1,5 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BRAND_FONT } from "@/lib/fonts";
+import { HeartRefresh } from "@/components/anim/HeartRefresh";
+import { HeartPulseOverlay } from "@/components/anim/HeartPulse";
+import { Skeleton } from "@/components/anim/Skeleton";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -59,11 +62,28 @@ export default function InicioScreen() {
   const { count: naoLidas } = useNotificacoesNaoLidas();
   const [destaques, setDestaques] = useState<Destaque[]>([]);
   const [cultos, setCultos] = useState<CultoUpcoming[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const carregar = useCallback(async () => {
+    const [d, c] = await Promise.all([
+      destaquesAtivos().catch(() => []),
+      proximosCultos(7).catch(() => []),
+    ]);
+    setDestaques(d);
+    setCultos(c);
+  }, []);
 
   useEffect(() => {
-    destaquesAtivos().then(setDestaques).catch(() => setDestaques([]));
-    proximosCultos(7).then(setCultos).catch(() => setCultos([]));
-  }, []);
+    setCarregando(true);
+    carregar().finally(() => setCarregando(false));
+  }, [carregar]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await carregar();
+    setRefreshing(false);
+  }, [carregar]);
   const nome = primeiroNome(
     membro?.nome || (user?.user_metadata?.nome as string | undefined),
     user?.email
@@ -71,7 +91,11 @@ export default function InicioScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <HeartPulseOverlay visible={refreshing} />
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={<HeartRefresh refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         {/* Logo + ações */}
         <View style={styles.brandRow}>
           <Image
@@ -115,9 +139,23 @@ export default function InicioScreen() {
 
         <Text style={styles.hello}>Olá, {nome}</Text>
 
-        {destaques.length > 0 && <Carrossel itens={destaques} />}
+        {carregando ? (
+          <Skeleton width="100%" height={180} borderRadius={20} />
+        ) : (
+          destaques.length > 0 && <Carrossel itens={destaques} />
+        )}
 
-        <ProximosCultos cultos={cultos} />
+        {carregando ? (
+          <View style={{ gap: spacing.sm }}>
+            <Skeleton width={160} height={18} borderRadius={6} />
+            <View style={{ flexDirection: "row", gap: spacing.sm }}>
+              <Skeleton width={220} height={140} borderRadius={20} />
+              <Skeleton width={220} height={140} borderRadius={20} />
+            </View>
+          </View>
+        ) : (
+          <ProximosCultos cultos={cultos} />
+        )}
 
         {/* Atalhos para os módulos */}
         <Text style={styles.sectionTitle}>Atalhos</Text>

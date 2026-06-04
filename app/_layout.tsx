@@ -74,6 +74,8 @@ function RootNavigator() {
       <Stack
         screenOptions={{
           headerShown: false,
+          animation: "ios_from_right",
+          animationDuration: 280,
           contentStyle: { backgroundColor: colors.background },
         }}
       >

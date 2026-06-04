@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  Animated,
   Dimensions,
-  FlatList,
   Image,
   Linking,
   Pressable,
@@ -17,16 +17,22 @@ import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 const SLIDE_W = SCREEN_W - spacing.lg * 2;
+const ITEM_OFFSET = SLIDE_W + spacing.sm;
 const AUTO_MS = 5000;
+
+const AnimatedFlatList = Animated.createAnimatedComponent(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  require("react-native").FlatList as any
+);
 
 export function Carrossel({ itens }: { itens: Destaque[] }) {
   const colors = useColors();
   const styles = makeStyles(colors);
   const router = useRouter();
   const [index, setIndex] = useState(0);
-  const ref = useRef<FlatList<Destaque>>(null);
+  const ref = useRef<Animated.FlatList<Destaque>>(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
 
-  // Auto-rotate
   useEffect(() => {
     if (itens.length < 2) return;
     const t = setInterval(() => {
@@ -54,32 +60,64 @@ export function Carrossel({ itens }: { itens: Destaque[] }) {
 
   return (
     <View>
-      <FlatList
+      <AnimatedFlatList
         ref={ref}
         data={itens}
-        keyExtractor={(d) => d.id}
+        keyExtractor={(d: Destaque) => d.id}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        snapToInterval={SLIDE_W + spacing.sm}
+        snapToInterval={ITEM_OFFSET}
         decelerationRate="fast"
         onViewableItemsChanged={onViewable}
         viewabilityConfig={{ itemVisiblePercentThreshold: 60 }}
-        renderItem={({ item }) => (
-          <Pressable
-            style={styles.slide}
-            onPress={() => abrir(item)}
-            disabled={!item.link}
-          >
-            <Image source={{ uri: item.imagem_url }} style={styles.img} />
-            {(item.titulo || item.subtitulo) && (
-              <View style={styles.legenda}>
-                {!!item.titulo && <Text style={styles.titulo}>{item.titulo}</Text>}
-                {!!item.subtitulo && <Text style={styles.subtitulo}>{item.subtitulo}</Text>}
-              </View>
-            )}
-          </Pressable>
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+          { useNativeDriver: true }
         )}
+        scrollEventThrottle={16}
+        renderItem={({ item, index: i }: { item: Destaque; index: number }) => {
+          const inputRange = [
+            (i - 1) * ITEM_OFFSET,
+            i * ITEM_OFFSET,
+            (i + 1) * ITEM_OFFSET,
+          ];
+          const scale = scrollX.interpolate({
+            inputRange,
+            outputRange: [0.92, 1, 0.92],
+            extrapolate: "clamp",
+          });
+          const opacity = scrollX.interpolate({
+            inputRange,
+            outputRange: [0.55, 1, 0.55],
+            extrapolate: "clamp",
+          });
+          const imgTranslate = scrollX.interpolate({
+            inputRange,
+            outputRange: [-30, 0, 30],
+            extrapolate: "clamp",
+          });
+          return (
+            <Animated.View style={{ transform: [{ scale }], opacity }}>
+              <Pressable
+                style={styles.slide}
+                onPress={() => abrir(item)}
+                disabled={!item.link}
+              >
+                <Animated.Image
+                  source={{ uri: item.imagem_url }}
+                  style={[styles.img, { transform: [{ translateX: imgTranslate }] }]}
+                />
+                {(item.titulo || item.subtitulo) && (
+                  <View style={styles.legenda}>
+                    {!!item.titulo && <Text style={styles.titulo}>{item.titulo}</Text>}
+                    {!!item.subtitulo && <Text style={styles.subtitulo}>{item.subtitulo}</Text>}
+                  </View>
+                )}
+              </Pressable>
+            </Animated.View>
+          );
+        }}
         ItemSeparatorComponent={() => <View style={{ width: spacing.sm }} />}
       />
       <View style={styles.dots}>
@@ -100,7 +138,7 @@ const makeStyles = (colors: Palette) =>
       overflow: "hidden",
       backgroundColor: colors.surfaceAlt,
     },
-    img: { width: "100%", height: "100%" },
+    img: { width: "110%", height: "100%" },
     legenda: {
       position: "absolute",
       left: 0,

@@ -1,4 +1,5 @@
-import { Dimensions, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { useRef } from "react";
+import { Animated, Dimensions, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
@@ -102,8 +103,37 @@ function CultoCard({
     .slice()
     .sort((a, b) => a.hora.localeCompare(b.hora));
 
+  // Lift compartilhado: qualquer pill que for pressionada eleva o card todo.
+  const scale = useRef(new Animated.Value(1)).current;
+  const elev = useRef(new Animated.Value(0)).current;
+  function lift() {
+    Animated.parallel([
+      Animated.spring(scale, { toValue: 1.025, useNativeDriver: true, stiffness: 400, damping: 18, mass: 0.5 }),
+      Animated.timing(elev, { toValue: 1, duration: 140, useNativeDriver: false }),
+    ]).start();
+  }
+  function drop() {
+    Animated.parallel([
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, stiffness: 320, damping: 16, mass: 0.5 }),
+      Animated.timing(elev, { toValue: 0, duration: 160, useNativeDriver: false }),
+    ]).start();
+  }
+  const shadowOpacity = elev.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.22] });
+  const shadowRadius = elev.interpolate({ inputRange: [0, 1], outputRange: [4, 14] });
+
   return (
-    <View style={styles.card}>
+    <Animated.View
+      style={[
+        styles.card,
+        {
+          transform: [{ scale }],
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity,
+          shadowRadius,
+        },
+      ]}
+    >
       <View style={styles.headerCard}>
         <View style={[styles.tag, { backgroundColor: cor }]}>
           <Text style={styles.tagTxt}>{ehHoje ? "HOJE" : dia.toUpperCase()}</Text>
@@ -118,7 +148,9 @@ function CultoCard({
           <Pressable
             key={c.id}
             onPress={() => router.navigate({ pathname: "/culto-detalhe", params: { id: c.id } })}
-            style={({ pressed }) => [styles.horaPill, pressed && { opacity: 0.7 }]}
+            onPressIn={lift}
+            onPressOut={drop}
+            style={styles.horaPill}
           >
             <Text style={styles.horaTxt}>{formatCultoHora(c.hora)}</Text>
           </Pressable>
@@ -139,7 +171,7 @@ function CultoCard({
           </View>
         )}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
