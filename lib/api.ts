@@ -139,3 +139,80 @@ export async function getVoluntariadoMe(): Promise<VoluntariadoMe> {
     : raw;
   return obj as VoluntariadoMe;
 }
+
+// ===== /app/next (NEXT) =====
+export type NextEncontro = {
+  id: string;
+  data: string;             // ISO date
+  titulo: string;
+  inscrito: boolean;
+  check_in_at: string | null;
+  pode_checkin_hoje: boolean;
+};
+
+export type NextMe = {
+  inscrito_next: boolean;
+  encontros: NextEncontro[];
+  igreja: { lat: number; lng: number; raio_m: number } | null;
+};
+
+export async function getNextMe(): Promise<NextMe> {
+  const raw = await apiGet<unknown>("/app/next/me");
+  const obj = (raw && typeof raw === "object" && "data" in (raw as object))
+    ? (raw as { data: unknown }).data
+    : raw;
+  return obj as NextMe;
+}
+
+export type NextInscreverResp = {
+  ok: boolean;
+  jaInscrito?: boolean;
+  evento?: NextEncontro;
+};
+
+export function inscreverNext(): Promise<NextInscreverResp> {
+  return apiPost<NextInscreverResp>("/app/next/inscrever", {});
+}
+
+export type NextCheckinErro = {
+  ok: false;
+  error: string;
+  distancia_m?: number;
+  needLocation?: boolean;
+  status: number;
+};
+
+export type NextCheckinResp =
+  | { ok: true; check_in_at: string }
+  | NextCheckinErro;
+
+export async function checkinNext(
+  eventoId: string,
+  lat: number,
+  lng: number
+): Promise<NextCheckinResp> {
+  try {
+    const data = await apiPost<{ ok: boolean; check_in_at: string }>(
+      `/app/next/encontros/${encodeURIComponent(eventoId)}/checkin`,
+      { lat, lng }
+    );
+    return { ok: true, check_in_at: data.check_in_at };
+  } catch (e) {
+    const err = e as Error & { status?: number; raw?: unknown };
+    // apiPost lança Error com .status; o body veio em .message OU como JSON.
+    // O backend devolve { error, distancia_m?, needLocation? } — tenta extrair.
+    let body: Record<string, unknown> = {};
+    try {
+      body = JSON.parse(err.message) as Record<string, unknown>;
+    } catch {
+      body = { error: err.message };
+    }
+    return {
+      ok: false,
+      error: (body.error as string) ?? err.message ?? "Falha no check-in.",
+      distancia_m: typeof body.distancia_m === "number" ? body.distancia_m : undefined,
+      needLocation: body.needLocation === true,
+      status: err.status ?? 500,
+    } as NextCheckinErro;
+  }
+}

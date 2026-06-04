@@ -17,7 +17,7 @@
       "bundleIdentifier": "br.com.cbrio.app",
       "usesAppleSignIn": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "O CBRio usa sua localização para mostrar os grupos mais próximos no mapa."
+        "NSLocationWhenInUseUsageDescription": "O CBRio usa sua localização para mostrar grupos próximos no mapa e confirmar sua presença no NEXT."
       }
     },
     "android": {
