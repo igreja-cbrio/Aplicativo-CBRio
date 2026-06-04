@@ -16,8 +16,43 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { criarInscricao } from "@/lib/inscricoes";
+import { isValidCPF, maskCPF, onlyDigits } from "@/lib/validators";
 import { supabase } from "@/lib/supabase";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+
+const AREAS = [
+  "Kids",
+  "AMI",
+  "Bridge",
+  "Online",
+  "Recepção - Integração",
+  "Estacionamento - Integração",
+  "Intercessão - Integração",
+  "Check-in do voluntariado",
+  "Cozinha do voluntariado",
+  "Cuidados",
+  "Louvor",
+  "Produção",
+  "Marketing - Fotografia",
+  "Marketing - Vídeo",
+  "Next",
+  "Grupos",
+  "Onde for mais necessário.",
+];
+
+// Áreas que exigem verificação de antecedentes (CPF + nome da mãe).
+const ANTECEDENTES: Record<string, { titulo: string; texto: string }> = {
+  Kids: {
+    titulo: "Para servir no CBKids, precisamos de algumas informações específicas",
+    texto:
+      "Prezamos pelo bem-estar e segurança das nossas crianças, e para garantir que estamos proporcionando um ambiente seguro e confiável, realizamos a verificação de antecedentes criminais de todos os envolvidos. Assim, reforçamos nosso compromisso com a proteção e o cuidado contínuo de nossos pequenos.",
+  },
+  Bridge: {
+    titulo: "Para servir no Bridge, precisamos de algumas informações específicas",
+    texto:
+      "Prezamos pelo bem-estar e segurança dos nossos adolescentes, e para garantir que estamos proporcionando um ambiente seguro e confiável, realizamos a verificação de antecedentes criminais de todos os envolvidos. Assim, reforçamos nosso compromisso com a proteção e o cuidado contínuo dos nossos jovens.",
+  },
+};
 
 type Escala = {
   id: string;
@@ -53,10 +88,16 @@ export default function VoluntariadoScreen() {
       .eq("membro_id", membro.membroId)
       .gte("data", hoje)
       .order("data", { ascending: true });
-
-    const rows = (data as { id: string; data: string; papel: string | null; confirmado: boolean | null; ministerio_id: string | null }[]) ?? [];
+    const rows =
+      (data as {
+        id: string;
+        data: string;
+        papel: string | null;
+        confirmado: boolean | null;
+        ministerio_id: string | null;
+      }[]) ?? [];
     const ids = [...new Set(rows.map((r) => r.ministerio_id).filter(Boolean))] as string[];
-    let nomes: Record<string, string> = {};
+    const nomes: Record<string, string> = {};
     if (ids.length) {
       const { data: mins } = await supabase
         .from("mem_ministerios")
@@ -89,9 +130,7 @@ export default function VoluntariadoScreen() {
       .update({ confirmado: true })
       .eq("id", id);
     if (!error) {
-      setEscalas((prev) =>
-        prev.map((e) => (e.id === id ? { ...e, confirmado: true } : e))
-      );
+      setEscalas((prev) => prev.map((e) => (e.id === id ? { ...e, confirmado: true } : e)));
     }
     setConfirmandoId(null);
   }
@@ -100,8 +139,9 @@ export default function VoluntariadoScreen() {
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [email, setEmail] = useState("");
-  const [area, setArea] = useState("");
-  const [disponibilidade, setDisponibilidade] = useState("");
+  const [areas, setAreas] = useState<string[]>([]);
+  const [cpf, setCpf] = useState("");
+  const [nomeMae, setNomeMae] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
@@ -111,14 +151,36 @@ export default function VoluntariadoScreen() {
       setNome((v) => v || membro.nome);
       setTelefone((v) => v || membro.telefone);
       setEmail((v) => v || membro.email);
+      setCpf((v) => v || (membro.cpf ? maskCPF(membro.cpf) : ""));
     }
   }, [membro]);
+
+  function toggleArea(a: string) {
+    setAreas((prev) => (prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]));
+  }
+
+  const areasAntecedentes = areas.filter((a) => ANTECEDENTES[a]);
+  const precisaAntecedentes = areasAntecedentes.length > 0;
 
   async function enviar() {
     setError(null);
     if (!nome || !telefone) {
       setError("Preencha pelo menos nome e telefone.");
       return;
+    }
+    if (areas.length === 0) {
+      setError("Escolha pelo menos uma área para servir.");
+      return;
+    }
+    if (precisaAntecedentes) {
+      if (!isValidCPF(cpf)) {
+        setError("Para Kids/Bridge, informe um CPF válido.");
+        return;
+      }
+      if (!nomeMae.trim()) {
+        setError("Para Kids/Bridge, informe o nome da mãe.");
+        return;
+      }
     }
     setEnviando(true);
     try {
@@ -131,9 +193,9 @@ export default function VoluntariadoScreen() {
           nome_completo: nome.trim(),
           telefone: telefone.trim(),
           email: email.trim(),
-          cpf: membro?.cpf || null,
-          area_interesse: area.trim() || null,
-          disponibilidade: disponibilidade.trim() || null,
+          areas,
+          cpf: precisaAntecedentes ? onlyDigits(cpf) : membro?.cpf || null,
+          nome_mae: precisaAntecedentes ? nomeMae.trim() : null,
           membro_id: membro?.membroId ?? null,
         },
         user?.id
@@ -170,17 +232,13 @@ export default function VoluntariadoScreen() {
               ) : escalas.length === 0 ? (
                 <View style={styles.emptyCard}>
                   <Ionicons name="calendar-outline" size={28} color={colors.textMuted} />
-                  <Text style={styles.muted}>
-                    Você não tem escalas futuras no momento.
-                  </Text>
+                  <Text style={styles.muted}>Você não tem escalas futuras no momento.</Text>
                 </View>
               ) : (
                 escalas.map((e) => (
                   <View key={e.id} style={styles.escala}>
                     <View style={styles.escalaInfo}>
-                      <Text style={styles.escalaMin}>
-                        {e.ministerio ?? "Ministério"}
-                      </Text>
+                      <Text style={styles.escalaMin}>{e.ministerio ?? "Ministério"}</Text>
                       <Text style={styles.escalaMeta}>
                         {fmtData(e.data)}
                         {e.papel ? ` · ${e.papel}` : ""}
@@ -217,20 +275,61 @@ export default function VoluntariadoScreen() {
               <Ionicons name="checkmark-circle" size={40} color={colors.success} />
               <Text style={styles.title}>Inscrição enviada!</Text>
               <Text style={styles.muted}>
-                Recebemos sua inscrição de voluntariado. Em breve a equipe fala com
-                você. 💙
+                Recebemos sua inscrição de voluntariado. Em breve a equipe fala com você. 💙
               </Text>
             </View>
           ) : (
             <View style={styles.section}>
               <Text style={styles.subtitle}>
-                Sirva com a gente na CBRio. Preencha e nossa equipe entra em contato.
+                Sirva com a gente na CBRio. Escolha as áreas e preencha seus dados.
               </Text>
               <Input label="Nome completo" value={nome} onChangeText={setNome} autoCapitalize="words" />
               <Input label="Telefone" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="+55 21 99999-9999" />
               <Input label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" />
-              <Input label="Área de interesse (opcional)" value={area} onChangeText={setArea} placeholder="Ex.: louvor, recepção, kids…" />
-              <Input label="Disponibilidade (opcional)" value={disponibilidade} onChangeText={setDisponibilidade} placeholder="Ex.: domingos à noite" />
+
+              <Text style={styles.fieldLabel}>Onde você quer servir?</Text>
+              <View style={styles.chips}>
+                {AREAS.map((a) => {
+                  const sel = areas.includes(a);
+                  return (
+                    <Pressable
+                      key={a}
+                      style={[styles.chip, sel && styles.chipSel]}
+                      onPress={() => toggleArea(a)}
+                    >
+                      <Text style={[styles.chipTxt, sel && styles.chipTxtSel]}>{a}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* Antecedentes (Kids/Bridge) */}
+              {areasAntecedentes.map((a) => (
+                <View key={a} style={styles.aviso}>
+                  <Text style={styles.avisoTitulo}>{ANTECEDENTES[a].titulo}</Text>
+                  <Text style={styles.avisoTexto}>{ANTECEDENTES[a].texto}</Text>
+                </View>
+              ))}
+              {precisaAntecedentes && (
+                <>
+                  <Input
+                    label="CPF"
+                    value={cpf}
+                    onChangeText={(t) => setCpf(maskCPF(t))}
+                    placeholder="000.000.000-00"
+                    keyboardType="number-pad"
+                    maxLength={14}
+                  />
+                  <Input
+                    label="Nome da mãe"
+                    value={nomeMae}
+                    onChangeText={setNomeMae}
+                    placeholder="Nome completo da mãe"
+                    autoCapitalize="words"
+                  />
+                </>
+              )}
+
               {error && <Text style={styles.error}>{error}</Text>}
               <Button title="Quero ser voluntário" onPress={enviar} loading={enviando || loading} />
             </View>
@@ -263,6 +362,29 @@ const makeStyles = (colors: Palette) =>
     sectionTitle: { color: colors.text, fontSize: font.size.lg, fontWeight: "700" },
     muted: { color: colors.textMuted, fontSize: font.size.md, textAlign: "center", lineHeight: 22 },
     error: { color: colors.danger, fontSize: font.size.sm },
+    fieldLabel: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "600" },
+    chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+    chip: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.full,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surfaceAlt,
+    },
+    chipSel: { backgroundColor: colors.primary, borderColor: colors.primary },
+    chipTxt: { color: colors.text, fontSize: font.size.sm },
+    chipTxtSel: { color: "#fff", fontWeight: "700" },
+    aviso: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.brandMid,
+      padding: spacing.md,
+      gap: spacing.xs,
+    },
+    avisoTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
+    avisoTexto: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 20 },
     emptyCard: {
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
