@@ -12,7 +12,13 @@ export type MeuBatismo = {
   checkin_em: string | null;     // ISO timestamp
 };
 
-/** Retorna a inscrição de batismo ativa mais recente do membro logado. */
+/**
+ * Retorna a inscrição de batismo "relevante" do membro:
+ *  - prioriza status 'pendente' (futura).
+ *  - aceita 'realizado' SÓ se tem data (histórico válido p/ mostrar fotos).
+ *  - ignora rows antigas de totem com status='realizado' e data nula.
+ *  - ignora 'cancelado'.
+ */
 export async function meuBatismo(membroId: string): Promise<MeuBatismo | null> {
   const { data } = await supabase
     .from("batismo_inscricoes")
@@ -20,10 +26,15 @@ export async function meuBatismo(membroId: string): Promise<MeuBatismo | null> {
     .eq("membro_id", membroId)
     .is("deleted_at", null)
     .neq("status", "cancelado")
-    .order("created_at", { ascending: false })
-    .limit(1);
+    .order("created_at", { ascending: false });
   const lista = (data as MeuBatismo[]) ?? [];
-  return lista[0] ?? null;
+
+  // Prioridade: pendente -> realizado com data -> nada
+  const pendente = lista.find((b) => b.status === "pendente");
+  if (pendente) return pendente;
+  const realizadoComData = lista.find((b) => b.status === "realizado" && b.data_batismo);
+  if (realizadoComData) return realizadoComData;
+  return null;
 }
 
 /** Faz o check-in via RPC (server-side valida data + status + propriedade). */

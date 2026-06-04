@@ -17,6 +17,8 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { criarInscricaoApi, getVoluntariadoOpcoes, type VoluntariadoOpcao } from "@/lib/api";
 import { useVoluntariadoSync } from "@/lib/useVoluntariadoSync";
+import { getMeuVolProfileId } from "@/lib/disponibilidade";
+import { Disponibilidade } from "@/components/voluntariado/Disponibilidade";
 import { isValidCPF, maskCPF, onlyDigits } from "@/lib/validators";
 import { supabase } from "@/lib/supabase";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -44,6 +46,13 @@ export default function VoluntariadoScreen() {
 
   // ---- Sync de status (fonte da verdade do voluntariado) ----
   const { me } = useVoluntariadoSync(membro?.membroId ?? null);
+  const [volProfileId, setVolProfileId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user?.id) return;
+    getMeuVolProfileId(user.id, membro?.membroId ?? null).then((id) => {
+      setVolProfileId(id);
+    });
+  }, [user?.id, membro?.membroId]);
   const statusIns = me?.inscricao?.status ?? null;
   const semInscricao = me !== null && me.inscricao === null;
   const inscrito = statusIns === "inscrito";
@@ -315,12 +324,7 @@ export default function VoluntariadoScreen() {
                   </View>
                 ))
               )}
-              <View style={styles.soon}>
-                <Ionicons name="notifications-outline" size={18} color={colors.textMuted} />
-                <Text style={styles.soonText}>
-                  Em breve: aviso no celular quando você for escalado.
-                </Text>
-              </View>
+              {volProfileId && <Disponibilidade volProfileId={volProfileId} />}
             </View>
           ) : enviado ? (
             <View style={styles.emptyCard}>
