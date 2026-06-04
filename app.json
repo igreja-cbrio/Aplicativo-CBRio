@@ -37,6 +37,15 @@
         {
           "photosPermission": "O CBRio usa suas fotos para definir o avatar do seu perfil."
         }
+      ],
+      "@maplibre/maplibre-react-native",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
       ]
     ],
     "experiments": {
