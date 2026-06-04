@@ -9,6 +9,7 @@ import { SplashPulse } from "@/components/brand/SplashPulse";
 import { registerForPush } from "@/lib/push";
 import { attachNotifTapListener } from "@/lib/notifTap";
 import { loadFontScale } from "@/lib/applyFontScale";
+import { useFontsCbrio, applyCbrioFontGlobally } from "@/lib/fonts";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -84,8 +85,10 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
-  const fontReady = useFontScaleBootstrap();
-  if (!fontReady) return null;
+  const fontScaleReady = useFontScaleBootstrap();
+  const fontsLoaded = useFontsCbrio();
+  if (fontsLoaded) applyCbrioFontGlobally();
+  if (!fontScaleReady || !fontsLoaded) return null;
   return (
     <SafeAreaProvider>
       <ThemeProvider>
