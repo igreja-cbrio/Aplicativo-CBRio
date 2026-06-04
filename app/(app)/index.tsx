@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -8,10 +8,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useColors, useTheme } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { useNotificacoesNaoLidas } from "@/lib/useNotificacoes";
+import { destaquesAtivos, type Destaque } from "@/lib/destaques";
+import { proximosCultos, type CultoUpcoming } from "@/lib/cultos";
+import { Carrossel } from "@/components/home/Carrossel";
+import { ProximosCultos } from "@/components/home/ProximosCultos";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
-const LOGO_LIGHT = require("../../assets/images/cbrio-wordmark.png");
-const LOGO_DARK = require("../../assets/images/cbrio-vertical-light.png");
+const LOGO_WORDMARK = require("../../assets/images/cbrio-wordmark.png");
 
 function primeiroNome(nomeCompleto?: string, email?: string | null) {
   const nome = nomeCompleto?.trim();
@@ -49,6 +52,13 @@ export default function InicioScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const { count: naoLidas } = useNotificacoesNaoLidas();
+  const [destaques, setDestaques] = useState<Destaque[]>([]);
+  const [cultos, setCultos] = useState<CultoUpcoming[]>([]);
+
+  useEffect(() => {
+    destaquesAtivos().then(setDestaques).catch(() => setDestaques([]));
+    proximosCultos(7).then(setCultos).catch(() => setCultos([]));
+  }, []);
   const nome = primeiroNome(
     membro?.nome || (user?.user_metadata?.nome as string | undefined),
     user?.email
@@ -60,8 +70,8 @@ export default function InicioScreen() {
         {/* Logo + ações */}
         <View style={styles.brandRow}>
           <Image
-            source={mode === "light" ? LOGO_LIGHT : LOGO_DARK}
-            style={styles.logo}
+            source={LOGO_WORDMARK}
+            style={[styles.logo, { tintColor: mode === "light" ? colors.primary : colors.brandPale }]}
             resizeMode="contain"
           />
           <View style={styles.actions}>
@@ -98,6 +108,10 @@ export default function InicioScreen() {
 
         <Text style={styles.hello}>Olá, {nome}</Text>
 
+        {destaques.length > 0 && <Carrossel itens={destaques} />}
+
+        <ProximosCultos cultos={cultos} />
+
         {/* Atalhos para os módulos */}
         <Text style={styles.sectionTitle}>Atalhos</Text>
         <View style={styles.grid}>
@@ -130,7 +144,7 @@ const makeStyles = (colors: Palette) =>
       justifyContent: "space-between",
       marginTop: spacing.sm,
     },
-    logo: { width: 110, height: 32 },
+    logo: { width: 110, height: 32, marginLeft: -spacing.sm },
     actions: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
     bellWrap: {
       width: 40,

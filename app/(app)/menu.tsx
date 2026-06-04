@@ -35,11 +35,11 @@ export default function MenuScreen() {
     { label: "Cuidados", icon: "heart-outline", onPress: () => router.navigate("/cuidados") },
     { label: "Voluntariado", icon: "hand-left-outline", onPress: () => router.navigate("/voluntariado") },
     { label: "Generosidade", icon: "gift-outline", onPress: () => router.navigate("/generosidade") },
-    { label: "Eventos", icon: "calendar-outline" },
+    { label: "Eventos", icon: "calendar-outline", onPress: () => router.navigate("/eventos") },
     { label: "Bíblia e devocionais", icon: "book-outline" },
     { label: "Notificações", icon: "notifications-outline", onPress: () => router.navigate("/notificacoes") },
     { label: "Configurações", icon: "settings-outline", onPress: () => router.navigate("/configuracoes") },
-    { label: "Sobre a CBRio", icon: "information-circle-outline" },
+    { label: "Sobre a CBRio", icon: "information-circle-outline", onPress: () => router.navigate("/sobre") },
   ];
 
   return (
