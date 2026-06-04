@@ -109,3 +109,33 @@ export type InscricaoQualquer = InscricaoVoluntariado | InscricaoGrupo | (Record
 export function criarInscricaoApi(body: InscricaoQualquer): Promise<{ ok: boolean; message?: string }> {
   return apiPost<{ ok: boolean; message?: string }>("/app/inscricoes", body);
 }
+
+// ===== /app/voluntariado/me (fonte da verdade do status do voluntário) =====
+export type VoluntariadoStatus = "inscrito" | "enviado_ministerio" | "integrado" | string;
+
+export type VoluntariadoMe = {
+  inscricao: {
+    id: string;
+    status: VoluntariadoStatus;
+    area: string | null;
+    ministerios_interesse: string[] | null;
+    integrado_em: string | null;
+  } | null;
+  voluntario_ativo: boolean;
+  escalas?: Array<{
+    id: string;
+    data: string;
+    papel: string | null;
+    confirmado: boolean | null;
+    ministerio: string | null;
+  }>;
+};
+
+export async function getVoluntariadoMe(): Promise<VoluntariadoMe> {
+  // Aceita resposta com ou sem envelope ({ data: {...} } ou raw)
+  const raw = await apiGet<unknown>("/app/voluntariado/me");
+  const obj = (raw && typeof raw === "object" && "data" in (raw as object))
+    ? (raw as { data: unknown }).data
+    : raw;
+  return obj as VoluntariadoMe;
+}

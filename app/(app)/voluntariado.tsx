@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { criarInscricaoApi, getVoluntariadoOpcoes, type VoluntariadoOpcao } from "@/lib/api";
+import { useVoluntariadoSync } from "@/lib/useVoluntariadoSync";
 import { isValidCPF, maskCPF, onlyDigits } from "@/lib/validators";
 import { supabase } from "@/lib/supabase";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -40,6 +41,14 @@ export default function VoluntariadoScreen() {
   const { membro, loading } = useMembro();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  // ---- Sync de status (fonte da verdade do voluntariado) ----
+  const { me } = useVoluntariadoSync(membro?.membroId ?? null);
+  const statusIns = me?.inscricao?.status ?? null;
+  const semInscricao = me !== null && me.inscricao === null;
+  const inscrito = statusIns === "inscrito";
+  const enviadoMinisterio = statusIns === "enviado_ministerio";
+  const integrado = statusIns === "integrado" || me?.voluntario_ativo === true;
 
   // ---- Minhas escalas ----
   const [escalas, setEscalas] = useState<Escala[]>([]);
@@ -207,13 +216,18 @@ export default function VoluntariadoScreen() {
       setSucessoMsg(resp.message || "Inscrição recebida! Nossa equipe entrará em contato.");
       setEnviado(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível enviar.");
+      const err = e as Error & { status?: number };
+      if (err.status === 409) {
+        // Já tem inscrição em análise — força sincronização e mostra status.
+        setError("Você já tem uma inscrição em análise. Acompanhe o status acima.");
+        setEnviado(false);
+      } else {
+        setError(err.message || "Não foi possível enviar.");
+      }
     } finally {
       setEnviando(false);
     }
   }
-
-  const ehVoluntario = !!membro?.voluntario || escalas.length > 0;
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
@@ -229,7 +243,36 @@ export default function VoluntariadoScreen() {
             <Text style={styles.title}>Voluntariado</Text>
           </View>
 
-          {ehVoluntario ? (
+          {inscrito ? (
+            <View style={styles.section}>
+              <View style={styles.statusCard}>
+                <Ionicons name="hourglass-outline" size={22} color={colors.brandMid} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.statusTitulo}>Inscrição em análise</Text>
+                  <Text style={styles.statusTxt}>
+                    Nossa equipe está revisando sua inscrição e em breve te
+                    encaminha pro ministério certo. Você recebe um aviso aqui
+                    quando avançar.
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ) : enviadoMinisterio ? (
+            <View style={styles.section}>
+              <View style={styles.statusCard}>
+                <Ionicons name="paper-plane-outline" size={22} color={colors.brandMid} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.statusTitulo}>Encaminhada ao ministério</Text>
+                  <Text style={styles.statusTxt}>
+                    {me?.inscricao?.area
+                      ? `Sua inscrição foi enviada pro ministério de ${me.inscricao.area}. `
+                      : "Sua inscrição foi enviada pro ministério. "}
+                    O líder vai te chamar em breve.
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ) : integrado ? (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Minhas escalas</Text>
               {carregandoEscalas ? (
@@ -378,6 +421,18 @@ const makeStyles = (colors: Palette) =>
     subtitle: { color: colors.textMuted, fontSize: font.size.md, textAlign: "center", lineHeight: 22 },
     section: { gap: spacing.md },
     sectionTitle: { color: colors.text, fontSize: font.size.lg, fontWeight: "700" },
+    statusCard: {
+      flexDirection: "row",
+      gap: spacing.md,
+      padding: spacing.md,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      backgroundColor: colors.surface,
+      alignItems: "flex-start",
+    },
+    statusTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800", marginBottom: 4 },
+    statusTxt: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 20 },
     muted: { color: colors.textMuted, fontSize: font.size.md, textAlign: "center", lineHeight: 22 },
     error: { color: colors.danger, fontSize: font.size.sm },
     fieldLabel: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "600" },
