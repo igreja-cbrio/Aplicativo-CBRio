@@ -41,7 +41,6 @@ const ATALHOS: Atalho[] = [
   { label: "Cuidados", icon: "heart", href: "/cuidados", desc: "Oração e apoio" },
   { label: "Voluntariado", icon: "hand-left", href: "/voluntariado", desc: "Sirva com a gente" },
   { label: "Generosidade", icon: "gift", href: "/generosidade", desc: "Dízimos e ofertas" },
-  { label: "Meu perfil", icon: "person", href: "/perfil", desc: "Conta e cartões" },
 ];
 
 export default function InicioScreen() {
