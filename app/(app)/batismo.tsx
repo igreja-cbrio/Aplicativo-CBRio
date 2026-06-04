@@ -25,9 +25,14 @@ import {
   meuBatismo,
   fazerCheckin,
   listarFotosBatismo,
+  getBatismoAnterior,
+  marcarBatismoAnterior,
+  desmarcarBatismoAnterior,
   type MeuBatismo,
+  type BatismoAnterior,
   type FotoBatismo,
 } from "@/lib/batismo";
+import { Input } from "@/components/ui/Input";
 import { formatDataLonga } from "@/lib/cultos";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { BRAND_FONT } from "@/lib/fonts";
@@ -58,6 +63,10 @@ export default function BatismoScreen() {
   const [fotoAberta, setFotoAberta] = useState<FotoBatismo | null>(null);
   const [checkinFazendo, setCheckinFazendo] = useState(false);
   const [confettiKey, setConfettiKey] = useState(0);
+  const [batismoAnt, setBatismoAnt] = useState<BatismoAnterior | null>(null);
+  const [modalIgrejaAberto, setModalIgrejaAberto] = useState(false);
+  const [igrejaTxt, setIgrejaTxt] = useState("");
+  const [salvandoIgreja, setSalvandoIgreja] = useState(false);
 
   const carregar = useCallback(async () => {
     if (!membro?.membroId) {
@@ -74,6 +83,10 @@ export default function BatismoScreen() {
       setFotos(fs);
       setFotosLoading(false);
     }
+    // Status "já sou batizado" do membro
+    const ant = await getBatismoAnterior(membro.membroId);
+    setBatismoAnt(ant);
+    setIgrejaTxt(ant.igreja_batismo_anterior ?? "");
   }, [membro?.membroId]);
 
   useEffect(() => {
@@ -135,15 +148,53 @@ export default function BatismoScreen() {
             styles={styles}
           />
         ) : !batismo ? (
-          <Vazio
-            icon="water-outline"
-            titulo="Você ainda não se inscreveu"
-            txt="O batismo é uma decisão linda. Inscreva-se e te acompanhamos até lá."
-            cta="Quero me batizar"
-            onPress={() => router.navigate("/inscricao-batismo")}
-            colors={colors}
-            styles={styles}
-          />
+          <View style={{ gap: spacing.md }}>
+            {batismoAnt?.batizado_outra_igreja && (
+              <View style={styles.card}>
+                <View style={styles.row}>
+                  <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                  <Text style={styles.cardTitle}>Já é batizado(a)</Text>
+                </View>
+                <Text style={styles.cardTxt}>
+                  Registramos seu batismo
+                  {batismoAnt.igreja_batismo_anterior ? ` em ${batismoAnt.igreja_batismo_anterior}` : ""}.
+                  Você ainda pode se batizar na CBRio se quiser.
+                </Text>
+                <Pressable
+                  onPress={async () => {
+                    await desmarcarBatismoAnterior();
+                    setBatismoAnt({ batizado_outra_igreja: false, igreja_batismo_anterior: null });
+                    setIgrejaTxt("");
+                  }}
+                  hitSlop={6}
+                >
+                  <Text style={{ color: colors.textMuted, fontSize: 12 }}>Remover este registro</Text>
+                </Pressable>
+              </View>
+            )}
+            <Vazio
+              icon="water-outline"
+              titulo={batismoAnt?.batizado_outra_igreja ? "Quer se batizar na CBRio?" : "Você ainda não se inscreveu"}
+              txt={
+                batismoAnt?.batizado_outra_igreja
+                  ? "Mesmo já sendo batizado(a), você pode renovar essa decisão aqui."
+                  : "O batismo é uma decisão linda. Inscreva-se e te acompanhamos até lá."
+              }
+              cta="Quero me batizar"
+              onPress={() => router.navigate("/inscricao-batismo")}
+              colors={colors}
+              styles={styles}
+            />
+            {!batismoAnt?.batizado_outra_igreja && (
+              <Pressable
+                onPress={() => setModalIgrejaAberto(true)}
+                style={({ pressed }) => [styles.linkAcao, pressed && { opacity: 0.6 }]}
+              >
+                <Ionicons name="checkmark-circle-outline" size={18} color={colors.brandMid} />
+                <Text style={styles.linkAcaoTxt}>Já sou batizado(a) em outra igreja</Text>
+              </Pressable>
+            )}
+          </View>
         ) : !batismo.data_batismo ? (
           <View style={styles.hero}>
             <Ionicons name="time-outline" size={28} color="#fff" />
@@ -190,6 +241,60 @@ export default function BatismoScreen() {
               <Text style={styles.modalSaveTxt}>Salvar / Compartilhar</Text>
             </Pressable>
           )}
+        </View>
+      </Modal>
+
+      {/* Modal pra capturar igreja onde foi batizado */}
+      <Modal
+        visible={modalIgrejaAberto}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setModalIgrejaAberto(false)}
+      >
+        <View style={styles.modalIgrejaBg}>
+          <View style={styles.modalIgrejaCard}>
+            <Text style={styles.cardTitle}>Você foi batizado(a) onde?</Text>
+            <Text style={styles.cardTxt}>
+              Conta pra gente a igreja. Isso ajuda nossa equipe a te conhecer
+              melhor.
+            </Text>
+            <Input
+              label="Nome da igreja"
+              value={igrejaTxt}
+              onChangeText={setIgrejaTxt}
+              placeholder="Igreja anterior"
+              autoFocus
+            />
+            <View style={{ flexDirection: "row", gap: spacing.sm }}>
+              <Button
+                title="Cancelar"
+                variant="ghost"
+                onPress={() => {
+                  setModalIgrejaAberto(false);
+                  setIgrejaTxt(batismoAnt?.igreja_batismo_anterior ?? "");
+                }}
+              />
+              <Button
+                title="Confirmar"
+                loading={salvandoIgreja}
+                onPress={async () => {
+                  setSalvandoIgreja(true);
+                  try {
+                    await marcarBatismoAnterior(igrejaTxt);
+                    setBatismoAnt({
+                      batizado_outra_igreja: true,
+                      igreja_batismo_anterior: igrejaTxt.trim() || null,
+                    });
+                    setModalIgrejaAberto(false);
+                  } catch (e) {
+                    Alert.alert("Erro", e instanceof Error ? e.message : "Falha ao salvar.");
+                  } finally {
+                    setSalvandoIgreja(false);
+                  }
+                }}
+              />
+            </View>
+          </View>
         </View>
       </Modal>
 
@@ -478,4 +583,24 @@ const makeStyles = (colors: Palette) =>
       backgroundColor: colors.primary,
     },
     modalSaveTxt: { color: "#fff", fontWeight: "800", fontSize: font.size.sm },
+    linkAcao: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.sm,
+      paddingVertical: spacing.md,
+    },
+    linkAcaoTxt: { color: colors.brandMid, fontSize: font.size.sm, fontWeight: "700" },
+    modalIgrejaBg: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.6)",
+      justifyContent: "flex-end",
+    },
+    modalIgrejaCard: {
+      backgroundColor: colors.background,
+      borderTopLeftRadius: radius.xl,
+      borderTopRightRadius: radius.xl,
+      padding: spacing.lg,
+      gap: spacing.md,
+    },
   });

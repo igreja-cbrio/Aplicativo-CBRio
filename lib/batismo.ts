@@ -49,6 +49,33 @@ export async function fazerCheckin(inscricaoId: string): Promise<
   return data as { ok: true; ja_checkado?: boolean; checkin_em: string } | { ok: false; erro: string };
 }
 
+export type BatismoAnterior = {
+  batizado_outra_igreja: boolean;
+  igreja_batismo_anterior: string | null;
+};
+
+export async function getBatismoAnterior(membroId: string): Promise<BatismoAnterior> {
+  const { data } = await supabase
+    .from("mem_membros")
+    .select("batizado_outra_igreja, igreja_batismo_anterior")
+    .eq("id", membroId)
+    .maybeSingle();
+  return {
+    batizado_outra_igreja: !!(data as { batizado_outra_igreja?: boolean } | null)?.batizado_outra_igreja,
+    igreja_batismo_anterior: (data as { igreja_batismo_anterior?: string | null } | null)?.igreja_batismo_anterior ?? null,
+  };
+}
+
+export async function marcarBatismoAnterior(igreja: string): Promise<void> {
+  const { error } = await supabase.rpc("app_marcar_batizado_outra", { p_igreja: igreja });
+  if (error) throw error;
+}
+
+export async function desmarcarBatismoAnterior(): Promise<void> {
+  const { error } = await supabase.rpc("app_desmarcar_batizado_outra");
+  if (error) throw error;
+}
+
 export type FotoBatismo = {
   nome: string;
   url: string;

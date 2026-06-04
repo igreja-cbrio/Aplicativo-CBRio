@@ -28,8 +28,6 @@ export default function InscricaoBatismoScreen() {
   const [email, setEmail] = useState("");
   const [nascimento, setNascimento] = useState("");
   const [camisa, setCamisa] = useState("");
-  const [jaBatizado, setJaBatizado] = useState(false);
-  const [igrejaAnterior, setIgrejaAnterior] = useState("");
   const [deficiencia, setDeficiencia] = useState(false);
   const [deficienciaDesc, setDeficienciaDesc] = useState("");
   const [obs, setObs] = useState("");
@@ -67,8 +65,6 @@ export default function InscricaoBatismoScreen() {
           email: email.trim() || null,
           data_nascimento: nascimento ? dateBRToISO(nascimento) : null,
           tamanho_camisa: camisa.trim() || null,
-          ja_batizado: jaBatizado,
-          igreja_anterior: jaBatizado ? igrejaAnterior.trim() || null : null,
           possui_deficiencia: deficiencia,
           deficiencia_descricao: deficiencia ? deficienciaDesc.trim() || null : null,
           observacoes: obs.trim() || null,
@@ -112,28 +108,6 @@ export default function InscricaoBatismoScreen() {
             {"  ·  "}Sempre no 4º domingo do mês.
           </Text>
         </View>
-      </View>
-
-      <View style={styles.jaBatizadoBox}>
-        <Checkbox
-          checked={jaBatizado}
-          onChange={setJaBatizado}
-          label="Já sou batizado(a) em outra igreja"
-        />
-        {jaBatizado && (
-          <>
-            <Text style={styles.jaBatizadoHint}>
-              Você ainda pode se inscrever pra ser batizado(a) na CBRio. Conta
-              um pouco pra gente.
-            </Text>
-            <Input
-              label="Em qual igreja você foi batizado(a)?"
-              value={igrejaAnterior}
-              onChangeText={setIgrejaAnterior}
-              placeholder="Nome da igreja"
-            />
-          </>
-        )}
       </View>
 
       <Input label="Nome completo" value={nome} onChangeText={setNome} autoCapitalize="words" />
