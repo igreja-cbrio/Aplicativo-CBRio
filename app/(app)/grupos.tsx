@@ -52,6 +52,7 @@ export default function GruposScreen() {
       .select("id, nome, categoria, bairro, dia_semana, horario, foto_url")
       .eq("ativo", true)
       .is("deleted_at", null)
+      .in("status_temporada", ["ativo", "novo", "a_confirmar"])
       .order("nome");
     setGrupos((data as Grupo[]) ?? []);
 
@@ -60,6 +61,7 @@ export default function GruposScreen() {
         .from("mem_grupo_membros")
         .select("grupo_id")
         .eq("membro_id", membro.membroId)
+        .is("saiu_em", null)
         .is("deleted_at", null);
       setMeusIds((meus ?? []).map((m) => m.grupo_id as string));
     }

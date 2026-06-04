@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { supabase } from "@/lib/supabase";
+import { pedirEntrarGrupo } from "@/lib/grupos";
 import { diaHorario } from "./grupos";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
@@ -69,6 +70,7 @@ export default function GrupoDetalheScreen() {
       .select("id")
       .eq("grupo_id", id)
       .eq("membro_id", membro.membroId)
+      .is("saiu_em", null)
       .is("deleted_at", null)
       .limit(1);
     if (jaMembro && jaMembro.length > 0) {
@@ -100,25 +102,21 @@ export default function GrupoDetalheScreen() {
     }
     setEnviando(true);
     try {
-      const { data, error } = await supabase
-        .from("mem_grupo_pedidos")
-        .insert({
-          grupo_id: id,
-          membro_id: membro.membroId,
-          nome: membro.nome || null,
-          telefone: membro.telefone || null,
-          status: "pendente",
-          origem: "app",
-        })
-        .select("id");
-      if (error) throw error;
-      if (!data || data.length === 0) {
-        setErro("Não foi possível enviar o pedido (permissão). Vamos ajustar isso.");
-        return;
-      }
+      await pedirEntrarGrupo(id as string, {
+        membro_id: membro.membroId,
+        nome: membro.nome || "Membro",
+        telefone: membro.telefone || null,
+        email: membro.email || null,
+      });
       setEstado("pendente");
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Não foi possível enviar o pedido.");
+      const err = e as Error & { code?: number };
+      if (err.code === 409) {
+        // já é membro ou já tem pedido — recarrega o estado real
+        await carregar();
+      } else {
+        setErro(err.message || "Não foi possível enviar o pedido.");
+      }
     } finally {
       setEnviando(false);
     }
