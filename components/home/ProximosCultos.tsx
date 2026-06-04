@@ -105,72 +105,84 @@ function CultoCard({
 
   // Lift compartilhado: qualquer pill que for pressionada eleva o card todo.
   const scale = useRef(new Animated.Value(1)).current;
-  const elev = useRef(new Animated.Value(0)).current;
   function lift() {
-    Animated.parallel([
-      Animated.spring(scale, { toValue: 1.025, useNativeDriver: true, stiffness: 400, damping: 18, mass: 0.5 }),
-      Animated.timing(elev, { toValue: 1, duration: 140, useNativeDriver: false }),
-    ]).start();
+    Animated.spring(scale, {
+      toValue: 1.03,
+      useNativeDriver: true,
+      stiffness: 400,
+      damping: 18,
+      mass: 0.5,
+    }).start();
   }
   function drop() {
-    Animated.parallel([
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, stiffness: 320, damping: 16, mass: 0.5 }),
-      Animated.timing(elev, { toValue: 0, duration: 160, useNativeDriver: false }),
-    ]).start();
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      stiffness: 320,
+      damping: 16,
+      mass: 0.5,
+    }).start();
   }
-  const shadowOpacity = elev.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.22] });
-  const shadowRadius = elev.interpolate({ inputRange: [0, 1], outputRange: [4, 14] });
+
+  const primeiro = horarios[0];
 
   return (
     <Animated.View
       style={[
-        styles.card,
+        styles.cardWrap,
         {
           transform: [{ scale }],
           shadowColor: "#000",
           shadowOffset: { width: 0, height: 6 },
-          shadowOpacity,
-          shadowRadius,
+          shadowOpacity: 0.15,
+          shadowRadius: 10,
         },
       ]}
     >
-      <View style={styles.headerCard}>
-        <View style={[styles.tag, { backgroundColor: cor }]}>
-          <Text style={styles.tagTxt}>{ehHoje ? "HOJE" : dia.toUpperCase()}</Text>
+      <Pressable
+        onPress={() => primeiro && router.navigate({ pathname: "/culto-detalhe", params: { id: primeiro.id } })}
+        onPressIn={lift}
+        onPressOut={drop}
+        style={styles.card}
+      >
+        <View style={styles.headerCard}>
+          <View style={[styles.tag, { backgroundColor: cor }]}>
+            <Text style={styles.tagTxt}>{ehHoje ? "HOJE" : dia.toUpperCase()}</Text>
+          </View>
+          <Text style={styles.nome} numberOfLines={1}>
+            {grupo.nomeBase}
+          </Text>
         </View>
-        <Text style={styles.nome} numberOfLines={1}>
-          {grupo.nomeBase}
-        </Text>
-      </View>
 
-      <View style={styles.horarios}>
-        {horarios.map((c) => (
-          <Pressable
-            key={c.id}
-            onPress={() => router.navigate({ pathname: "/culto-detalhe", params: { id: c.id } })}
-            onPressIn={lift}
-            onPressOut={drop}
-            style={styles.horaPill}
-          >
-            <Text style={styles.horaTxt}>{formatCultoHora(c.hora)}</Text>
-          </Pressable>
-        ))}
-      </View>
+        <View style={styles.horarios}>
+          {horarios.map((c) => (
+            <Pressable
+              key={c.id}
+              onPress={() => router.navigate({ pathname: "/culto-detalhe", params: { id: c.id } })}
+              onPressIn={lift}
+              onPressOut={drop}
+              style={styles.horaPill}
+            >
+              <Text style={styles.horaTxt}>{formatCultoHora(c.hora)}</Text>
+            </Pressable>
+          ))}
+        </View>
 
-      <View style={styles.feats}>
-        {grupo.has_online && (
-          <View style={styles.feat}>
-            <Ionicons name="videocam" size={11} color={colors.brandMid} />
-            <Text style={styles.featTxt}>online</Text>
-          </View>
-        )}
-        {grupo.has_kids && (
-          <View style={styles.feat}>
-            <Ionicons name="happy" size={11} color={colors.brandMid} />
-            <Text style={styles.featTxt}>kids</Text>
-          </View>
-        )}
-      </View>
+        <View style={styles.feats}>
+          {grupo.has_online && (
+            <View style={styles.feat}>
+              <Ionicons name="videocam" size={11} color={colors.brandMid} />
+              <Text style={styles.featTxt}>online</Text>
+            </View>
+          )}
+          {grupo.has_kids && (
+            <View style={styles.feat}>
+              <Ionicons name="happy" size={11} color={colors.brandMid} />
+              <Text style={styles.featTxt}>kids</Text>
+            </View>
+          )}
+        </View>
+      </Pressable>
     </Animated.View>
   );
 }
@@ -179,8 +191,11 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     headerRow: { flexDirection: "row", alignItems: "center", gap: 8 },
     titulo: { color: colors.text, fontSize: font.size.md, fontFamily: BRAND_FONT },
-    card: {
+    cardWrap: {
       width: CARD_W,
+      borderRadius: radius.lg,
+    },
+    card: {
       padding: spacing.md,
       borderRadius: radius.lg,
       borderWidth: 1,
