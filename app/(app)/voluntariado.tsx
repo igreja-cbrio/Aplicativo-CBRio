@@ -171,6 +171,10 @@ export default function VoluntariadoScreen() {
 
   async function enviar() {
     setError(null);
+    if (me?.inscricao) {
+      setError("Você já tem uma inscrição em andamento.");
+      return;
+    }
     if (!nome || !telefone) {
       setError("Preencha pelo menos nome e telefone.");
       return;
@@ -325,6 +329,26 @@ export default function VoluntariadoScreen() {
               <Text style={styles.muted}>
                 {sucessoMsg ?? "Recebemos sua inscrição de voluntariado. Em breve a equipe fala com você. 💙"}
               </Text>
+            </View>
+          ) : me === null ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.muted}>Carregando…</Text>
+            </View>
+          ) : me.inscricao ? (
+            <View style={styles.section}>
+              <View style={styles.statusCard}>
+                <Ionicons name="information-circle-outline" size={22} color={colors.brandMid} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.statusTitulo}>
+                    Você já tem uma inscrição ({me.inscricao.status})
+                  </Text>
+                  <Text style={styles.statusTxt}>
+                    Para evitar duplicatas, só uma inscrição ativa por membro.
+                    Acompanhe o status aqui — quando avançar, a tela atualiza
+                    sozinha.
+                  </Text>
+                </View>
+              </View>
             </View>
           ) : (
             <View style={styles.section}>

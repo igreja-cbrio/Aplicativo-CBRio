@@ -2,21 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { supabase } from "./supabase";
-import { getVoluntariadoMe, type VoluntariadoMe } from "./api";
+import { type VoluntariadoMe } from "./api";
 
 /**
- * Mantém a tela de Voluntariado sincronizada com o status real da inscrição.
- *
- * Combina:
- *  - GET /app/voluntariado/me no mount + foco da tela + AppState foreground
- *  - polling leve a cada 30s enquanto a tela está visível
- *  - subscription realtime em vol_inscricoes (filtrada pelo membro) — quando
- *    a coordenação muda o status, a tela re-fetch imediatamente
- *
- * Returns:
- *   me     -> resposta atual (null enquanto carrega)
- *   loading -> true só na 1ª carga
- *   recarregar -> força um refetch manual
+ * Mantém a tela de Voluntariado sincronizada com a fonte da verdade
+ * (vol_inscricoes + mem_membros.voluntario), consultando direto pelo
+ * Supabase. Combina foco da tela, AppState, polling leve e realtime.
  */
 export function useVoluntariadoSync(membroId: string | null | undefined) {
   const [me, setMe] = useState<VoluntariadoMe | null>(null);
@@ -25,10 +16,43 @@ export function useVoluntariadoSync(membroId: string | null | undefined) {
   const ativo = useRef(true);
 
   const recarregar = useCallback(async () => {
+    if (!membroId) {
+      setMe({ inscricao: null, voluntario_ativo: false });
+      setLoading(false);
+      return;
+    }
     try {
-      const dados = await getVoluntariadoMe();
+      // 1) Inscrição mais recente (ativa) do membro em vol_inscricoes.
+      const { data: insRow } = await supabase
+        .from("vol_inscricoes")
+        .select("id, status, area, ministerios_interesse, integrado_em")
+        .eq("membro_id", membroId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // 2) Flag voluntario do membro (sinaliza ativo mesmo sem inscrição
+      //    recente, ex.: voluntário antigo importado via backfill).
+      const { data: m } = await supabase
+        .from("mem_membros")
+        .select("voluntario")
+        .eq("id", membroId)
+        .maybeSingle();
+
       if (ativo.current) {
-        setMe(dados);
+        setMe({
+          inscricao: insRow
+            ? {
+                id: insRow.id as string,
+                status: insRow.status as string,
+                area: (insRow.area as string) ?? null,
+                ministerios_interesse:
+                  (insRow.ministerios_interesse as string[] | null) ?? null,
+                integrado_em: (insRow.integrado_em as string | null) ?? null,
+              }
+            : null,
+          voluntario_ativo: !!(m as { voluntario?: boolean } | null)?.voluntario,
+        });
         setErro(null);
       }
     } catch (e) {
@@ -36,9 +60,9 @@ export function useVoluntariadoSync(membroId: string | null | undefined) {
     } finally {
       if (ativo.current) setLoading(false);
     }
-  }, []);
+  }, [membroId]);
 
-  // 1) Refetch ao focar a tela
+  // Refetch ao focar a tela
   useFocusEffect(
     useCallback(() => {
       ativo.current = true;
@@ -49,7 +73,7 @@ export function useVoluntariadoSync(membroId: string | null | undefined) {
     }, [recarregar])
   );
 
-  // 2) Refetch quando o app volta pro foreground
+  // Refetch quando o app volta pro foreground
   useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") recarregar();
@@ -57,7 +81,7 @@ export function useVoluntariadoSync(membroId: string | null | undefined) {
     return () => sub.remove();
   }, [recarregar]);
 
-  // 3) Polling leve enquanto a tela está ativa
+  // Polling leve
   useEffect(() => {
     const t = setInterval(() => {
       if (ativo.current) recarregar();
@@ -65,7 +89,7 @@ export function useVoluntariadoSync(membroId: string | null | undefined) {
     return () => clearInterval(t);
   }, [recarregar]);
 
-  // 4) Realtime — Postgres Changes em vol_inscricoes filtrado pelo membro
+  // Realtime — Postgres Changes em vol_inscricoes filtrado pelo membro
   useEffect(() => {
     if (!membroId) return;
     const canal = supabase
