@@ -45,7 +45,7 @@ export default function MenuScreen() {
     { label: "Generosidade", icon: "gift-outline", onPress: () => router.navigate("/generosidade") },
     { label: "Eventos", icon: "calendar-outline" },
     { label: "Bíblia e devocionais", icon: "book-outline" },
-    { label: "Notificações", icon: "notifications-outline" },
+    { label: "Notificações", icon: "notifications-outline", onPress: () => router.navigate("/notificacoes") },
     { label: "Configurações", icon: "settings-outline" },
     { label: "Sobre a CBRio", icon: "information-circle-outline" },
   ];

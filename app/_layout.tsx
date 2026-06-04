@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { SplashPulse } from "@/components/brand/SplashPulse";
 import { registerForPush } from "@/lib/push";
+import { attachNotifTapListener } from "@/lib/notifTap";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -40,6 +41,12 @@ function RootNavigator() {
   useEffect(() => {
     if (session?.user?.id) registerForPush(session.user.id);
   }, [session?.user?.id]);
+
+  // Listener de tap em notificações -> roteia pra tela certa.
+  useEffect(() => {
+    const detach = attachNotifTapListener();
+    return detach;
+  }, []);
 
   if (loading) {
     return <SplashPulse />;

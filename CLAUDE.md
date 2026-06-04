@@ -52,6 +52,7 @@ app/
     inscricao-batismo.tsx / inscricao-grupos.tsx / inscricao-next.tsx
     grupos.tsx / grupo-detalhe.tsx  # lista/detalhe de grupos (mem_grupos) + pedido p/ entrar (mem_grupo_pedidos)
     grupo-editar.tsx     # tela admin: edita info do grupo + upload de foto de capa (bucket 'grupos')
+    notificacoes.tsx     # histórico de notificações (app_notificacoes) — tap navega pra tela origem
 components/
   inscricoes/FormScaffold.tsx  # layout comum dos formulários de inscrição
 lib/
@@ -79,7 +80,8 @@ constants/
 | :----: | ---------------- | ---------------------------------------------------------------- |
 |   ✅   | **Autenticação** | Login/cadastro e-mail/senha, Google, Apple, "lembrar de mim", recuperação de senha (SMS pronto, desligado até ter remetente BR) |
 |   🚧   | **Inscrições**   | Formulários no app gravando em `app_inscricoes` (tipo + dados jsonb): Batismo, Grupos, NEXT, Voluntariado prontos. Decisão fica só na web. ⚠️ depende do sistema processar `app_inscricoes` nas tabelas finais. |
-|   🚧   | **Voluntariado** | Aba self-service: ver/confirmar **escalas** (`mem_escalas`) ✅. **Push** ao ser escalado: `lib/push.ts` salva token em `app_push_tokens`; Edge Function `supabase/functions/notify-escala` dispara (precisa EAS projectId + device físico + deploy da function/webhook). |
+|   🚧   | **Voluntariado** | Aba self-service: ver/confirmar **escalas** (`mem_escalas`) ✅. **Push** ao ser escalado: `lib/push.ts` salva token em `app_push_tokens`; Edge Function `supabase/functions/notify-escala` dispara (precisa EAS projectId + device físico + webhook). |
+|   ✅   | **Notificações** | `app_notificacoes` (histórico in-app), helper `supabase/functions/_shared/notify.ts`, tela `notificacoes.tsx` com badge e marca-como-lida, `lib/notifTap.ts` roteia o tap pra tela certa. Functions já deployadas (`notify-escala`, `notify-cuidado-sos`, `notify-grupo-pedido`). **Falta:** EAS projectId + Database Webhooks no dashboard. |
 |   🚧   | **Cuidados**     | Pedido de oração + aconselhamento (grava em `app_inscricoes`) e **SOS** (CVV 188/192 na hora + alerta push aos pastores via Edge Function `notify-cuidado-sos`). |
 |   ⬜   | _Próximos_       | A definir, construídos um a um                                   |
 
