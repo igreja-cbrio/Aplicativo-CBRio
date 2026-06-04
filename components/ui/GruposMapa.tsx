@@ -1,12 +1,12 @@
-import { useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
 import {
   Map,
   Camera,
   Marker,
-  UserLocation,
   type CameraRef,
   LocationManager,
+  useCurrentPosition,
 } from "@maplibre/maplibre-react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme, useColors } from "@/contexts/ThemeContext";
@@ -42,18 +42,51 @@ export function GruposMapa({
   const colors = useColors();
   const cameraRef = useRef<CameraRef>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [permissionOk, setPermissionOk] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    LocationManager.requestPermissions().then((ok) => {
+      if (mounted) setPermissionOk(ok);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const pos = useCurrentPosition({ enabled: permissionOk });
+  const userLngLat: [number, number] | null = pos
+    ? [pos.coords.longitude, pos.coords.latitude]
+    : null;
+
+  // Pulso animado contínuo na localização do usuário.
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(pulse, {
+        toValue: 1,
+        duration: 1800,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      })
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+  const pulseScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.4, 2.6] });
+  const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 0] });
 
   async function centralizarUsuario() {
-    try {
-      const ok = await LocationManager.requestPermissions();
+    let target = userLngLat;
+    if (!target) {
+      const ok = permissionOk || (await LocationManager.requestPermissions());
       if (!ok) return;
-      const pos = await LocationManager.getCurrentPosition();
-      if (!pos) return;
-      cameraRef.current?.flyTo({
-        center: [pos.coords.longitude, pos.coords.latitude],
-        zoom: 14,
-      });
-    } catch {}
+      setPermissionOk(true);
+      const p = await LocationManager.getCurrentPosition();
+      if (!p) return;
+      target = [p.coords.longitude, p.coords.latitude];
+    }
+    cameraRef.current?.flyTo({ center: target, zoom: 14, duration: 800 });
   }
 
   const pins = useMemo(
@@ -77,7 +110,19 @@ export function GruposMapa({
     <View style={styles.container}>
       <Map style={styles.map} mapStyle={STYLE_URL[mode]}>
         <Camera ref={cameraRef} initialViewState={{ center: centro, zoom: 10 }} />
-        <UserLocation animated accuracy />
+        {userLngLat && (
+          <Marker lngLat={userLngLat} anchor="center">
+            <View style={styles.userPin}>
+              <Animated.View
+                style={[
+                  styles.userPulse,
+                  { transform: [{ scale: pulseScale }], opacity: pulseOpacity },
+                ]}
+              />
+              <View style={styles.userDot} />
+            </View>
+          </Marker>
+        )}
         {pins.map((g) => (
           <Marker
             key={g.id}
@@ -191,6 +236,32 @@ const styles = StyleSheet.create({
   markerWrapper: {
     alignItems: "center",
     gap: 2,
+  },
+  userPin: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  userPulse: {
+    position: "absolute",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: brand.primary,
+  },
+  userDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: brand.primary,
+    borderWidth: 2.5,
+    borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.35,
+    shadowRadius: 2,
+    elevation: 3,
   },
   pin: {
     width: 16,
