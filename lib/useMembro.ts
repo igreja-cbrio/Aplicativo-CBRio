@@ -60,6 +60,16 @@ export function useMembro() {
           avatarUrl: base.avatarUrl ?? m.foto_url ?? null,
         };
       }
+      // Também é voluntário se tiver vínculo ativo em mem_voluntarios
+      if (!base.voluntario) {
+        const { data: vols } = await supabase
+          .from("mem_voluntarios")
+          .select("id")
+          .eq("membro_id", prof.membro_id)
+          .is("deleted_at", null)
+          .limit(1);
+        if (vols && vols.length > 0) base.voluntario = true;
+      }
     }
     setMembro(base);
     setLoading(false);
