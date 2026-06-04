@@ -2,6 +2,22 @@ import { supabase } from "./supabase";
 
 const API = "https://cbrio.org/api";
 
+async function authHeader() {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Sessão expirada. Faça login novamente.");
+  return { Authorization: `Bearer ${token}` };
+}
+
+/** GET /api/grupos/meu — grupos que participo/lidero + meus pedidos pendentes. */
+export async function meusGrupos() {
+  const resp = await fetch(`${API}/grupos/meu`, { headers: await authHeader() });
+  if (!resp.ok) throw new Error("Não foi possível carregar seus grupos.");
+  return resp.json();
+}
+
 /**
  * Pedido para entrar em um grupo. NÃO pode ser insert direto (RLS bloqueia) —
  * vai pelo backend, autenticado com o token do Supabase do membro.
