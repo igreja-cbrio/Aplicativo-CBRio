@@ -38,6 +38,7 @@ export default function MenuScreen() {
     { label: "Meu perfil", icon: "person-outline", onPress: () => router.navigate("/perfil") },
     { label: "Cartões", icon: "card-outline", onPress: () => router.navigate("/cartoes") },
     { label: "Inscrições", icon: "create-outline", onPress: () => router.navigate("/inscricoes") },
+    { label: "Grupos", icon: "people-outline", onPress: () => router.navigate("/grupos") },
     { label: "Início", icon: "home-outline", onPress: () => router.navigate("/") },
     { label: "Cuidados", icon: "heart-outline", onPress: () => router.navigate("/cuidados") },
     { label: "Voluntariado", icon: "hand-left-outline", onPress: () => router.navigate("/voluntariado") },

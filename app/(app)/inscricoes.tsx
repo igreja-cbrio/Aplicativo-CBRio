@@ -10,12 +10,12 @@ type Item = {
   label: string;
   desc: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
-  href: "/inscricao-batismo" | "/inscricao-grupos" | "/inscricao-next" | "/voluntariado";
+  href: "/inscricao-batismo" | "/grupos" | "/inscricao-next" | "/voluntariado";
 };
 
 const ITENS: Item[] = [
   { label: "Batismo", desc: "Inscreva-se para ser batizado", icon: "water", href: "/inscricao-batismo" },
-  { label: "Grupos", desc: "Participe de um grupo", icon: "people", href: "/inscricao-grupos" },
+  { label: "Grupos", desc: "Participe de um grupo", icon: "people", href: "/grupos" },
   { label: "NEXT", desc: "Inscrição no NEXT", icon: "sparkles", href: "/inscricao-next" },
   { label: "Voluntariado", desc: "Sirva na CBRio", icon: "hand-left", href: "/voluntariado" },
 ];

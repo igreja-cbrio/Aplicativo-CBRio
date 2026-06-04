@@ -50,6 +50,7 @@ app/
     voluntariado.tsx   # inscrição de voluntariado (+ escalas em breve)
     inscricoes.tsx     # hub: Batismo, Grupos, NEXT, Voluntariado; fora do dock
     inscricao-batismo.tsx / inscricao-grupos.tsx / inscricao-next.tsx
+    grupos.tsx / grupo-detalhe.tsx  # lista/detalhe de grupos (mem_grupos) + pedido p/ entrar (mem_grupo_pedidos)
 components/
   inscricoes/FormScaffold.tsx  # layout comum dos formulários de inscrição
 lib/
