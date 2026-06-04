@@ -11,6 +11,7 @@ import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors } from "@/contexts/ThemeContext";
+import { GruposMapa } from "@/components/ui/GruposMapa";
 import { useMembro } from "@/lib/useMembro";
 import { supabase } from "@/lib/supabase";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -23,9 +24,32 @@ export type Grupo = {
   dia_semana: number | null;
   horario: string | null;
   foto_url: string | null;
+  lat: number | null;
+  lng: number | null;
 };
 
 const DOW = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+// Ordem preferida de exibição das categorias na lista. Categorias fora desta
+// lista aparecem depois, em ordem alfabética. A comparação é por prefixo
+// normalizado (sem acento/caixa), então "Jovens", "jovem", "JOVENS" caem juntos.
+const CATEGORIA_ORDEM = ["adultos", "casais", "jovens", "mulheres", "homens", "famílias", "kids", "teens"];
+
+const SEM_CATEGORIA = "Outros";
+
+function normalizar(s: string) {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function ordemCategoria(cat: string) {
+  const n = normalizar(cat);
+  const i = CATEGORIA_ORDEM.findIndex((c) => n.startsWith(normalizar(c)));
+  return i === -1 ? CATEGORIA_ORDEM.length : i;
+}
 
 export function diaHorario(dia: number | null, horario: string | null) {
   const d = dia != null && DOW[dia] ? DOW[dia] : null;
@@ -43,13 +67,13 @@ export default function GruposScreen() {
   const [meusIds, setMeusIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
-  const [cat, setCat] = useState<string | null>(null);
+  const [view, setView] = useState<"lista" | "mapa">("lista");
 
   const carregar = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase
       .from("mem_grupos")
-      .select("id, nome, categoria, bairro, dia_semana, horario, foto_url")
+      .select("id, nome, categoria, bairro, dia_semana, horario, foto_url, lat, lng")
       .eq("ativo", true)
       .is("deleted_at", null)
       .in("status_temporada", ["ativo", "novo", "a_confirmar"])
@@ -72,22 +96,35 @@ export default function GruposScreen() {
     carregar();
   }, [carregar]);
 
-  const categorias = useMemo(
-    () => [...new Set(grupos.map((g) => g.categoria).filter(Boolean))] as string[],
-    [grupos]
-  );
-
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase();
-    return grupos.filter((g) => {
-      if (cat && g.categoria !== cat) return false;
-      if (!q) return true;
-      return (
+    if (!q) return grupos;
+    return grupos.filter(
+      (g) =>
         g.nome.toLowerCase().includes(q) ||
-        (g.bairro ?? "").toLowerCase().includes(q)
-      );
-    });
-  }, [grupos, busca, cat]);
+        (g.bairro ?? "").toLowerCase().includes(q) ||
+        (g.categoria ?? "").toLowerCase().includes(q)
+    );
+  }, [grupos, busca]);
+
+  // Agrupa os grupos filtrados por categoria, na ordem preferida.
+  const secoes = useMemo(() => {
+    const mapa = new Map<string, Grupo[]>();
+    for (const g of filtrados) {
+      const chave = g.categoria?.trim() || SEM_CATEGORIA;
+      if (!mapa.has(chave)) mapa.set(chave, []);
+      mapa.get(chave)!.push(g);
+    }
+    return [...mapa.entries()]
+      .sort(([a], [b]) => {
+        if (a === SEM_CATEGORIA) return 1;
+        if (b === SEM_CATEGORIA) return -1;
+        const oa = ordemCategoria(a);
+        const ob = ordemCategoria(b);
+        return oa !== ob ? oa - ob : a.localeCompare(b);
+      })
+      .map(([categoria, itens]) => ({ categoria, itens }));
+  }, [filtrados]);
 
   const meusGrupos = grupos.filter((g) => meusIds.includes(g.id));
 
@@ -103,7 +140,7 @@ export default function GruposScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.cardNome}>{g.nome}</Text>
           <Text style={styles.cardMeta}>
-            {[g.categoria, g.bairro, diaHorario(g.dia_semana, g.horario)]
+            {[g.bairro, diaHorario(g.dia_semana, g.horario)]
               .filter(Boolean)
               .join(" • ")}
           </Text>
@@ -125,43 +162,69 @@ export default function GruposScreen() {
           <View style={{ width: 24 }} />
         </View>
 
-        {meusGrupos.length > 0 && (
-          <View style={{ gap: spacing.sm }}>
-            <Text style={styles.section}>Meus grupos</Text>
-            {meusGrupos.map((g) => (
-              <GrupoCard key={`meu-${g.id}`} g={g} />
-            ))}
-          </View>
-        )}
+        {/* Alternância Lista / Mapa */}
+        <View style={styles.toggle}>
+          <Pressable
+            style={[styles.toggleItem, view === "lista" && styles.toggleItemSel]}
+            onPress={() => setView("lista")}
+          >
+            <Ionicons name="list" size={16} color={view === "lista" ? "#fff" : colors.textMuted} />
+            <Text style={[styles.toggleTxt, view === "lista" && styles.toggleTxtSel]}>Lista</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.toggleItem, view === "mapa" && styles.toggleItemSel]}
+            onPress={() => setView("mapa")}
+          >
+            <Ionicons name="map" size={16} color={view === "mapa" ? "#fff" : colors.textMuted} />
+            <Text style={[styles.toggleTxt, view === "mapa" && styles.toggleTxtSel]}>Mapa</Text>
+          </Pressable>
+        </View>
 
-        <Text style={styles.section}>Encontre um grupo</Text>
         <TextInput
           style={styles.search}
           value={busca}
           onChangeText={setBusca}
-          placeholder="Buscar por nome ou bairro"
+          placeholder="Buscar por nome, bairro ou categoria"
           placeholderTextColor={colors.textMuted}
           autoCorrect={false}
         />
-        {categorias.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-            <Pressable style={[styles.chip, !cat && styles.chipSel]} onPress={() => setCat(null)}>
-              <Text style={[styles.chipTxt, !cat && styles.chipTxtSel]}>Todas</Text>
-            </Pressable>
-            {categorias.map((c) => (
-              <Pressable key={c} style={[styles.chip, cat === c && styles.chipSel]} onPress={() => setCat(c)}>
-                <Text style={[styles.chipTxt, cat === c && styles.chipTxtSel]}>{c}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        )}
 
         {loading ? (
           <Text style={styles.muted}>Carregando…</Text>
-        ) : filtrados.length === 0 ? (
-          <Text style={styles.muted}>Nenhum grupo encontrado.</Text>
+        ) : view === "mapa" ? (
+          <GruposMapa
+            grupos={filtrados}
+            onSelect={(id) => router.navigate({ pathname: "/grupo-detalhe", params: { id } })}
+          />
         ) : (
-          filtrados.map((g) => <GrupoCard key={g.id} g={g} />)
+          <>
+            {meusGrupos.length > 0 && (
+              <View style={{ gap: spacing.sm }}>
+                <Text style={styles.section}>Meus grupos</Text>
+                {meusGrupos.map((g) => (
+                  <GrupoCard key={`meu-${g.id}`} g={g} />
+                ))}
+              </View>
+            )}
+
+            {filtrados.length === 0 ? (
+              <Text style={styles.muted}>Nenhum grupo encontrado.</Text>
+            ) : (
+              secoes.map(({ categoria, itens }) => (
+                <View key={categoria} style={{ gap: spacing.sm }}>
+                  <View style={styles.catHeader}>
+                    <Text style={styles.catTitle}>{categoria}</Text>
+                    <View style={styles.catBadge}>
+                      <Text style={styles.catBadgeTxt}>{itens.length}</Text>
+                    </View>
+                  </View>
+                  {itens.map((g) => (
+                    <GrupoCard key={g.id} g={g} />
+                  ))}
+                </View>
+              ))
+            )}
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -187,18 +250,49 @@ const makeStyles = (colors: Palette) =>
       color: colors.text,
       fontSize: font.size.md,
     },
-    chips: { gap: spacing.sm, paddingVertical: 2 },
-    chip: {
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
-      borderRadius: radius.full,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surfaceAlt,
+    catHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      marginTop: spacing.sm,
     },
-    chipSel: { backgroundColor: colors.primary, borderColor: colors.primary },
-    chipTxt: { color: colors.text, fontSize: font.size.sm },
-    chipTxtSel: { color: "#fff", fontWeight: "700" },
+    catTitle: {
+      color: colors.text,
+      fontSize: font.size.md,
+      fontWeight: "800",
+      textTransform: "capitalize",
+    },
+    catBadge: {
+      minWidth: 22,
+      height: 22,
+      paddingHorizontal: 6,
+      borderRadius: radius.full,
+      backgroundColor: colors.glass,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    catBadgeTxt: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "700" },
+    toggle: {
+      flexDirection: "row",
+      gap: spacing.xs,
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      padding: spacing.xs,
+    },
+    toggleItem: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.sm,
+    },
+    toggleItemSel: { backgroundColor: colors.primary },
+    toggleTxt: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "600" },
+    toggleTxtSel: { color: "#fff" },
     card: {
       flexDirection: "row",
       alignItems: "center",
