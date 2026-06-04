@@ -53,7 +53,7 @@ export default function NextScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
-  const { me, loading, recarregar } = useNextSync();
+  const { me, loading, erro, recarregar } = useNextSync();
 
   const [inscrevendo, setInscrevendo] = useState(false);
   const [checkinId, setCheckinId] = useState<string | null>(null);
@@ -147,12 +147,20 @@ export default function NextScreen() {
           <View style={{ width: 24 }} />
         </View>
 
-        {loading || !me ? (
+        {loading ? (
           <View style={{ gap: spacing.md }}>
             <Skeleton width="100%" height={170} borderRadius={20} />
             <Skeleton width={160} height={20} borderRadius={6} />
             <Skeleton width="100%" height={90} borderRadius={16} />
             <Skeleton width="100%" height={90} borderRadius={16} />
+          </View>
+        ) : !me ? (
+          <View style={styles.vazio}>
+            <Ionicons name="cloud-offline-outline" size={36} color={colors.textMuted} />
+            <Text style={styles.vazioTxt}>
+              {erro ? erro : "Não foi possível carregar o NEXT."}
+            </Text>
+            <Button title="Tentar de novo" variant="ghost" onPress={recarregar} />
           </View>
         ) : !me.inscrito_next ? (
           <>
