@@ -28,12 +28,12 @@ export default function MenuScreen() {
 
   const options: Option[] = [
     { label: "Meu perfil", icon: "person-outline", onPress: () => router.navigate("/perfil") },
+    { label: "Início", icon: "home-outline", onPress: () => router.navigate("/") },
     { label: "Cartões", icon: "card-outline", onPress: () => router.navigate("/cartoes") },
     { label: "Inscrições", icon: "create-outline", onPress: () => router.navigate("/inscricoes") },
     { label: "Batismo", icon: "water-outline", onPress: () => router.navigate("/batismo") },
     { label: "NEXT", icon: "sparkles-outline", onPress: () => router.navigate("/next") },
     { label: "Grupos", icon: "people-outline", onPress: () => router.navigate("/grupos") },
-    { label: "Início", icon: "home-outline", onPress: () => router.navigate("/") },
     { label: "Cuidados", icon: "heart-outline", onPress: () => router.navigate("/cuidados") },
     { label: "Voluntariado", icon: "hand-left-outline", onPress: () => router.navigate("/voluntariado") },
     { label: "Generosidade", icon: "gift-outline", onPress: () => router.navigate("/generosidade") },

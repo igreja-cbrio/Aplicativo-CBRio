@@ -20,6 +20,7 @@ import {
   type ThemePreference,
   type FontScale,
 } from "@/contexts/ThemeContext";
+import { LANGS, useLang } from "@/lib/i18n";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -35,12 +36,6 @@ const FONTE_OPCOES: { key: FontScale; label: string }[] = [
   { key: "md", label: "Normal" },
   { key: "lg", label: "Grande" },
   { key: "xl", label: "Muito grande" },
-];
-
-const IDIOMA_OPCOES = [
-  { key: "pt-BR", label: "Português (Brasil)" },
-  { key: "en", label: "English (em breve)", disabled: true },
-  { key: "es", label: "Español (em breve)", disabled: true },
 ];
 
 const PAGAMENTO_OPCOES = [
@@ -63,7 +58,7 @@ export default function ConfiguracoesScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
 
-  const [idioma, setIdioma] = useState("pt-BR");
+  const { lang, setLang } = useLang();
   const [pagamento, setPagamento] = useState("pix");
   const [notifAtivas, setNotifAtivas] = useState<boolean | null>(null);
 
@@ -202,13 +197,17 @@ export default function ConfiguracoesScreen() {
 
         {/* IDIOMA */}
         <Section title="Idioma" colors={colors} styles={styles}>
-          {IDIOMA_OPCOES.map((o) => (
+          <Text style={styles.hint}>
+            Por enquanto só o português tem tradução completa; os demais
+            ficam disponíveis nas próximas atualizações.
+          </Text>
+          {LANGS.map((o) => (
             <RadioRow
-              key={o.key}
-              label={o.label}
-              checked={idioma === o.key}
-              disabled={o.disabled}
-              onPress={() => !o.disabled && setIdioma(o.key)}
+              key={o.code}
+              label={`${o.bandeira}  ${o.label}${!o.pronto ? "  (em breve)" : ""}`}
+              checked={lang === o.code}
+              disabled={!o.pronto}
+              onPress={() => o.pronto && setLang(o.code)}
               colors={colors}
               styles={styles}
             />
