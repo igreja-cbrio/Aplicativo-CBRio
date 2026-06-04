@@ -1,6 +1,13 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Map, Camera, Marker } from "@maplibre/maplibre-react-native";
+import {
+  Map,
+  Camera,
+  Marker,
+  UserLocation,
+  type CameraRef,
+  LocationManager,
+} from "@maplibre/maplibre-react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme, useColors } from "@/contexts/ThemeContext";
 import { brand, radius, font, spacing } from "@/constants/theme";
@@ -33,7 +40,21 @@ export function GruposMapa({
 }) {
   const { mode } = useTheme();
   const colors = useColors();
+  const cameraRef = useRef<CameraRef>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  async function centralizarUsuario() {
+    try {
+      const ok = await LocationManager.requestPermissions();
+      if (!ok) return;
+      const pos = await LocationManager.getCurrentPosition();
+      if (!pos) return;
+      cameraRef.current?.flyTo({
+        center: [pos.coords.longitude, pos.coords.latitude],
+        zoom: 14,
+      });
+    } catch {}
+  }
 
   const pins = useMemo(
     () => grupos.filter((g) => g.lat != null && g.lng != null),
@@ -55,7 +76,8 @@ export function GruposMapa({
   return (
     <View style={styles.container}>
       <Map style={styles.map} mapStyle={STYLE_URL[mode]}>
-        <Camera initialViewState={{ center: centro, zoom: 10 }} />
+        <Camera ref={cameraRef} initialViewState={{ center: centro, zoom: 10 }} />
+        <UserLocation animated accuracy />
         {pins.map((g) => (
           <Marker
             key={g.id}
@@ -84,6 +106,18 @@ export function GruposMapa({
           onPress={() => setSelectedId(null)}
         />
       )}
+
+      <Pressable
+        onPress={centralizarUsuario}
+        style={({ pressed }) => [
+          styles.locBtn,
+          { backgroundColor: colors.surface, borderColor: colors.glassBorder },
+          pressed && { opacity: 0.7 },
+        ]}
+        hitSlop={6}
+      >
+        <Ionicons name="locate" size={22} color={brand.primary} />
+      </Pressable>
 
       {selected && (
         <View
@@ -133,11 +167,27 @@ export function GruposMapa({
 
 const styles = StyleSheet.create({
   container: {
-    height: 380,
+    flex: 1,
     borderRadius: radius.lg,
     overflow: "hidden",
   },
   map: { flex: 1 },
+  locBtn: {
+    position: "absolute",
+    top: spacing.md,
+    right: spacing.md,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
   markerWrapper: {
     alignItems: "center",
     gap: 2,

@@ -15,7 +15,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "br.com.cbrio.app",
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "O CBRio usa sua localização para mostrar os grupos mais próximos no mapa."
+      }
     },
     "android": {
       "package": "br.com.cbrio.app",

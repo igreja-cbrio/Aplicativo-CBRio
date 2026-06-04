@@ -153,7 +153,7 @@ export default function GruposScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <View style={styles.header}>
         <View style={styles.topRow}>
           <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
@@ -162,7 +162,6 @@ export default function GruposScreen() {
           <View style={{ width: 24 }} />
         </View>
 
-        {/* Alternância Lista / Mapa */}
         <View style={styles.toggle}>
           <Pressable
             style={[styles.toggleItem, view === "lista" && styles.toggleItemSel]}
@@ -188,45 +187,47 @@ export default function GruposScreen() {
           placeholderTextColor={colors.textMuted}
           autoCorrect={false}
         />
+      </View>
 
-        {loading ? (
-          <Text style={styles.muted}>Carregando…</Text>
-        ) : view === "mapa" ? (
+      {loading ? (
+        <Text style={styles.muted}>Carregando…</Text>
+      ) : view === "mapa" ? (
+        <View style={styles.mapWrap}>
           <GruposMapa
             grupos={filtrados}
             onSelect={(id) => router.navigate({ pathname: "/grupo-detalhe", params: { id } })}
           />
-        ) : (
-          <>
-            {meusGrupos.length > 0 && (
-              <View style={{ gap: spacing.sm }}>
-                <Text style={styles.section}>Meus grupos</Text>
-                {meusGrupos.map((g) => (
-                  <GrupoCard key={`meu-${g.id}`} g={g} />
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.listContent} keyboardShouldPersistTaps="handled">
+          {meusGrupos.length > 0 && (
+            <View style={{ gap: spacing.sm }}>
+              <Text style={styles.section}>Meus grupos</Text>
+              {meusGrupos.map((g) => (
+                <GrupoCard key={`meu-${g.id}`} g={g} />
+              ))}
+            </View>
+          )}
+
+          {filtrados.length === 0 ? (
+            <Text style={styles.muted}>Nenhum grupo encontrado.</Text>
+          ) : (
+            secoes.map(({ categoria, itens }) => (
+              <View key={categoria} style={{ gap: spacing.sm }}>
+                <View style={styles.catHeader}>
+                  <Text style={styles.catTitle}>{categoria}</Text>
+                  <View style={styles.catBadge}>
+                    <Text style={styles.catBadgeTxt}>{itens.length}</Text>
+                  </View>
+                </View>
+                {itens.map((g) => (
+                  <GrupoCard key={g.id} g={g} />
                 ))}
               </View>
-            )}
-
-            {filtrados.length === 0 ? (
-              <Text style={styles.muted}>Nenhum grupo encontrado.</Text>
-            ) : (
-              secoes.map(({ categoria, itens }) => (
-                <View key={categoria} style={{ gap: spacing.sm }}>
-                  <View style={styles.catHeader}>
-                    <Text style={styles.catTitle}>{categoria}</Text>
-                    <View style={styles.catBadge}>
-                      <Text style={styles.catBadgeTxt}>{itens.length}</Text>
-                    </View>
-                  </View>
-                  {itens.map((g) => (
-                    <GrupoCard key={g.id} g={g} />
-                  ))}
-                </View>
-              ))
-            )}
-          </>
-        )}
-      </ScrollView>
+            ))
+          )}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -234,7 +235,9 @@ export default function GruposScreen() {
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
-    content: { padding: spacing.lg, paddingBottom: 120, gap: spacing.md },
+    header: { padding: spacing.lg, paddingBottom: spacing.md, gap: spacing.md },
+    listContent: { paddingHorizontal: spacing.lg, paddingBottom: 120, gap: spacing.md },
+    mapWrap: { flex: 1, paddingHorizontal: spacing.lg, paddingBottom: 100 },
     topRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: spacing.sm },
     back: { width: 24 },
     title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
