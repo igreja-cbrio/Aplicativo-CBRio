@@ -54,7 +54,6 @@ app/
     grupo-editar.tsx     # tela admin: edita info do grupo + upload de foto de capa (bucket 'grupos')
     notificacoes.tsx     # histórico de notificações (app_notificacoes) — tap navega pra tela origem
     configuracoes.tsx    # tema + tamanho da fonte + idioma + pagamento + notif + excluir conta
-    eventos.tsx          # lista de eventos (tabela events, com event_categories)
     sobre.tsx            # missão, contato, valores da jornada, NSM
 components/
   inscricoes/FormScaffold.tsx  # layout comum dos formulários de inscrição
