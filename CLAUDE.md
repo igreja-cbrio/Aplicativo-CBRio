@@ -54,6 +54,8 @@ app/
     grupo-editar.tsx     # tela admin: edita info do grupo + upload de foto de capa (bucket 'grupos')
     notificacoes.tsx     # histórico de notificações (app_notificacoes) — tap navega pra tela origem
     configuracoes.tsx    # tema + tamanho da fonte + idioma + pagamento + notif + excluir conta
+    batismo.tsx          # hub do meu batismo: countdown, check-in no dia, galeria de fotos
+    culto-detalhe.tsx    # info de um culto específico (data, online, kids, mapa)
     sobre.tsx            # missão, contato, valores da jornada, NSM
 components/
   inscricoes/FormScaffold.tsx  # layout comum dos formulários de inscrição

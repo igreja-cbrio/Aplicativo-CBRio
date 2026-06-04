@@ -5,6 +5,9 @@ export type CultoUpcoming = {
   nome: string | null;
   data: string;     // ISO date
   hora: string;     // HH:MM:SS
+  cor: string | null;
+  has_online: boolean | null;
+  has_kids: boolean | null;
 };
 
 /** Cultos a partir de hoje (até 7 dias por padrão), ordenados. */
@@ -15,13 +18,34 @@ export async function proximosCultos(diasFrente = 7): Promise<CultoUpcoming[]> {
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
   const { data } = await supabase
     .from("cultos")
-    .select("id, nome, data, hora")
+    .select("id, nome, data, hora, vol_service_types(color, has_online_stream, has_kids)")
     .gte("data", fmt(hoje))
     .lte("data", fmt(limite))
     .is("deleted_at", null)
     .order("data", { ascending: true })
     .order("hora", { ascending: true });
-  return (data as CultoUpcoming[]) ?? [];
+  type Row = {
+    id: string;
+    nome: string | null;
+    data: string;
+    hora: string;
+    vol_service_types?:
+      | { color: string | null; has_online_stream: boolean | null; has_kids: boolean | null }
+      | { color: string | null; has_online_stream: boolean | null; has_kids: boolean | null }[]
+      | null;
+  };
+  return ((data as Row[] | null) ?? []).map((r) => {
+    const st = Array.isArray(r.vol_service_types) ? r.vol_service_types[0] : r.vol_service_types;
+    return {
+      id: r.id,
+      nome: r.nome,
+      data: r.data,
+      hora: r.hora,
+      cor: st?.color ?? null,
+      has_online: st?.has_online_stream ?? null,
+      has_kids: st?.has_kids ?? null,
+    };
+  });
 }
 
 const DOW = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];

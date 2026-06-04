@@ -32,11 +32,15 @@ type Atalho = {
     | "/voluntariado"
     | "/generosidade"
     | "/perfil"
-    | "/inscricoes";
+    | "/inscricoes"
+    | "/batismo"
+    | "/grupos";
 };
 
 const ATALHOS: Atalho[] = [
   { label: "Inscrições", icon: "create", href: "/inscricoes" },
+  { label: "Batismo", icon: "water", href: "/batismo" },
+  { label: "Grupos", icon: "people", href: "/grupos" },
   { label: "Cuidados", icon: "heart", href: "/cuidados" },
   { label: "Voluntariado", icon: "hand-left", href: "/voluntariado" },
   { label: "Generosidade", icon: "gift", href: "/generosidade" },
@@ -122,7 +126,7 @@ export default function InicioScreen() {
               <View style={styles.shortcutIcon}>
                 <Ionicons name={a.icon} size={22} color={colors.brandMid} />
               </View>
-              <Text style={styles.shortcutLabel} numberOfLines={1}>{a.label}</Text>
+              <Text style={styles.shortcutLabel} numberOfLines={2}>{a.label}</Text>
             </Pressable>
           ))}
         </View>
@@ -186,13 +190,14 @@ const makeStyles = (colors: Palette) =>
     },
     grid: {
       flexDirection: "row",
-      justifyContent: "space-between",
-      gap: spacing.sm,
+      flexWrap: "wrap",
+      rowGap: spacing.md,
     },
     shortcut: {
-      width: "22%",
+      width: "33.333%",
       alignItems: "center",
       gap: 6,
+      paddingHorizontal: 4,
     },
     pressed: { opacity: 0.7 },
     shortcutIcon: {
