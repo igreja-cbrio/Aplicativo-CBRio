@@ -50,14 +50,7 @@
           }
         }
       ],
-      "expo-localization",
-      [
-        "@stripe/stripe-react-native",
-        {
-          "merchantIdentifier": "merchant.br.com.cbrio.app",
-          "enableGooglePay": false
-        }
-      ]
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true
