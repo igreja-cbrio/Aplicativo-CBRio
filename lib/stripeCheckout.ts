@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 
-const BASE = "https://www.cbrio.org/api";
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 
 /**
  * Pede ao backend pra criar uma Checkout Session na Stripe e devolver a URL.
@@ -27,18 +27,21 @@ export async function criarCheckoutSession(params: {
   const auth = session?.access_token;
   if (!auth) throw new Error("Sessão expirada. Faça login novamente.");
 
-  const resp = await fetch(`${BASE}/app/generosidade/checkout-session`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${auth}`,
-    },
-    body: JSON.stringify({
-      amount_cents: params.amountCents,
-      currency: "brl",
-      descricao: params.descricao ?? "Generosidade CBRio",
-    }),
-  });
+  const resp = await fetch(
+    `${SUPABASE_URL}/functions/v1/generosidade-checkout-session`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${auth}`,
+      },
+      body: JSON.stringify({
+        amount_cents: params.amountCents,
+        currency: "brl",
+        descricao: params.descricao ?? "Generosidade CBRio",
+      }),
+    }
+  );
   if (!resp.ok) {
     const j = (await resp.json().catch(() => ({}))) as { error?: string };
     throw new Error(j.error || "Não foi possível iniciar o pagamento.");
