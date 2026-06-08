@@ -3,6 +3,7 @@ import { Animated, Dimensions, FlatList, Pressable, StyleSheet, Text, View } fro
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { type CultoUpcoming, formatCultoDia, formatCultoHora } from "@/lib/cultos";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { BRAND_FONT } from "@/lib/fonts";
@@ -139,50 +140,52 @@ function CultoCard({
         },
       ]}
     >
-      <Pressable
-        onPress={() => primeiro && router.navigate({ pathname: "/culto-detalhe", params: { id: primeiro.id } })}
-        onPressIn={lift}
-        onPressOut={drop}
-        style={styles.card}
-      >
-        <View style={styles.headerCard}>
-          <View style={[styles.tag, { backgroundColor: cor }]}>
-            <Text style={styles.tagTxt}>{ehHoje ? "HOJE" : dia.toUpperCase()}</Text>
+      <GlassCard style={{ overflow: "hidden" }}>
+        <Pressable
+          onPress={() => primeiro && router.navigate({ pathname: "/culto-detalhe", params: { id: primeiro.id } })}
+          onPressIn={lift}
+          onPressOut={drop}
+          style={styles.card}
+        >
+          <View style={styles.headerCard}>
+            <View style={[styles.tag, { backgroundColor: cor }]}>
+              <Text style={styles.tagTxt}>{ehHoje ? "HOJE" : dia.toUpperCase()}</Text>
+            </View>
+            <Text style={styles.nome} numberOfLines={1}>
+              {grupo.nomeBase}
+            </Text>
           </View>
-          <Text style={styles.nome} numberOfLines={1}>
-            {grupo.nomeBase}
-          </Text>
-        </View>
 
-        <View style={styles.horarios}>
-          {horarios.map((c) => (
-            <Pressable
-              key={c.id}
-              onPress={() => router.navigate({ pathname: "/culto-detalhe", params: { id: c.id } })}
-              onPressIn={lift}
-              onPressOut={drop}
-              style={styles.horaPill}
-            >
-              <Text style={styles.horaTxt}>{formatCultoHora(c.hora)}</Text>
-            </Pressable>
-          ))}
-        </View>
+          <View style={styles.horarios}>
+            {horarios.map((c) => (
+              <Pressable
+                key={c.id}
+                onPress={() => router.navigate({ pathname: "/culto-detalhe", params: { id: c.id } })}
+                onPressIn={lift}
+                onPressOut={drop}
+                style={styles.horaPill}
+              >
+                <Text style={styles.horaTxt}>{formatCultoHora(c.hora)}</Text>
+              </Pressable>
+            ))}
+          </View>
 
-        <View style={styles.feats}>
-          {grupo.has_online && (
-            <View style={styles.feat}>
-              <Ionicons name="videocam" size={11} color={colors.brandMid} />
-              <Text style={styles.featTxt}>online</Text>
-            </View>
-          )}
-          {grupo.has_kids && (
-            <View style={styles.feat}>
-              <Ionicons name="happy" size={11} color={colors.brandMid} />
-              <Text style={styles.featTxt}>kids</Text>
-            </View>
-          )}
-        </View>
-      </Pressable>
+          <View style={styles.feats}>
+            {grupo.has_online && (
+              <View style={styles.feat}>
+                <Ionicons name="videocam" size={11} color={colors.brandMid} />
+                <Text style={styles.featTxt}>online</Text>
+              </View>
+            )}
+            {grupo.has_kids && (
+              <View style={styles.feat}>
+                <Ionicons name="happy" size={11} color={colors.brandMid} />
+                <Text style={styles.featTxt}>kids</Text>
+              </View>
+            )}
+          </View>
+        </Pressable>
+      </GlassCard>
     </Animated.View>
   );
 }
@@ -197,10 +200,6 @@ const makeStyles = (colors: Palette) =>
     },
     card: {
       padding: spacing.md,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      backgroundColor: colors.surface,
       gap: spacing.sm,
     },
     headerCard: { gap: 6 },

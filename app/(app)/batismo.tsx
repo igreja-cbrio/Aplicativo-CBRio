@@ -244,14 +244,14 @@ export default function BatismoScreen() {
         </View>
       </Modal>
 
-      {/* Modal pra capturar igreja onde foi batizado */}
+      {/* Sheet nativa (pageSheet) — iOS 26 com swipe-to-dismiss */}
       <Modal
         visible={modalIgrejaAberto}
         animationType="slide"
-        transparent
+        presentationStyle="pageSheet"
         onRequestClose={() => setModalIgrejaAberto(false)}
       >
-        <View style={styles.modalIgrejaBg}>
+        <View style={styles.modalIgrejaSheet}>
           <View style={styles.modalIgrejaCard}>
             <Text style={styles.cardTitle}>Você foi batizado(a) onde?</Text>
             <Text style={styles.cardTxt}>
@@ -591,16 +591,12 @@ const makeStyles = (colors: Palette) =>
       paddingVertical: spacing.md,
     },
     linkAcaoTxt: { color: colors.brandMid, fontSize: font.size.sm, fontWeight: "700" },
-    modalIgrejaBg: {
+    modalIgrejaSheet: {
       flex: 1,
-      backgroundColor: "rgba(0,0,0,0.6)",
-      justifyContent: "flex-end",
+      backgroundColor: colors.background,
+      padding: spacing.lg,
     },
     modalIgrejaCard: {
-      backgroundColor: colors.background,
-      borderTopLeftRadius: radius.xl,
-      borderTopRightRadius: radius.xl,
-      padding: spacing.lg,
       gap: spacing.md,
     },
   });
