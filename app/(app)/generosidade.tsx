@@ -1,9 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
@@ -11,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 import QRCode from "react-native-qrcode-svg";
+import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
 import {
   PIX_KEY,
@@ -20,10 +24,20 @@ import {
   PIX_BENEFICIARIO,
   PIX_CIDADE,
 } from "@/constants/pix";
+import { applePayDisponivel, abrirApplePay, confirmarApplePay } from "@/lib/applePay";
+import { criarCheckoutSession } from "@/lib/stripeCheckout";
+import { CheckoutWebView } from "@/components/generosidade/CheckoutWebView";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { BRAND_FONT } from "@/lib/fonts";
 
 type Metodo = "pix" | "card" | "apple_pay";
+
+const PRESETS = [20, 50, 100, 200, 500];
+
+function formatBRL(centavos: number): string {
+  const v = (centavos / 100).toFixed(2).replace(".", ",");
+  return `R$ ${v}`;
+}
 
 export default function GenerosidadeScreen() {
   const colors = useColors();
@@ -31,6 +45,28 @@ export default function GenerosidadeScreen() {
   const router = useRouter();
 
   const [metodo, setMetodo] = useState<Metodo>("pix");
+  const [valor, setValor] = useState<number>(50 * 100);
+  const [customTxt, setCustomTxt] = useState("");
+
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [checkoutAberto, setCheckoutAberto] = useState(false);
+
+  function setCustom(t: string) {
+    const limpo = t.replace(/[^\d,]/g, "").replace(",", ".");
+    const num = parseFloat(limpo);
+    setCustomTxt(t);
+    if (!isNaN(num)) setValor(Math.round(num * 100));
+  }
+
+  function fecharCheckout(status: "success" | "cancel" | "interrupted" | "loading") {
+    setCheckoutAberto(false);
+    setCheckoutUrl(null);
+    if (status === "success") {
+      Alert.alert("Pagamento confirmado 💙", "Obrigado pela sua generosidade!");
+    } else if (status === "cancel") {
+      Alert.alert("Pagamento cancelado", "Você pode tentar de novo quando quiser.");
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
@@ -52,13 +88,61 @@ export default function GenerosidadeScreen() {
         <View style={styles.tabs}>
           <MetodoTab atual={metodo} value="pix" label="PIX" icon="qr-code" onPress={setMetodo} colors={colors} styles={styles} />
           <MetodoTab atual={metodo} value="card" label="Cartão" icon="card" onPress={setMetodo} colors={colors} styles={styles} />
-          <MetodoTab atual={metodo} value="apple_pay" label="Apple Pay" icon="logo-apple" onPress={setMetodo} colors={colors} styles={styles} />
+          {Platform.OS === "ios" && (
+            <MetodoTab atual={metodo} value="apple_pay" label="Apple Pay" icon="logo-apple" onPress={setMetodo} colors={colors} styles={styles} />
+          )}
         </View>
 
+        {(metodo !== "pix" || !PIX_PAYLOAD) && (
+          <View style={styles.box}>
+            <Text style={styles.boxTitulo}>Valor</Text>
+            <View style={styles.presets}>
+              {PRESETS.map((v) => {
+                const sel = valor === v * 100 && customTxt === "";
+                return (
+                  <Pressable
+                    key={v}
+                    onPress={() => {
+                      setValor(v * 100);
+                      setCustomTxt("");
+                    }}
+                    style={[styles.presetPill, sel && styles.presetPillSel]}
+                  >
+                    <Text style={[styles.presetTxt, sel && styles.presetTxtSel]}>R$ {v}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <TextInput
+              value={customTxt}
+              onChangeText={setCustom}
+              placeholder="Outro valor"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="decimal-pad"
+              style={styles.customInput}
+            />
+            <Text style={styles.valorFinal}>{formatBRL(valor)}</Text>
+          </View>
+        )}
+
         {metodo === "pix" && <ConteudoPix colors={colors} styles={styles} />}
-        {metodo === "card" && <EmBreve titulo="Cartão de crédito em breve" txt="Estamos finalizando a integração com a Stripe. Por enquanto, contribua via PIX." colors={colors} styles={styles} />}
-        {metodo === "apple_pay" && <EmBreve titulo="Apple Pay em breve" txt="Logo você poderá doar usando qualquer cartão do seu Apple Wallet com Face ID." colors={colors} styles={styles} />}
+        {metodo === "card" && (
+          <ConteudoCartao
+            valor={valor}
+            onAbrir={(url) => {
+              setCheckoutUrl(url);
+              setCheckoutAberto(true);
+            }}
+            colors={colors}
+            styles={styles}
+          />
+        )}
+        {metodo === "apple_pay" && (
+          <ConteudoApplePay valor={valor} colors={colors} styles={styles} />
+        )}
       </ScrollView>
+
+      <CheckoutWebView url={checkoutUrl} visible={checkoutAberto} onResult={fecharCheckout} />
     </SafeAreaView>
   );
 }
@@ -81,10 +165,7 @@ function MetodoTab({
 }) {
   const sel = atual === value;
   return (
-    <Pressable
-      onPress={() => onPress(value)}
-      style={[styles.tab, sel && styles.tabSel]}
-    >
+    <Pressable onPress={() => onPress(value)} style={[styles.tab, sel && styles.tabSel]}>
       <Ionicons name={icon} size={16} color={sel ? "#fff" : "#888"} />
       <Text style={[styles.tabTxt, sel && styles.tabTxtSel]}>{label}</Text>
     </Pressable>
@@ -99,13 +180,11 @@ function ConteudoPix({
   styles: ReturnType<typeof makeStyles>;
 }) {
   const [copiado, setCopiado] = useState<"chave" | "payload" | null>(null);
-
   async function copiar(texto: string, tipo: "chave" | "payload") {
     await Clipboard.setStringAsync(texto);
     setCopiado(tipo);
     setTimeout(() => setCopiado(null), 2000);
   }
-
   return (
     <View style={{ gap: spacing.md }}>
       {!!PIX_PAYLOAD && (
@@ -122,7 +201,6 @@ function ConteudoPix({
           </Pressable>
         </View>
       )}
-
       <View style={styles.box}>
         <Text style={styles.boxTitulo}>Chave PIX</Text>
         <View style={styles.chaveRow}>
@@ -139,47 +217,134 @@ function ConteudoPix({
         <Linha colors={colors} icon="person-outline" styles={styles}>
           Beneficiário: <Text style={{ fontWeight: "800" }}>{PIX_BENEFICIARIO}</Text>
         </Linha>
-        <Linha colors={colors} icon="location-outline" styles={styles}>
-          {PIX_CIDADE}
-        </Linha>
+        <Linha colors={colors} icon="location-outline" styles={styles}>{PIX_CIDADE}</Linha>
       </View>
-
       <View style={styles.box}>
         <Text style={styles.boxTitulo}>Como pagar</Text>
-        <PassoNum num={1} colors={colors} styles={styles}>
-          Abra o app do seu banco e escolha pagar via PIX.
-        </PassoNum>
+        <PassoNum num={1} colors={colors} styles={styles}>Abra o app do seu banco e escolha pagar via PIX.</PassoNum>
         <PassoNum num={2} colors={colors} styles={styles}>
-          {PIX_PAYLOAD
-            ? "Cole o código copia-e-cola (ou aponte a câmera pro QR Code)."
-            : "Use o CNPJ acima como chave PIX e informe o valor."}
+          {PIX_PAYLOAD ? "Cole o código copia-e-cola (ou aponte a câmera pro QR Code)." : "Use o CNPJ acima como chave PIX e informe o valor."}
         </PassoNum>
-        <PassoNum num={3} colors={colors} styles={styles}>
-          Confirme os dados e finalize. Te agradecemos! 💙
-        </PassoNum>
+        <PassoNum num={3} colors={colors} styles={styles}>Confirme os dados e finalize. Te agradecemos! 💙</PassoNum>
       </View>
     </View>
   );
 }
 
-function EmBreve({
-  titulo,
-  txt,
+function ConteudoCartao({
+  valor,
+  onAbrir,
   colors,
   styles,
 }: {
-  titulo: string;
-  txt: string;
+  valor: number;
+  onAbrir: (url: string) => void;
   colors: Palette;
   styles: ReturnType<typeof makeStyles>;
 }) {
+  const [carregando, setCarregando] = useState(false);
+  async function pagar() {
+    setCarregando(true);
+    try {
+      const { url } = await criarCheckoutSession({ amountCents: valor });
+      onAbrir(url);
+    } catch (e) {
+      Alert.alert("Não foi possível abrir o pagamento", e instanceof Error ? e.message : "Erro.");
+    } finally {
+      setCarregando(false);
+    }
+  }
   return (
-    <View style={styles.box}>
-      <View style={{ alignItems: "center", gap: spacing.sm, paddingVertical: spacing.md }}>
-        <Ionicons name="time-outline" size={40} color={colors.brandMid} />
-        <Text style={styles.boxTitulo}>{titulo}</Text>
-        <Text style={styles.cardHint}>{txt}</Text>
+    <View style={{ gap: spacing.md }}>
+      <View style={styles.box}>
+        <Text style={styles.boxTitulo}>Cartão de crédito</Text>
+        <Text style={styles.cardHint}>
+          Você vai ser levado pra tela segura da Stripe pra informar os dados do
+          cartão. O CBRio não guarda nada — toda a transação é processada direto
+          na Stripe (PCI nível 1).
+        </Text>
+        <View style={styles.bandeiras}>
+          <Ionicons name="card" size={28} color={colors.brandMid} />
+          <Text style={styles.bandeirasTxt}>Visa · Mastercard · Elo · Amex</Text>
+        </View>
       </View>
+      <Button title={`Pagar ${formatBRL(valor)}`} onPress={pagar} loading={carregando} />
+    </View>
+  );
+}
+
+function ConteudoApplePay({
+  valor,
+  colors,
+  styles,
+}: {
+  valor: number;
+  colors: Palette;
+  styles: ReturnType<typeof makeStyles>;
+}) {
+  const [carregando, setCarregando] = useState(false);
+  const [disponivel, setDisponivel] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    applePayDisponivel().then(setDisponivel).catch(() => setDisponivel(false));
+  }, []);
+
+  async function pagar() {
+    setCarregando(true);
+    try {
+      const token = await abrirApplePay(valor);
+      await confirmarApplePay(valor, token);
+      Alert.alert("Pagamento confirmado 💙", "Obrigado pela sua generosidade!");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro desconhecido.";
+      if (msg.toLowerCase().includes("cancel")) return;
+      Alert.alert("Não foi possível processar", msg);
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  if (Platform.OS !== "ios") {
+    return (
+      <View style={styles.box}>
+        <Text style={styles.cardHint}>Apple Pay só está disponível em iOS.</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ gap: spacing.md }}>
+      <View style={styles.box}>
+        <Text style={styles.boxTitulo}>Apple Pay</Text>
+        <Text style={styles.cardHint}>
+          Pague com qualquer cartão que você já tem na Carteira do iPhone, com
+          Face ID/Touch ID. Sem digitar nada.
+        </Text>
+      </View>
+      {disponivel === false ? (
+        <View style={styles.aviso}>
+          <Ionicons name="alert-circle-outline" size={20} color={colors.brandMid} />
+          <Text style={styles.avisoTxt}>
+            Você ainda não tem um cartão configurado. Adicione um no app
+            Carteira pra liberar o Apple Pay.
+          </Text>
+        </View>
+      ) : (
+        <Pressable
+          onPress={pagar}
+          disabled={carregando}
+          style={({ pressed }) => [
+            styles.applePayBtn,
+            pressed && { opacity: 0.85 },
+            carregando && { opacity: 0.6 },
+          ]}
+        >
+          <Ionicons name="logo-apple" size={20} color="#fff" />
+          <Text style={styles.applePayTxt}>
+            {carregando ? "Processando…" : `Pay ${formatBRL(valor)}`}
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -267,7 +432,36 @@ const makeStyles = (colors: Palette) =>
       backgroundColor: colors.surface,
       gap: spacing.sm,
     },
-    boxTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800", textAlign: "center" },
+    boxTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800" },
+    presets: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+    presetPill: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.full,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      backgroundColor: colors.surfaceAlt,
+    },
+    presetPillSel: { backgroundColor: colors.primary, borderColor: colors.primary },
+    presetTxt: { color: colors.textMuted, fontWeight: "700", fontSize: font.size.sm },
+    presetTxtSel: { color: "#fff" },
+    customInput: {
+      height: 44,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      paddingHorizontal: spacing.md,
+      color: colors.text,
+      fontSize: font.size.md,
+      backgroundColor: colors.surfaceAlt,
+    },
+    valorFinal: {
+      color: colors.text,
+      fontSize: font.size.xl,
+      fontFamily: BRAND_FONT,
+      textAlign: "center",
+      marginTop: spacing.xs,
+    },
     qrBox: {
       padding: spacing.md,
       backgroundColor: "#fff",
@@ -311,5 +505,33 @@ const makeStyles = (colors: Palette) =>
       justifyContent: "center",
     },
     passoNumTxt: { color: "#fff", fontSize: 11, fontWeight: "900" },
-    cardHint: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 20, textAlign: "center" },
+    cardHint: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 20 },
+    bandeiras: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      paddingVertical: spacing.xs,
+    },
+    bandeirasTxt: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "600" },
+    aviso: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      padding: spacing.md,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      backgroundColor: colors.surface,
+      alignItems: "flex-start",
+    },
+    avisoTxt: { flex: 1, color: colors.textMuted, fontSize: font.size.sm, lineHeight: 20 },
+    applePayBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.sm,
+      backgroundColor: "#000",
+      paddingVertical: spacing.md,
+      borderRadius: radius.full,
+    },
+    applePayTxt: { color: "#fff", fontSize: font.size.md, fontWeight: "800" },
   });

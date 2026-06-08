@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["ApplePayModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.applepay.ApplePayModule"]
+  }
+}

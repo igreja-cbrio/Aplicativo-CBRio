@@ -18,6 +18,9 @@
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "O CBRio usa sua localização para mostrar grupos próximos no mapa e confirmar sua presença no NEXT."
+      },
+      "entitlements": {
+        "com.apple.developer.in-app-payments": ["merchant.br.com.cbrio.app"]
       }
     },
     "android": {
