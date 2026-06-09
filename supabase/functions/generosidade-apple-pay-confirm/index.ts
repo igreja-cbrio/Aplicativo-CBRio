@@ -60,16 +60,19 @@ Deno.serve(async (req) => {
 
     const paymentDataJson = atob(tok.paymentDataBase64);
 
+    // Formato do SDK oficial da Stripe (STPAPIClient+ApplePay): pk_token e os
+    // metadados vão no NÍVEL RAIZ do form — aninhar em card[...] faz a Stripe
+    // recusar com "Received unknown parameters".
     const tokenParams = new URLSearchParams();
-    tokenParams.set("card[pk_token]", paymentDataJson);
+    tokenParams.set("pk_token", paymentDataJson);
     if (tok.transactionIdentifier) {
-      tokenParams.set("card[pk_token_transaction_id]", tok.transactionIdentifier);
+      tokenParams.set("pk_token_transaction_id", tok.transactionIdentifier);
     }
     if (tok.paymentMethod?.network) {
-      tokenParams.set("card[pk_token_payment_network]", normalizeNetwork(tok.paymentMethod.network));
+      tokenParams.set("pk_token_payment_network", normalizeNetwork(tok.paymentMethod.network));
     }
     if (tok.paymentMethod?.displayName) {
-      tokenParams.set("card[pk_token_instrument_name]", tok.paymentMethod.displayName);
+      tokenParams.set("pk_token_instrument_name", tok.paymentMethod.displayName);
     }
 
     const tokenResp = await fetch("https://api.stripe.com/v1/tokens", {
