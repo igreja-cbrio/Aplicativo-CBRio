@@ -18,6 +18,7 @@ import { useMembro } from "@/lib/useMembro";
 import { criarInscricaoApi, getVoluntariadoOpcoes, type VoluntariadoOpcao } from "@/lib/api";
 import { useVoluntariadoSync } from "@/lib/useVoluntariadoSync";
 import { getMeuVolProfileId } from "@/lib/disponibilidade";
+import { minhasEscalas, type MinhaEscala } from "@/lib/escalas";
 import { Disponibilidade } from "@/components/voluntariado/Disponibilidade";
 import { isValidCPF, maskCPF, onlyDigits } from "@/lib/validators";
 import { supabase } from "@/lib/supabase";
@@ -25,17 +26,13 @@ import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const MAX_AREAS = 3;
 
-type Escala = {
-  id: string;
-  data: string;
-  papel: string | null;
-  confirmado: boolean | null;
-  ministerio: string | null;
-};
-
-function fmtData(iso: string) {
+function fmtDataIso(iso: string) {
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+  if (!m) return iso;
+  // tenta extrair HH:MM da parte do tempo
+  const t = iso.match(/T(\d{2}):(\d{2})/);
+  const dataBR = `${m[3]}/${m[2]}/${m[1]}`;
+  return t ? `${dataBR} ${t[1]}:${t[2]}` : dataBR;
 }
 
 export default function VoluntariadoScreen() {
@@ -62,51 +59,20 @@ export default function VoluntariadoScreen() {
   const enviadoMinisterio = statusIns === "enviado_ministerio";
   const integrado = statusIns === "integrado" || me?.voluntario_ativo === true;
 
-  // ---- Minhas escalas ----
-  const [escalas, setEscalas] = useState<Escala[]>([]);
+  // ---- Minhas escalas (vol_schedules + vol_services) ----
+  const [escalas, setEscalas] = useState<MinhaEscala[]>([]);
   const [carregandoEscalas, setCarregandoEscalas] = useState(false);
   const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
 
   const carregarEscalas = useCallback(async () => {
-    if (!membro?.membroId) return;
+    if (!volProfileId) return;
     setCarregandoEscalas(true);
-    const hoje = new Date().toISOString().slice(0, 10);
-    const { data } = await supabase
-      .from("mem_escalas")
-      .select("id, data, papel, confirmado, ministerio_id")
-      .eq("membro_id", membro.membroId)
-      .gte("data", hoje)
-      .order("data", { ascending: true });
-    const rows =
-      (data as {
-        id: string;
-        data: string;
-        papel: string | null;
-        confirmado: boolean | null;
-        ministerio_id: string | null;
-      }[]) ?? [];
-    const ids = [...new Set(rows.map((r) => r.ministerio_id).filter(Boolean))] as string[];
-    const nomes: Record<string, string> = {};
-    if (ids.length) {
-      const { data: mins } = await supabase
-        .from("mem_ministerios")
-        .select("id, nome")
-        .in("id", ids);
-      (mins as { id: string; nome: string }[] | null)?.forEach((m) => {
-        nomes[m.id] = m.nome;
-      });
+    try {
+      setEscalas(await minhasEscalas(volProfileId));
+    } finally {
+      setCarregandoEscalas(false);
     }
-    setEscalas(
-      rows.map((r) => ({
-        id: r.id,
-        data: r.data,
-        papel: r.papel,
-        confirmado: r.confirmado,
-        ministerio: r.ministerio_id ? nomes[r.ministerio_id] ?? null : null,
-      }))
-    );
-    setCarregandoEscalas(false);
-  }, [membro?.membroId]);
+  }, [volProfileId]);
 
   useEffect(() => {
     carregarEscalas();
@@ -115,11 +81,13 @@ export default function VoluntariadoScreen() {
   async function confirmar(id: string) {
     setConfirmandoId(id);
     const { error } = await supabase
-      .from("mem_escalas")
-      .update({ confirmado: true })
+      .from("vol_schedules")
+      .update({ confirmation_status: "confirmed" })
       .eq("id", id);
     if (!error) {
-      setEscalas((prev) => prev.map((e) => (e.id === id ? { ...e, confirmado: true } : e)));
+      setEscalas((prev) =>
+        prev.map((e) => (e.id === id ? { ...e, confirmation_status: "confirmed" } : e))
+      );
     }
     setConfirmandoId(null);
   }
@@ -299,33 +267,41 @@ export default function VoluntariadoScreen() {
                   <Text style={styles.muted}>Você não tem escalas futuras no momento.</Text>
                 </View>
               ) : (
-                escalas.map((e) => (
-                  <View key={e.id} style={styles.escala}>
-                    <View style={styles.escalaInfo}>
-                      <Text style={styles.escalaMin}>{e.ministerio ?? "Ministério"}</Text>
-                      <Text style={styles.escalaMeta}>
-                        {fmtData(e.data)}
-                        {e.papel ? ` · ${e.papel}` : ""}
-                      </Text>
-                    </View>
-                    {e.confirmado ? (
-                      <View style={styles.confirmado}>
-                        <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                        <Text style={styles.confirmadoTxt}>Confirmada</Text>
+                escalas.map((e) => {
+                  const confirmado = e.confirmation_status === "confirmed";
+                  const titulo = e.culto ?? e.team_name ?? "Escala";
+                  const detalhes = [
+                    e.data ? fmtDataIso(e.data) : null,
+                    e.team_name && e.culto ? e.team_name : null,
+                    e.position_name,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ");
+                  return (
+                    <View key={e.id} style={styles.escala}>
+                      <View style={styles.escalaInfo}>
+                        <Text style={styles.escalaMin}>{titulo}</Text>
+                        {!!detalhes && <Text style={styles.escalaMeta}>{detalhes}</Text>}
                       </View>
-                    ) : (
-                      <Pressable
-                        style={styles.confirmarBtn}
-                        onPress={() => confirmar(e.id)}
-                        disabled={confirmandoId === e.id}
-                      >
-                        <Text style={styles.confirmarTxt}>
-                          {confirmandoId === e.id ? "..." : "Confirmar"}
-                        </Text>
-                      </Pressable>
-                    )}
-                  </View>
-                ))
+                      {confirmado ? (
+                        <View style={styles.confirmado}>
+                          <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                          <Text style={styles.confirmadoTxt}>Confirmada</Text>
+                        </View>
+                      ) : (
+                        <Pressable
+                          style={styles.confirmarBtn}
+                          onPress={() => confirmar(e.id)}
+                          disabled={confirmandoId === e.id}
+                        >
+                          <Text style={styles.confirmarTxt}>
+                            {confirmandoId === e.id ? "..." : "Confirmar"}
+                          </Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  );
+                })
               )}
               {volProfileId && <Disponibilidade volProfileId={volProfileId} />}
             </View>

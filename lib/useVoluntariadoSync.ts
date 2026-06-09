@@ -16,7 +16,12 @@ export function useVoluntariadoSync(membroId: string | null | undefined) {
   const ativo = useRef(true);
 
   const recarregar = useCallback(async () => {
-    if (!membroId) {
+    // undefined = pai ainda carregando o membro -> não toca em nada
+    if (membroId === undefined) {
+      return;
+    }
+    // null = membro carregado mas sem vínculo -> sem inscrição
+    if (membroId === null) {
       setMe({ inscricao: null, voluntario_ativo: false });
       setLoading(false);
       return;

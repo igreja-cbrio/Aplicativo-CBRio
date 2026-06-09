@@ -5,6 +5,7 @@ import { HeartPulseOverlay } from "@/components/anim/HeartPulse";
 import { Skeleton } from "@/components/anim/Skeleton";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { ScreenBackground } from "@/components/ui/ScreenBackground";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
@@ -91,6 +92,7 @@ export default function InicioScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+      <ScreenBackground />
       <HeartPulseOverlay visible={refreshing} />
       <ScrollView
         contentContainerStyle={styles.content}
@@ -181,15 +183,17 @@ export default function InicioScreen() {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-    safe: { flex: 1, backgroundColor: colors.background },
+    safe: { flex: 1, backgroundColor: "transparent" },
     content: { padding: spacing.lg, paddingBottom: 120, gap: spacing.lg },
     brandRow: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      marginTop: spacing.sm,
+      marginTop: 0,
+      marginLeft: -spacing.md,
+      paddingRight: spacing.md,
     },
-    logo: { width: 150, height: 42, marginLeft: -spacing.md },
+    logo: { width: 150, height: 42 },
     actions: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
     bellWrap: {
       width: 40,

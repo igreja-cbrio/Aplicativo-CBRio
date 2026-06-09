@@ -36,7 +36,7 @@ type Categoria = "dizimo" | "oferta" | "campanha";
 const PRESETS = [20, 50, 100, 200, 500];
 
 const CATEGORIAS: { value: Categoria; label: string; icon: React.ComponentProps<typeof Ionicons>["name"]; desc: string }[] = [
-  { value: "dizimo", label: "Dízimo", icon: "ribbon-outline", desc: "10% pra missão da igreja" },
+  { value: "dizimo", label: "Dízimo", icon: "ribbon-outline", desc: "" },
   { value: "oferta", label: "Oferta", icon: "gift-outline", desc: "Doação livre" },
   { value: "campanha", label: "Campanha", icon: "megaphone-outline", desc: "Causa específica" },
 ];
@@ -119,7 +119,9 @@ export default function GenerosidadeScreen() {
                     color={sel ? "#fff" : colors.brandMid}
                   />
                   <Text style={[styles.categoriaLabel, sel && styles.categoriaLabelSel]}>{c.label}</Text>
-                  <Text style={[styles.categoriaDesc, sel && styles.categoriaDescSel]}>{c.desc}</Text>
+                  {!!c.desc && (
+                    <Text style={[styles.categoriaDesc, sel && styles.categoriaDescSel]}>{c.desc}</Text>
+                  )}
                 </Pressable>
               );
             })}
@@ -135,7 +137,7 @@ export default function GenerosidadeScreen() {
           )}
         </View>
 
-        {(metodo !== "pix" || !PIX_PAYLOAD) && (
+        {metodo !== "pix" && (
           <View style={styles.box}>
             <Text style={styles.boxTitulo}>Valor</Text>
             <View style={styles.presets}>
@@ -380,15 +382,9 @@ function ConteudoApplePay({
           Face ID/Touch ID. Sem digitar nada.
         </Text>
       </View>
-      {disponivel === false ? (
-        <View style={styles.aviso}>
-          <Ionicons name="alert-circle-outline" size={20} color={colors.brandMid} />
-          <Text style={styles.avisoTxt}>
-            Você ainda não tem um cartão configurado. Adicione um no app
-            Carteira pra liberar o Apple Pay.
-          </Text>
-        </View>
-      ) : (
+      {/* Botão sempre visível (recomendação Apple). Se não houver cartão,
+          a própria sheet do PassKit oferece adicionar um. */}
+      {(
         <Pressable
           onPress={pagar}
           disabled={carregando}
