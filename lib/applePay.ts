@@ -5,9 +5,16 @@ const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const APPLE_PAY_MERCHANT_ID =
   process.env.EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID ?? "merchant.br.com.cbrio.app";
 
-/** Saber se o device tem Apple Pay disponível (cartões na Wallet, suporte ao tipo). */
+/**
+ * Saber se o device suporta Apple Pay. Sem filtro de redes — antes
+ * usávamos canMakePayments(usingNetworks:) restrito a Visa/MC/Amex/Elo,
+ * que retornava false se o cartão na Wallet fosse de outra rede.
+ * Agora usa apenas canMakePayments() (hardware/iOS suporta Apple Pay).
+ * Se o usuário não tiver cartão, a própria sheet do PassKit oferece
+ * adicionar um.
+ */
 export function applePayDisponivel(): Promise<boolean> {
-  return ApplePay.isAvailable(["visa", "mastercard", "amex", "elo"]);
+  return ApplePay.isAvailable();
 }
 
 /** Abre a sheet nativa e devolve o token criptografado da Apple. */

@@ -45,7 +45,10 @@ export default function VoluntariadoScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   // ---- Sync de status (fonte da verdade do voluntariado) ----
-  const { me } = useVoluntariadoSync(membro?.membroId ?? null);
+  // Só dispara o sync quando membro já carregou. Sem isso, useVoluntariadoSync(null)
+  // resolve na hora com { inscricao: null } e a tela mostra o form por um frame
+  // antes do estado real (flash).
+  const { me } = useVoluntariadoSync(loading ? undefined : membro?.membroId ?? null);
   const [volProfileId, setVolProfileId] = useState<string | null>(null);
   useEffect(() => {
     if (!user?.id) return;
