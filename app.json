@@ -18,6 +18,7 @@
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "O CBRio usa sua localização para mostrar grupos próximos no mapa e confirmar sua presença no NEXT.",
+        "NSMotionUsageDescription": "O CBRio usa o sensor de movimento para o efeito holográfico do seu cartão.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "entitlements": {
