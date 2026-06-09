@@ -18,13 +18,13 @@ export function applePayDisponivel(): Promise<boolean> {
 }
 
 /** Abre a sheet nativa e devolve o token criptografado da Apple. */
-export function abrirApplePay(amountCents: number): Promise<ApplePayTokenResult> {
+export function abrirApplePay(amountCents: number, label = "Generosidade CBRio"): Promise<ApplePayTokenResult> {
   return ApplePay.requestPayment({
     merchantId: APPLE_PAY_MERCHANT_ID,
     amountCents,
     countryCode: "BR",
     currencyCode: "BRL",
-    label: "Generosidade CBRio",
+    label,
   });
 }
 
@@ -40,7 +40,8 @@ export function abrirApplePay(amountCents: number): Promise<ApplePayTokenResult>
  */
 export async function confirmarApplePay(
   amountCents: number,
-  token: ApplePayTokenResult
+  token: ApplePayTokenResult,
+  meta?: { categoria?: "dizimo" | "oferta" | "campanha"; campanha?: string | null }
 ): Promise<{ ok: true; payment_intent_id: string }> {
   const {
     data: { session },
@@ -59,6 +60,8 @@ export async function confirmarApplePay(
       body: JSON.stringify({
         amount_cents: amountCents,
         currency: "brl",
+        categoria: meta?.categoria ?? "oferta",
+        campanha: meta?.campanha ?? null,
         payment_token: {
           paymentDataBase64: token.paymentDataBase64,
           transactionIdentifier: token.transactionIdentifier,

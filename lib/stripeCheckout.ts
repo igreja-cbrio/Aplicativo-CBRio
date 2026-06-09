@@ -20,6 +20,8 @@ const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 export async function criarCheckoutSession(params: {
   amountCents: number;
   descricao?: string;
+  categoria?: "dizimo" | "oferta" | "campanha";
+  campanha?: string | null;
 }): Promise<{ url: string; session_id: string }> {
   const {
     data: { session },
@@ -39,6 +41,8 @@ export async function criarCheckoutSession(params: {
         amount_cents: params.amountCents,
         currency: "brl",
         descricao: params.descricao ?? "Generosidade CBRio",
+        categoria: params.categoria ?? "oferta",
+        campanha: params.campanha ?? null,
       }),
     }
   );

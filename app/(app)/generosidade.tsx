@@ -31,8 +31,15 @@ import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { BRAND_FONT } from "@/lib/fonts";
 
 type Metodo = "pix" | "card" | "apple_pay";
+type Categoria = "dizimo" | "oferta" | "campanha";
 
 const PRESETS = [20, 50, 100, 200, 500];
+
+const CATEGORIAS: { value: Categoria; label: string; icon: React.ComponentProps<typeof Ionicons>["name"]; desc: string }[] = [
+  { value: "dizimo", label: "Dízimo", icon: "ribbon-outline", desc: "10% pra missão da igreja" },
+  { value: "oferta", label: "Oferta", icon: "gift-outline", desc: "Doação livre" },
+  { value: "campanha", label: "Campanha", icon: "megaphone-outline", desc: "Causa específica" },
+];
 
 function formatBRL(centavos: number): string {
   const v = (centavos / 100).toFixed(2).replace(".", ",");
@@ -45,6 +52,8 @@ export default function GenerosidadeScreen() {
   const router = useRouter();
 
   const [metodo, setMetodo] = useState<Metodo>("pix");
+  const [categoria, setCategoria] = useState<Categoria>("dizimo");
+  const [campanhaTxt, setCampanhaTxt] = useState("");
   const [valor, setValor] = useState<number>(50 * 100);
   const [customTxt, setCustomTxt] = useState("");
 
@@ -93,6 +102,39 @@ export default function GenerosidadeScreen() {
           )}
         </View>
 
+        <View style={styles.box}>
+          <Text style={styles.boxTitulo}>Categoria</Text>
+          <View style={styles.categoriasRow}>
+            {CATEGORIAS.map((c) => {
+              const sel = categoria === c.value;
+              return (
+                <Pressable
+                  key={c.value}
+                  onPress={() => setCategoria(c.value)}
+                  style={[styles.categoriaCard, sel && styles.categoriaCardSel]}
+                >
+                  <Ionicons
+                    name={c.icon}
+                    size={22}
+                    color={sel ? "#fff" : colors.brandMid}
+                  />
+                  <Text style={[styles.categoriaLabel, sel && styles.categoriaLabelSel]}>{c.label}</Text>
+                  <Text style={[styles.categoriaDesc, sel && styles.categoriaDescSel]}>{c.desc}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {categoria === "campanha" && (
+            <TextInput
+              value={campanhaTxt}
+              onChangeText={setCampanhaTxt}
+              placeholder="Nome da campanha"
+              placeholderTextColor={colors.textMuted}
+              style={styles.customInput}
+            />
+          )}
+        </View>
+
         {(metodo !== "pix" || !PIX_PAYLOAD) && (
           <View style={styles.box}>
             <Text style={styles.boxTitulo}>Valor</Text>
@@ -129,6 +171,8 @@ export default function GenerosidadeScreen() {
         {metodo === "card" && (
           <ConteudoCartao
             valor={valor}
+            categoria={categoria}
+            campanha={categoria === "campanha" ? campanhaTxt.trim() || null : null}
             onAbrir={(url) => {
               setCheckoutUrl(url);
               setCheckoutAberto(true);
@@ -138,7 +182,13 @@ export default function GenerosidadeScreen() {
           />
         )}
         {metodo === "apple_pay" && (
-          <ConteudoApplePay valor={valor} colors={colors} styles={styles} />
+          <ConteudoApplePay
+            valor={valor}
+            categoria={categoria}
+            campanha={categoria === "campanha" ? campanhaTxt.trim() || null : null}
+            colors={colors}
+            styles={styles}
+          />
         )}
       </ScrollView>
 
@@ -233,11 +283,15 @@ function ConteudoPix({
 
 function ConteudoCartao({
   valor,
+  categoria,
+  campanha,
   onAbrir,
   colors,
   styles,
 }: {
   valor: number;
+  categoria: Categoria;
+  campanha: string | null;
   onAbrir: (url: string) => void;
   colors: Palette;
   styles: ReturnType<typeof makeStyles>;
@@ -246,7 +300,7 @@ function ConteudoCartao({
   async function pagar() {
     setCarregando(true);
     try {
-      const { url } = await criarCheckoutSession({ amountCents: valor });
+      const { url } = await criarCheckoutSession({ amountCents: valor, categoria, campanha });
       onAbrir(url);
     } catch (e) {
       Alert.alert("Não foi possível abrir o pagamento", e instanceof Error ? e.message : "Erro.");
@@ -275,10 +329,14 @@ function ConteudoCartao({
 
 function ConteudoApplePay({
   valor,
+  categoria,
+  campanha,
   colors,
   styles,
 }: {
   valor: number;
+  categoria: Categoria;
+  campanha: string | null;
   colors: Palette;
   styles: ReturnType<typeof makeStyles>;
 }) {
@@ -292,8 +350,9 @@ function ConteudoApplePay({
   async function pagar() {
     setCarregando(true);
     try {
-      const token = await abrirApplePay(valor);
-      await confirmarApplePay(valor, token);
+      const label = categoria === "dizimo" ? "Dízimo CBRio" : categoria === "campanha" ? `${campanha ?? "Campanha"} CBRio` : "Oferta CBRio";
+      const token = await abrirApplePay(valor, label);
+      await confirmarApplePay(valor, token, { categoria, campanha });
       Alert.alert("Pagamento confirmado 💙", "Obrigado pela sua generosidade!");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro desconhecido.";
@@ -433,6 +492,24 @@ const makeStyles = (colors: Palette) =>
       gap: spacing.sm,
     },
     boxTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800" },
+    categoriasRow: { flexDirection: "row", gap: spacing.xs },
+    categoriaCard: {
+      flex: 1,
+      padding: spacing.sm,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      backgroundColor: colors.surfaceAlt,
+      alignItems: "center",
+      gap: 4,
+      minHeight: 92,
+      justifyContent: "center",
+    },
+    categoriaCardSel: { backgroundColor: colors.primary, borderColor: colors.primary },
+    categoriaLabel: { color: colors.text, fontSize: font.size.sm, fontWeight: "800" },
+    categoriaLabelSel: { color: "#fff" },
+    categoriaDesc: { color: colors.textMuted, fontSize: 11, textAlign: "center" },
+    categoriaDescSel: { color: "rgba(255,255,255,0.85)" },
     presets: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
     presetPill: {
       paddingHorizontal: spacing.md,
