@@ -11,9 +11,9 @@ expo-env.d.ts
 supabase/.temp/
 supabase/.branches/
 
-# Native (gerado por expo prebuild)
-ios/
-android/
+# Native (gerado por expo prebuild) — só na raiz; modules/*/ios|android são código nosso
+/ios/
+/android/
 *.orig.*
 *.jks
 *.p8
