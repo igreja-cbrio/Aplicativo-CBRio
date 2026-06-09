@@ -46,25 +46,15 @@ create trigger app_inscricoes_notify_recebida
   after insert on public.app_inscricoes
   for each row execute function public.tr_app_inscricoes_recebida();
 
--- 2. INSERT em app_inscricoes -> SOS (a function ignora se tipo<>sos)
-create or replace function public.tr_app_inscricoes_sos()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  perform public.app_dispara_webhook(
-    'https://hhntwfawfnxvuobhdfkb.supabase.co/functions/v1/notify-cuidado-sos',
-    to_jsonb(NEW)
-  );
-  return NEW;
-end; $$;
-
+-- 2. INSERT em app_inscricoes -> SOS
+-- REMOVIDO em 2026-06-09 (PR SISTEMA_INTEGRADO_CBRIO #923):
+-- A notificação de Cuidados (aconselhamento/oração/SOS) virou
+-- responsabilidade exclusiva do backend principal (cbrio.org/api).
+-- Manter este trigger causaria push duplicado pros pastores.
+-- A Edge Function notify-cuidado-sos continua deployada como fallback,
+-- mas não é mais chamada via trigger.
 drop trigger if exists app_inscricoes_notify_sos on public.app_inscricoes;
-create trigger app_inscricoes_notify_sos
-  after insert on public.app_inscricoes
-  for each row execute function public.tr_app_inscricoes_sos();
+drop function if exists public.tr_app_inscricoes_sos();
 
 -- 3. INSERT em mem_grupo_pedidos -> notify-grupo-pedido
 create or replace function public.tr_mem_grupo_pedidos_notify()
