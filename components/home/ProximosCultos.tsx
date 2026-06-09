@@ -65,8 +65,8 @@ export function ProximosCultos({ cultos }: { cultos: CultoUpcoming[] }) {
   const grupos = agrupar(cultos);
 
   return (
-    <View style={{ gap: spacing.sm }}>
-      <View style={styles.headerRow}>
+    <View style={{ gap: spacing.sm, marginHorizontal: -spacing.lg }}>
+      <View style={[styles.headerRow, { paddingHorizontal: spacing.lg }]}>
         <Ionicons name="calendar" size={18} color={colors.brandMid} />
         <Text style={styles.titulo}>Próximos cultos</Text>
       </View>
@@ -78,7 +78,7 @@ export function ProximosCultos({ cultos }: { cultos: CultoUpcoming[] }) {
         showsHorizontalScrollIndicator={false}
         snapToInterval={CARD_W + spacing.sm}
         decelerationRate="fast"
-        contentContainerStyle={{ paddingRight: spacing.lg }}
+        contentContainerStyle={{ paddingHorizontal: spacing.lg }}
         ItemSeparatorComponent={() => <View style={{ width: spacing.sm }} />}
         renderItem={({ item }) => <CultoCard grupo={item} router={router} colors={colors} styles={styles} />}
       />

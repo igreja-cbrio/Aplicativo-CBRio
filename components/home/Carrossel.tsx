@@ -59,7 +59,7 @@ export function Carrossel({ itens }: { itens: Destaque[] }) {
   if (!itens.length) return null;
 
   return (
-    <View>
+    <View style={{ marginHorizontal: -spacing.lg }}>
       <AnimatedFlatList
         ref={ref}
         data={itens}
@@ -69,6 +69,7 @@ export function Carrossel({ itens }: { itens: Destaque[] }) {
         showsHorizontalScrollIndicator={false}
         snapToInterval={ITEM_OFFSET}
         decelerationRate="fast"
+        contentContainerStyle={{ paddingHorizontal: spacing.lg }}
         onViewableItemsChanged={onViewable}
         viewabilityConfig={{ itemVisiblePercentThreshold: 60 }}
         onScroll={Animated.event(
