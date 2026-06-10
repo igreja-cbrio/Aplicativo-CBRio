@@ -2,3 +2,4 @@
 // and on native platforms to ApplePayModule.ts
 export { default } from './src/ApplePayModule';
 export * from './src/ApplePay.types';
+export { ApplePayButton, applePayButtonNativo } from './src/ApplePayButton';

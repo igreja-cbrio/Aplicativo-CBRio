@@ -19,6 +19,22 @@ public class ApplePayModule: Module {
       return PKPaymentAuthorizationController.canMakePayments(usingNetworks: parsed)
     }
 
+    View(ApplePayButtonView.self) {
+      Events("onPress")
+
+      Prop("buttonType") { (view: ApplePayButtonView, type: String) in
+        view.setButtonType(type)
+      }
+
+      Prop("buttonStyle") { (view: ApplePayButtonView, style: String) in
+        view.setButtonStyle(style)
+      }
+
+      Prop("cornerRadius") { (view: ApplePayButtonView, radius: Double) in
+        view.setCornerRadius(radius)
+      }
+    }
+
     AsyncFunction("requestPayment") { (config: ApplePayConfig, promise: Promise) in
       DispatchQueue.main.async {
         let presenter = ApplePayPresenter(promise: promise) { [weak self] in

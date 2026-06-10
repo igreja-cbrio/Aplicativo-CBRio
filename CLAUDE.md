@@ -99,6 +99,22 @@ constants/
 |   🚧   | **Cuidados**     | Pedido de oração + aconselhamento (grava em `app_inscricoes`) e **SOS** (CVV 188/192 na hora + alerta push aos pastores via Edge Function `notify-cuidado-sos`). |
 |   ⬜   | _Próximos_       | A definir, construídos um a um                                   |
 
+## Generosidade — notas de implementação
+
+- **Apple Pay:** módulo nativo local em `modules/apple-pay` (PassKit). A sheet
+  devolve o token cru; a Edge Function `generosidade-apple-pay-confirm`
+  tokeniza na Stripe (params `pk_token*` no NÍVEL RAIZ do form, não em
+  `card[...]`). O botão é o **oficial do sistema** (`PKPaymentButton` tipo
+  donate) via view nativa do módulo (`ApplePayButton` em
+  `modules/apple-pay/src/ApplePayButton.tsx`) — exigência das HIG; fallback
+  custom só pra binário antigo/dev client.
+- **Confirmação de doação:** `components/generosidade/SucessoDoacao.tsx`
+  (modal com confete + haptic de sucesso) — Alert de sistema só pra erro.
+- **⚠️ .gitignore:** os padrões nativos são ancorados na raiz (`/ios/`,
+  `/android/`). NUNCA voltar pra `ios/`/`android/` sem âncora — isso já
+  excluiu `modules/apple-pay/ios|android` do upload do EAS e os builds 1–9
+  saíram sem o módulo nativo do Apple Pay.
+
 ## Módulo 1 — Autenticação (detalhes)
 
 Métodos em `contexts/AuthContext.tsx`:

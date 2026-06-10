@@ -9,10 +9,11 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Stack, useRouter } from "expo-router";
+import { Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
+import * as Haptics from "expo-haptics";
 import QRCode from "react-native-qrcode-svg";
 import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
@@ -25,8 +26,10 @@ import {
   PIX_CIDADE,
 } from "@/constants/pix";
 import { applePayDisponivel, abrirApplePay, confirmarApplePay } from "@/lib/applePay";
+import { ApplePayButton, applePayButtonNativo } from "@/modules/apple-pay";
 import { criarCheckoutSession } from "@/lib/stripeCheckout";
 import { CheckoutWebView } from "@/components/generosidade/CheckoutWebView";
+import { SucessoDoacao } from "@/components/generosidade/SucessoDoacao";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { BRAND_FONT } from "@/lib/fonts";
 
@@ -49,7 +52,6 @@ function formatBRL(centavos: number): string {
 export default function GenerosidadeScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const router = useRouter();
 
   const [metodo, setMetodo] = useState<Metodo>("pix");
   const [categoria, setCategoria] = useState<Categoria>("dizimo");
@@ -59,6 +61,7 @@ export default function GenerosidadeScreen() {
 
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [checkoutAberto, setCheckoutAberto] = useState(false);
+  const [sucessoValor, setSucessoValor] = useState<number | null>(null);
 
   function setCustom(t: string) {
     const limpo = t.replace(/[^\d,]/g, "").replace(",", ".");
@@ -71,7 +74,7 @@ export default function GenerosidadeScreen() {
     setCheckoutAberto(false);
     setCheckoutUrl(null);
     if (status === "success") {
-      Alert.alert("Pagamento confirmado 💙", "Obrigado pela sua generosidade!");
+      setSucessoValor(valor);
     } else if (status === "cancel") {
       Alert.alert("Pagamento cancelado", "Você pode tentar de novo quando quiser.");
     }
@@ -80,13 +83,15 @@ export default function GenerosidadeScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        automaticallyAdjustKeyboardInsets
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Aba raiz do dock: sem botão "voltar" (HIG — navegação por abas). */}
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
-            <Ionicons name="chevron-back" size={24} color={colors.text} />
-          </Pressable>
           <Text style={styles.title}>Generosidade</Text>
-          <View style={{ width: 24 }} />
         </View>
 
         <Text style={styles.intro}>
@@ -110,7 +115,10 @@ export default function GenerosidadeScreen() {
               return (
                 <Pressable
                   key={c.value}
-                  onPress={() => setCategoria(c.value)}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setCategoria(c.value);
+                  }}
                   style={[styles.categoriaCard, sel && styles.categoriaCardSel]}
                 >
                   <Ionicons
@@ -147,6 +155,7 @@ export default function GenerosidadeScreen() {
                   <Pressable
                     key={v}
                     onPress={() => {
+                      Haptics.selectionAsync();
                       setValor(v * 100);
                       setCustomTxt("");
                     }}
@@ -188,6 +197,7 @@ export default function GenerosidadeScreen() {
             valor={valor}
             categoria={categoria}
             campanha={categoria === "campanha" ? campanhaTxt.trim() || null : null}
+            onSucesso={() => setSucessoValor(valor)}
             colors={colors}
             styles={styles}
           />
@@ -195,6 +205,11 @@ export default function GenerosidadeScreen() {
       </ScrollView>
 
       <CheckoutWebView url={checkoutUrl} visible={checkoutAberto} onResult={fecharCheckout} />
+      <SucessoDoacao
+        visible={sucessoValor != null}
+        valorCentavos={sucessoValor}
+        onClose={() => setSucessoValor(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -217,7 +232,13 @@ function MetodoTab({
 }) {
   const sel = atual === value;
   return (
-    <Pressable onPress={() => onPress(value)} style={[styles.tab, sel && styles.tabSel]}>
+    <Pressable
+      onPress={() => {
+        Haptics.selectionAsync();
+        onPress(value);
+      }}
+      style={[styles.tab, sel && styles.tabSel]}
+    >
       <Ionicons name={icon} size={16} color={sel ? "#fff" : "#888"} />
       <Text style={[styles.tabTxt, sel && styles.tabTxtSel]}>{label}</Text>
     </Pressable>
@@ -333,12 +354,14 @@ function ConteudoApplePay({
   valor,
   categoria,
   campanha,
+  onSucesso,
   colors,
   styles,
 }: {
   valor: number;
   categoria: Categoria;
   campanha: string | null;
+  onSucesso: () => void;
   colors: Palette;
   styles: ReturnType<typeof makeStyles>;
 }) {
@@ -355,7 +378,7 @@ function ConteudoApplePay({
       const label = categoria === "dizimo" ? "Dízimo CBRio" : categoria === "campanha" ? `${campanha ?? "Campanha"} CBRio` : "Oferta CBRio";
       const token = await abrirApplePay(valor, label);
       await confirmarApplePay(valor, token, { categoria, campanha });
-      Alert.alert("Pagamento confirmado 💙", "Obrigado pela sua generosidade!");
+      onSucesso();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro desconhecido.";
       if (msg.toLowerCase().includes("cancel")) return;
@@ -381,10 +404,13 @@ function ConteudoApplePay({
           Pague com qualquer cartão que você já tem na Carteira do iPhone, com
           Face ID/Touch ID. Sem digitar nada.
         </Text>
+        <Text style={styles.valorFinal}>{formatBRL(valor)}</Text>
       </View>
-      {/* Botão sempre visível (recomendação Apple). Se não houver cartão,
-          a própria sheet do PassKit oferece adicionar um. */}
-      {(
+      {/* Botão OFICIAL do sistema (PKPaymentButton, tipo "donate") — exigido
+          pelas HIG. Sempre visível: sem cartão, a sheet oferece adicionar um. */}
+      {applePayButtonNativo ? (
+        <ApplePayButton onPress={pagar} disabled={carregando} buttonType="donate" />
+      ) : (
         <Pressable
           onPress={pagar}
           disabled={carregando}
@@ -448,8 +474,7 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
     content: { padding: spacing.lg, paddingBottom: 140, gap: spacing.md },
-    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-    back: { width: 24 },
+    header: { alignItems: "center", justifyContent: "center" },
     title: { color: colors.text, fontSize: font.size.lg, fontFamily: BRAND_FONT },
     intro: {
       color: colors.textMuted,
@@ -474,6 +499,7 @@ const makeStyles = (colors: Palette) =>
       justifyContent: "center",
       gap: 4,
       paddingVertical: spacing.sm,
+      minHeight: 44, // alvo de toque mínimo (HIG)
       borderRadius: radius.sm,
     },
     tabSel: { backgroundColor: colors.primary },
@@ -510,6 +536,8 @@ const makeStyles = (colors: Palette) =>
     presetPill: {
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
+      minHeight: 44, // alvo de toque mínimo (HIG)
+      justifyContent: "center",
       borderRadius: radius.full,
       borderWidth: 1,
       borderColor: colors.glassBorder,
@@ -562,6 +590,7 @@ const makeStyles = (colors: Palette) =>
       gap: 4,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
+      minHeight: 44, // alvo de toque mínimo (HIG)
       borderRadius: radius.full,
       backgroundColor: colors.glass,
     },
