@@ -7,6 +7,8 @@ import * as Notifications from "expo-notifications";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { SplashPulse } from "@/components/brand/SplashPulse";
+import { BiometriaLock } from "@/components/auth/BiometriaLock";
+import { biometriaAtiva } from "@/lib/biometria";
 import { registerForPush } from "@/lib/push";
 import { attachNotifTapListener } from "@/lib/notifTap";
 import { loadFontScale } from "@/lib/applyFontScale";
@@ -36,11 +38,25 @@ function useFontScaleBootstrap() {
 }
 
 function RootNavigator() {
-  const { session, loading, preview } = useAuth();
+  const { session, loading, preview, signOut } = useAuth();
   const { colors, mode } = useTheme();
   const segments = useSegments();
   const router = useRouter();
   const authed = !!session || preview;
+
+  // Desbloqueio por biometria: trava UMA vez por abertura do app quando há
+  // sessão salva e o usuário ativou a opção. null = ainda decidindo.
+  const [precisaBiometria, setPrecisaBiometria] = useState<boolean | null>(null);
+  const [desbloqueado, setDesbloqueado] = useState(false);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!session || preview) {
+      setPrecisaBiometria(false);
+      return;
+    }
+    biometriaAtiva().then((ativa) => setPrecisaBiometria(ativa));
+  }, [loading, session, preview]);
 
   useEffect(() => {
     if (loading) return;
@@ -65,8 +81,24 @@ function RootNavigator() {
     return detach;
   }, []);
 
-  if (loading) {
+  if (loading || (session && !preview && precisaBiometria === null)) {
     return <SplashPulse />;
+  }
+
+  // Sessão salva + biometria ativa + ainda não desbloqueou nesta abertura.
+  if (session && !preview && precisaBiometria && !desbloqueado) {
+    return (
+      <>
+        <StatusBar style={mode === "light" ? "dark" : "light"} />
+        <BiometriaLock
+          onUnlock={() => setDesbloqueado(true)}
+          onSair={() => {
+            setDesbloqueado(true); // libera a navegação pro login
+            signOut();
+          }}
+        />
+      </>
+    );
   }
 
   return (

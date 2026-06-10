@@ -17,6 +17,7 @@ import {
   REMEMBER_PREF_KEY,
 } from "@/lib/supabase";
 import { limparCache } from "@/lib/cache";
+import { definirBiometriaAtiva } from "@/lib/biometria";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -199,6 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async signOut() {
         setPreview(false);
         await limparCache(); // descarta cache local (destaques/cultos) da sessão
+        await definirBiometriaAtiva(false); // cada conta reativa o desbloqueio
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
       },

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Linking,
@@ -23,6 +23,13 @@ import {
 import { LANGS, useLang } from "@/lib/i18n";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import {
+  autenticarBiometria,
+  biometriaAtiva,
+  biometriaSuportada,
+  definirBiometriaAtiva,
+  rotuloBiometria,
+} from "@/lib/biometria";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const TEMA_OPCOES: { key: ThemePreference; label: string; icon: React.ComponentProps<typeof Ionicons>["name"] }[] = [
@@ -61,6 +68,34 @@ export default function ConfiguracoesScreen() {
   const { lang, setLang } = useLang();
   const [pagamento, setPagamento] = useState("pix");
   const [notifAtivas, setNotifAtivas] = useState<boolean | null>(null);
+
+  // Desbloqueio por biometria (Face ID / Touch ID)
+  const [biomSuportada, setBiomSuportada] = useState(false);
+  const [biomRotulo, setBiomRotulo] = useState("Face ID");
+  const [biomOn, setBiomOn] = useState(false);
+
+  useEffect(() => {
+    biometriaSuportada().then(async (sup) => {
+      setBiomSuportada(sup);
+      if (sup) {
+        setBiomRotulo(await rotuloBiometria());
+        setBiomOn(await biometriaAtiva());
+      }
+    });
+  }, []);
+
+  async function alternarBiometria(ativar: boolean) {
+    if (ativar) {
+      // Confirma com a biometria antes de ligar (garante que funciona).
+      const ok = await autenticarBiometria(`Confirmar ${biomRotulo}`);
+      if (!ok) return;
+      await definirBiometriaAtiva(true);
+      setBiomOn(true);
+    } else {
+      await definirBiometriaAtiva(false);
+      setBiomOn(false);
+    }
+  }
 
   // Estado do fluxo "excluir conta"
   const [excluirAberto, setExcluirAberto] = useState(false);
@@ -233,6 +268,25 @@ export default function ConfiguracoesScreen() {
         </Section>
 
         {/* NOTIFICAÇÕES */}
+        {biomSuportada && (
+          <Section title="Segurança" colors={colors} styles={styles}>
+            <View style={styles.switchRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Desbloquear com {biomRotulo}</Text>
+                <Text style={styles.hint}>
+                  Ao reabrir o app, entre com {biomRotulo} em vez de digitar a
+                  senha.
+                </Text>
+              </View>
+              <Switch
+                value={biomOn}
+                onValueChange={alternarBiometria}
+                trackColor={{ true: colors.primary, false: colors.glassBorder }}
+              />
+            </View>
+          </Section>
+        )}
+
         <Section title="Notificações" colors={colors} styles={styles}>
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>

@@ -19,6 +19,7 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "O CBRio usa sua localização para mostrar grupos próximos no mapa e confirmar sua presença no NEXT.",
         "NSMotionUsageDescription": "O CBRio usa o sensor de movimento para o efeito holográfico do seu cartão.",
+        "NSFaceIDUsageDescription": "O CBRio usa o Face ID para você desbloquear o app com segurança, sem digitar sua senha.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "entitlements": {
@@ -60,7 +61,13 @@
           }
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "O CBRio usa o Face ID para você desbloquear o app com segurança, sem digitar sua senha."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
