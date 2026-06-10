@@ -35,6 +35,19 @@ public class ApplePayModule: Module {
       }
     }
 
+    // Botão oficial "Add to Apple Wallet" (PKAddPassButton).
+    View(AddPassButtonView.self) {
+      Events("onAddPassPress")
+
+      Prop("buttonStyle") { (view: AddPassButtonView, style: String) in
+        view.setButtonStyle(style)
+      }
+
+      Prop("cornerRadius") { (view: AddPassButtonView, radius: Double) in
+        view.setCornerRadius(radius)
+      }
+    }
+
     AsyncFunction("requestPayment") { (config: ApplePayConfig, promise: Promise) in
       DispatchQueue.main.async {
         let presenter = ApplePayPresenter(promise: promise) { [weak self] in

@@ -3,3 +3,4 @@
 export { default } from './src/ApplePayModule';
 export * from './src/ApplePay.types';
 export { ApplePayButton, applePayButtonNativo } from './src/ApplePayButton';
+export { AddPassButton, addPassButtonNativo } from './src/AddPassButton';

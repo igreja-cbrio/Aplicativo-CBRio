@@ -35,7 +35,11 @@ if (Platform.OS === "ios") {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { requireNativeView } = require("expo");
-    NativeButton = requireNativeView("ApplePay") as ComponentType<NativeProps>;
+    // Nome explícito da view (o módulo tem 2: pagamento e Add-to-Wallet).
+    NativeButton = requireNativeView(
+      "ApplePay",
+      "ApplePayButtonView"
+    ) as ComponentType<NativeProps>;
   } catch {
     NativeButton = null;
   }

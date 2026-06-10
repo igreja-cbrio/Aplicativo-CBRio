@@ -6,6 +6,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { AddPassButton, addPassButtonNativo } from "@/modules/apple-pay";
 
 type Props = {
   onPress: () => void;
@@ -16,17 +17,20 @@ type Props = {
 /**
  * Botão "Add to Apple Wallet".
  *
- * Visual conforme a especificação de marca da Apple Wallet
- * (https://developer.apple.com/design/human-interface-guidelines/wallet):
- * fundo preto, cantos arredondados, logo da Apple + "Add to Apple Wallet"
- * em inglês (a marca não é traduzida). Ao tocar, abre a folha nativa
- * `PKAddPassesViewController` (via módulo `apple-pay`).
+ * Usa o botão OFICIAL do sistema (`PKAddPassButton`) — com o ícone e a arte
+ * da Apple Wallet desenhados pelo iOS, localizados automaticamente e em
+ * conformidade com as HIG
+ * (https://developer.apple.com/design/human-interface-guidelines/wallet).
+ * O ícone oficial da Wallet passa a credibilidade que o usuário Apple espera.
  *
- * Nota: não usamos `PKAddPassButton` nativo porque a lib legada que o
- * expunha (`react-native-wallet-pass`) quebra na nova arquitetura do RN
- * (constantes não bridgeadas) — era a causa do crash da tela de cartões.
+ * Durante o carregamento mostra um botão equivalente com spinner; em binário
+ * sem o módulo nativo, cai num botão estilizado com o ícone da carteira.
  */
 export function AddToWalletButton({ onPress, loading, disabled }: Props) {
+  if (addPassButtonNativo && !loading) {
+    return <AddPassButton onPress={onPress} disabled={disabled} />;
+  }
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -42,7 +46,7 @@ export function AddToWalletButton({ onPress, loading, disabled }: Props) {
         <ActivityIndicator color="#FFFFFF" />
       ) : (
         <View style={styles.content}>
-          <Ionicons name="logo-apple" size={22} color="#FFFFFF" style={styles.apple} />
+          <Ionicons name="wallet" size={24} color="#FFFFFF" style={styles.icon} />
           <View>
             <Text style={styles.addTo}>Add to</Text>
             <Text style={styles.wallet}>Apple Wallet</Text>
@@ -63,8 +67,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   pressed: { opacity: 0.85 },
-  content: { flexDirection: "row", alignItems: "center", gap: 8 },
-  apple: { marginTop: -2 },
+  content: { flexDirection: "row", alignItems: "center", gap: 10 },
+  icon: { marginTop: -1 },
   addTo: { color: "#FFFFFF", fontSize: 11, fontWeight: "500", lineHeight: 13 },
   wallet: {
     color: "#FFFFFF",
