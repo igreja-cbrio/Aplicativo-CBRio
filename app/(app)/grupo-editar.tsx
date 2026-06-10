@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/Input";
 import { useColors } from "@/contexts/ThemeContext";
 import { useAdminGrupo } from "@/lib/useAdminGrupo";
 import { supabase } from "@/lib/supabase";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type GrupoEdit = {
@@ -44,6 +45,7 @@ export default function GrupoEditarScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const { isAdmin, loading: checking } = useAdminGrupo(id);
+  const t = useT();
 
   const [grupo, setGrupo] = useState<GrupoEdit | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -75,7 +77,7 @@ export default function GrupoEditarScreen() {
     if (!grupo) return;
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Permissão necessária", "Permita o acesso às fotos para escolher uma capa.");
+      Alert.alert(t("Permissão necessária"), t("Permita o acesso às fotos para escolher uma capa."));
       return;
     }
     const res = await ImagePicker.launchImageLibraryAsync({
@@ -108,11 +110,11 @@ export default function GrupoEditarScreen() {
         .eq("id", grupo.id);
       if (updErr) throw updErr;
       setField("foto_url", publicUrl);
-      setMsg({ type: "ok", text: "Capa atualizada." });
+      setMsg({ type: "ok", text: t("Capa atualizada.") });
     } catch (e) {
       setMsg({
         type: "err",
-        text: e instanceof Error ? `Falha ao enviar a capa: ${e.message}` : "Falha ao enviar a capa.",
+        text: e instanceof Error ? `${t("Falha ao enviar a capa")}: ${e.message}` : t("Falha ao enviar a capa."),
       });
     } finally {
       setUploading(false);
@@ -139,11 +141,11 @@ export default function GrupoEditarScreen() {
         })
         .eq("id", grupo.id);
       if (error) throw error;
-      setMsg({ type: "ok", text: "Grupo atualizado." });
+      setMsg({ type: "ok", text: t("Grupo atualizado.") });
     } catch (e) {
       setMsg({
         type: "err",
-        text: e instanceof Error ? `Falha ao salvar: ${e.message}` : "Falha ao salvar.",
+        text: e instanceof Error ? `${t("Falha ao salvar")}: ${e.message}` : t("Falha ao salvar."),
       });
     } finally {
       setSalvando(false);
@@ -167,10 +169,10 @@ export default function GrupoEditarScreen() {
           <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>Editar grupo</Text>
+          <Text style={styles.title}>{t("Editar grupo")}</Text>
           <View style={{ width: 24 }} />
         </View>
-        <Text style={styles.muted}>Você não tem permissão para editar este grupo.</Text>
+        <Text style={styles.muted}>{t("Você não tem permissão para editar este grupo.")}</Text>
       </SafeAreaView>
     );
   }
@@ -179,7 +181,7 @@ export default function GrupoEditarScreen() {
     return (
       <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <Text style={styles.muted}>Grupo não encontrado.</Text>
+        <Text style={styles.muted}>{t("Grupo não encontrado.")}</Text>
       </SafeAreaView>
     );
   }
@@ -196,7 +198,7 @@ export default function GrupoEditarScreen() {
             <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
               <Ionicons name="chevron-back" size={24} color={colors.text} />
             </Pressable>
-            <Text style={styles.title}>Editar grupo</Text>
+            <Text style={styles.title}>{t("Editar grupo")}</Text>
             <View style={{ width: 24 }} />
           </View>
 
@@ -206,7 +208,7 @@ export default function GrupoEditarScreen() {
             ) : (
               <View style={[styles.capa, styles.capaPlaceholder]}>
                 <Ionicons name="image-outline" size={40} color={colors.textMuted} />
-                <Text style={styles.capaHint}>Toque para escolher a capa</Text>
+                <Text style={styles.capaHint}>{t("Toque para escolher a capa")}</Text>
               </View>
             )}
             <View style={styles.capaBadge}>
@@ -219,33 +221,33 @@ export default function GrupoEditarScreen() {
           </Pressable>
 
           <Input
-            label="Nome"
+            label={t("Nome")}
             value={grupo.nome ?? ""}
-            onChangeText={(t) => setField("nome", t)}
-            placeholder="Nome do grupo"
+            onChangeText={(v) => setField("nome", v)}
+            placeholder={t("Nome do grupo")}
           />
           <Input
-            label="Categoria"
+            label={t("Categoria")}
             value={grupo.categoria ?? ""}
-            onChangeText={(t) => setField("categoria", t)}
-            placeholder="Adultos, Jovens, Casais…"
+            onChangeText={(v) => setField("categoria", v)}
+            placeholder={t("Adultos, Jovens, Casais…")}
           />
           <Input
-            label="Tema"
+            label={t("Tema")}
             value={grupo.tema ?? ""}
-            onChangeText={(t) => setField("tema", t)}
-            placeholder="Tema do trimestre"
+            onChangeText={(v) => setField("tema", v)}
+            placeholder={t("Tema do trimestre")}
           />
           <Input
-            label="Descrição"
+            label={t("Descrição")}
             value={grupo.descricao ?? ""}
-            onChangeText={(t) => setField("descricao", t)}
-            placeholder="Sobre o grupo"
+            onChangeText={(v) => setField("descricao", v)}
+            placeholder={t("Sobre o grupo")}
             multiline
             numberOfLines={4}
           />
 
-          <Text style={styles.label}>Dia da semana</Text>
+          <Text style={styles.label}>{t("Dia da semana")}</Text>
           <View style={styles.diasRow}>
             {DOW.map((d, i) => {
               const sel = grupo.dia_semana === i;
@@ -255,43 +257,43 @@ export default function GrupoEditarScreen() {
                   onPress={() => setField("dia_semana", sel ? null : i)}
                   style={[styles.diaChip, sel && styles.diaChipSel]}
                 >
-                  <Text style={[styles.diaTxt, sel && styles.diaTxtSel]}>{d.slice(0, 3)}</Text>
+                  <Text style={[styles.diaTxt, sel && styles.diaTxtSel]}>{t(d).slice(0, 3)}</Text>
                 </Pressable>
               );
             })}
           </View>
 
           <Input
-            label="Horário (HH:MM)"
+            label={t("Horário (HH:MM)")}
             value={grupo.horario ?? ""}
-            onChangeText={(t) => setField("horario", t)}
+            onChangeText={(v) => setField("horario", v)}
             placeholder="19:30"
             autoCapitalize="none"
           />
           <Input
-            label="Local"
+            label={t("Local")}
             value={grupo.local ?? ""}
-            onChangeText={(t) => setField("local", t)}
-            placeholder="Casa do líder, igreja, etc."
+            onChangeText={(v) => setField("local", v)}
+            placeholder={t("Casa do líder, igreja, etc.")}
           />
           <Input
-            label="Endereço"
+            label={t("Endereço")}
             value={grupo.endereco ?? ""}
-            onChangeText={(t) => setField("endereco", t)}
-            placeholder="Rua, número"
+            onChangeText={(v) => setField("endereco", v)}
+            placeholder={t("Rua, número")}
           />
           <Input
-            label="Bairro"
+            label={t("Bairro")}
             value={grupo.bairro ?? ""}
-            onChangeText={(t) => setField("bairro", t)}
-            placeholder="Bairro"
+            onChangeText={(v) => setField("bairro", v)}
+            placeholder={t("Bairro")}
           />
 
           {msg && (
             <Text style={msg.type === "ok" ? styles.ok : styles.erro}>{msg.text}</Text>
           )}
 
-          <Button title="Salvar alterações" onPress={salvar} loading={salvando} />
+          <Button title={t("Salvar alterações")} onPress={salvar} loading={salvando} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

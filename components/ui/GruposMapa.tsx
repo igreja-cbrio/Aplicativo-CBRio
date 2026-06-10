@@ -10,6 +10,7 @@ import {
 } from "@maplibre/maplibre-react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme, useColors } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { brand, radius, font, spacing } from "@/constants/theme";
 import { diaHorario } from "@/app/(app)/grupos";
 
@@ -40,6 +41,7 @@ export function GruposMapa({
 }) {
   const { mode } = useTheme();
   const colors = useColors();
+  const t = useT();
   const cameraRef = useRef<CameraRef>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [permissionOk, setPermissionOk] = useState(false);
@@ -201,7 +203,7 @@ export function GruposMapa({
               onSelect(selected.id);
             }}
           >
-            <Text style={styles.detalhesTxt}>Ver</Text>
+            <Text style={styles.detalhesTxt}>{t("Ver")}</Text>
             <Ionicons name="chevron-forward" size={14} color="#fff" />
           </Pressable>
         </View>

@@ -22,6 +22,7 @@ import { minhasEscalas, type MinhaEscala } from "@/lib/escalas";
 import { Disponibilidade } from "@/components/voluntariado/Disponibilidade";
 import { isValidCPF, maskCPF, onlyDigits } from "@/lib/validators";
 import { supabase } from "@/lib/supabase";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const MAX_AREAS = 3;
@@ -39,6 +40,7 @@ export default function VoluntariadoScreen() {
   const { user } = useAuth();
   const { membro, loading } = useMembro();
   const colors = useColors();
+  const t = useT();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   // ---- Sync de status (fonte da verdade do voluntariado) ----
@@ -124,7 +126,7 @@ export default function VoluntariadoScreen() {
         if (alive) setOpcoes(data);
       })
       .catch((e) => {
-        if (alive) setOpcoesErro(e instanceof Error ? e.message : "Falha ao carregar áreas.");
+        if (alive) setOpcoesErro(e instanceof Error ? e.message : t("Falha ao carregar áreas."));
       })
       .finally(() => {
         if (alive) setOpcoesLoading(false);
@@ -152,28 +154,28 @@ export default function VoluntariadoScreen() {
   async function enviar() {
     setError(null);
     if (me?.inscricao) {
-      setError("Você já tem uma inscrição em andamento.");
+      setError(t("Você já tem uma inscrição em andamento."));
       return;
     }
     if (!nome || !telefone) {
-      setError("Preencha pelo menos nome e telefone.");
+      setError(t("Preencha pelo menos nome e telefone."));
       return;
     }
     if (areas.length === 0) {
-      setError("Escolha pelo menos uma área para servir.");
+      setError(t("Escolha pelo menos uma área para servir."));
       return;
     }
     if (areas.length > MAX_AREAS) {
-      setError(`Escolha no máximo ${MAX_AREAS} áreas.`);
+      setError(`${t("Escolha no máximo")} ${MAX_AREAS} ${t("áreas.")}`);
       return;
     }
     if (precisaAntecedentes) {
       if (!isValidCPF(cpf)) {
-        setError("Para Kids/Bridge, informe um CPF válido.");
+        setError(t("Para Kids/Bridge, informe um CPF válido."));
         return;
       }
       if (!nomeMae.trim()) {
-        setError("Para Kids/Bridge, informe o nome da mãe.");
+        setError(t("Para Kids/Bridge, informe o nome da mãe."));
         return;
       }
     }
@@ -197,16 +199,16 @@ export default function VoluntariadoScreen() {
         areas,
         membro_id: membro?.membroId ?? null,
       });
-      setSucessoMsg(resp.message || "Inscrição recebida! Nossa equipe entrará em contato.");
+      setSucessoMsg(resp.message || t("Inscrição recebida! Nossa equipe entrará em contato."));
       setEnviado(true);
     } catch (e) {
       const err = e as Error & { status?: number };
       if (err.status === 409) {
         // Já tem inscrição em análise — força sincronização e mostra status.
-        setError("Você já tem uma inscrição em análise. Acompanhe o status acima.");
+        setError(t("Você já tem uma inscrição em análise. Acompanhe o status acima."));
         setEnviado(false);
       } else {
-        setError(err.message || "Não foi possível enviar.");
+        setError(err.message || t("Não foi possível enviar."));
       }
     } finally {
       setEnviando(false);
@@ -224,7 +226,7 @@ export default function VoluntariadoScreen() {
             <View style={styles.badge}>
               <Ionicons name="hand-left" size={28} color={colors.brandPale} />
             </View>
-            <Text style={styles.title}>Voluntariado</Text>
+            <Text style={styles.title}>{t("Voluntariado")}</Text>
           </View>
 
           {inscrito ? (
@@ -232,11 +234,9 @@ export default function VoluntariadoScreen() {
               <View style={styles.statusCard}>
                 <Ionicons name="hourglass-outline" size={22} color={colors.brandMid} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.statusTitulo}>Inscrição em análise</Text>
+                  <Text style={styles.statusTitulo}>{t("Inscrição em análise")}</Text>
                   <Text style={styles.statusTxt}>
-                    Nossa equipe está revisando sua inscrição e em breve te
-                    encaminha pro ministério certo. Você recebe um aviso aqui
-                    quando avançar.
+                    {t("Nossa equipe está revisando sua inscrição e em breve te encaminha pro ministério certo. Você recebe um aviso aqui quando avançar.")}
                   </Text>
                 </View>
               </View>
@@ -246,30 +246,30 @@ export default function VoluntariadoScreen() {
               <View style={styles.statusCard}>
                 <Ionicons name="paper-plane-outline" size={22} color={colors.brandMid} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.statusTitulo}>Encaminhada ao ministério</Text>
+                  <Text style={styles.statusTitulo}>{t("Encaminhada ao ministério")}</Text>
                   <Text style={styles.statusTxt}>
                     {me?.inscricao?.area
-                      ? `Sua inscrição foi enviada pro ministério de ${me.inscricao.area}. `
-                      : "Sua inscrição foi enviada pro ministério. "}
-                    O líder vai te chamar em breve.
+                      ? `${t("Sua inscrição foi enviada pro ministério de")} ${me.inscricao.area}. `
+                      : t("Sua inscrição foi enviada pro ministério. ")}
+                    {t("O líder vai te chamar em breve.")}
                   </Text>
                 </View>
               </View>
             </View>
           ) : integrado ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Minhas escalas</Text>
+              <Text style={styles.sectionTitle}>{t("Minhas escalas")}</Text>
               {carregandoEscalas ? (
-                <Text style={styles.muted}>Carregando…</Text>
+                <Text style={styles.muted}>{t("Carregando…")}</Text>
               ) : escalas.length === 0 ? (
                 <View style={styles.emptyCard}>
                   <Ionicons name="calendar-outline" size={28} color={colors.textMuted} />
-                  <Text style={styles.muted}>Você não tem escalas futuras no momento.</Text>
+                  <Text style={styles.muted}>{t("Você não tem escalas futuras no momento.")}</Text>
                 </View>
               ) : (
                 escalas.map((e) => {
                   const confirmado = e.confirmation_status === "confirmed";
-                  const titulo = e.culto ?? e.team_name ?? "Escala";
+                  const titulo = e.culto ?? e.team_name ?? t("Escala");
                   const detalhes = [
                     e.data ? fmtDataIso(e.data) : null,
                     e.team_name && e.culto ? e.team_name : null,
@@ -286,7 +286,7 @@ export default function VoluntariadoScreen() {
                       {confirmado ? (
                         <View style={styles.confirmado}>
                           <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                          <Text style={styles.confirmadoTxt}>Confirmada</Text>
+                          <Text style={styles.confirmadoTxt}>{t("Confirmada")}</Text>
                         </View>
                       ) : (
                         <Pressable
@@ -295,7 +295,7 @@ export default function VoluntariadoScreen() {
                           disabled={confirmandoId === e.id}
                         >
                           <Text style={styles.confirmarTxt}>
-                            {confirmandoId === e.id ? "..." : "Confirmar"}
+                            {confirmandoId === e.id ? "..." : t("Confirmar")}
                           </Text>
                         </Pressable>
                       )}
@@ -308,14 +308,14 @@ export default function VoluntariadoScreen() {
           ) : enviado ? (
             <View style={styles.emptyCard}>
               <Ionicons name="checkmark-circle" size={40} color={colors.success} />
-              <Text style={styles.title}>Inscrição enviada!</Text>
+              <Text style={styles.title}>{t("Inscrição enviada!")}</Text>
               <Text style={styles.muted}>
-                {sucessoMsg ?? "Recebemos sua inscrição de voluntariado. Em breve a equipe fala com você. 💙"}
+                {sucessoMsg ?? t("Recebemos sua inscrição de voluntariado. Em breve a equipe fala com você. 💙")}
               </Text>
             </View>
           ) : me === null ? (
             <View style={styles.emptyCard}>
-              <Text style={styles.muted}>Carregando…</Text>
+              <Text style={styles.muted}>{t("Carregando…")}</Text>
             </View>
           ) : me.inscricao ? (
             <View style={styles.section}>
@@ -323,12 +323,10 @@ export default function VoluntariadoScreen() {
                 <Ionicons name="information-circle-outline" size={22} color={colors.brandMid} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.statusTitulo}>
-                    Você já tem uma inscrição ({me.inscricao.status})
+                    {t("Você já tem uma inscrição")} ({me.inscricao.status})
                   </Text>
                   <Text style={styles.statusTxt}>
-                    Para evitar duplicatas, só uma inscrição ativa por membro.
-                    Acompanhe o status aqui — quando avançar, a tela atualiza
-                    sozinha.
+                    {t("Para evitar duplicatas, só uma inscrição ativa por membro. Acompanhe o status aqui — quando avançar, a tela atualiza sozinha.")}
                   </Text>
                 </View>
               </View>
@@ -336,17 +334,17 @@ export default function VoluntariadoScreen() {
           ) : (
             <View style={styles.section}>
               <Text style={styles.subtitle}>
-                Sirva com a gente na CBRio. Escolha as áreas e preencha seus dados.
+                {t("Sirva com a gente na CBRio. Escolha as áreas e preencha seus dados.")}
               </Text>
-              <Input label="Nome completo" value={nome} onChangeText={setNome} autoCapitalize="words" />
-              <Input label="Telefone" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="+55 21 99999-9999" />
-              <Input label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" />
+              <Input label={t("Nome completo")} value={nome} onChangeText={setNome} autoCapitalize="words" />
+              <Input label={t("Telefone")} value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="+55 21 99999-9999" />
+              <Input label={t("E-mail")} value={email} onChangeText={setEmail} keyboardType="email-address" />
 
               <Text style={styles.fieldLabel}>
-                Onde você quer servir? (até {MAX_AREAS})
+                {t("Onde você quer servir? (até")} {MAX_AREAS})
               </Text>
               {opcoesLoading ? (
-                <Text style={styles.muted}>Carregando áreas…</Text>
+                <Text style={styles.muted}>{t("Carregando áreas…")}</Text>
               ) : opcoesErro ? (
                 <Text style={styles.error}>{opcoesErro}</Text>
               ) : (
@@ -381,25 +379,25 @@ export default function VoluntariadoScreen() {
               {precisaAntecedentes && (
                 <>
                   <Input
-                    label="CPF"
+                    label={t("CPF")}
                     value={cpf}
-                    onChangeText={(t) => setCpf(maskCPF(t))}
+                    onChangeText={(v) => setCpf(maskCPF(v))}
                     placeholder="000.000.000-00"
                     keyboardType="number-pad"
                     maxLength={14}
                   />
                   <Input
-                    label="Nome da mãe"
+                    label={t("Nome da mãe")}
                     value={nomeMae}
                     onChangeText={setNomeMae}
-                    placeholder="Nome completo da mãe"
+                    placeholder={t("Nome completo da mãe")}
                     autoCapitalize="words"
                   />
                 </>
               )}
 
               {error && <Text style={styles.error}>{error}</Text>}
-              <Button title="Quero ser voluntário" onPress={enviar} loading={enviando || loading} />
+              <Button title={t("Quero ser voluntário")} onPress={enviar} loading={enviando || loading} />
             </View>
           )}
         </ScrollView>

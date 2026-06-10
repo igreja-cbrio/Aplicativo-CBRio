@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { autenticarBiometria, rotuloBiometria } from "@/lib/biometria";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { BRAND_FONT } from "@/lib/fonts";
@@ -18,6 +19,7 @@ export function BiometriaLock({
   onUnlock: () => void;
   onSair: () => void;
 }) {
+  const t = useT();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [rotulo, setRotulo] = useState("Face ID");
@@ -26,10 +28,10 @@ export function BiometriaLock({
 
   const tentar = useCallback(async () => {
     setTentando(true);
-    const ok = await autenticarBiometria("Desbloquear o CBRio");
+    const ok = await autenticarBiometria(t("Desbloquear o CBRio"));
     setTentando(false);
     if (ok) onUnlock();
-  }, [onUnlock]);
+  }, [onUnlock, t]);
 
   useEffect(() => {
     rotuloBiometria().then(setRotulo);
@@ -54,9 +56,9 @@ export function BiometriaLock({
         resizeMode="contain"
       />
 
-      <Text style={styles.titulo}>App bloqueado</Text>
+      <Text style={styles.titulo}>{t("App bloqueado")}</Text>
       <Text style={styles.sub}>
-        Desbloqueie com {rotulo} para continuar.
+        {t("Desbloqueie com")} {rotulo} {t("para continuar.")}
       </Text>
 
       <Pressable
@@ -67,14 +69,14 @@ export function BiometriaLock({
           (pressed || tentando) && { opacity: 0.85 },
         ]}
         accessibilityRole="button"
-        accessibilityLabel={`Desbloquear com ${rotulo}`}
+        accessibilityLabel={`${t("Desbloquear com")} ${rotulo}`}
       >
         <Ionicons name={icone} size={22} color="#fff" />
-        <Text style={styles.btnTxt}>Desbloquear com {rotulo}</Text>
+        <Text style={styles.btnTxt}>{t("Desbloquear com")} {rotulo}</Text>
       </Pressable>
 
       <Pressable onPress={onSair} hitSlop={12} style={styles.sair}>
-        <Text style={styles.sairTxt}>Entrar com outra conta</Text>
+        <Text style={styles.sairTxt}>{t("Entrar com outra conta")}</Text>
       </Pressable>
     </View>
   );

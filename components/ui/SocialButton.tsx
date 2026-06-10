@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
 import { AntDesign } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Props = {
@@ -17,6 +18,7 @@ const CONFIG = {
 };
 
 export function SocialButton({ provider, onPress, loading, disabled }: Props) {
+  const t = useT();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { icon, label } = CONFIG[provider];
@@ -37,7 +39,7 @@ export function SocialButton({ provider, onPress, loading, disabled }: Props) {
       ) : (
         <>
           <AntDesign name={icon} size={18} color={colors.text} />
-          <Text style={styles.label}>{label}</Text>
+          <Text style={styles.label}>{t(label)}</Text>
         </>
       )}
     </Pressable>

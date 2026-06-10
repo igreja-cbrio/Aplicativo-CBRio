@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors } from "@/contexts/ThemeContext";
 import { useNotificacoes, type AppNotificacao } from "@/lib/useNotificacoes";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -24,13 +25,13 @@ function iconePorTipo(tipo: string): keyof typeof Ionicons.glyphMap {
   return ICONES[tipo] ?? "notifications";
 }
 
-function formatTempo(iso: string) {
+function formatTempo(iso: string, t: (s: string) => string) {
   const d = new Date(iso);
   const agora = Date.now();
   const diff = Math.max(0, agora - d.getTime());
   const min = Math.floor(diff / 60000);
-  if (min < 1) return "agora";
-  if (min < 60) return `${min} min`;
+  if (min < 1) return t("agora");
+  if (min < 60) return `${min} ${t("min")}`;
   const h = Math.floor(min / 60);
   if (h < 24) return `${h}h`;
   const dias = Math.floor(h / 24);
@@ -42,6 +43,7 @@ export default function NotificacoesScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const t = useT();
   const { itens, loading, marcarLida, marcarTodasLidas } = useNotificacoes();
 
   const naoLidas = itens.filter((n) => !n.lida_em).length;
@@ -89,7 +91,7 @@ export default function NotificacoesScreen() {
           <Text style={styles.body} numberOfLines={2}>
             {item.body}
           </Text>
-          <Text style={styles.tempo}>{formatTempo(item.criada_em)}</Text>
+          <Text style={styles.tempo}>{formatTempo(item.criada_em, t)}</Text>
         </View>
         {naoLida && <View style={styles.dot} />}
       </Pressable>
@@ -103,10 +105,10 @@ export default function NotificacoesScreen() {
         <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>Notificações</Text>
+        <Text style={styles.title}>{t("Notificações")}</Text>
         {naoLidas > 0 ? (
           <Pressable onPress={marcarTodasLidas} hitSlop={8}>
-            <Text style={styles.acao}>Marcar todas</Text>
+            <Text style={styles.acao}>{t("Marcar todas")}</Text>
           </Pressable>
         ) : (
           <View style={{ width: 24 }} />
@@ -118,7 +120,7 @@ export default function NotificacoesScreen() {
       ) : itens.length === 0 ? (
         <View style={styles.vazio}>
           <Ionicons name="notifications-off-outline" size={48} color={colors.textMuted} />
-          <Text style={styles.vazioTxt}>Nenhuma notificação por enquanto.</Text>
+          <Text style={styles.vazioTxt}>{t("Nenhuma notificação por enquanto.")}</Text>
         </View>
       ) : (
         <FlatList

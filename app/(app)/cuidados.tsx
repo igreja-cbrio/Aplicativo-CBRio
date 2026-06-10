@@ -19,12 +19,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { criarInscricao } from "@/lib/inscricoes";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 export default function CuidadosScreen() {
   const { user } = useAuth();
   const { membro } = useMembro();
   const colors = useColors();
+  const t = useT();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [oracao, setOracao] = useState("");
@@ -35,7 +37,7 @@ export default function CuidadosScreen() {
 
   async function enviarOracao() {
     if (!oracao.trim()) {
-      setMsg("Escreva seu pedido de oração.");
+      setMsg(t("Escreva seu pedido de oração."));
       return;
     }
     setMsg(null);
@@ -53,11 +55,11 @@ export default function CuidadosScreen() {
       );
       setOracao("");
       Alert.alert(
-        "Recebemos seu pedido 🙏",
-        "Nossa equipe vai orar por você. Que Deus te console."
+        t("Recebemos seu pedido 🙏"),
+        t("Nossa equipe vai orar por você. Que Deus te console.")
       );
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Não foi possível enviar.");
+      setMsg(e instanceof Error ? e.message : t("Não foi possível enviar."));
     } finally {
       setEnviandoOracao(false);
     }
@@ -77,11 +79,11 @@ export default function CuidadosScreen() {
         user?.id
       );
       Alert.alert(
-        "Pedido enviado",
-        "Um pastor ou líder vai entrar em contato com você em breve."
+        t("Pedido enviado"),
+        t("Um pastor ou líder vai entrar em contato com você em breve.")
       );
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Não foi possível enviar.");
+      setMsg(e instanceof Error ? e.message : t("Não foi possível enviar."));
     } finally {
       setEnviandoAcons(false);
     }
@@ -89,12 +91,12 @@ export default function CuidadosScreen() {
 
   function abrirSOS() {
     Alert.alert(
-      "Precisa de ajuda agora?",
-      "Se há risco imediato à vida, ligue 192 (SAMU). Você também pode falar agora, de graça e em sigilo, com o CVV (188).\n\nQuer que a gente avise um pastor da CBRio agora?",
+      t("Precisa de ajuda agora?"),
+      t("Se há risco imediato à vida, ligue 192 (SAMU). Você também pode falar agora, de graça e em sigilo, com o CVV (188).\n\nQuer que a gente avise um pastor da CBRio agora?"),
       [
-        { text: "Ligar para o CVV (188)", onPress: () => Linking.openURL("tel:188") },
-        { text: "Avisar um pastor", style: "destructive", onPress: enviarSos },
-        { text: "Fechar", style: "cancel" },
+        { text: t("Ligar para o CVV (188)"), onPress: () => Linking.openURL("tel:188") },
+        { text: t("Avisar um pastor"), style: "destructive", onPress: enviarSos },
+        { text: t("Fechar"), style: "cancel" },
       ]
     );
   }
@@ -113,13 +115,13 @@ export default function CuidadosScreen() {
         user?.id
       );
       Alert.alert(
-        "Avisamos um pastor 💙",
-        "Um pastor responsável foi notificado e vai te procurar. Se for emergência, ligue 192 (SAMU) ou 188 (CVV) agora."
+        t("Avisamos um pastor 💙"),
+        t("Um pastor responsável foi notificado e vai te procurar. Se for emergência, ligue 192 (SAMU) ou 188 (CVV) agora.")
       );
     } catch {
       Alert.alert(
-        "Não foi possível avisar agora",
-        "Por favor, ligue para o CVV (188) ou 192 (SAMU). Você não está sozinho."
+        t("Não foi possível avisar agora"),
+        t("Por favor, ligue para o CVV (188) ou 192 (SAMU). Você não está sozinho.")
       );
     } finally {
       setEnviandoSos(false);
@@ -137,9 +139,9 @@ export default function CuidadosScreen() {
             <View style={styles.badge}>
               <Ionicons name="heart" size={28} color={colors.brandPale} />
             </View>
-            <Text style={styles.title}>Cuidados</Text>
+            <Text style={styles.title}>{t("Cuidados")}</Text>
             <Text style={styles.subtitle}>
-              Você não está sozinho. Conte com a CBRio.
+              {t("Você não está sozinho. Conte com a CBRio.")}
             </Text>
           </View>
 
@@ -147,11 +149,10 @@ export default function CuidadosScreen() {
           <View style={styles.sos}>
             <View style={styles.sosTop}>
               <Ionicons name="alert-circle" size={22} color="#fff" />
-              <Text style={styles.sosTitle}>Preciso de ajuda agora</Text>
+              <Text style={styles.sosTitle}>{t("Preciso de ajuda agora")}</Text>
             </View>
             <Text style={styles.sosText}>
-              Se você está em sofrimento ou pensando em desistir, fale agora. É
-              de graça e em sigilo.
+              {t("Se você está em sofrimento ou pensando em desistir, fale agora. É de graça e em sigilo.")}
             </Text>
             <Pressable
               style={styles.sosBtn}
@@ -160,40 +161,39 @@ export default function CuidadosScreen() {
             >
               <Ionicons name="hand-right" size={18} color={colors.danger} />
               <Text style={styles.sosBtnText}>
-                {enviandoSos ? "Enviando..." : "Pedir ajuda urgente"}
+                {enviandoSos ? t("Enviando...") : t("Pedir ajuda urgente")}
               </Text>
             </Pressable>
             <Pressable onPress={() => Linking.openURL("tel:188")} hitSlop={6}>
               <Text style={styles.sosLink}>
-                Ou ligue agora para o CVV — 188 (24h, gratuito)
+                {t("Ou ligue agora para o CVV — 188 (24h, gratuito)")}
               </Text>
             </Pressable>
           </View>
 
           {/* Pedido de oração */}
           <GlassCard style={styles.card}>
-            <Text style={styles.cardTitle}>Pedido de oração</Text>
+            <Text style={styles.cardTitle}>{t("Pedido de oração")}</Text>
             <TextInput
               style={styles.textarea}
               value={oracao}
               onChangeText={setOracao}
-              placeholder="Conte pelo que podemos orar…"
+              placeholder={t("Conte pelo que podemos orar…")}
               placeholderTextColor={colors.textMuted}
               multiline
             />
             {msg && <Text style={styles.err}>{msg}</Text>}
-            <Button title="Enviar pedido" onPress={enviarOracao} loading={enviandoOracao} />
+            <Button title={t("Enviar pedido")} onPress={enviarOracao} loading={enviandoOracao} />
           </GlassCard>
 
           {/* Aconselhamento */}
           <GlassCard style={styles.card}>
-            <Text style={styles.cardTitle}>Conversar com um pastor</Text>
+            <Text style={styles.cardTitle}>{t("Conversar com um pastor")}</Text>
             <Text style={styles.cardText}>
-              Quer um aconselhamento ou uma conversa? Um pastor ou líder entra em
-              contato com você.
+              {t("Quer um aconselhamento ou uma conversa? Um pastor ou líder entra em contato com você.")}
             </Text>
             <Button
-              title="Quero conversar"
+              title={t("Quero conversar")}
               variant="ghost"
               onPress={pedirAconselhamento}
               loading={enviandoAcons}

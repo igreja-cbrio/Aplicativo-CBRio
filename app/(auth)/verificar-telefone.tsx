@@ -14,11 +14,13 @@ import { CodeInput } from "@/components/ui/CodeInput";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 export default function VerificarTelefoneScreen() {
   const { phone } = useLocalSearchParams<{ phone: string }>();
   const { verifyPhoneOtp, resendPhoneOtp } = useAuth();
+  const t = useT();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [code, setCode] = useState("");
@@ -31,7 +33,7 @@ export default function VerificarTelefoneScreen() {
     setError(null);
     setInfo(null);
     if (value.length < 6) {
-      setError("Digite os 6 dígitos recebidos por SMS.");
+      setError(t("Digite os 6 dígitos recebidos por SMS."));
       return;
     }
     setLoading(true);
@@ -39,7 +41,7 @@ export default function VerificarTelefoneScreen() {
       await verifyPhoneOtp(phone ?? "", value);
       // O guard de rotas redireciona para a área autenticada.
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Código inválido.");
+      setError(e instanceof Error ? e.message : t("Código inválido."));
     } finally {
       setLoading(false);
     }
@@ -50,9 +52,9 @@ export default function VerificarTelefoneScreen() {
     setInfo(null);
     try {
       await resendPhoneOtp(phone ?? "");
-      setInfo("Enviamos um novo código por SMS.");
+      setInfo(t("Enviamos um novo código por SMS."));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível reenviar.");
+      setError(e instanceof Error ? e.message : t("Não foi possível reenviar."));
     }
   }
 
@@ -70,9 +72,9 @@ export default function VerificarTelefoneScreen() {
             <View style={styles.logoCircle}>
               <CbrioHeart size={40} color={colors.brandPale} />
             </View>
-            <Text style={styles.title}>Confirme seu número</Text>
+            <Text style={styles.title}>{t("Confirme seu número")}</Text>
             <Text style={styles.subtitle}>
-              Enviamos um código por SMS para {phone}
+              {t("Enviamos um código por SMS para")} {phone}
             </Text>
 
             <View style={styles.form}>
@@ -87,12 +89,12 @@ export default function VerificarTelefoneScreen() {
               {info && <Text style={styles.info}>{info}</Text>}
 
               <Button
-                title="Confirmar"
+                title={t("Confirmar")}
                 onPress={() => handleVerify()}
                 loading={loading}
               />
               <Button
-                title="Reenviar código"
+                title={t("Reenviar código")}
                 variant="ghost"
                 onPress={handleResend}
               />

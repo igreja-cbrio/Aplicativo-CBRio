@@ -2,6 +2,7 @@ import { Tabs } from "expo-router";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Dock, type DockItem } from "@/components/ui/Dock";
 import { MembroProvider } from "@/contexts/MembroContext";
+import { useT } from "@/lib/i18n";
 
 const META: Record<string, { label: string; icon: DockItem["icon"]; iconActive: DockItem["icon"] }> = {
   index: { label: "Home", icon: "home-outline", iconActive: "home" },
@@ -12,6 +13,7 @@ const META: Record<string, { label: string; icon: DockItem["icon"]; iconActive: 
 };
 
 function DockTabBar({ state, navigation }: BottomTabBarProps) {
+  const t = useT();
   const items: DockItem[] = state.routes
     .filter((route) => META[route.name])
     .map((route) => {
@@ -19,7 +21,7 @@ function DockTabBar({ state, navigation }: BottomTabBarProps) {
       const active = state.index === routeIndex;
       return {
         key: route.key,
-        label: META[route.name].label,
+        label: t(META[route.name].label),
         icon: META[route.name].icon,
         iconActive: META[route.name].iconActive,
         active,

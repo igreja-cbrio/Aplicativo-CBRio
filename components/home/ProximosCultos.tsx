@@ -3,6 +3,7 @@ import { Animated, Dimensions, FlatList, Pressable, StyleSheet, Text, View } fro
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { type CultoUpcoming, formatCultoDia, formatCultoHora } from "@/lib/cultos";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -59,6 +60,7 @@ export function ProximosCultos({ cultos }: { cultos: CultoUpcoming[] }) {
   const colors = useColors();
   const styles = makeStyles(colors);
   const router = useRouter();
+  const t = useT();
 
   if (!cultos.length) return null;
 
@@ -68,7 +70,7 @@ export function ProximosCultos({ cultos }: { cultos: CultoUpcoming[] }) {
     <View style={{ gap: spacing.sm, marginHorizontal: -spacing.lg }}>
       <View style={[styles.headerRow, { paddingHorizontal: spacing.lg }]}>
         <Ionicons name="calendar" size={18} color={colors.brandMid} />
-        <Text style={styles.titulo}>Próximos cultos</Text>
+        <Text style={styles.titulo}>{t("Próximos cultos")}</Text>
       </View>
 
       <FlatList
@@ -80,7 +82,7 @@ export function ProximosCultos({ cultos }: { cultos: CultoUpcoming[] }) {
         decelerationRate="fast"
         contentContainerStyle={{ paddingHorizontal: spacing.lg }}
         ItemSeparatorComponent={() => <View style={{ width: spacing.sm }} />}
-        renderItem={({ item }) => <CultoCard grupo={item} router={router} colors={colors} styles={styles} />}
+        renderItem={({ item }) => <CultoCard grupo={item} router={router} colors={colors} styles={styles} t={t} />}
       />
     </View>
   );
@@ -91,11 +93,13 @@ function CultoCard({
   router,
   colors,
   styles,
+  t,
 }: {
   grupo: Grupo;
   router: ReturnType<typeof useRouter>;
   colors: Palette;
   styles: ReturnType<typeof makeStyles>;
+  t: ReturnType<typeof useT>;
 }) {
   const cor = grupo.cor || colors.primary;
   const dia = formatCultoDia(grupo.data);
@@ -149,7 +153,7 @@ function CultoCard({
         >
           <View style={styles.headerCard}>
             <View style={[styles.tag, { backgroundColor: cor }]}>
-              <Text style={styles.tagTxt}>{ehHoje ? "HOJE" : dia.toUpperCase()}</Text>
+              <Text style={styles.tagTxt}>{ehHoje ? t("HOJE") : dia.toUpperCase()}</Text>
             </View>
             <Text style={styles.nome} numberOfLines={1}>
               {grupo.nomeBase}
@@ -174,13 +178,13 @@ function CultoCard({
             {grupo.has_online && (
               <View style={styles.feat}>
                 <Ionicons name="videocam" size={11} color={colors.brandMid} />
-                <Text style={styles.featTxt}>online</Text>
+                <Text style={styles.featTxt}>{t("online")}</Text>
               </View>
             )}
             {grupo.has_kids && (
               <View style={styles.feat}>
                 <Ionicons name="happy" size={11} color={colors.brandMid} />
-                <Text style={styles.featTxt}>kids</Text>
+                <Text style={styles.featTxt}>{t("kids")}</Text>
               </View>
             )}
           </View>

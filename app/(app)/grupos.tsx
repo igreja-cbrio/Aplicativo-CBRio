@@ -14,6 +14,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { GruposMapa } from "@/components/ui/GruposMapa";
 import { useMembro } from "@/lib/useMembro";
 import { supabase } from "@/lib/supabase";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 export type Grupo = {
@@ -62,6 +63,7 @@ export default function GruposScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const { membro } = useMembro();
+  const t = useT();
 
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [meusIds, setMeusIds] = useState<string[]>([]);
@@ -158,7 +160,7 @@ export default function GruposScreen() {
           <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>Grupos</Text>
+          <Text style={styles.title}>{t("Grupos")}</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -168,14 +170,14 @@ export default function GruposScreen() {
             onPress={() => setView("lista")}
           >
             <Ionicons name="list" size={16} color={view === "lista" ? "#fff" : colors.textMuted} />
-            <Text style={[styles.toggleTxt, view === "lista" && styles.toggleTxtSel]}>Lista</Text>
+            <Text style={[styles.toggleTxt, view === "lista" && styles.toggleTxtSel]}>{t("Lista")}</Text>
           </Pressable>
           <Pressable
             style={[styles.toggleItem, view === "mapa" && styles.toggleItemSel]}
             onPress={() => setView("mapa")}
           >
             <Ionicons name="map" size={16} color={view === "mapa" ? "#fff" : colors.textMuted} />
-            <Text style={[styles.toggleTxt, view === "mapa" && styles.toggleTxtSel]}>Mapa</Text>
+            <Text style={[styles.toggleTxt, view === "mapa" && styles.toggleTxtSel]}>{t("Mapa")}</Text>
           </Pressable>
         </View>
 
@@ -183,14 +185,14 @@ export default function GruposScreen() {
           style={styles.search}
           value={busca}
           onChangeText={setBusca}
-          placeholder="Buscar por nome, bairro ou categoria"
+          placeholder={t("Buscar por nome, bairro ou categoria")}
           placeholderTextColor={colors.textMuted}
           autoCorrect={false}
         />
       </View>
 
       {loading ? (
-        <Text style={styles.muted}>Carregando…</Text>
+        <Text style={styles.muted}>{t("Carregando…")}</Text>
       ) : view === "mapa" ? (
         <View style={styles.mapWrap}>
           <GruposMapa
@@ -202,7 +204,7 @@ export default function GruposScreen() {
         <ScrollView contentContainerStyle={styles.listContent} keyboardShouldPersistTaps="handled">
           {meusGrupos.length > 0 && (
             <View style={{ gap: spacing.sm }}>
-              <Text style={styles.section}>Meus grupos</Text>
+              <Text style={styles.section}>{t("Meus grupos")}</Text>
               {meusGrupos.map((g) => (
                 <GrupoCard key={`meu-${g.id}`} g={g} />
               ))}
@@ -210,12 +212,12 @@ export default function GruposScreen() {
           )}
 
           {filtrados.length === 0 ? (
-            <Text style={styles.muted}>Nenhum grupo encontrado.</Text>
+            <Text style={styles.muted}>{t("Nenhum grupo encontrado.")}</Text>
           ) : (
             secoes.map(({ categoria, itens }) => (
               <View key={categoria} style={{ gap: spacing.sm }}>
                 <View style={styles.catHeader}>
-                  <Text style={styles.catTitle}>{categoria}</Text>
+                  <Text style={styles.catTitle}>{categoria === SEM_CATEGORIA ? t(SEM_CATEGORIA) : categoria}</Text>
                   <View style={styles.catBadge}>
                     <Text style={styles.catBadgeTxt}>{itens.length}</Text>
                   </View>

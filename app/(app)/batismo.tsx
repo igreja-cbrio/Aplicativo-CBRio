@@ -20,6 +20,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as FileSystem from "expo-file-system/legacy";
 import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { useMembro } from "@/lib/useMembro";
 import {
   meuBatismo,
@@ -54,6 +55,7 @@ export default function BatismoScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const t = useT();
   const { membro, loading: loadingMembro } = useMembro();
 
   const [batismo, setBatismo] = useState<MeuBatismo | null>(null);
@@ -102,13 +104,13 @@ export default function BatismoScreen() {
       setBatismo((b) => (b ? { ...b, checkin_em: resp.checkin_em } : b));
       if (!resp.ja_checkado) setConfettiKey((k) => k + 1);
       Alert.alert(
-        resp.ja_checkado ? "Check-in já feito" : "Check-in confirmado!",
+        resp.ja_checkado ? t("Check-in já feito") : t("Check-in confirmado!"),
         resp.ja_checkado
-          ? "Você já tinha feito o check-in. Bora!"
-          : "Deus te abençoe nesse dia incrível. Te vejo já! 💙"
+          ? t("Você já tinha feito o check-in. Bora!")
+          : t("Deus te abençoe nesse dia incrível. Te vejo já! 💙")
       );
     } else {
-      Alert.alert("Não foi possível fazer o check-in", resp.erro);
+      Alert.alert(t("Não foi possível fazer o check-in"), resp.erro);
     }
   }
 
@@ -116,7 +118,7 @@ export default function BatismoScreen() {
     try {
       const destino = (FileSystem.documentDirectory ?? "") + f.nome;
       const { uri } = await FileSystem.downloadAsync(f.url, destino);
-      await Share.share({ url: uri, message: "Minha foto do batismo na CBRio 💙" });
+      await Share.share({ url: uri, message: t("Minha foto do batismo na CBRio 💙") });
     } catch {
       // Fallback: abre a URL no browser pra salvar.
       Linking.openURL(f.url).catch(() => {});
@@ -131,7 +133,7 @@ export default function BatismoScreen() {
           <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>Meu batismo</Text>
+          <Text style={styles.title}>{t("Meu batismo")}</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -140,9 +142,9 @@ export default function BatismoScreen() {
         ) : !membro?.membroId ? (
           <Vazio
             icon="link-outline"
-            titulo="Vincule seu perfil"
-            txt="Pra acompanhar seu batismo, complete o cadastro do membro (CPF) no perfil."
-            cta="Ir para o perfil"
+            titulo={t("Vincule seu perfil")}
+            txt={t("Pra acompanhar seu batismo, complete o cadastro do membro (CPF) no perfil.")}
+            cta={t("Ir para o perfil")}
             onPress={() => router.navigate("/perfil")}
             colors={colors}
             styles={styles}
@@ -153,12 +155,12 @@ export default function BatismoScreen() {
               <View style={styles.card}>
                 <View style={styles.row}>
                   <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-                  <Text style={styles.cardTitle}>Já é batizado(a)</Text>
+                  <Text style={styles.cardTitle}>{t("Já é batizado(a)")}</Text>
                 </View>
                 <Text style={styles.cardTxt}>
-                  Registramos seu batismo
-                  {batismoAnt.igreja_batismo_anterior ? ` em ${batismoAnt.igreja_batismo_anterior}` : ""}.
-                  Você ainda pode se batizar na CBRio se quiser.
+                  {t("Registramos seu batismo")}
+                  {batismoAnt.igreja_batismo_anterior ? ` ${t("em")} ${batismoAnt.igreja_batismo_anterior}` : ""}.
+                  {" "}{t("Você ainda pode se batizar na CBRio se quiser.")}
                 </Text>
                 <Pressable
                   onPress={async () => {
@@ -168,19 +170,19 @@ export default function BatismoScreen() {
                   }}
                   hitSlop={6}
                 >
-                  <Text style={{ color: colors.textMuted, fontSize: 12 }}>Remover este registro</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12 }}>{t("Remover este registro")}</Text>
                 </Pressable>
               </View>
             )}
             <Vazio
               icon="water-outline"
-              titulo={batismoAnt?.batizado_outra_igreja ? "Quer se batizar na CBRio?" : "Você ainda não se inscreveu"}
+              titulo={batismoAnt?.batizado_outra_igreja ? t("Quer se batizar na CBRio?") : t("Você ainda não se inscreveu")}
               txt={
                 batismoAnt?.batizado_outra_igreja
-                  ? "Mesmo já sendo batizado(a), você pode renovar essa decisão aqui."
-                  : "O batismo é uma decisão linda. Inscreva-se e te acompanhamos até lá."
+                  ? t("Mesmo já sendo batizado(a), você pode renovar essa decisão aqui.")
+                  : t("O batismo é uma decisão linda. Inscreva-se e te acompanhamos até lá.")
               }
-              cta="Quero me batizar"
+              cta={t("Quero me batizar")}
               onPress={() => router.navigate("/inscricao-batismo")}
               colors={colors}
               styles={styles}
@@ -191,16 +193,16 @@ export default function BatismoScreen() {
                 style={({ pressed }) => [styles.linkAcao, pressed && { opacity: 0.6 }]}
               >
                 <Ionicons name="checkmark-circle-outline" size={18} color={colors.brandMid} />
-                <Text style={styles.linkAcaoTxt}>Já sou batizado(a) em outra igreja</Text>
+                <Text style={styles.linkAcaoTxt}>{t("Já sou batizado(a) em outra igreja")}</Text>
               </Pressable>
             )}
           </View>
         ) : !batismo.data_batismo ? (
           <View style={styles.hero}>
             <Ionicons name="time-outline" size={28} color="#fff" />
-            <Text style={styles.heroTitulo}>Sua inscrição foi recebida!</Text>
+            <Text style={styles.heroTitulo}>{t("Sua inscrição foi recebida!")}</Text>
             <Text style={styles.heroSub}>
-              Sua data ainda não foi marcada. A equipe entra em contato em breve.
+              {t("Sua data ainda não foi marcada. A equipe entra em contato em breve.")}
             </Text>
           </View>
         ) : (
@@ -238,7 +240,7 @@ export default function BatismoScreen() {
               hitSlop={6}
             >
               <Ionicons name="download-outline" size={20} color="#fff" />
-              <Text style={styles.modalSaveTxt}>Salvar / Compartilhar</Text>
+              <Text style={styles.modalSaveTxt}>{t("Salvar / Compartilhar")}</Text>
             </Pressable>
           )}
         </View>
@@ -253,21 +255,20 @@ export default function BatismoScreen() {
       >
         <View style={styles.modalIgrejaSheet}>
           <View style={styles.modalIgrejaCard}>
-            <Text style={styles.cardTitle}>Você foi batizado(a) onde?</Text>
+            <Text style={styles.cardTitle}>{t("Você foi batizado(a) onde?")}</Text>
             <Text style={styles.cardTxt}>
-              Conta pra gente a igreja. Isso ajuda nossa equipe a te conhecer
-              melhor.
+              {t("Conta pra gente a igreja. Isso ajuda nossa equipe a te conhecer melhor.")}
             </Text>
             <Input
-              label="Nome da igreja"
+              label={t("Nome da igreja")}
               value={igrejaTxt}
               onChangeText={setIgrejaTxt}
-              placeholder="Igreja anterior"
+              placeholder={t("Igreja anterior")}
               autoFocus
             />
             <View style={{ flexDirection: "row", gap: spacing.sm }}>
               <Button
-                title="Cancelar"
+                title={t("Cancelar")}
                 variant="ghost"
                 onPress={() => {
                   setModalIgrejaAberto(false);
@@ -275,7 +276,7 @@ export default function BatismoScreen() {
                 }}
               />
               <Button
-                title="Confirmar"
+                title={t("Confirmar")}
                 loading={salvandoIgreja}
                 onPress={async () => {
                   setSalvandoIgreja(true);
@@ -287,7 +288,7 @@ export default function BatismoScreen() {
                     });
                     setModalIgrejaAberto(false);
                   } catch (e) {
-                    Alert.alert("Erro", e instanceof Error ? e.message : "Falha ao salvar.");
+                    Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Falha ao salvar."));
                   } finally {
                     setSalvandoIgreja(false);
                   }
@@ -332,20 +333,21 @@ function BatismoConteudo({
   colors: ReturnType<typeof useColors>;
   styles: ReturnType<typeof makeStyles>;
 }) {
+  const t = useT();
   const dias = diasAte(batismo.data_batismo!);
   const ehHoje = dias === 0;
   const passou = dias < 0;
   const realizado = batismo.status === "realizado" || !!batismo.checkin_em || passou;
 
-  let topo = "Faltam";
+  let topo = t("Faltam");
   let valor = `${Math.abs(dias)}`;
-  let unidade = Math.abs(dias) === 1 ? "dia" : "dias";
+  let unidade = Math.abs(dias) === 1 ? t("dia") : t("dias");
   if (ehHoje) {
-    topo = "É hoje!";
+    topo = t("É hoje!");
     valor = "🙌";
     unidade = "";
   } else if (passou) {
-    topo = "Já aconteceu";
+    topo = t("Já aconteceu");
     valor = "✓";
     unidade = "";
   }
@@ -355,7 +357,7 @@ function BatismoConteudo({
       {/* Hero com contagem regressiva — Breathing aplica scale loop sutil */}
       <Breathing>
         <View style={styles.hero}>
-          <Text style={styles.heroLabel}>Meu batismo</Text>
+          <Text style={styles.heroLabel}>{t("Meu batismo")}</Text>
           <Text style={styles.heroTitulo}>{topo}</Text>
           {!ehHoje && !passou && (
             <View style={styles.contagemRow}>
@@ -381,20 +383,19 @@ function BatismoConteudo({
               color={batismo.checkin_em ? colors.success : colors.brandMid}
             />
             <Text style={styles.cardTitle}>
-              {batismo.checkin_em ? "Check-in feito" : "Faça seu check-in"}
+              {batismo.checkin_em ? t("Check-in feito") : t("Faça seu check-in")}
             </Text>
           </View>
           {batismo.checkin_em ? (
             <Text style={styles.cardTxt}>
-              Pronto! Te vejo já. 💙
+              {t("Pronto! Te vejo já. 💙")}
             </Text>
           ) : (
             <>
               <Text style={styles.cardTxt}>
-                Ao chegar na igreja, confirme sua presença aqui. Isso ajuda nossa
-                equipe a se preparar pra você.
+                {t("Ao chegar na igreja, confirme sua presença aqui. Isso ajuda nossa equipe a se preparar pra você.")}
               </Text>
-              <Button title="Fazer check-in" onPress={onCheckin} loading={checkinFazendo} />
+              <Button title={t("Fazer check-in")} onPress={onCheckin} loading={checkinFazendo} />
             </>
           )}
         </View>
@@ -403,19 +404,19 @@ function BatismoConteudo({
       {/* O que levar / dicas */}
       {!passou && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Como se preparar</Text>
+          <Text style={styles.cardTitle}>{t("Como se preparar")}</Text>
           <Linha icon="shirt-outline" colors={colors} styles={styles}>
-            Traga uma muda de roupa seca e toalha.
+            {t("Traga uma muda de roupa seca e toalha.")}
           </Linha>
           <Linha icon="time-outline" colors={colors} styles={styles}>
-            Chegue 30 minutos antes pra orientação.
+            {t("Chegue 30 minutos antes pra orientação.")}
           </Linha>
           <Linha icon="heart-outline" colors={colors} styles={styles}>
-            Convide quem te leva a viver isso de perto.
+            {t("Convide quem te leva a viver isso de perto.")}
           </Linha>
           {!!batismo.tamanho_camisa && (
             <Linha icon="pricetag-outline" colors={colors} styles={styles}>
-              Camisa: <Text style={{ fontWeight: "800" }}>{batismo.tamanho_camisa}</Text>
+              {t("Camisa:")} <Text style={{ fontWeight: "800" }}>{batismo.tamanho_camisa}</Text>
             </Linha>
           )}
         </View>
@@ -424,13 +425,12 @@ function BatismoConteudo({
       {/* Galeria de fotos do dia */}
       {(realizado || ehHoje) && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Fotos do dia</Text>
+          <Text style={styles.cardTitle}>{t("Fotos do dia")}</Text>
           {fotosLoading ? (
             <ActivityIndicator color={colors.primary} />
           ) : fotos.length === 0 ? (
             <Text style={styles.cardTxt}>
-              As fotos do dia ainda não foram publicadas. Volte mais tarde — o
-              marketing posta logo depois do batismo. 📸
+              {t("As fotos do dia ainda não foram publicadas. Volte mais tarde — o marketing posta logo depois do batismo. 📸")}
             </Text>
           ) : (
             <FlatList

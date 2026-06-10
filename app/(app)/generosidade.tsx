@@ -34,6 +34,7 @@ import { SucessoDoacao } from "@/components/generosidade/SucessoDoacao";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { BRAND_FONT } from "@/lib/fonts";
+import { useT } from "@/lib/i18n";
 
 type Metodo = "pix" | "card" | "apple_pay";
 type Categoria = "dizimo" | "oferta" | "campanha";
@@ -54,6 +55,7 @@ function formatBRL(centavos: number): string {
 export default function GenerosidadeScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const t = useT();
 
   const [metodo, setMetodo] = useState<Metodo>("pix");
 
@@ -86,7 +88,7 @@ export default function GenerosidadeScreen() {
     if (status === "success") {
       setSucessoValor(valor);
     } else if (status === "cancel") {
-      Alert.alert("Pagamento cancelado", "Você pode tentar de novo quando quiser.");
+      Alert.alert(t("Pagamento cancelado"), t("Você pode tentar de novo quando quiser."));
     }
   }
 
@@ -101,24 +103,23 @@ export default function GenerosidadeScreen() {
       >
         {/* Aba raiz do dock: sem botão "voltar" (HIG — navegação por abas). */}
         <View style={styles.header}>
-          <Text style={styles.title}>Generosidade</Text>
+          <Text style={styles.title}>{t("Generosidade")}</Text>
         </View>
 
         <Text style={styles.intro}>
-          Sua generosidade alimenta a missão. Toda contribuição vai pra
-          sustentar a obra da CBRio.
+          {t("Sua generosidade alimenta a missão. Toda contribuição vai pra sustentar a obra da CBRio.")}
         </Text>
 
         <GlassCard style={styles.tabs}>
           <MetodoTab atual={metodo} value="pix" label="PIX" icon="qr-code" onPress={setMetodo} colors={colors} styles={styles} />
-          <MetodoTab atual={metodo} value="card" label="Cartão" icon="card" onPress={setMetodo} colors={colors} styles={styles} />
+          <MetodoTab atual={metodo} value="card" label={t("Cartão")} icon="card" onPress={setMetodo} colors={colors} styles={styles} />
           {Platform.OS === "ios" && (
             <MetodoTab atual={metodo} value="apple_pay" label="Apple Pay" icon="logo-apple" onPress={setMetodo} colors={colors} styles={styles} />
           )}
         </GlassCard>
 
         <View style={styles.box}>
-          <Text style={styles.boxTitulo}>Categoria</Text>
+          <Text style={styles.boxTitulo}>{t("Categoria")}</Text>
           <View style={styles.categoriasRow}>
             {CATEGORIAS.map((c) => {
               const sel = categoria === c.value;
@@ -136,9 +137,9 @@ export default function GenerosidadeScreen() {
                     size={22}
                     color={sel ? "#fff" : colors.brandMid}
                   />
-                  <Text style={[styles.categoriaLabel, sel && styles.categoriaLabelSel]}>{c.label}</Text>
+                  <Text style={[styles.categoriaLabel, sel && styles.categoriaLabelSel]}>{t(c.label)}</Text>
                   {!!c.desc && (
-                    <Text style={[styles.categoriaDesc, sel && styles.categoriaDescSel]}>{c.desc}</Text>
+                    <Text style={[styles.categoriaDesc, sel && styles.categoriaDescSel]}>{t(c.desc)}</Text>
                   )}
                 </Pressable>
               );
@@ -148,7 +149,7 @@ export default function GenerosidadeScreen() {
             <TextInput
               value={campanhaTxt}
               onChangeText={setCampanhaTxt}
-              placeholder="Nome da campanha"
+              placeholder={t("Nome da campanha")}
               placeholderTextColor={colors.textMuted}
               style={styles.customInput}
             />
@@ -157,7 +158,7 @@ export default function GenerosidadeScreen() {
 
         {metodo !== "pix" && (
           <View style={styles.box}>
-            <Text style={styles.boxTitulo}>Valor</Text>
+            <Text style={styles.boxTitulo}>{t("Valor")}</Text>
             <View style={styles.presets}>
               {PRESETS.map((v) => {
                 const sel = valor === v * 100 && customTxt === "";
@@ -179,7 +180,7 @@ export default function GenerosidadeScreen() {
             <TextInput
               value={customTxt}
               onChangeText={setCustom}
-              placeholder="Outro valor"
+              placeholder={t("Outro valor")}
               placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
               style={styles.customInput}
@@ -262,6 +263,7 @@ function ConteudoPix({
   colors: Palette;
   styles: ReturnType<typeof makeStyles>;
 }) {
+  const t = useT();
   const [copiado, setCopiado] = useState<"chave" | "payload" | null>(null);
   async function copiar(texto: string, tipo: "chave" | "payload") {
     await Clipboard.setStringAsync(texto);
@@ -272,20 +274,20 @@ function ConteudoPix({
     <View style={{ gap: spacing.md }}>
       {!!PIX_PAYLOAD && (
         <View style={[styles.box, { alignItems: "center" }]}>
-          <Text style={styles.boxTitulo}>Aponte a câmera</Text>
+          <Text style={styles.boxTitulo}>{t("Aponte a câmera")}</Text>
           <View style={styles.qrBox}>
             <QRCode value={PIX_PAYLOAD} size={200} backgroundColor="#fff" color="#000" />
           </View>
           <Pressable onPress={() => copiar(PIX_PAYLOAD, "payload")} style={styles.btnGrande}>
             <Ionicons name={copiado === "payload" ? "checkmark" : "copy"} size={18} color="#fff" />
             <Text style={styles.btnGrandeTxt}>
-              {copiado === "payload" ? "Copiado!" : "Copiar PIX (copia e cola)"}
+              {copiado === "payload" ? t("Copiado!") : t("Copiar PIX (copia e cola)")}
             </Text>
           </Pressable>
         </View>
       )}
       <View style={styles.box}>
-        <Text style={styles.boxTitulo}>Chave PIX</Text>
+        <Text style={styles.boxTitulo}>{t("Chave PIX")}</Text>
         <View style={styles.chaveRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.chaveTipo}>{PIX_KEY_TIPO}</Text>
@@ -293,22 +295,22 @@ function ConteudoPix({
           </View>
           <Pressable onPress={() => copiar(PIX_KEY, "chave")} style={styles.copiarBtn}>
             <Ionicons name={copiado === "chave" ? "checkmark" : "copy-outline"} size={20} color={colors.primary} />
-            <Text style={styles.copiarTxt}>{copiado === "chave" ? "Copiado" : "Copiar"}</Text>
+            <Text style={styles.copiarTxt}>{copiado === "chave" ? t("Copiado") : t("Copiar")}</Text>
           </Pressable>
         </View>
         <View style={styles.divider} />
         <Linha colors={colors} icon="person-outline" styles={styles}>
-          Beneficiário: <Text style={{ fontWeight: "800" }}>{PIX_BENEFICIARIO}</Text>
+          {t("Beneficiário:")} <Text style={{ fontWeight: "800" }}>{PIX_BENEFICIARIO}</Text>
         </Linha>
         <Linha colors={colors} icon="location-outline" styles={styles}>{PIX_CIDADE}</Linha>
       </View>
       <View style={styles.box}>
-        <Text style={styles.boxTitulo}>Como pagar</Text>
-        <PassoNum num={1} colors={colors} styles={styles}>Abra o app do seu banco e escolha pagar via PIX.</PassoNum>
+        <Text style={styles.boxTitulo}>{t("Como pagar")}</Text>
+        <PassoNum num={1} colors={colors} styles={styles}>{t("Abra o app do seu banco e escolha pagar via PIX.")}</PassoNum>
         <PassoNum num={2} colors={colors} styles={styles}>
-          {PIX_PAYLOAD ? "Cole o código copia-e-cola (ou aponte a câmera pro QR Code)." : "Use o CNPJ acima como chave PIX e informe o valor."}
+          {PIX_PAYLOAD ? t("Cole o código copia-e-cola (ou aponte a câmera pro QR Code).") : t("Use o CNPJ acima como chave PIX e informe o valor.")}
         </PassoNum>
-        <PassoNum num={3} colors={colors} styles={styles}>Confirme os dados e finalize. Te agradecemos! 💙</PassoNum>
+        <PassoNum num={3} colors={colors} styles={styles}>{t("Confirme os dados e finalize. Te agradecemos!")} 💙</PassoNum>
       </View>
     </View>
   );
@@ -329,6 +331,7 @@ function ConteudoCartao({
   colors: Palette;
   styles: ReturnType<typeof makeStyles>;
 }) {
+  const t = useT();
   const [carregando, setCarregando] = useState(false);
   async function pagar() {
     setCarregando(true);
@@ -336,7 +339,7 @@ function ConteudoCartao({
       const { url } = await criarCheckoutSession({ amountCents: valor, categoria, campanha });
       onAbrir(url);
     } catch (e) {
-      Alert.alert("Não foi possível abrir o pagamento", e instanceof Error ? e.message : "Erro.");
+      Alert.alert(t("Não foi possível abrir o pagamento"), e instanceof Error ? e.message : t("Erro."));
     } finally {
       setCarregando(false);
     }
@@ -344,18 +347,16 @@ function ConteudoCartao({
   return (
     <View style={{ gap: spacing.md }}>
       <View style={styles.box}>
-        <Text style={styles.boxTitulo}>Cartão de crédito</Text>
+        <Text style={styles.boxTitulo}>{t("Cartão de crédito")}</Text>
         <Text style={styles.cardHint}>
-          Você vai ser levado pra tela segura da Stripe pra informar os dados do
-          cartão. O CBRio não guarda nada — toda a transação é processada direto
-          na Stripe (PCI nível 1).
+          {t("Você vai ser levado pra tela segura da Stripe pra informar os dados do cartão. O CBRio não guarda nada — toda a transação é processada direto na Stripe (PCI nível 1).")}
         </Text>
         <View style={styles.bandeiras}>
           <Ionicons name="card" size={28} color={colors.brandMid} />
           <Text style={styles.bandeirasTxt}>Visa · Mastercard · Elo · Amex</Text>
         </View>
       </View>
-      <Button title={`Pagar ${formatBRL(valor)}`} onPress={pagar} loading={carregando} />
+      <Button title={`${t("Pagar")} ${formatBRL(valor)}`} onPress={pagar} loading={carregando} />
     </View>
   );
 }
@@ -375,6 +376,7 @@ function ConteudoApplePay({
   colors: Palette;
   styles: ReturnType<typeof makeStyles>;
 }) {
+  const t = useT();
   const [carregando, setCarregando] = useState(false);
   const [disponivel, setDisponivel] = useState<boolean | null>(null);
 
@@ -385,14 +387,14 @@ function ConteudoApplePay({
   async function pagar() {
     setCarregando(true);
     try {
-      const label = categoria === "dizimo" ? "Dízimo CBRio" : categoria === "campanha" ? `${campanha ?? "Campanha"} CBRio` : "Oferta CBRio";
+      const label = categoria === "dizimo" ? `${t("Dízimo")} CBRio` : categoria === "campanha" ? `${campanha ?? t("Campanha")} CBRio` : `${t("Oferta")} CBRio`;
       const token = await abrirApplePay(valor, label);
       await confirmarApplePay(valor, token, { categoria, campanha });
       onSucesso();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro desconhecido.";
+      const msg = e instanceof Error ? e.message : t("Erro desconhecido.");
       if (msg.toLowerCase().includes("cancel")) return;
-      Alert.alert("Não foi possível processar", msg);
+      Alert.alert(t("Não foi possível processar"), msg);
     } finally {
       setCarregando(false);
     }
@@ -401,7 +403,7 @@ function ConteudoApplePay({
   if (Platform.OS !== "ios") {
     return (
       <View style={styles.box}>
-        <Text style={styles.cardHint}>Apple Pay só está disponível em iOS.</Text>
+        <Text style={styles.cardHint}>{t("Apple Pay só está disponível em iOS.")}</Text>
       </View>
     );
   }
@@ -411,8 +413,7 @@ function ConteudoApplePay({
       <View style={styles.box}>
         <Text style={styles.boxTitulo}>Apple Pay</Text>
         <Text style={styles.cardHint}>
-          Pague com qualquer cartão que você já tem na Carteira do iPhone, com
-          Face ID/Touch ID. Sem digitar nada.
+          {t("Pague com qualquer cartão que você já tem na Carteira do iPhone, com Face ID/Touch ID. Sem digitar nada.")}
         </Text>
         <Text style={styles.valorFinal}>{formatBRL(valor)}</Text>
       </View>
@@ -432,7 +433,7 @@ function ConteudoApplePay({
         >
           <Ionicons name="logo-apple" size={20} color="#fff" />
           <Text style={styles.applePayTxt}>
-            {carregando ? "Processando…" : `Pay ${formatBRL(valor)}`}
+            {carregando ? t("Processando…") : `Pay ${formatBRL(valor)}`}
           </Text>
         </Pressable>
       )}

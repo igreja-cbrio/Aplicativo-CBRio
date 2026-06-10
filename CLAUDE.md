@@ -265,7 +265,15 @@ splash nativa (`splash.png`) são compostos com `sharp` e referenciados no
 
 ## Convenções
 
-- Textos de UI em **português (pt-BR)**.
+- **i18n (pt-BR / en / es):** `lib/i18n.ts` expõe `TranslationProvider`
+  (montado no `app/_layout.tsx`, re-renderiza ao trocar idioma), `useT()`
+  (`const t = useT(); t("texto PT")`) e `useLang()`. A **CHAVE de tradução é a
+  string em português** — `lib/translations.ts` mapeia PT → {en, es}. Falta de
+  tradução cai no PT (nunca quebra). Ao criar texto novo, envolva com `t("...")`
+  e adicione a entrada PT→en/es em `translations.ts`. Idioma escolhido em
+  Configurações → Idioma (pt/en/es habilitados; demais "em breve"); detecta o
+  idioma do aparelho na 1ª vez; persiste em AsyncStorage. Strings de UI seguem
+  escritas em **português** no código (são as chaves).
 - Identidade visual: tema escuro teal (`#0B1F26`), card, botões arredondados
   (pill), cor primária `#408097`.
 - Sempre que um módulo for adicionado/alterado, atualizar a tabela de Módulos

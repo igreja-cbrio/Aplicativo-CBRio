@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Props = {
@@ -15,6 +16,7 @@ type Props = {
 export function ComingSoon({ title, icon, description }: Props) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const t = useT();
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.content}>
@@ -23,7 +25,7 @@ export function ComingSoon({ title, icon, description }: Props) {
         </View>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.note}>
-          {description ?? "Este módulo está a caminho. Em breve por aqui. 💙"}
+          {description ?? t("Este módulo está a caminho. Em breve por aqui. 💙")}
         </Text>
       </View>
     </SafeAreaView>

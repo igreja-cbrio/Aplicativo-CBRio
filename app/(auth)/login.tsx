@@ -16,6 +16,7 @@ import { SocialButton } from "@/components/ui/SocialButton";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 // Apple Sign-In requer App ID com "Sign in with Apple" (conta paga). Ativado.
@@ -24,6 +25,7 @@ const APPLE_SIGNIN_ENABLED = true;
 export default function LoginScreen() {
   const { signIn, signInWithGoogle, signInWithApple, rememberPref, enterPreview } =
     useAuth();
+  const t = useT();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [email, setEmail] = useState("");
@@ -37,14 +39,14 @@ export default function LoginScreen() {
   async function handleLogin() {
     setError(null);
     if (!email || !password) {
-      setError("Preencha e-mail e senha.");
+      setError(t("Preencha e-mail e senha."));
       return;
     }
     setLoading("email");
     try {
       await signIn(email, password, remember);
     } catch (e) {
-      setError(e instanceof Error ? traduzErro(e.message) : "Não foi possível entrar.");
+      setError(e instanceof Error ? t(traduzErro(e.message)) : t("Não foi possível entrar."));
     } finally {
       setLoading(null);
     }
@@ -57,7 +59,7 @@ export default function LoginScreen() {
       if (provider === "google") await signInWithGoogle();
       else await signInWithApple();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível entrar.");
+      setError(e instanceof Error ? e.message : t("Não foi possível entrar."));
     } finally {
       setLoading(null);
     }
@@ -79,11 +81,11 @@ export default function LoginScreen() {
               <CbrioHeart size={44} color={colors.brandPale} />
             </View>
             <Text style={styles.brand}>CBRio</Text>
-            <Text style={styles.subtitle}>Bem-vindo de volta</Text>
+            <Text style={styles.subtitle}>{t("Bem-vindo de volta")}</Text>
 
             <View style={styles.form}>
               <Input
-                label="E-mail"
+                label={t("E-mail")}
                 value={email}
                 onChangeText={setEmail}
                 placeholder="voce@exemplo.com"
@@ -91,7 +93,7 @@ export default function LoginScreen() {
                 autoComplete="email"
               />
               <Input
-                label="Senha"
+                label={t("Senha")}
                 value={password}
                 onChangeText={setPassword}
                 placeholder="••••••••"
@@ -103,24 +105,24 @@ export default function LoginScreen() {
                 <Checkbox
                   checked={remember}
                   onChange={setRemember}
-                  label="Lembrar de mim"
+                  label={t("Lembrar de mim")}
                 />
                 <Link href="/(auth)/recuperar-senha" style={styles.forgot}>
-                  Esqueci a senha
+                  {t("Esqueci a senha")}
                 </Link>
               </View>
 
               {error && <Text style={styles.error}>{error}</Text>}
 
               <Button
-                title="Entrar"
+                title={t("Entrar")}
                 onPress={handleLogin}
                 loading={loading === "email"}
               />
 
               <View style={styles.dividerRow}>
                 <View style={styles.divider} />
-                <Text style={styles.dividerText}>ou continue com</Text>
+                <Text style={styles.dividerText}>{t("ou continue com")}</Text>
                 <View style={styles.divider} />
               </View>
 
@@ -141,15 +143,15 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Ainda não tem conta?</Text>
+            <Text style={styles.footerText}>{t("Ainda não tem conta?")}</Text>
             <Link href="/(auth)/cadastro" style={styles.footerLink}>
-              Criar conta
+              {t("Criar conta")}
             </Link>
           </View>
 
           {__DEV__ && (
             <Button
-              title="Entrar como visitante (preview)"
+              title={t("Entrar como visitante (preview)")}
               variant="ghost"
               onPress={enterPreview}
             />

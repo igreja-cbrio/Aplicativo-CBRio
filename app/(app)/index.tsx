@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useColors, useTheme } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { useNotificacoesNaoLidas } from "@/lib/useNotificacoes";
+import { useT } from "@/lib/i18n";
 import { destaquesAtivos, type Destaque } from "@/lib/destaques";
 import { proximosCultos, type CultoUpcoming } from "@/lib/cultos";
 import { Carrossel } from "@/components/home/Carrossel";
@@ -60,6 +61,7 @@ export default function InicioScreen() {
   const { mode } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const t = useT();
   const { count: naoLidas } = useNotificacoesNaoLidas();
   const [destaques, setDestaques] = useState<Destaque[]>([]);
   const [cultos, setCultos] = useState<CultoUpcoming[]>([]);
@@ -112,7 +114,7 @@ export default function InicioScreen() {
                 style={styles.bellWrap}
                 hitSlop={8}
                 accessibilityRole="button"
-                accessibilityLabel="Notificações"
+                accessibilityLabel={t("Notificações")}
               >
                 <Ionicons name="notifications-outline" size={22} color={colors.text} />
                 {naoLidas > 0 && (
@@ -128,7 +130,7 @@ export default function InicioScreen() {
               style={styles.avatar}
               onPress={() => router.navigate("/perfil")}
               accessibilityRole="button"
-              accessibilityLabel="Abrir perfil"
+              accessibilityLabel={t("Abrir perfil")}
             >
               {membro?.avatarUrl ? (
                 <Image source={{ uri: membro.avatarUrl }} style={styles.avatarImg} />
@@ -139,7 +141,7 @@ export default function InicioScreen() {
           </View>
         </View>
 
-        <Text style={styles.hello}>Olá, {nome}</Text>
+        <Text style={styles.hello}>{t("Olá")}, {nome}</Text>
 
         {carregando ? (
           <Skeleton width="100%" height={180} borderRadius={20} />
@@ -160,7 +162,7 @@ export default function InicioScreen() {
         )}
 
         {/* Atalhos para os módulos */}
-        <Text style={styles.sectionTitle}>Atalhos</Text>
+        <Text style={styles.sectionTitle}>{t("Atalhos")}</Text>
         <View style={styles.grid}>
           {ATALHOS.map((a, i) => (
             <AnimatedShortcut
@@ -172,7 +174,7 @@ export default function InicioScreen() {
               <View style={styles.shortcutIcon}>
                 <Ionicons name={a.icon} size={22} color={colors.brandMid} />
               </View>
-              <Text style={styles.shortcutLabel} numberOfLines={2}>{a.label}</Text>
+              <Text style={styles.shortcutLabel} numberOfLines={2}>{t(a.label)}</Text>
             </AnimatedShortcut>
           ))}
         </View>

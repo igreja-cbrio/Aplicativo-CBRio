@@ -16,6 +16,7 @@ import { PhoneInput } from "@/components/ui/PhoneInput";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { DEFAULT_COUNTRY, type Country } from "@/constants/countries";
 import {
   dateBRToISO,
@@ -29,6 +30,7 @@ import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 export default function CadastroScreen() {
   const { signUp } = useAuth();
+  const t = useT();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
@@ -45,19 +47,19 @@ export default function CadastroScreen() {
   async function handleSignUp() {
     setError(null);
     if (!nome || !cpf || !nascimento || !phone || !email || !password) {
-      setError("Preencha todos os campos.");
+      setError(t("Preencha todos os campos."));
       return;
     }
     if (!isValidCPF(cpf)) {
-      setError("CPF inválido.");
+      setError(t("CPF inválido."));
       return;
     }
     if (!isValidDateBR(nascimento)) {
-      setError("Data de nascimento inválida (use DD/MM/AAAA).");
+      setError(t("Data de nascimento inválida (use DD/MM/AAAA)."));
       return;
     }
     if (password.length < 6) {
-      setError("A senha deve ter pelo menos 6 caracteres.");
+      setError(t("A senha deve ter pelo menos 6 caracteres."));
       return;
     }
     setLoading(true);
@@ -70,14 +72,14 @@ export default function CadastroScreen() {
       });
       if (needsEmailConfirmation) {
         Alert.alert(
-          "Confirme seu e-mail",
-          "Enviamos um link de confirmação para o seu e-mail. Confirme para entrar.",
+          t("Confirme seu e-mail"),
+          t("Enviamos um link de confirmação para o seu e-mail. Confirme para entrar."),
           [{ text: "OK", onPress: () => router.replace("/(auth)/login") }]
         );
       }
       // Com a sessão criada, o guard de rotas leva direto para a área logada.
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível criar a conta.");
+      setError(e instanceof Error ? e.message : t("Não foi possível criar a conta."));
     } finally {
       setLoading(false);
     }
@@ -97,59 +99,59 @@ export default function CadastroScreen() {
             <View style={styles.logoCircle}>
               <CbrioHeart size={40} color={colors.brandPale} />
             </View>
-            <Text style={styles.title}>Criar conta</Text>
-            <Text style={styles.subtitle}>Faça parte da comunidade CBRio</Text>
+            <Text style={styles.title}>{t("Criar conta")}</Text>
+            <Text style={styles.subtitle}>{t("Faça parte da comunidade CBRio")}</Text>
 
             <View style={styles.form}>
               <Input
-                label="Nome completo"
+                label={t("Nome completo")}
                 value={nome}
                 onChangeText={setNome}
-                placeholder="Seu nome completo"
+                placeholder={t("Seu nome completo")}
                 autoCapitalize="words"
               />
               <Input
                 label="CPF"
                 value={cpf}
-                onChangeText={(t) => setCpf(maskCPF(t))}
+                onChangeText={(v) => setCpf(maskCPF(v))}
                 placeholder="000.000.000-00"
                 keyboardType="number-pad"
                 maxLength={14}
               />
               <Input
-                label="Data de nascimento"
+                label={t("Data de nascimento")}
                 value={nascimento}
-                onChangeText={(t) => setNascimento(maskDateBR(t))}
+                onChangeText={(v) => setNascimento(maskDateBR(v))}
                 placeholder="DD/MM/AAAA"
                 keyboardType="number-pad"
                 maxLength={10}
               />
               <PhoneInput
-                label="Celular"
+                label={t("Celular")}
                 country={country}
                 onChangeCountry={setCountry}
                 number={phone}
                 onChangeNumber={setPhone}
               />
               <Input
-                label="E-mail"
+                label={t("E-mail")}
                 value={email}
                 onChangeText={setEmail}
                 placeholder="voce@exemplo.com"
                 keyboardType="email-address"
               />
               <Input
-                label="Senha"
+                label={t("Senha")}
                 value={password}
                 onChangeText={setPassword}
-                placeholder="Mínimo 6 caracteres"
+                placeholder={t("Mínimo 6 caracteres")}
                 secure
               />
 
               {error && <Text style={styles.error}>{error}</Text>}
 
               <Button
-                title="Criar conta"
+                title={t("Criar conta")}
                 onPress={handleSignUp}
                 loading={loading}
               />
@@ -157,9 +159,9 @@ export default function CadastroScreen() {
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Já tem conta?</Text>
+            <Text style={styles.footerText}>{t("Já tem conta?")}</Text>
             <Link href="/(auth)/login" style={styles.footerLink}>
-              Entrar
+              {t("Entrar")}
             </Link>
           </View>
         </ScrollView>

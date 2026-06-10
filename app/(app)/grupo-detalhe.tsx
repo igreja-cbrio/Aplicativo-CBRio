@@ -18,6 +18,7 @@ import { useMembro } from "@/lib/useMembro";
 import { supabase } from "@/lib/supabase";
 import { pedirEntrarGrupo } from "@/lib/grupos";
 import { useAdminGrupo } from "@/lib/useAdminGrupo";
+import { useT } from "@/lib/i18n";
 import { diaHorario } from "./grupos";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
@@ -46,6 +47,7 @@ export default function GrupoDetalheScreen() {
   const router = useRouter();
   const { membro } = useMembro();
   const { isAdmin } = useAdminGrupo(id);
+  const t = useT();
 
   const [grupo, setGrupo] = useState<GrupoDetalhe | null>(null);
   const [estado, setEstado] = useState<Estado>("carregando");
@@ -117,7 +119,7 @@ export default function GrupoDetalheScreen() {
         // já é membro ou já tem pedido — recarrega o estado real
         await carregar();
       } else {
-        setErro(err.message || "Não foi possível enviar o pedido.");
+        setErro(err.message || t("Não foi possível enviar o pedido."));
       }
     } finally {
       setEnviando(false);
@@ -140,7 +142,7 @@ export default function GrupoDetalheScreen() {
           <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>Grupo</Text>
+          <Text style={styles.title}>{t("Grupo")}</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -177,34 +179,34 @@ export default function GrupoDetalheScreen() {
             {!!grupo.descricao && <Text style={styles.descricao}>{grupo.descricao}</Text>}
 
             {(grupo.lat || grupo.endereco) && (
-              <Button title="Abrir no mapa" variant="ghost" onPress={abrirMapa} />
+              <Button title={t("Abrir no mapa")} variant="ghost" onPress={abrirMapa} />
             )}
 
             {estado === "participa" ? (
               <View style={styles.statusOk}>
                 <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-                <Text style={styles.statusOkTxt}>Você participa deste grupo.</Text>
+                <Text style={styles.statusOkTxt}>{t("Você participa deste grupo.")}</Text>
               </View>
             ) : estado === "pendente" ? (
               <View style={styles.statusOk}>
                 <Ionicons name="time-outline" size={20} color={colors.brandMid} />
-                <Text style={styles.statusOkTxt}>Pedido enviado! Aguarde o contato do líder.</Text>
+                <Text style={styles.statusOkTxt}>{t("Pedido enviado! Aguarde o contato do líder.")}</Text>
               </View>
             ) : estado === "sem_vinculo" ? (
               <View style={{ gap: spacing.sm }}>
-                <Text style={styles.muted}>Vincule seu perfil (CPF) para participar.</Text>
-                <Button title="Ir para o perfil" onPress={() => router.navigate("/perfil")} />
+                <Text style={styles.muted}>{t("Vincule seu perfil (CPF) para participar.")}</Text>
+                <Button title={t("Ir para o perfil")} onPress={() => router.navigate("/perfil")} />
               </View>
             ) : (
-              <Button title="Quero participar" onPress={participar} loading={enviando || estado === "carregando"} />
+              <Button title={t("Quero participar")} onPress={participar} loading={enviando || estado === "carregando"} />
             )}
             {erro && <Text style={styles.erro}>{erro}</Text>}
 
             {isAdmin && (
               <View style={styles.adminBox}>
-                <Text style={styles.adminTitle}>Administração</Text>
+                <Text style={styles.adminTitle}>{t("Administração")}</Text>
                 <Button
-                  title="Editar grupo"
+                  title={t("Editar grupo")}
                   variant="ghost"
                   onPress={() =>
                     router.navigate({ pathname: "/grupo-editar", params: { id: grupo.id } })

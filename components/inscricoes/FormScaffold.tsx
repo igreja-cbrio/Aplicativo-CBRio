@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Props = {
@@ -43,6 +44,7 @@ export function FormScaffold({
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const t = useT();
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
@@ -63,11 +65,11 @@ export function FormScaffold({
           {enviado ? (
             <View style={styles.card}>
               <Ionicons name="checkmark-circle" size={40} color={colors.success} />
-              <Text style={styles.okTitle}>Inscrição enviada!</Text>
+              <Text style={styles.okTitle}>{t("Inscrição enviada!")}</Text>
               <Text style={styles.okText}>
-                {enviadoTexto ?? "Recebemos sua inscrição. Em breve falamos com você. 💙"}
+                {enviadoTexto ?? t("Recebemos sua inscrição. Em breve falamos com você. 💙")}
               </Text>
-              <Button title="Voltar" variant="ghost" onPress={() => router.back()} />
+              <Button title={t("Voltar")} variant="ghost" onPress={() => router.back()} />
             </View>
           ) : (
             <>

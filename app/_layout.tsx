@@ -6,6 +6,7 @@ import { StatusBar } from "expo-status-bar";
 import * as Notifications from "expo-notifications";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
+import { TranslationProvider } from "@/lib/i18n";
 import { SplashPulse } from "@/components/brand/SplashPulse";
 import { BiometriaLock } from "@/components/auth/BiometriaLock";
 import { biometriaAtiva } from "@/lib/biometria";
@@ -127,11 +128,13 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ThemeProvider>
-          <AuthProvider>
-            <RootNavigator />
-          </AuthProvider>
-        </ThemeProvider>
+        <TranslationProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <RootNavigator />
+            </AuthProvider>
+          </ThemeProvider>
+        </TranslationProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

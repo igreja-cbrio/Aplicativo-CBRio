@@ -12,6 +12,7 @@ import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors, useTheme } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const LOGO = require("../../assets/images/cbrio-wordmark.png");
@@ -29,6 +30,7 @@ export default function SobreScreen() {
   const { mode } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const t = useT();
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
@@ -38,7 +40,7 @@ export default function SobreScreen() {
           <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>Sobre a CBRio</Text>
+          <Text style={styles.title}>{t("Sobre a CBRio")}</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -51,20 +53,20 @@ export default function SobreScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Nossa missão</Text>
+          <Text style={styles.cardTitle}>{t("Nossa missão")}</Text>
           <Text style={styles.missao}>
-            "Empoderados por Deus para alcançar pessoas pra Jesus" (Mt 28:19).
+            {t("\"Empoderados por Deus para alcançar pessoas pra Jesus\" (Mt 28:19).")}
           </Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Onde estamos</Text>
+          <Text style={styles.cardTitle}>{t("Onde estamos")}</Text>
           <Row icon="location-outline" colors={colors} styles={styles}>
-            Av. das Américas, 7907 — Open Mall (subsolo), Barra da Tijuca, Rio de Janeiro
+            {t("Av. das Américas, 7907 — Open Mall (subsolo), Barra da Tijuca, Rio de Janeiro")}
           </Row>
           <ActionLink
             icon="logo-youtube"
-            label="Assistir online (cbrio.tv)"
+            label={t("Assistir online (cbrio.tv)")}
             onPress={() => Linking.openURL("https://cbrio.tv")}
             colors={colors}
             styles={styles}
@@ -78,7 +80,7 @@ export default function SobreScreen() {
           />
           <ActionLink
             icon="logo-whatsapp"
-            label="Falar com a igreja (CBZap)"
+            label={t("Falar com a igreja (CBZap)")}
             onPress={() => Linking.openURL("https://wa.me/5521997567770")}
             colors={colors}
             styles={styles}
@@ -86,29 +88,29 @@ export default function SobreScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Os 5 valores da jornada</Text>
+          <Text style={styles.cardTitle}>{t("Os 5 valores da jornada")}</Text>
           {VALORES.map((v) => (
             <View key={v.titulo} style={styles.valor}>
               <Ionicons name={v.icon} size={20} color={colors.brandMid} />
-              <Text style={styles.valorTxt}>{v.titulo}</Text>
+              <Text style={styles.valorTxt}>{t(v.titulo)}</Text>
             </View>
           ))}
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Marcos do novo convertido</Text>
+          <Text style={styles.cardTitle}>{t("Marcos do novo convertido")}</Text>
           <Row icon="call-outline" colors={colors} styles={styles}>
-            Contato pastoral em até 3 dias
+            {t("Contato pastoral em até 3 dias")}
           </Row>
           <Row icon="water-outline" colors={colors} styles={styles}>
-            Batismo em até 90 dias
+            {t("Batismo em até 90 dias")}
           </Row>
           <Row icon="map-outline" colors={colors} styles={styles}>
-            NEXT em até 90 dias
+            {t("NEXT em até 90 dias")}
           </Row>
           <Text style={styles.nsm}>
             <Text style={{ fontWeight: "800" }}>NSM: </Text>
-            "Novos convertidos engajados em ≥1 valor da CBRio em até 60 dias da decisão."
+            {t("\"Novos convertidos engajados em ≥1 valor da CBRio em até 60 dias da decisão.\"")}
           </Text>
         </View>
       </ScrollView>

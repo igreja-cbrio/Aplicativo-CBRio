@@ -8,6 +8,7 @@ import {
   type TextInputProps,
 } from "react-native";
 import { useColors } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Props = TextInputProps & {
@@ -18,6 +19,7 @@ type Props = TextInputProps & {
 export function Input({ label, secure, ...rest }: Props) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const t = useT();
   const [hidden, setHidden] = useState(!!secure);
 
   return (
@@ -33,7 +35,7 @@ export function Input({ label, secure, ...rest }: Props) {
         />
         {secure && (
           <Pressable onPress={() => setHidden((v) => !v)} hitSlop={8}>
-            <Text style={styles.toggle}>{hidden ? "Mostrar" : "Ocultar"}</Text>
+            <Text style={styles.toggle}>{hidden ? t("Mostrar") : t("Ocultar")}</Text>
           </Pressable>
         )}
       </View>

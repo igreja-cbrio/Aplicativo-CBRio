@@ -4,6 +4,7 @@ import WebView from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { useT } from "@/lib/i18n";
 
 type Status = "loading" | "success" | "cancel" | "interrupted";
 
@@ -25,6 +26,7 @@ export function CheckoutWebView({
   const colors = useColors();
   const styles = makeStyles(colors);
   const webview = useRef<WebView | null>(null);
+  const t = useT();
 
   function handleNav(navState: { url: string; loading: boolean }) {
     const u = navState.url;
@@ -54,7 +56,7 @@ export function CheckoutWebView({
           >
             <Ionicons name="close" size={22} color={colors.text} />
           </Pressable>
-          <Text style={styles.titulo}>Pagamento seguro</Text>
+          <Text style={styles.titulo}>{t("Pagamento seguro")}</Text>
           <View style={{ width: 22 }} />
         </View>
         {url ? (

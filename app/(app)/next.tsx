@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { Skeleton } from "@/components/anim/Skeleton";
 import { useNextSync } from "@/lib/useNextSync";
 import { inscreverNext, checkinNext, type NextEncontro } from "@/lib/api";
@@ -53,6 +54,7 @@ export default function NextScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const t = useT();
   const { me, loading, erro, recarregar } = useNextSync();
 
   const [inscrevendo, setInscrevendo] = useState(false);
@@ -64,13 +66,13 @@ export default function NextScreen() {
       const resp = await inscreverNext();
       await recarregar();
       Alert.alert(
-        "Inscrição NEXT confirmada!",
+        t("Inscrição NEXT confirmada!"),
         resp.jaInscrito
-          ? "Você já estava inscrito(a). Te vemos lá."
-          : "Tá feito. A equipe vai te receber muito bem."
+          ? t("Você já estava inscrito(a). Te vemos lá.")
+          : t("Tá feito. A equipe vai te receber muito bem.")
       );
     } catch (e) {
-      Alert.alert("Não foi possível inscrever", e instanceof Error ? e.message : "Erro.");
+      Alert.alert(t("Não foi possível inscrever"), e instanceof Error ? e.message : t("Erro."));
     } finally {
       setInscrevendo(false);
     }
@@ -85,11 +87,11 @@ export default function NextScreen() {
     }
     if (s !== "granted") {
       Alert.alert(
-        "Ative a localização",
-        "Pra confirmar sua presença no NEXT, precisamos da sua localização.",
+        t("Ative a localização"),
+        t("Pra confirmar sua presença no NEXT, precisamos da sua localização."),
         [
-          { text: "Cancelar", style: "cancel" },
-          { text: "Abrir Configurações", onPress: () => Linking.openSettings() },
+          { text: t("Cancelar"), style: "cancel" },
+          { text: t("Abrir Configurações"), onPress: () => Linking.openSettings() },
         ]
       );
       return null;
@@ -99,7 +101,7 @@ export default function NextScreen() {
         accuracy: Location.Accuracy.High,
       });
     } catch {
-      Alert.alert("Falha ao obter localização", "Tente novamente.");
+      Alert.alert(t("Falha ao obter localização"), t("Tente novamente."));
       return null;
     }
   }
@@ -111,7 +113,7 @@ export default function NextScreen() {
       if (!loc) return;
       const resp = await checkinNext(enc.id, loc.coords.latitude, loc.coords.longitude);
       if (resp.ok) {
-        Alert.alert("Presença confirmada!", "Te vejo já 💙");
+        Alert.alert(t("Presença confirmada!"), t("Te vejo já 💙"));
         await recarregar();
         return;
       }
@@ -121,15 +123,15 @@ export default function NextScreen() {
       }
       if (resp.status === 403) {
         const dist = resp.distancia_m
-          ? ` (você está a ${Math.round(resp.distancia_m)}m)`
+          ? ` (${t("você está a")} ${Math.round(resp.distancia_m)}m)`
           : "";
         Alert.alert(
-          "Você precisa estar na igreja",
-          `O check-in só libera dentro do raio da CBRio${dist}.`
+          t("Você precisa estar na igreja"),
+          `${t("O check-in só libera dentro do raio da CBRio")}${dist}.`
         );
         return;
       }
-      Alert.alert("Não foi possível confirmar", resp.error || "Tente novamente.");
+      Alert.alert(t("Não foi possível confirmar"), resp.error || t("Tente novamente."));
     } finally {
       setCheckinId(null);
     }
@@ -158,22 +160,21 @@ export default function NextScreen() {
           <View style={styles.vazio}>
             <Ionicons name="cloud-offline-outline" size={36} color={colors.textMuted} />
             <Text style={styles.vazioTxt}>
-              {erro ? erro : "Não foi possível carregar o NEXT."}
+              {erro ? erro : t("Não foi possível carregar o NEXT.")}
             </Text>
-            <Button title="Tentar de novo" variant="ghost" onPress={recarregar} />
+            <Button title={t("Tentar de novo")} variant="ghost" onPress={recarregar} />
           </View>
         ) : !me.inscrito_next ? (
           <>
             <View style={styles.hero}>
               <Ionicons name="map" size={28} color="#fff" />
-              <Text style={styles.heroTitulo}>O começo da sua jornada</Text>
+              <Text style={styles.heroTitulo}>{t("O começo da sua jornada")}</Text>
               <Text style={styles.heroSub}>
-                O NEXT é onde a gente te conhece e te conecta no coração da CBRio.
-                São encontros pra você descobrir como dar próximos passos com Jesus.
+                {t("O NEXT é onde a gente te conhece e te conecta no coração da CBRio. São encontros pra você descobrir como dar próximos passos com Jesus.")}
               </Text>
             </View>
             <Button
-              title="Quero participar do NEXT"
+              title={t("Quero participar do NEXT")}
               onPress={inscrever}
               loading={inscrevendo}
             />
@@ -183,21 +184,20 @@ export default function NextScreen() {
             <View style={styles.statusCard}>
               <Ionicons name="checkmark-circle" size={22} color={colors.success} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.statusTitulo}>Você está no NEXT 💙</Text>
+                <Text style={styles.statusTitulo}>{t("Você está no NEXT 💙")}</Text>
                 <Text style={styles.statusTxt}>
-                  Veja os encontros e faça check-in no dia, quando estiver na
-                  igreja.
+                  {t("Veja os encontros e faça check-in no dia, quando estiver na igreja.")}
                 </Text>
               </View>
             </View>
 
-            <Text style={styles.section}>Próximos encontros</Text>
+            <Text style={styles.section}>{t("Próximos encontros")}</Text>
 
             {me.encontros.length === 0 ? (
               <View style={styles.vazio}>
                 <Ionicons name="calendar-outline" size={36} color={colors.textMuted} />
                 <Text style={styles.vazioTxt}>
-                  Nenhum encontro programado por enquanto.
+                  {t("Nenhum encontro programado por enquanto.")}
                 </Text>
               </View>
             ) : (
@@ -213,7 +213,7 @@ export default function NextScreen() {
                       {confirmado && (
                         <View style={styles.checkPill}>
                           <Ionicons name="checkmark-circle" size={14} color="#fff" />
-                          <Text style={styles.checkPillTxt}>Presença confirmada</Text>
+                          <Text style={styles.checkPillTxt}>{t("Presença confirmada")}</Text>
                         </View>
                       )}
                     </View>
@@ -222,7 +222,7 @@ export default function NextScreen() {
 
                     {confirmado ? null : podeAgora ? (
                       <Button
-                        title={checkinId === enc.id ? "Confirmando…" : "Fazer check-in"}
+                        title={checkinId === enc.id ? t("Confirmando…") : t("Fazer check-in")}
                         onPress={() => fazerCheckin(enc)}
                         loading={checkinId === enc.id}
                       />
@@ -230,7 +230,7 @@ export default function NextScreen() {
                       <View style={styles.indisponivelBox}>
                         <Ionicons name="time-outline" size={16} color={colors.textMuted} />
                         <Text style={styles.indisponivelTxt}>
-                          Check-in abre no dia do encontro.
+                          {t("Check-in abre no dia do encontro.")}
                         </Text>
                       </View>
                     )}

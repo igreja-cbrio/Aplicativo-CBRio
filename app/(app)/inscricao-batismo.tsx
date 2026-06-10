@@ -7,6 +7,7 @@ import { FormScaffold } from "@/components/inscricoes/FormScaffold";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
+import { useT } from "@/lib/i18n";
 import { criarInscricao } from "@/lib/inscricoes";
 import { dateBRToISO, isValidDateBR, maskDateBR } from "@/lib/validators";
 import {
@@ -21,6 +22,7 @@ export default function InscricaoBatismoScreen() {
   const { membro, loading } = useMembro();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const t = useT();
   const proxDt = useMemo(() => proximoBatismo(), []);
   const diasFalta = useMemo(() => diasAteProximoBatismo(proxDt), [proxDt]);
   const [nome, setNome] = useState("");
@@ -46,11 +48,11 @@ export default function InscricaoBatismoScreen() {
   async function enviar() {
     setError(null);
     if (!nome || !telefone) {
-      setError("Preencha pelo menos nome e telefone.");
+      setError(t("Preencha pelo menos nome e telefone."));
       return;
     }
     if (nascimento && !isValidDateBR(nascimento)) {
-      setError("Data de nascimento inválida (DD/MM/AAAA).");
+      setError(t("Data de nascimento inválida (DD/MM/AAAA)."));
       return;
     }
     setEnviando(true);
@@ -75,7 +77,7 @@ export default function InscricaoBatismoScreen() {
       );
       setEnviado(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível enviar.");
+      setError(e instanceof Error ? e.message : t("Não foi possível enviar."));
     } finally {
       setEnviando(false);
     }
@@ -83,10 +85,10 @@ export default function InscricaoBatismoScreen() {
 
   return (
     <FormScaffold
-      title="Batismo"
-      subtitle="Inscreva-se para ser batizado(a) na CBRio."
+      title={t("Batismo")}
+      subtitle={t("Inscreva-se para ser batizado(a) na CBRio.")}
       icon="water"
-      submitLabel="Quero me batizar"
+      submitLabel={t("Quero me batizar")}
       onSubmit={enviar}
       submitting={enviando || loading}
       enviado={enviado}
@@ -97,45 +99,45 @@ export default function InscricaoBatismoScreen() {
           <Ionicons name="water" size={22} color="#fff" />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.bannerLabel}>Próximo batismo</Text>
+          <Text style={styles.bannerLabel}>{t("Próximo batismo")}</Text>
           <Text style={styles.bannerData}>{formatProximoBatismo(proxDt)}</Text>
           <Text style={styles.bannerSub}>
             {diasFalta === 0
-              ? "É hoje! 🙌"
+              ? t("É hoje! 🙌")
               : diasFalta === 1
-              ? "Amanhã"
-              : `Em ${diasFalta} dias`}
-            {"  ·  "}Sempre no 4º domingo do mês.
+              ? t("Amanhã")
+              : `${t("Em")} ${diasFalta} ${t("dias")}`}
+            {"  ·  "}{t("Sempre no 4º domingo do mês.")}
           </Text>
         </View>
       </View>
 
-      <Input label="Nome completo" value={nome} onChangeText={setNome} autoCapitalize="words" />
-      <Input label="Telefone" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="+55 21 99999-9999" />
-      <Input label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" />
+      <Input label={t("Nome completo")} value={nome} onChangeText={setNome} autoCapitalize="words" />
+      <Input label={t("Telefone")} value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="+55 21 99999-9999" />
+      <Input label={t("E-mail")} value={email} onChangeText={setEmail} keyboardType="email-address" />
       <Input
-        label="Data de nascimento (opcional)"
+        label={t("Data de nascimento (opcional)")}
         value={nascimento}
-        onChangeText={(t) => setNascimento(maskDateBR(t))}
+        onChangeText={(v) => setNascimento(maskDateBR(v))}
         placeholder="DD/MM/AAAA"
         keyboardType="number-pad"
         maxLength={10}
       />
-      <Input label="Tamanho da camisa (opcional)" value={camisa} onChangeText={setCamisa} placeholder="P / M / G / GG" />
+      <Input label={t("Tamanho da camisa (opcional)")} value={camisa} onChangeText={setCamisa} placeholder="P / M / G / GG" />
       <Checkbox
         checked={deficiencia}
         onChange={setDeficiencia}
-        label="Possui alguma deficiência ou limitação física?"
+        label={t("Possui alguma deficiência ou limitação física?")}
       />
       {deficiencia && (
         <Input
-          label="Descreva a limitação"
+          label={t("Descreva a limitação")}
           value={deficienciaDesc}
           onChangeText={setDeficienciaDesc}
-          placeholder="Conte como podemos te ajudar"
+          placeholder={t("Conte como podemos te ajudar")}
         />
       )}
-      <Input label="Observações (opcional)" value={obs} onChangeText={setObs} />
+      <Input label={t("Observações (opcional)")} value={obs} onChangeText={setObs} />
     </FormScaffold>
   );
 }

@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { COUNTRIES, flagEmoji, type Country } from "@/constants/countries";
 import { onlyDigits } from "@/lib/validators";
 import { useColors } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Props = {
@@ -29,6 +30,7 @@ export function PhoneInput({
   number,
   onChangeNumber,
 }: Props) {
+  const t = useT();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [open, setOpen] = useState(false);
@@ -54,8 +56,8 @@ export function PhoneInput({
         <TextInput
           style={styles.input}
           value={number}
-          onChangeText={(t) => onChangeNumber(onlyDigits(t))}
-          placeholder="DDD + número"
+          onChangeText={(v) => onChangeNumber(onlyDigits(v))}
+          placeholder={t("DDD + número")}
           placeholderTextColor={colors.textMuted}
           keyboardType="phone-pad"
         />
@@ -70,16 +72,16 @@ export function PhoneInput({
         <View style={styles.backdrop}>
           <SafeAreaView style={styles.sheet} edges={["bottom"]}>
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Escolha o país</Text>
+              <Text style={styles.sheetTitle}>{t("Escolha o país")}</Text>
               <Pressable onPress={() => setOpen(false)} hitSlop={8}>
-                <Text style={styles.close}>Fechar</Text>
+                <Text style={styles.close}>{t("Fechar")}</Text>
               </Pressable>
             </View>
             <TextInput
               style={styles.search}
               value={query}
               onChangeText={setQuery}
-              placeholder="Buscar país ou código"
+              placeholder={t("Buscar país ou código")}
               placeholderTextColor={colors.textMuted}
               autoCorrect={false}
               autoCapitalize="none"

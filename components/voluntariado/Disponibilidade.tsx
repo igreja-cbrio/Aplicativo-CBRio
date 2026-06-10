@@ -22,6 +22,7 @@ import {
   isValidDateBR,
   maskDateBR,
 } from "@/lib/validators";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 function fmtIso(iso: string) {
@@ -31,6 +32,7 @@ function fmtIso(iso: string) {
 
 export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
   const colors = useColors();
+  const t = useT();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [itens, setItens] = useState<Indisponibilidade[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -55,21 +57,21 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
   async function salvar() {
     setErro(null);
     if (!isValidDateBR(de)) {
-      setErro("Data de início inválida (DD/MM/AAAA).");
+      setErro(t("Data de início inválida (DD/MM/AAAA)."));
       return;
     }
     if (!isValidDateBR(ate)) {
-      setErro("Data de fim inválida (DD/MM/AAAA).");
+      setErro(t("Data de fim inválida (DD/MM/AAAA)."));
       return;
     }
     const isoDe = dateBRToISO(de);
     const isoAte = dateBRToISO(ate);
     if (!isoDe || !isoAte) {
-      setErro("Data inválida.");
+      setErro(t("Data inválida."));
       return;
     }
     if (isoAte < isoDe) {
-      setErro("A data final precisa ser igual ou depois da inicial.");
+      setErro(t("A data final precisa ser igual ou depois da inicial."));
       return;
     }
     setSalvando(true);
@@ -81,7 +83,7 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
       setAberto(false);
       await carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Falha ao salvar.");
+      setErro(e instanceof Error ? e.message : t("Falha ao salvar."));
     } finally {
       setSalvando(false);
     }
@@ -89,12 +91,12 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
 
   function confirmarRemocao(item: Indisponibilidade) {
     Alert.alert(
-      "Remover indisponibilidade",
-      `Liberar ${fmtIso(item.unavailable_from)} – ${fmtIso(item.unavailable_to)}?`,
+      t("Remover indisponibilidade"),
+      `${t("Liberar")} ${fmtIso(item.unavailable_from)} – ${fmtIso(item.unavailable_to)}?`,
       [
-        { text: "Cancelar", style: "cancel" },
+        { text: t("Cancelar"), style: "cancel" },
         {
-          text: "Remover",
+          text: t("Remover"),
           style: "destructive",
           onPress: async () => {
             await removerIndisponibilidade(item.id);
@@ -110,25 +112,23 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
       <View style={styles.headerRow}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <Ionicons name="calendar-clear-outline" size={18} color={colors.brandMid} />
-          <Text style={styles.titulo}>Disponibilidade</Text>
+          <Text style={styles.titulo}>{t("Disponibilidade")}</Text>
         </View>
         {!aberto && (
           <Pressable onPress={() => setAberto(true)} hitSlop={6}>
-            <Text style={styles.linkAcao}>+ Bloquear datas</Text>
+            <Text style={styles.linkAcao}>{t("+ Bloquear datas")}</Text>
           </Pressable>
         )}
       </View>
 
       <Text style={styles.hint}>
-        Por padrão você está disponível. Bloqueie as datas em que não pode
-        servir (viagem, prova, etc.) — a coordenação não vai te escalar nesse
-        período.
+        {t("Por padrão você está disponível. Bloqueie as datas em que não pode servir (viagem, prova, etc.) — a coordenação não vai te escalar nesse período.")}
       </Text>
 
       {carregando ? (
         <ActivityIndicator color={colors.primary} />
       ) : itens.length === 0 ? (
-        <Text style={styles.semNada}>Nenhum bloqueio. Você está disponível!</Text>
+        <Text style={styles.semNada}>{t("Nenhum bloqueio. Você está disponível!")}</Text>
       ) : (
         itens.map((i) => (
           <View key={i.id} style={styles.item}>
@@ -155,9 +155,9 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
           <View style={styles.row2}>
             <View style={{ flex: 1 }}>
               <Input
-                label="De"
+                label={t("De")}
                 value={de}
-                onChangeText={(t) => setDe(maskDateBR(t))}
+                onChangeText={(v) => setDe(maskDateBR(v))}
                 placeholder="DD/MM/AAAA"
                 keyboardType="number-pad"
                 maxLength={10}
@@ -165,9 +165,9 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
             </View>
             <View style={{ flex: 1 }}>
               <Input
-                label="Até"
+                label={t("Até")}
                 value={ate}
-                onChangeText={(t) => setAte(maskDateBR(t))}
+                onChangeText={(v) => setAte(maskDateBR(v))}
                 placeholder="DD/MM/AAAA"
                 keyboardType="number-pad"
                 maxLength={10}
@@ -175,15 +175,15 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
             </View>
           </View>
           <Input
-            label="Motivo (opcional)"
+            label={t("Motivo (opcional)")}
             value={motivo}
             onChangeText={setMotivo}
-            placeholder="Viagem, prova, etc."
+            placeholder={t("Viagem, prova, etc.")}
           />
           {!!erro && <Text style={styles.erro}>{erro}</Text>}
           <View style={styles.botoes}>
             <Button
-              title="Cancelar"
+              title={t("Cancelar")}
               variant="ghost"
               onPress={() => {
                 setAberto(false);
@@ -193,7 +193,7 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
                 setMotivo("");
               }}
             />
-            <Button title="Salvar" onPress={salvar} loading={salvando} />
+            <Button title={t("Salvar")} onPress={salvar} loading={salvando} />
           </View>
         </View>
       )}

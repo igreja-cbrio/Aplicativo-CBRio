@@ -19,6 +19,7 @@ import {
   formatDataLonga,
   type CultoDetalhe,
 } from "@/lib/cultos";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const END = "Av. das Américas, 7907 — Open Mall (subsolo), Barra da Tijuca, Rio de Janeiro";
@@ -33,6 +34,7 @@ export default function CultoDetalheScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const t = useT();
 
   const [culto, setCulto] = useState<CultoDetalhe | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,14 +67,14 @@ export default function CultoDetalheScreen() {
           <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>Culto</Text>
+          <Text style={styles.title}>{t("Culto")}</Text>
           <View style={{ width: 24 }} />
         </View>
 
         {loading ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />
         ) : !culto ? (
-          <Text style={styles.muted}>Culto não encontrado.</Text>
+          <Text style={styles.muted}>{t("Culto não encontrado.")}</Text>
         ) : (
           <>
             <View
@@ -91,29 +93,30 @@ export default function CultoDetalheScreen() {
 
             {!!culto.service_type?.description && (
               <View style={styles.card}>
-                <Text style={styles.cardTitle}>Sobre o culto</Text>
+                <Text style={styles.cardTitle}>{t("Sobre o culto")}</Text>
                 <Text style={styles.cardTxt}>{culto.service_type.description}</Text>
               </View>
             )}
 
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Onde acontece</Text>
+              <Text style={styles.cardTitle}>{t("Onde acontece")}</Text>
               <View style={styles.row}>
                 <Ionicons name="location-outline" size={18} color={colors.brandMid} />
                 <Text style={styles.rowTxt}>{END}</Text>
               </View>
-              <Button title="Abrir no mapa" variant="ghost" onPress={abrirMaps} />
+              <Button title={t("Abrir no mapa")} variant="ghost" onPress={abrirMaps} />
             </View>
 
             {(culto.service_type?.has_online_stream || culto.youtube_video_id) && (
               <View style={styles.card}>
-                <Text style={styles.cardTitle}>Online</Text>
+                <Text style={styles.cardTitle}>{t("Online")}</Text>
                 <Text style={styles.cardTxt}>
-                  Acompanhe ao vivo na CBRio TV. Se ainda não começou, o link
-                  abre o canal — o vídeo aparece quando entrar no ar.
+                  {t(
+                    "Acompanhe ao vivo na CBRio TV. Se ainda não começou, o link abre o canal — o vídeo aparece quando entrar no ar."
+                  )}
                 </Text>
                 <Button
-                  title={culto.youtube_video_id ? "Assistir no YouTube" : "Abrir cbrio.tv"}
+                  title={culto.youtube_video_id ? t("Assistir no YouTube") : t("Abrir cbrio.tv")}
                   onPress={abrirYoutube}
                 />
               </View>
@@ -123,11 +126,12 @@ export default function CultoDetalheScreen() {
               <View style={styles.card}>
                 <View style={styles.row}>
                   <Ionicons name="happy-outline" size={20} color={colors.brandMid} />
-                  <Text style={styles.cardTitle}>CBKids neste culto</Text>
+                  <Text style={styles.cardTitle}>{t("CBKids neste culto")}</Text>
                 </View>
                 <Text style={styles.cardTxt}>
-                  Tem programação para as crianças (4 a 11 anos) acontecendo
-                  paralelamente. Faça o check-in na chegada.
+                  {t(
+                    "Tem programação para as crianças (4 a 11 anos) acontecendo paralelamente. Faça o check-in na chegada."
+                  )}
                 </Text>
               </View>
             )}

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
 import { brand, font, radius, spacing, type Palette } from "@/constants/theme";
 import { BRAND_FONT } from "@/lib/fonts";
+import { useT } from "@/lib/i18n";
 
 /**
  * Confirmação de doação — substitui o Alert de sistema (HIG reserva
@@ -24,6 +25,7 @@ export function SucessoDoacao({
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { width } = useWindowDimensions();
+  const t = useT();
 
   useEffect(() => {
     if (visible) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -41,13 +43,12 @@ export function SucessoDoacao({
           <View style={styles.checkCircle}>
             <Ionicons name="checkmark" size={44} color="#fff" />
           </View>
-          <Text style={styles.titulo}>Doação confirmada</Text>
+          <Text style={styles.titulo}>{t("Doação confirmada")}</Text>
           {!!valor && <Text style={styles.valor}>{valor}</Text>}
           <Text style={styles.msg}>
-            Obrigado pela sua generosidade! Toda contribuição sustenta a obra da
-            CBRio. 💙
+            {t("Obrigado pela sua generosidade! Toda contribuição sustenta a obra da CBRio.")} 💙
           </Text>
-          <Button title="Amém" onPress={onClose} />
+          <Button title={t("Amém")} onPress={onClose} />
         </View>
         <ConfettiCannon
           count={90}

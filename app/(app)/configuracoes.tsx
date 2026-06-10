@@ -21,7 +21,7 @@ import {
   type ThemePreference,
   type FontScale,
 } from "@/contexts/ThemeContext";
-import { LANGS, useLang } from "@/lib/i18n";
+import { LANGS, useLang, useT } from "@/lib/i18n";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import {
@@ -74,6 +74,7 @@ export default function ConfiguracoesScreen() {
   const { user, signOut } = useAuth();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const t = useT();
 
   const { lang, setLang } = useLang();
   const [pagamento, setPagamento] = useState<MetodoPagamento>("pix");
@@ -106,7 +107,7 @@ export default function ConfiguracoesScreen() {
   async function alternarBiometria(ativar: boolean) {
     if (ativar) {
       // Confirma com a biometria antes de ligar (garante que funciona).
-      const ok = await autenticarBiometria(`Confirmar ${biomRotulo}`);
+      const ok = await autenticarBiometria(`${t("Confirmar")} ${biomRotulo}`);
       if (!ok) return;
       await definirBiometriaAtiva(true);
       setBiomOn(true);
@@ -132,11 +133,11 @@ export default function ConfiguracoesScreen() {
   async function alternarNotificacoes(valor: boolean) {
     if (!valor) {
       Alert.alert(
-        "Desativar notificações",
-        "Pra desativar, abra as Configurações do sistema e desligue as notificações do CBRio.",
+        t("Desativar notificações"),
+        t("Pra desativar, abra as Configurações do sistema e desligue as notificações do CBRio."),
         [
-          { text: "Cancelar", style: "cancel" },
-          { text: "Abrir Configurações", onPress: () => Linking.openSettings() },
+          { text: t("Cancelar"), style: "cancel" },
+          { text: t("Abrir Configurações"), onPress: () => Linking.openSettings() },
         ]
       );
       return;
@@ -145,15 +146,15 @@ export default function ConfiguracoesScreen() {
     setNotifAtivas(req.status === "granted");
     if (req.status !== "granted") {
       Alert.alert(
-        "Permissão necessária",
-        "Você precisa autorizar as notificações nas Configurações do sistema."
+        t("Permissão necessária"),
+        t("Você precisa autorizar as notificações nas Configurações do sistema.")
       );
     }
   }
 
   async function confirmarExclusao() {
     if (!motivo) {
-      setErroExclusao("Escolha um motivo.");
+      setErroExclusao(t("Escolha um motivo."));
       return;
     }
     if (!user?.id) return;
@@ -180,11 +181,11 @@ export default function ConfiguracoesScreen() {
       if (e2) console.log("[exclusao] não atualizou profiles.status:", e2.message);
 
       Alert.alert(
-        "Solicitação registrada",
-        "Recebemos seu pedido. Em breve sua conta será desativada. Vamos sentir sua falta. 💙",
+        t("Solicitação registrada"),
+        t("Recebemos seu pedido. Em breve sua conta será desativada. Vamos sentir sua falta. 💙"),
         [
           {
-            text: "Ok",
+            text: t("Ok"),
             onPress: async () => {
               await signOut();
             },
@@ -192,7 +193,7 @@ export default function ConfiguracoesScreen() {
         ]
       );
     } catch (e) {
-      setErroExclusao(e instanceof Error ? e.message : "Falha ao solicitar exclusão.");
+      setErroExclusao(e instanceof Error ? e.message : t("Falha ao solicitar exclusão."));
     } finally {
       setExcluindo(false);
     }
@@ -206,13 +207,13 @@ export default function ConfiguracoesScreen() {
           <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>Configurações</Text>
+          <Text style={styles.title}>{t("Configurações")}</Text>
           <View style={{ width: 24 }} />
         </View>
 
         {/* APARÊNCIA */}
-        <Section title="Aparência" colors={colors} styles={styles}>
-          <Text style={styles.label}>Tema</Text>
+        <Section title={t("Aparência")} colors={colors} styles={styles}>
+          <Text style={styles.label}>{t("Tema")}</Text>
           <View style={styles.row}>
             {TEMA_OPCOES.map((o) => {
               const sel = preference === o.key;
@@ -223,13 +224,13 @@ export default function ConfiguracoesScreen() {
                   onPress={() => setPreference(o.key)}
                 >
                   <Ionicons name={o.icon} size={16} color={sel ? "#fff" : colors.textMuted} />
-                  <Text style={[styles.optTxt, sel && styles.optTxtSel]}>{o.label}</Text>
+                  <Text style={[styles.optTxt, sel && styles.optTxtSel]}>{t(o.label)}</Text>
                 </Pressable>
               );
             })}
           </View>
 
-          <Text style={[styles.label, { marginTop: spacing.md }]}>Tamanho da fonte</Text>
+          <Text style={[styles.label, { marginTop: spacing.md }]}>{t("Tamanho da fonte")}</Text>
           <View style={styles.row}>
             {FONTE_OPCOES.map((o) => {
               const sel = fontScale === o.key;
@@ -239,26 +240,25 @@ export default function ConfiguracoesScreen() {
                   style={[styles.optChip, sel && styles.optChipSel]}
                   onPress={() => setFontScale(o.key)}
                 >
-                  <Text style={[styles.optTxt, sel && styles.optTxtSel]}>{o.label}</Text>
+                  <Text style={[styles.optTxt, sel && styles.optTxtSel]}>{t(o.label)}</Text>
                 </Pressable>
               );
             })}
           </View>
           <Text style={styles.hint}>
-            Para o novo tamanho valer em todo o app, feche e abra o aplicativo de novo.
+            {t("Para o novo tamanho valer em todo o app, feche e abra o aplicativo de novo.")}
           </Text>
         </Section>
 
         {/* IDIOMA */}
-        <Section title="Idioma" colors={colors} styles={styles}>
+        <Section title={t("Idioma")} colors={colors} styles={styles}>
           <Text style={styles.hint}>
-            Por enquanto só o português tem tradução completa; os demais
-            ficam disponíveis nas próximas atualizações.
+            {t("Por enquanto só o português tem tradução completa; os demais ficam disponíveis nas próximas atualizações.")}
           </Text>
           {LANGS.map((o) => (
             <RadioRow
               key={o.code}
-              label={`${o.bandeira}  ${o.label}${!o.pronto ? "  (em breve)" : ""}`}
+              label={`${o.bandeira}  ${o.label}${!o.pronto ? `  (${t("em breve")})` : ""}`}
               checked={lang === o.code}
               disabled={!o.pronto}
               onPress={() => o.pronto && setLang(o.code)}
@@ -269,16 +269,16 @@ export default function ConfiguracoesScreen() {
         </Section>
 
         {/* PAGAMENTO */}
-        <Section title="Forma de pagamento" colors={colors} styles={styles}>
+        <Section title={t("Forma de pagamento")} colors={colors} styles={styles}>
           <Text style={styles.hint}>
-            Método aberto por padrão na tela de Generosidade.
+            {t("Método aberto por padrão na tela de Generosidade.")}
           </Text>
           {PAGAMENTO_OPCOES.filter(
             (o) => !o.iosOnly || Platform.OS === "ios"
           ).map((o) => (
             <RadioRow
               key={o.key}
-              label={o.label}
+              label={o.key === "card" ? t(o.label) : o.label}
               checked={pagamento === o.key}
               onPress={() => escolherPagamento(o.key)}
               colors={colors}
@@ -289,13 +289,12 @@ export default function ConfiguracoesScreen() {
 
         {/* NOTIFICAÇÕES */}
         {biomSuportada && (
-          <Section title="Segurança" colors={colors} styles={styles}>
+          <Section title={t("Segurança")} colors={colors} styles={styles}>
             <View style={styles.switchRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.label}>Desbloquear com {biomRotulo}</Text>
+                <Text style={styles.label}>{t("Desbloquear com")} {biomRotulo}</Text>
                 <Text style={styles.hint}>
-                  Ao reabrir o app, entre com {biomRotulo} em vez de digitar a
-                  senha.
+                  {t("Ao reabrir o app, entre com")} {biomRotulo} {t("em vez de digitar a senha.")}
                 </Text>
               </View>
               <Switch
@@ -307,12 +306,12 @@ export default function ConfiguracoesScreen() {
           </Section>
         )}
 
-        <Section title="Notificações" colors={colors} styles={styles}>
+        <Section title={t("Notificações")} colors={colors} styles={styles}>
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Receber notificações</Text>
+              <Text style={styles.label}>{t("Receber notificações")}</Text>
               <Text style={styles.hint}>
-                Escalas, pedidos de oração, novidades e mais.
+                {t("Escalas, pedidos de oração, novidades e mais.")}
               </Text>
             </View>
             <Switch
@@ -322,29 +321,29 @@ export default function ConfiguracoesScreen() {
             />
           </View>
           <Button
-            title="Abrir configurações do sistema"
+            title={t("Abrir configurações do sistema")}
             variant="ghost"
             onPress={() => Linking.openSettings()}
           />
         </Section>
 
         {/* EXCLUIR CONTA */}
-        <Section title="Conta" colors={colors} styles={styles}>
+        <Section title={t("Conta")} colors={colors} styles={styles}>
           {!excluirAberto ? (
             <Pressable
               style={styles.dangerRow}
               onPress={() => setExcluirAberto(true)}
             >
               <Ionicons name="trash-outline" size={20} color={colors.danger} />
-              <Text style={styles.dangerTxt}>Excluir minha conta</Text>
+              <Text style={styles.dangerTxt}>{t("Excluir minha conta")}</Text>
             </Pressable>
           ) : (
             <View style={{ gap: spacing.sm }}>
-              <Text style={styles.label}>Por que você quer excluir sua conta?</Text>
+              <Text style={styles.label}>{t("Por que você quer excluir sua conta?")}</Text>
               {MOTIVOS_EXCLUSAO.map((m) => (
                 <RadioRow
                   key={m.key}
-                  label={m.label}
+                  label={t(m.label)}
                   checked={motivo === m.key}
                   onPress={() => setMotivo(m.key)}
                   colors={colors}
@@ -352,17 +351,17 @@ export default function ConfiguracoesScreen() {
                 />
               ))}
               <Input
-                label="Quer contar mais? (opcional)"
+                label={t("Quer contar mais? (opcional)")}
                 value={detalhe}
                 onChangeText={setDetalhe}
-                placeholder="Algo que possamos melhorar"
+                placeholder={t("Algo que possamos melhorar")}
                 multiline
                 numberOfLines={3}
               />
               {erroExclusao && <Text style={styles.erro}>{erroExclusao}</Text>}
               <View style={{ flexDirection: "row", gap: spacing.sm }}>
                 <Button
-                  title="Cancelar"
+                  title={t("Cancelar")}
                   variant="ghost"
                   onPress={() => {
                     setExcluirAberto(false);
@@ -372,14 +371,13 @@ export default function ConfiguracoesScreen() {
                   }}
                 />
                 <Button
-                  title="Confirmar exclusão"
+                  title={t("Confirmar exclusão")}
                   onPress={confirmarExclusao}
                   loading={excluindo}
                 />
               </View>
               <Text style={styles.hint}>
-                Você sai do app agora. Sua conta entra em processo de exclusão e
-                não poderá mais ser usada.
+                {t("Você sai do app agora. Sua conta entra em processo de exclusão e não poderá mais ser usada.")}
               </Text>
             </View>
           )}

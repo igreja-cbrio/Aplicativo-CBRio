@@ -14,10 +14,12 @@ import { Input } from "@/components/ui/Input";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 export default function RecuperarSenhaScreen() {
   const { resetPassword } = useAuth();
+  const t = useT();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [email, setEmail] = useState("");
@@ -28,7 +30,7 @@ export default function RecuperarSenhaScreen() {
   async function handleReset() {
     setError(null);
     if (!email) {
-      setError("Informe seu e-mail.");
+      setError(t("Informe seu e-mail."));
       return;
     }
     setLoading(true);
@@ -36,7 +38,7 @@ export default function RecuperarSenhaScreen() {
       await resetPassword(email);
       setSent(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível enviar o e-mail.");
+      setError(e instanceof Error ? e.message : t("Não foi possível enviar o e-mail."));
     } finally {
       setLoading(false);
     }
@@ -56,34 +58,33 @@ export default function RecuperarSenhaScreen() {
             <View style={styles.logoCircle}>
               <CbrioHeart size={40} color={colors.brandPale} />
             </View>
-            <Text style={styles.title}>Recuperar senha</Text>
+            <Text style={styles.title}>{t("Recuperar senha")}</Text>
             <Text style={styles.subtitle}>
-              Enviaremos um link para redefinir sua senha.
+              {t("Enviaremos um link para redefinir sua senha.")}
             </Text>
 
             {sent ? (
               <Text style={styles.success}>
-                Pronto! Se houver uma conta com esse e-mail, o link de
-                recuperação foi enviado.
+                {t("Pronto! Se houver uma conta com esse e-mail, o link de recuperação foi enviado.")}
               </Text>
             ) : (
               <View style={styles.form}>
                 <Input
-                  label="E-mail"
+                  label={t("E-mail")}
                   value={email}
                   onChangeText={setEmail}
                   placeholder="voce@exemplo.com"
                   keyboardType="email-address"
                 />
                 {error && <Text style={styles.error}>{error}</Text>}
-                <Button title="Enviar link" onPress={handleReset} loading={loading} />
+                <Button title={t("Enviar link")} onPress={handleReset} loading={loading} />
               </View>
             )}
           </View>
 
           <View style={styles.footer}>
             <Link href="/(auth)/login" style={styles.footerLink}>
-              Voltar para o login
+              {t("Voltar para o login")}
             </Link>
           </View>
         </ScrollView>

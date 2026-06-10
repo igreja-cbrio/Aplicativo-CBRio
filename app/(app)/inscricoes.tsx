@@ -4,6 +4,7 @@ import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Item = {
@@ -24,6 +25,7 @@ export default function InscricoesScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const t = useT();
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
@@ -33,7 +35,7 @@ export default function InscricoesScreen() {
           <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>Inscrições</Text>
+          <Text style={styles.title}>{t("Inscrições")}</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -47,8 +49,8 @@ export default function InscricoesScreen() {
               <Ionicons name={it.icon} size={22} color={colors.brandMid} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.rowLabel}>{it.label}</Text>
-              <Text style={styles.rowDesc}>{it.desc}</Text>
+              <Text style={styles.rowLabel}>{t(it.label)}</Text>
+              <Text style={styles.rowDesc}>{t(it.desc)}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </Pressable>

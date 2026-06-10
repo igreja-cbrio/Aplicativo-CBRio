@@ -10,6 +10,7 @@ import Constants from "expo-constants";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMembro } from "@/lib/useMembro";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Option = {
@@ -24,8 +25,9 @@ export default function MenuScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const t = useT();
   const nome =
-    membro?.nome || (user?.user_metadata?.nome as string) || "Membro CBRio";
+    membro?.nome || (user?.user_metadata?.nome as string) || t("Membro CBRio");
 
   const options: Option[] = [
     { label: "Meu perfil", icon: "person-outline", onPress: () => router.navigate("/perfil") },
@@ -74,17 +76,17 @@ export default function MenuScreen() {
               ]}
             >
               <Ionicons name={opt.icon} size={22} color={colors.brandMid} />
-              <Text style={styles.rowLabel}>{opt.label}</Text>
+              <Text style={styles.rowLabel}>{t(opt.label)}</Text>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </Pressable>
           ))}
         </GlassCard>
 
-        <Button title="Sair" variant="ghost" onPress={() => signOut()} />
+        <Button title={t("Sair")} variant="ghost" onPress={() => signOut()} />
 
         <View style={styles.versao}>
           <Text style={styles.versaoTxt}>
-            CBRio · versão {Constants.expoConfig?.version ?? "1.0.0"}
+            CBRio · {t("versão")} {Constants.expoConfig?.version ?? "1.0.0"}
           </Text>
         </View>
       </ScrollView>

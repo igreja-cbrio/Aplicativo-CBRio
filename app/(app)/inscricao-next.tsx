@@ -5,6 +5,7 @@ import { FormScaffold } from "@/components/inscricoes/FormScaffold";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
+import { useT } from "@/lib/i18n";
 import { criarInscricao } from "@/lib/inscricoes";
 import { supabase } from "@/lib/supabase";
 import { dateBRToISO, isValidDateBR, maskDateBR } from "@/lib/validators";
@@ -22,6 +23,7 @@ export default function InscricaoNextScreen() {
   const { membro, loading } = useMembro();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const t = useT();
 
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [eventoId, setEventoId] = useState<string | null>(null);
@@ -56,11 +58,11 @@ export default function InscricaoNextScreen() {
   async function enviar() {
     setError(null);
     if (!nome || !telefone) {
-      setError("Preencha nome e telefone.");
+      setError(t("Preencha nome e telefone."));
       return;
     }
     if (nascimento && !isValidDateBR(nascimento)) {
-      setError("Data de nascimento inválida (DD/MM/AAAA).");
+      setError(t("Data de nascimento inválida (DD/MM/AAAA)."));
       return;
     }
     setEnviando(true);
@@ -82,7 +84,7 @@ export default function InscricaoNextScreen() {
       );
       setEnviado(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível enviar.");
+      setError(e instanceof Error ? e.message : t("Não foi possível enviar."));
     } finally {
       setEnviando(false);
     }
@@ -91,9 +93,9 @@ export default function InscricaoNextScreen() {
   return (
     <FormScaffold
       title="NEXT"
-      subtitle="Inscreva-se no próximo NEXT."
+      subtitle={t("Inscreva-se no próximo NEXT.")}
       icon="sparkles"
-      submitLabel="Quero participar"
+      submitLabel={t("Quero participar")}
       onSubmit={enviar}
       submitting={enviando || loading}
       enviado={enviado}
@@ -101,7 +103,7 @@ export default function InscricaoNextScreen() {
     >
       {eventos.length > 0 && (
         <>
-          <Text style={styles.label}>Evento</Text>
+          <Text style={styles.label}>{t("Evento")}</Text>
           <View style={styles.list}>
             {eventos.map((ev) => {
               const active = eventoId === ev.id;
@@ -122,13 +124,13 @@ export default function InscricaoNextScreen() {
         </>
       )}
 
-      <Input label="Nome completo" value={nome} onChangeText={setNome} autoCapitalize="words" />
-      <Input label="Telefone" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="+55 21 99999-9999" />
-      <Input label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" />
+      <Input label={t("Nome completo")} value={nome} onChangeText={setNome} autoCapitalize="words" />
+      <Input label={t("Telefone")} value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="+55 21 99999-9999" />
+      <Input label={t("E-mail")} value={email} onChangeText={setEmail} keyboardType="email-address" />
       <Input
-        label="Data de nascimento (opcional)"
+        label={t("Data de nascimento (opcional)")}
         value={nascimento}
-        onChangeText={(t) => setNascimento(maskDateBR(t))}
+        onChangeText={(v) => setNascimento(maskDateBR(v))}
         placeholder="DD/MM/AAAA"
         keyboardType="number-pad"
         maxLength={10}

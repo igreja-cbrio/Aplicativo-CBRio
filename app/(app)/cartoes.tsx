@@ -23,6 +23,7 @@ import { supabase } from "@/lib/supabase";
 import { adicionarWalletMembresia } from "@/lib/wallet";
 import { onlyDigits } from "@/lib/validators";
 import { brand, font, radius, spacing, type Palette } from "@/constants/theme";
+import { useT } from "@/lib/i18n";
 
 const CARD_RADIUS = 22;
 const CARD_WIDTH = Dimensions.get("window").width - spacing.lg * 2;
@@ -43,6 +44,7 @@ export default function CartoesScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const t = useT();
 
   const [membroId, setMembroId] = useState<string | null>(null);
   const [nome, setNome] = useState<string | null>(null);
@@ -95,14 +97,14 @@ export default function CartoesScreen() {
   async function addWallet() {
     setErro(null);
     if (!cpf) {
-      setErro("Cadastro sem CPF — atualize seu perfil para gerar o cartão.");
+      setErro(t("Cadastro sem CPF — atualize seu perfil para gerar o cartão."));
       return;
     }
     setWalletLoading(true);
     try {
       await adicionarWalletMembresia(onlyDigits(cpf), nascimento);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Não foi possível abrir a Wallet.");
+      setErro(e instanceof Error ? e.message : t("Não foi possível abrir a Wallet."));
     } finally {
       setWalletLoading(false);
     }
@@ -116,7 +118,7 @@ export default function CartoesScreen() {
           <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>Meu cartão</Text>
+          <Text style={styles.title}>{t("Meu cartão")}</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -126,10 +128,9 @@ export default function CartoesScreen() {
           <View style={styles.empty}>
             <Ionicons name="card-outline" size={40} color={colors.textMuted} />
             <Text style={styles.emptyText}>
-              Sua conta ainda não está vinculada a um membro da CBRio. Informe seu
-              CPF no perfil para liberar seu cartão.
+              {t("Sua conta ainda não está vinculada a um membro da CBRio. Informe seu CPF no perfil para liberar seu cartão.")}
             </Text>
-            <Button title="Vincular pelo CPF" onPress={() => router.navigate("/perfil")} />
+            <Button title={t("Vincular pelo CPF")} onPress={() => router.navigate("/perfil")} />
           </View>
         ) : (
           <>
@@ -149,30 +150,30 @@ export default function CartoesScreen() {
                       resizeMode="contain"
                     />
 
-                    <Text style={styles.label}>MEMBRO</Text>
+                    <Text style={styles.label}>{t("MEMBRO")}</Text>
                     <Text style={styles.nome} numberOfLines={1}>
-                      {nome ?? "Membro"}
+                      {nome ?? t("Membro")}
                     </Text>
 
                     <View style={styles.row}>
                       <View>
-                        <Text style={styles.label}>IGREJA</Text>
+                        <Text style={styles.label}>{t("IGREJA")}</Text>
                         <Text style={styles.value}>CBRio</Text>
                       </View>
                       <View style={{ alignItems: "flex-end" }}>
-                        <Text style={styles.label}>STATUS</Text>
-                        <Text style={styles.value}>{statusLabel(status)}</Text>
+                        <Text style={styles.label}>{t("STATUS")}</Text>
+                        <Text style={styles.value}>{t(statusLabel(status))}</Text>
                       </View>
                     </View>
 
-                    <Text style={[styles.label, { marginTop: spacing.md }]}>ID</Text>
+                    <Text style={[styles.label, { marginTop: spacing.md }]}>{t("ID")}</Text>
                     <Text style={styles.value}>{cartaoId(membroId)}</Text>
 
                     <View style={styles.qrBox}>
                       {token ? (
                         <QRCode value={token} size={150} backgroundColor="#ffffff" color="#0B1F26" />
                       ) : (
-                        <Text style={styles.qrMissing}>QR indisponível</Text>
+                        <Text style={styles.qrMissing}>{t("QR indisponível")}</Text>
                       )}
                     </View>
                   </View>
@@ -180,16 +181,16 @@ export default function CartoesScreen() {
                 backSide={
                   <View style={styles.backFace}>
                     <CbrioHeart size={96} color={brand.sand} />
-                    <Text style={styles.backTitle}>CARTÃO DE MEMBRO</Text>
+                    <Text style={styles.backTitle}>{t("CARTÃO DE MEMBRO")}</Text>
                     <Text style={styles.backNome} numberOfLines={1}>
-                      {nome ?? "Membro"}
+                      {nome ?? t("Membro")}
                     </Text>
                     <Text style={styles.backId}>{cartaoId(membroId)}</Text>
                   </View>
                 }
               />
             </View>
-            <Text style={styles.hint}>Toque no cartão para virar</Text>
+            <Text style={styles.hint}>{t("Toque no cartão para virar")}</Text>
 
             <AddToWalletButton onPress={addWallet} loading={walletLoading} />
             {erro && <Text style={styles.erro}>{erro}</Text>}

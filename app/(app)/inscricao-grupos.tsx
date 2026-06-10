@@ -5,6 +5,7 @@ import { FormScaffold } from "@/components/inscricoes/FormScaffold";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
+import { useT } from "@/lib/i18n";
 import { criarInscricao } from "@/lib/inscricoes";
 import { supabase } from "@/lib/supabase";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -16,6 +17,7 @@ export default function InscricaoGruposScreen() {
   const { membro, loading } = useMembro();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const t = useT();
 
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [grupoId, setGrupoId] = useState<string | null>(null);
@@ -47,11 +49,11 @@ export default function InscricaoGruposScreen() {
   async function enviar() {
     setError(null);
     if (!grupoId) {
-      setError("Escolha um grupo.");
+      setError(t("Escolha um grupo."));
       return;
     }
     if (!nome || !telefone) {
-      setError("Preencha nome e telefone.");
+      setError(t("Preencha nome e telefone."));
       return;
     }
     setEnviando(true);
@@ -71,7 +73,7 @@ export default function InscricaoGruposScreen() {
       );
       setEnviado(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível enviar.");
+      setError(e instanceof Error ? e.message : t("Não foi possível enviar."));
     } finally {
       setEnviando(false);
     }
@@ -79,19 +81,19 @@ export default function InscricaoGruposScreen() {
 
   return (
     <FormScaffold
-      title="Grupos"
-      subtitle="Escolha um grupo para participar."
+      title={t("Grupos")}
+      subtitle={t("Escolha um grupo para participar.")}
       icon="people"
-      submitLabel="Quero participar"
+      submitLabel={t("Quero participar")}
       onSubmit={enviar}
       submitting={enviando || loading}
       enviado={enviado}
       error={error}
     >
-      <Text style={styles.label}>Grupo</Text>
+      <Text style={styles.label}>{t("Grupo")}</Text>
       <View style={styles.list}>
         {grupos.length === 0 ? (
-          <Text style={styles.empty}>Nenhum grupo disponível no momento.</Text>
+          <Text style={styles.empty}>{t("Nenhum grupo disponível no momento.")}</Text>
         ) : (
           grupos.map((g) => {
             const active = grupoId === g.id;
@@ -111,8 +113,8 @@ export default function InscricaoGruposScreen() {
         )}
       </View>
 
-      <Input label="Seu nome" value={nome} onChangeText={setNome} autoCapitalize="words" />
-      <Input label="Telefone" value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="+55 21 99999-9999" />
+      <Input label={t("Seu nome")} value={nome} onChangeText={setNome} autoCapitalize="words" />
+      <Input label={t("Telefone")} value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="+55 21 99999-9999" />
     </FormScaffold>
   );
 }
