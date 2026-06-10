@@ -92,7 +92,7 @@ constants/
 
 | Status | Módulo           | Descrição                                                        |
 | :----: | ---------------- | ---------------------------------------------------------------- |
-|   ✅   | **Autenticação** | Login/cadastro e-mail/senha, Google, Apple, "lembrar de mim", recuperação de senha (SMS pronto, desligado até ter remetente BR) |
+|   ✅   | **Autenticação** | Login/cadastro e-mail/senha, Google, Apple, "lembrar de mim", recuperação de senha (SMS pronto, desligado até ter remetente BR). **Desbloqueio por Face ID/Touch ID** (`lib/biometria.ts` + `components/auth/BiometriaLock.tsx`): trava 1x por abertura quando há sessão salva e a opção está ligada em Configurações → Segurança. |
 |   ✅   | **Inscrições**   | Todos os formulários vão via `POST https://cbrio.org/api/app/inscricoes` (helper em `lib/api.ts`, fachada em `lib/inscricoes.ts`). Voluntariado puxa áreas dinâmicas de `GET /public/voluntariado/form-opcoes` (até 3 áreas, com Kids/Bridge exigindo CPF + nome da mãe). Grupos usa o mesmo endpoint com `tipo:"grupos"`. |
 |   🚧   | **Voluntariado** | Aba self-service: ver/confirmar **escalas** (`mem_escalas`) ✅. **Push** ao ser escalado: `lib/push.ts` salva token em `app_push_tokens`; Edge Function `supabase/functions/notify-escala` dispara (precisa EAS projectId + device físico + webhook). |
 |   ✅   | **Notificações** | `app_notificacoes` (histórico in-app), helper `supabase/functions/_shared/notify.ts`, tela `notificacoes.tsx` com badge e marca-como-lida, `lib/notifTap.ts` roteia o tap pra tela certa. Functions já deployadas (`notify-escala`, `notify-cuidado-sos`, `notify-grupo-pedido`). **Falta:** EAS projectId + Database Webhooks no dashboard. |
@@ -171,6 +171,18 @@ Métodos em `contexts/AuthContext.tsx`:
 "Lembrar de mim": `lib/supabase.ts` usa um **storage híbrido** — quando ligado,
 a sessão é gravada no `AsyncStorage` (persiste após fechar o app); quando
 desligado, fica só em memória (some ao reiniciar o app).
+
+**Desbloqueio por biometria (Face ID / Touch ID):** `expo-local-authentication`.
+`lib/biometria.ts` expõe `biometriaSuportada`, `rotuloBiometria`,
+`autenticarBiometria`, e a preferência `biometriaAtiva`/`definirBiometriaAtiva`
+(flag em AsyncStorage `cbrio:biometria_unlock`). O gate fica no `RootNavigator`
+(`app/_layout.tsx`): se há sessão salva + opção ligada, renderiza
+`BiometriaLock` **uma vez por abertura do app** (não a cada background — é
+desbloqueio rápido no lugar da senha, não trava de privacidade). A opção é
+ligada em **Configurações → Segurança** (só aparece se o aparelho tem
+biometria cadastrada; pede a biometria pra confirmar antes de ativar). A flag
+é limpa no `signOut` (cada conta reativa). `NSFaceIDUsageDescription` no
+`app.json`. A sessão em si NÃO passa pela biometria — ela só é o porteiro.
 
 ### ⚠️ Configuração do Supabase
 

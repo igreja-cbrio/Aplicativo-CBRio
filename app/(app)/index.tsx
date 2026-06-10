@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/anim/Skeleton";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenBackground } from "@/components/ui/ScreenBackground";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
@@ -169,9 +170,9 @@ export default function InicioScreen() {
               style={styles.shortcut}
               onPress={() => router.navigate(a.href)}
             >
-              <View style={styles.shortcutIcon}>
+              <GlassCard style={styles.shortcutIcon}>
                 <Ionicons name={a.icon} size={22} color={colors.brandMid} />
-              </View>
+              </GlassCard>
               <Text style={styles.shortcutLabel} numberOfLines={2}>{a.label}</Text>
             </AnimatedShortcut>
           ))}
@@ -251,9 +252,6 @@ const makeStyles = (colors: Palette) =>
       width: 60,
       height: 60,
       borderRadius: radius.md,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
       alignItems: "center",
       justifyContent: "center",
       alignSelf: "center",
