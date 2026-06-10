@@ -66,10 +66,10 @@ export default function InicioScreen() {
   const [carregando, setCarregando] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const carregar = useCallback(async () => {
+  const carregar = useCallback(async (forcar = false) => {
     const [d, c] = await Promise.all([
-      destaquesAtivos().catch(() => []),
-      proximosCultos(7).catch(() => []),
+      destaquesAtivos(forcar).catch(() => []),
+      proximosCultos(7, forcar).catch(() => []),
     ]);
     setDestaques(d);
     setCultos(c);
@@ -82,7 +82,7 @@ export default function InicioScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await carregar();
+    await carregar(true); // pull-to-refresh ignora o cache
     setRefreshing(false);
   }, [carregar]);
   const nome = primeiroNome(

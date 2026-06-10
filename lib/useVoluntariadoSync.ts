@@ -86,13 +86,8 @@ export function useVoluntariadoSync(membroId: string | null | undefined) {
     return () => sub.remove();
   }, [recarregar]);
 
-  // Polling leve
-  useEffect(() => {
-    const t = setInterval(() => {
-      if (ativo.current) recarregar();
-    }, 30000);
-    return () => clearInterval(t);
-  }, [recarregar]);
+  // (Sem polling: o realtime abaixo já cobre mudanças em vol_inscricoes;
+  //  o setInterval de 30s era redundante e gerava carga no Supabase.)
 
   // Realtime — Postgres Changes em vol_inscricoes filtrado pelo membro
   useEffect(() => {

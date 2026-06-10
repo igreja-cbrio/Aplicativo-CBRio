@@ -16,6 +16,7 @@ import {
   setRememberSession,
   REMEMBER_PREF_KEY,
 } from "@/lib/supabase";
+import { limparCache } from "@/lib/cache";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -197,6 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       async signOut() {
         setPreview(false);
+        await limparCache(); // descarta cache local (destaques/cultos) da sessão
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
       },

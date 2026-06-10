@@ -107,13 +107,46 @@ constants/
   `card[...]`). O botão é o **oficial do sistema** (`PKPaymentButton` tipo
   donate) via view nativa do módulo (`ApplePayButton` em
   `modules/apple-pay/src/ApplePayButton.tsx`) — exigência das HIG; fallback
-  custom só pra binário antigo/dev client.
+  custom só pra binário antigo/dev client. ⚠️ O evento da view nativa se chama
+  `onApplePress` (NÃO `onPress`: colidiria com o `topPress` core do RN e
+  derruba a tela com "Event cannot be both direct and bubbling").
+- **Apple Wallet (cartão):** `addPass`/`canAddPasses` também vivem no módulo
+  `apple-pay` (PKAddPassesViewController). Substituímos a lib
+  `react-native-wallet-pass` (de 2021), que QUEBRA na nova arquitetura do RN
+  (constantes não bridgeadas → `PassKit.AddPassButtonStyle` undefined) e era a
+  causa do crash da tela de cartões. O botão "Add to Apple Wallet"
+  (`components/cartao/AddToWalletButton.tsx`) é estilizado conforme a marca,
+  não usa mais view nativa de terceiro.
 - **Confirmação de doação:** `components/generosidade/SucessoDoacao.tsx`
   (modal com confete + haptic de sucesso) — Alert de sistema só pra erro.
 - **⚠️ .gitignore:** os padrões nativos são ancorados na raiz (`/ios/`,
   `/android/`). NUNCA voltar pra `ios/`/`android/` sem âncora — isso já
   excluiu `modules/apple-pay/ios|android` do upload do EAS e os builds 1–9
   saíram sem o módulo nativo do Apple Pay.
+
+## Performance / carga no Supabase
+
+Otimizações pra aguentar picos (muita gente abrindo no culto). Tudo no app:
+
+- **Dados do membro = contexto global.** `contexts/MembroContext.tsx`
+  (`MembroProvider` montado em `app/(app)/_layout.tsx`) carrega
+  profiles + mem_membros (+ mem_voluntarios) **uma vez por sessão** e
+  compartilha. Antes, `useMembro` refazia tudo ao focar cada uma das ~12
+  telas. `lib/useMembro.ts` virou só re-export do contexto (interface
+  intacta: `{ membro, loading, reload }`). `reload()` é chamado nos pontos de
+  mutação (perfil: salvar + upload de foto + `app_salvar_membro`). Recarrega
+  ao voltar do background se passou > 5 min. Limpa na troca de usuário.
+- **Polling 120s + ciente de foco.** Badge de notificações
+  (`useNotificacoesNaoLidas`) e NEXT (`useNextSync`) usam 120s (era 30s) e
+  **pausam em background** (AppState), retomando + recarregando ao voltar pra
+  `active`. Voluntariado (`useVoluntariadoSync`) **não faz mais polling** — o
+  canal realtime de `vol_inscricoes` já cobre; mantém focus + foreground +
+  realtime.
+- **Cache local da Home.** `lib/cache.ts` (`cacheSWR`, AsyncStorage + TTL,
+  stale-while-revalidate). `destaquesAtivos()` e `proximosCultos()` (iguais
+  entre usuários) servem do cache na hora e revalidam em background; TTL 10
+  min; offline serve stale; pull-to-refresh passa `forcar` e ignora o cache.
+  `limparCache()` roda no signOut.
 
 ## Módulo 1 — Autenticação (detalhes)
 

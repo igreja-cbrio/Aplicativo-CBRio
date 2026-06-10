@@ -3,7 +3,7 @@ import { AppState } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { getNextMe, type NextMe } from "./api";
 
-/** Mantém a aba NEXT sincronizada: refetch ao focar, foreground e a cada 30s. */
+/** Mantém a aba NEXT sincronizada: refetch ao focar, foreground e a cada 120s. */
 export function useNextSync() {
   const [me, setMe] = useState<NextMe | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,10 +41,11 @@ export function useNextSync() {
     return () => sub.remove();
   }, [recarregar]);
 
+  // Polling leve (NEXT não tem realtime). 120s pra reduzir carga no Supabase.
   useEffect(() => {
     const t = setInterval(() => {
       if (ativo.current) recarregar();
-    }, 30000);
+    }, 120000);
     return () => clearInterval(t);
   }, [recarregar]);
 

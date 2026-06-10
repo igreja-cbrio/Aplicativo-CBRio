@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Dock, type DockItem } from "@/components/ui/Dock";
+import { MembroProvider } from "@/contexts/MembroContext";
 
 const META: Record<string, { label: string; icon: DockItem["icon"]; iconActive: DockItem["icon"] }> = {
   index: { label: "Home", icon: "home-outline", iconActive: "home" },
@@ -40,10 +41,11 @@ function DockTabBar({ state, navigation }: BottomTabBarProps) {
 
 export default function AppLayout() {
   return (
-    <Tabs
-      tabBar={(props) => <DockTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
-    >
+    <MembroProvider>
+      <Tabs
+        tabBar={(props) => <DockTabBar {...props} />}
+        screenOptions={{ headerShown: false }}
+      >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="cuidados" />
       <Tabs.Screen name="voluntariado" />
@@ -57,6 +59,7 @@ export default function AppLayout() {
       <Tabs.Screen name="inscricao-next" options={{ href: null }} />
       <Tabs.Screen name="grupos" options={{ href: null }} />
       <Tabs.Screen name="grupo-detalhe" options={{ href: null }} />
-    </Tabs>
+      </Tabs>
+    </MembroProvider>
   );
 }

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AppState } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { supabase } from "./supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -71,10 +72,18 @@ export function useNotificacoes() {
   return { itens, loading, carregar, marcarLida, marcarTodasLidas };
 }
 
-/** Hook leve só pra contagem de não-lidas (pra badge do sino). */
-export function useNotificacoesNaoLidas(intervaloMs = 30000) {
+/**
+ * Hook leve só pra contagem de não-lidas (pra badge do sino).
+ *
+ * Polling ciente de foco: roda a cada `intervaloMs` (120s por padrão)
+ * apenas com o app em foreground. Em background/inactive o timer é
+ * pausado; ao voltar pra `active`, recarrega na hora e religa o timer.
+ * Reduz consultas ociosas no Supabase (ex.: app aberto em segundo plano).
+ */
+export function useNotificacoesNaoLidas(intervaloMs = 120000) {
   const { user } = useAuth();
   const [count, setCount] = useState(0);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const carregar = useCallback(async () => {
     if (!user?.id) {
@@ -90,9 +99,36 @@ export function useNotificacoesNaoLidas(intervaloMs = 30000) {
   }, [user?.id]);
 
   useEffect(() => {
-    carregar();
-    const t = setInterval(carregar, intervaloMs);
-    return () => clearInterval(t);
+    const parar = () => {
+      if (timer.current) {
+        clearInterval(timer.current);
+        timer.current = null;
+      }
+    };
+    const iniciar = () => {
+      parar();
+      timer.current = setInterval(carregar, intervaloMs);
+    };
+
+    // Estado inicial: só faz polling se o app já está em foreground.
+    if (AppState.currentState === "active") {
+      carregar();
+      iniciar();
+    }
+
+    const sub = AppState.addEventListener("change", (estado) => {
+      if (estado === "active") {
+        carregar();
+        iniciar();
+      } else {
+        parar();
+      }
+    });
+
+    return () => {
+      parar();
+      sub.remove();
+    };
   }, [carregar, intervaloMs]);
 
   return { count, recarregar: carregar };

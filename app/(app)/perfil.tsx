@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/Input";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
+import { useMembro } from "@/lib/useMembro";
 import { supabase } from "@/lib/supabase";
 import {
   dateBRToISO,
@@ -39,6 +40,7 @@ function isoToBR(iso?: string | null) {
 
 export default function PerfilScreen() {
   const { user } = useAuth();
+  const { reload: reloadMembro } = useMembro();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
@@ -130,6 +132,7 @@ export default function PerfilScreen() {
       const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
       await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id);
       setAvatarUrl(publicUrl);
+      reloadMembro(); // atualiza o avatar compartilhado (Home, Menu, etc.)
       setMsg({ type: "ok", text: "Foto de perfil atualizada." });
     } catch (e) {
       setMsg({
@@ -210,6 +213,7 @@ export default function PerfilScreen() {
         }
       }
 
+      reloadMembro(); // propaga nome/CPF/telefone/vínculo pras outras telas
       setMsg({ type: "ok", text: "Perfil salvo e vinculado ao seu cadastro." });
       if (emailAviso) {
         Alert.alert(

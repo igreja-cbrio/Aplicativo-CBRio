@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { cacheSWR } from "./cache";
 
 export type CultoUpcoming = {
   id: string;
@@ -10,13 +11,12 @@ export type CultoUpcoming = {
   has_kids: boolean | null;
 };
 
-/** Cultos a partir de hoje (até 7 dias por padrão), ordenados. */
-export async function proximosCultos(diasFrente = 7): Promise<CultoUpcoming[]> {
+async function buscarProximosCultos(diasFrente: number): Promise<CultoUpcoming[]> {
   const hoje = new Date();
   const limite = new Date(hoje);
   limite.setDate(limite.getDate() + diasFrente);
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("cultos")
     .select("id, nome, data, hora, vol_service_types(color, has_online_stream, has_kids)")
     .gte("data", fmt(hoje))
@@ -24,6 +24,7 @@ export async function proximosCultos(diasFrente = 7): Promise<CultoUpcoming[]> {
     .is("deleted_at", null)
     .order("data", { ascending: true })
     .order("hora", { ascending: true });
+  if (error) throw error;
   type Row = {
     id: string;
     nome: string | null;
@@ -46,6 +47,24 @@ export async function proximosCultos(diasFrente = 7): Promise<CultoUpcoming[]> {
       has_kids: st?.has_kids ?? null,
     };
   });
+}
+
+/**
+ * Cultos a partir de hoje (até 7 dias por padrão), ordenados. Iguais
+ * entre usuários -> cache local (SWR, TTL 10 min). A chave inclui a data
+ * de hoje, então o cache vira sozinho de um dia pro outro. `forcar`
+ * ignora o cache (pull-to-refresh).
+ */
+export async function proximosCultos(
+  diasFrente = 7,
+  forcar = false
+): Promise<CultoUpcoming[]> {
+  const hojeKey = new Date().toISOString().slice(0, 10);
+  return cacheSWR(
+    `cultos:${diasFrente}:${hojeKey}`,
+    () => buscarProximosCultos(diasFrente),
+    { forcar }
+  );
 }
 
 const DOW = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
