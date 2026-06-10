@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -30,6 +31,11 @@ import {
   definirBiometriaAtiva,
   rotuloBiometria,
 } from "@/lib/biometria";
+import {
+  getMetodoPagamentoPadrao,
+  setMetodoPagamentoPadrao,
+  type MetodoPagamento,
+} from "@/lib/preferenciaPagamento";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const TEMA_OPCOES: { key: ThemePreference; label: string; icon: React.ComponentProps<typeof Ionicons>["name"] }[] = [
@@ -45,10 +51,14 @@ const FONTE_OPCOES: { key: FontScale; label: string }[] = [
   { key: "xl", label: "Muito grande" },
 ];
 
-const PAGAMENTO_OPCOES = [
+const PAGAMENTO_OPCOES: {
+  key: MetodoPagamento;
+  label: string;
+  iosOnly?: boolean;
+}[] = [
   { key: "pix", label: "PIX" },
-  { key: "credito", label: "Cartão de crédito (em breve)", disabled: true },
-  { key: "debito", label: "Cartão de débito (em breve)", disabled: true },
+  { key: "card", label: "Cartão de crédito" },
+  { key: "apple_pay", label: "Apple Pay", iosOnly: true },
 ];
 
 const MOTIVOS_EXCLUSAO = [
@@ -66,7 +76,16 @@ export default function ConfiguracoesScreen() {
   const router = useRouter();
 
   const { lang, setLang } = useLang();
-  const [pagamento, setPagamento] = useState("pix");
+  const [pagamento, setPagamento] = useState<MetodoPagamento>("pix");
+
+  useEffect(() => {
+    getMetodoPagamentoPadrao().then(setPagamento);
+  }, []);
+
+  function escolherPagamento(m: MetodoPagamento) {
+    setPagamento(m);
+    setMetodoPagamentoPadrao(m);
+  }
   const [notifAtivas, setNotifAtivas] = useState<boolean | null>(null);
 
   // Desbloqueio por biometria (Face ID / Touch ID)
@@ -252,15 +271,16 @@ export default function ConfiguracoesScreen() {
         {/* PAGAMENTO */}
         <Section title="Forma de pagamento" colors={colors} styles={styles}>
           <Text style={styles.hint}>
-            Usado para a Generosidade dentro do app (em breve).
+            Método aberto por padrão na tela de Generosidade.
           </Text>
-          {PAGAMENTO_OPCOES.map((o) => (
+          {PAGAMENTO_OPCOES.filter(
+            (o) => !o.iosOnly || Platform.OS === "ios"
+          ).map((o) => (
             <RadioRow
               key={o.key}
               label={o.label}
               checked={pagamento === o.key}
-              disabled={o.disabled}
-              onPress={() => !o.disabled && setPagamento(o.key)}
+              onPress={() => escolherPagamento(o.key)}
               colors={colors}
               styles={styles}
             />

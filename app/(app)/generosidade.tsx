@@ -28,6 +28,7 @@ import {
 import { applePayDisponivel, abrirApplePay, confirmarApplePay } from "@/lib/applePay";
 import { ApplePayButton, applePayButtonNativo } from "@/modules/apple-pay";
 import { criarCheckoutSession } from "@/lib/stripeCheckout";
+import { getMetodoPagamentoPadrao } from "@/lib/preferenciaPagamento";
 import { CheckoutWebView } from "@/components/generosidade/CheckoutWebView";
 import { SucessoDoacao } from "@/components/generosidade/SucessoDoacao";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -55,6 +56,14 @@ export default function GenerosidadeScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [metodo, setMetodo] = useState<Metodo>("pix");
+
+  // Abre no método preferido do usuário (Configurações → Forma de pagamento).
+  useEffect(() => {
+    getMetodoPagamentoPadrao().then((m) => {
+      if (m === "apple_pay" && Platform.OS !== "ios") return;
+      setMetodo(m);
+    });
+  }, []);
   const [categoria, setCategoria] = useState<Categoria>("dizimo");
   const [campanhaTxt, setCampanhaTxt] = useState("");
   const [valor, setValor] = useState<number>(50 * 100);
