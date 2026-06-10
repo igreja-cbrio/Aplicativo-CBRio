@@ -30,6 +30,7 @@ import { ApplePayButton, applePayButtonNativo } from "@/modules/apple-pay";
 import { criarCheckoutSession } from "@/lib/stripeCheckout";
 import { CheckoutWebView } from "@/components/generosidade/CheckoutWebView";
 import { SucessoDoacao } from "@/components/generosidade/SucessoDoacao";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { BRAND_FONT } from "@/lib/fonts";
 
@@ -99,13 +100,13 @@ export default function GenerosidadeScreen() {
           sustentar a obra da CBRio.
         </Text>
 
-        <View style={styles.tabs}>
+        <GlassCard style={styles.tabs}>
           <MetodoTab atual={metodo} value="pix" label="PIX" icon="qr-code" onPress={setMetodo} colors={colors} styles={styles} />
           <MetodoTab atual={metodo} value="card" label="Cartão" icon="card" onPress={setMetodo} colors={colors} styles={styles} />
           {Platform.OS === "ios" && (
             <MetodoTab atual={metodo} value="apple_pay" label="Apple Pay" icon="logo-apple" onPress={setMetodo} colors={colors} styles={styles} />
           )}
-        </View>
+        </GlassCard>
 
         <View style={styles.box}>
           <Text style={styles.boxTitulo}>Categoria</Text>
@@ -486,10 +487,7 @@ const makeStyles = (colors: Palette) =>
     tabs: {
       flexDirection: "row",
       gap: spacing.xs,
-      backgroundColor: colors.surface,
       borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
       padding: spacing.xs,
     },
     tab: {

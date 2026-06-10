@@ -14,6 +14,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
@@ -170,7 +171,7 @@ export default function CuidadosScreen() {
           </View>
 
           {/* Pedido de oração */}
-          <View style={styles.card}>
+          <GlassCard style={styles.card}>
             <Text style={styles.cardTitle}>Pedido de oração</Text>
             <TextInput
               style={styles.textarea}
@@ -182,10 +183,10 @@ export default function CuidadosScreen() {
             />
             {msg && <Text style={styles.err}>{msg}</Text>}
             <Button title="Enviar pedido" onPress={enviarOracao} loading={enviandoOracao} />
-          </View>
+          </GlassCard>
 
           {/* Aconselhamento */}
-          <View style={styles.card}>
+          <GlassCard style={styles.card}>
             <Text style={styles.cardTitle}>Conversar com um pastor</Text>
             <Text style={styles.cardText}>
               Quer um aconselhamento ou uma conversa? Um pastor ou líder entra em
@@ -197,7 +198,7 @@ export default function CuidadosScreen() {
               onPress={pedirAconselhamento}
               loading={enviandoAcons}
             />
-          </View>
+          </GlassCard>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -251,10 +252,7 @@ const makeStyles = (colors: Palette) =>
       marginTop: spacing.xs,
     },
     card: {
-      backgroundColor: colors.surface,
       borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
       padding: spacing.lg,
       gap: spacing.sm,
     },

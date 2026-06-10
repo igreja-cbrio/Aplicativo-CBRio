@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
@@ -272,14 +273,16 @@ export default function PerfilScreen() {
             <Text style={styles.avatarHint}>Toque para trocar a foto</Text>
           </View>
 
-          <Pressable
-            style={styles.cartoesRow}
-            onPress={() => router.navigate("/cartoes")}
-          >
-            <Ionicons name="card-outline" size={22} color={colors.brandMid} />
-            <Text style={styles.cartoesText}>Meus cartões</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-          </Pressable>
+          <GlassCard style={styles.cartoesCard}>
+            <Pressable
+              style={styles.cartoesRow}
+              onPress={() => router.navigate("/cartoes")}
+            >
+              <Ionicons name="card-outline" size={22} color={colors.brandMid} />
+              <Text style={styles.cartoesText}>Meus cartões</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </Pressable>
+          </GlassCard>
 
           <View style={styles.form}>
             <Input
@@ -380,14 +383,11 @@ const makeStyles = (colors: Palette) =>
       borderColor: colors.background,
     },
     avatarHint: { color: colors.textMuted, fontSize: font.size.sm },
+    cartoesCard: { borderRadius: radius.lg },
     cartoesRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: spacing.md,
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
     },

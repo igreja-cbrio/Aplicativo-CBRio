@@ -13,8 +13,14 @@ módulo**. Roda em **Android e iOS**.
 
 - **Expo SDK 54** + **Expo Router** (rotas tipadas)
 - **React Native 0.81** / React 19 / **TypeScript** (strict)
-- **Liquid Glass (iOS 26)** via `expo-glass-effect` (`GlassView`) no Dock; fallback
-  `expo-blur` em iOS antigo/Android (`isLiquidGlassAvailable()`).
+- **Liquid Glass (iOS 26/27)** via `expo-glass-effect` (`GlassView`), com fallback
+  `expo-blur` em iOS antigo/Android (`isLiquidGlassAvailable()`). Componente
+  `components/ui/GlassCard.tsx` é o veículo padrão. Adotado no Dock e nas
+  superfícies proeminentes/controles das telas principais: atalhos da Home,
+  cards de Cuidados, seletor de método da Generosidade, lista do Menu, card de
+  cartões do Perfil. **Por HIG**, conteúdo denso (instruções PIX, cards de
+  status do Voluntariado) e alertas (SOS) ficam SÓLIDOS pra legibilidade — não
+  espalhar glass em tudo.
 - **Supabase** para autenticação (e futuramente dados)
 - **Estilização:** `StyleSheet` nativo (decisão: melhor performance/confiabilidade
   no celular; sem Tailwind/NativeWind). **Tema claro/escuro** com paletas em

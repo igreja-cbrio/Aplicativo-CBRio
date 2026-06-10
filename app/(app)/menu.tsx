@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import Constants from "expo-constants";
 import { useAuth } from "@/contexts/AuthContext";
@@ -61,7 +62,7 @@ export default function MenuScreen() {
         </View>
 
         {/* Opções */}
-        <View style={styles.list}>
+        <GlassCard style={styles.list}>
           {options.map((opt, i) => (
             <Pressable
               key={opt.label}
@@ -77,7 +78,7 @@ export default function MenuScreen() {
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </Pressable>
           ))}
-        </View>
+        </GlassCard>
 
         <Button title="Sair" variant="ghost" onPress={() => signOut()} />
 
@@ -116,10 +117,7 @@ const makeStyles = (colors: Palette) =>
     name: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
     meta: { color: colors.textMuted, fontSize: font.size.sm },
     list: {
-      backgroundColor: colors.surface,
       borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
       overflow: "hidden",
     },
     row: {
