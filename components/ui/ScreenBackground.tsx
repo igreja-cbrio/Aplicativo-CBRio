@@ -11,10 +11,10 @@ export function ScreenBackground({ style }: { style?: ViewStyle }) {
   const { colors, mode } = useTheme();
   const stops =
     mode === "dark"
-      ? // teal escuro -> levemente mais frio embaixo
-        ["#0A1B22", "#0E2630", "#0B1F26"]
-      : // off-white -> tom de areia bem suave
-        ["#F8F6F1", "#F0E9DD", "#FBFAF7"];
+      ? // brilho teal no topo -> base escura da marca
+        ["#16404E", "#0E2833", "#0B1F26"]
+      : // azul claro da marca -> areia suave (gradiente perceptível, texto escuro ok)
+        ["#CDE2E6", "#E8F0EF", "#F6F3EC"];
   return (
     <View
       pointerEvents="none"
@@ -22,9 +22,9 @@ export function ScreenBackground({ style }: { style?: ViewStyle }) {
     >
       <LinearGradient
         colors={stops as [string, string, string]}
-        locations={[0, 0.55, 1]}
+        locations={[0, 0.45, 1]}
         start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
+        end={{ x: 0.35, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
     </View>
