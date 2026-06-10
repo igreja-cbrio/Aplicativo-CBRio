@@ -6,7 +6,9 @@ import PassKit
 /// na App Review. Tipo/estilo são imutáveis no PKPaymentButton, então
 /// o botão é recriado quando essas props mudam.
 class ApplePayButtonView: ExpoView {
-  let onPress = EventDispatcher()
+  // Nome único: "onPress" colidiria com o evento core do RN (topPress),
+  // disparando "Event cannot be both direct and bubbling".
+  let onApplePress = EventDispatcher()
 
   private var button: PKPaymentButton?
   private var buttonType: PKPaymentButtonType = .donate
@@ -54,7 +56,7 @@ class ApplePayButtonView: ExpoView {
   }
 
   @objc private func pressed() {
-    onPress()
+    onApplePress()
   }
 
   static func type(for name: String) -> PKPaymentButtonType {

@@ -1,7 +1,7 @@
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { Platform } from "react-native";
-import PassKit from "react-native-wallet-pass";
+import ApplePay from "../modules/apple-pay";
 
 // API do ERP CBRio (mesma app). O .pkpass é gerado on-demand e devolvido binário.
 // Usa o host canônico (www) direto: o apex cbrio.org responde 307 e o fetch do
@@ -63,11 +63,11 @@ async function abrirPkpass(resp: Response, nome: string) {
   // PKAddPassesViewController) a partir do passe em base64. Adicionar um passe
   // não exige entitlement — funciona até com Apple ID gratuito.
   if (Platform.OS === "ios") {
-    const podeAdicionar = await PassKit.canAddPasses();
+    const podeAdicionar = await ApplePay.canAddPasses();
     if (!podeAdicionar) {
       throw new Error("Este dispositivo não suporta a Apple Wallet.");
     }
-    await PassKit.addPass(b64);
+    await ApplePay.addPass(b64);
     return;
   }
 

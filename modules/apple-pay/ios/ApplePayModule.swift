@@ -20,7 +20,7 @@ public class ApplePayModule: Module {
     }
 
     View(ApplePayButtonView.self) {
-      Events("onPress")
+      Events("onApplePress")
 
       Prop("buttonType") { (view: ApplePayButtonView, type: String) in
         view.setButtonType(type)
@@ -49,6 +49,51 @@ public class ApplePayModule: Module {
         }
       }
     }
+
+    // MARK: - Apple Wallet (PKPass)
+
+    AsyncFunction("canAddPasses") { () -> Bool in
+      return PKAddPassesViewController.canAddPasses()
+    }
+
+    AsyncFunction("addPass") { (base64: String, promise: Promise) in
+      guard let data = Data(base64Encoded: base64) else {
+        promise.reject("WALLET_INVALID", "Passe inválido (base64).")
+        return
+      }
+      DispatchQueue.main.async {
+        do {
+          let pass = try PKPass(data: data)
+          guard let vc = PKAddPassesViewController(pass: pass) else {
+            promise.reject("WALLET_ERROR", "Não foi possível abrir a Apple Wallet.")
+            return
+          }
+          self.passDelegate = AddPassesDelegate(promise: promise) { [weak self] in
+            self?.passDelegate = nil
+          }
+          vc.delegate = self.passDelegate
+          let root = Self.topViewController()
+          root?.present(vc, animated: true)
+        } catch {
+          promise.reject("WALLET_ERROR", error.localizedDescription)
+        }
+      }
+    }
+  }
+
+  private var passDelegate: AddPassesDelegate?
+
+  static func topViewController() -> UIViewController? {
+    let scenes = UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+    let keyWindow = scenes
+      .flatMap { $0.windows }
+      .first { $0.isKeyWindow }
+    var top = keyWindow?.rootViewController
+    while let presented = top?.presentedViewController {
+      top = presented
+    }
+    return top
   }
 
   static func network(for name: String) -> PKPaymentNetwork? {
@@ -159,6 +204,29 @@ final class ApplePayPresenter: NSObject, PKPaymentAuthorizationControllerDelegat
     case .prepaid: return "prepaid"
     case .store: return "store"
     default: return "unknown"
+    }
+  }
+}
+
+// MARK: - Add Passes delegate
+
+final class AddPassesDelegate: NSObject, PKAddPassesViewControllerDelegate {
+  private let promise: Promise
+  private let onDone: () -> Void
+  private var resolved = false
+
+  init(promise: Promise, onDone: @escaping () -> Void) {
+    self.promise = promise
+    self.onDone = onDone
+    super.init()
+  }
+
+  func addPassesViewControllerDidFinish(_ controller: PKAddPassesViewController) {
+    controller.dismiss(animated: true) { [weak self] in
+      guard let self, !self.resolved else { return }
+      self.resolved = true
+      self.promise.resolve(nil)
+      self.onDone()
     }
   }
 }

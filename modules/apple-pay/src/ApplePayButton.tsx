@@ -1,15 +1,28 @@
 import { type ComponentType } from "react";
 import { Platform, type StyleProp, type ViewStyle } from "react-native";
 
+type ButtonType = "donate" | "buy" | "checkout" | "continue" | "inStore" | "plain";
+type ButtonStyle = "black" | "white" | "whiteOutline" | "automatic";
+
+// Props da view nativa. O evento se chama `onApplePress` (NÃO `onPress`:
+// colidiria com o `topPress` core do RN).
 type NativeProps = {
-  buttonType?: "donate" | "buy" | "checkout" | "continue" | "inStore" | "plain";
-  buttonStyle?: "black" | "white" | "whiteOutline" | "automatic";
+  buttonType?: ButtonType;
+  buttonStyle?: ButtonStyle;
   cornerRadius?: number;
-  onPress?: () => void;
+  onApplePress?: () => void;
   style?: StyleProp<ViewStyle>;
 };
 
-export type ApplePayButtonProps = NativeProps & { disabled?: boolean };
+// API pública do componente — expõe o `onPress` convencional.
+export type ApplePayButtonProps = {
+  buttonType?: ButtonType;
+  buttonStyle?: ButtonStyle;
+  cornerRadius?: number;
+  onPress?: () => void;
+  disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
+};
 
 /**
  * Botão oficial do Apple Pay (PKPaymentButton) — visual desenhado pelo
@@ -44,7 +57,7 @@ export function ApplePayButton({
       buttonType={buttonType}
       buttonStyle={buttonStyle}
       cornerRadius={cornerRadius}
-      onPress={() => {
+      onApplePress={() => {
         if (!disabled) onPress?.();
       }}
       style={[{ height: 50 }, style, disabled ? { opacity: 0.5 } : null]}

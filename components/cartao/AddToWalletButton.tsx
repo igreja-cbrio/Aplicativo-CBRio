@@ -1,13 +1,11 @@
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import PassKit, { AddPassButton } from "react-native-wallet-pass";
 
 type Props = {
   onPress: () => void;
@@ -18,26 +16,17 @@ type Props = {
 /**
  * Botão "Add to Apple Wallet".
  *
- * No iOS usa o botão OFICIAL nativo da Apple (`PKAddPassButton`, via
- * react-native-wallet-pass) — arte oficial, localizada automaticamente e em
- * conformidade com as Human Interface Guidelines da Apple
- * (https://developer.apple.com/design/human-interface-guidelines/wallet),
- * sem recriar nem modificar a arte.
+ * Visual conforme a especificação de marca da Apple Wallet
+ * (https://developer.apple.com/design/human-interface-guidelines/wallet):
+ * fundo preto, cantos arredondados, logo da Apple + "Add to Apple Wallet"
+ * em inglês (a marca não é traduzida). Ao tocar, abre a folha nativa
+ * `PKAddPassesViewController` (via módulo `apple-pay`).
  *
- * Durante o carregamento (ou no Android, que não tem Apple Wallet) cai num
- * botão estilizado equivalente.
+ * Nota: não usamos `PKAddPassButton` nativo porque a lib legada que o
+ * expunha (`react-native-wallet-pass`) quebra na nova arquitetura do RN
+ * (constantes não bridgeadas) — era a causa do crash da tela de cartões.
  */
 export function AddToWalletButton({ onPress, loading, disabled }: Props) {
-  if (Platform.OS === "ios" && !loading) {
-    return (
-      <AddPassButton
-        addPassButtonStyle={PassKit.AddPassButtonStyle.black}
-        onPress={disabled ? () => {} : onPress}
-        style={styles.nativeButton}
-      />
-    );
-  }
-
   return (
     <Pressable
       accessibilityRole="button"
@@ -45,7 +34,7 @@ export function AddToWalletButton({ onPress, loading, disabled }: Props) {
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [
-        styles.fallback,
+        styles.button,
         (pressed || disabled || loading) && styles.pressed,
       ]}
     >
@@ -65,8 +54,7 @@ export function AddToWalletButton({ onPress, loading, disabled }: Props) {
 }
 
 const styles = StyleSheet.create({
-  nativeButton: { height: 52, alignSelf: "stretch" },
-  fallback: {
+  button: {
     backgroundColor: "#000000",
     borderRadius: 8,
     height: 52,
