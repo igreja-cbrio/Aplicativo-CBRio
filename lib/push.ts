@@ -15,6 +15,17 @@ import { supabase } from "./supabase";
  */
 export async function registerForPush(userId: string): Promise<string | null> {
   try {
+    // Android: canal "default" com o som elegante da marca (o som de push no
+    // Android é definido por canal, não pelo payload).
+    if (Platform.OS === "android") {
+      await Notifications.setNotificationChannelAsync("default", {
+        name: "CBRio",
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: "cbrio-chime.wav",
+        vibrationPattern: [0, 250, 250, 250],
+      });
+    }
+
     const { status: existing } = await Notifications.getPermissionsAsync();
     let status = existing;
     if (existing !== "granted") {

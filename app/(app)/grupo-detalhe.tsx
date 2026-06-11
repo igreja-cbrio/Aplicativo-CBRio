@@ -17,6 +17,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { supabase } from "@/lib/supabase";
 import { pedirEntrarGrupo } from "@/lib/grupos";
+import { getTemporadaGrupos } from "@/lib/temporadaGrupos";
 import { useAdminGrupo } from "@/lib/useAdminGrupo";
 import { useT } from "@/lib/i18n";
 import { diaHorario } from "./grupos";
@@ -38,7 +39,7 @@ type GrupoDetalhe = {
   foto_url: string | null;
 };
 
-type Estado = "carregando" | "participa" | "pendente" | "pode_pedir" | "sem_vinculo";
+type Estado = "carregando" | "participa" | "pendente" | "pode_pedir" | "sem_vinculo" | "fechada";
 
 export default function GrupoDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -91,7 +92,9 @@ export default function GrupoDetalheScreen() {
       setEstado("pendente");
       return;
     }
-    setEstado("pode_pedir");
+    // Pode pedir — mas só se a temporada de inscrição estiver aberta.
+    const { aberta } = await getTemporadaGrupos();
+    setEstado(aberta ? "pode_pedir" : "fechada");
   }, [id, membro?.membroId]);
 
   useEffect(() => {
@@ -196,6 +199,13 @@ export default function GrupoDetalheScreen() {
               <View style={{ gap: spacing.sm }}>
                 <Text style={styles.muted}>{t("Vincule seu perfil (CPF) para participar.")}</Text>
                 <Button title={t("Ir para o perfil")} onPress={() => router.navigate("/perfil")} />
+              </View>
+            ) : estado === "fechada" ? (
+              <View style={styles.statusOk}>
+                <Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} />
+                <Text style={styles.statusOkTxt}>
+                  {t("As inscrições de grupos estão fechadas. Avisaremos quando a temporada abrir.")}
+                </Text>
               </View>
             ) : (
               <Button title={t("Quero participar")} onPress={participar} loading={enviando || estado === "carregando"} />

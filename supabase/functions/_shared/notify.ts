@@ -86,7 +86,10 @@ export async function notificar(
 
   const messages = tokens.map((t) => ({
     to: t.token,
-    sound: payload.sound === null ? undefined : "default",
+    // som elegante da marca (bundlado via expo-notifications); Android usa o
+    // canal "default" configurado no app (lib/push.ts) com o mesmo som.
+    sound: payload.sound === null ? undefined : "cbrio-chime.wav",
+    channelId: "default",
     title: payload.titulo,
     body: payload.body,
     data: { tipo: payload.tipo, ...(payload.data ?? {}) },

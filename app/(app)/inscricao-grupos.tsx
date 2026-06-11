@@ -7,6 +7,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { useT } from "@/lib/i18n";
 import { criarInscricao } from "@/lib/inscricoes";
+import { getTemporadaGrupos } from "@/lib/temporadaGrupos";
 import { supabase } from "@/lib/supabase";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
@@ -26,8 +27,10 @@ export default function InscricaoGruposScreen() {
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  const [temporadaAberta, setTemporadaAberta] = useState<boolean | null>(null);
 
   useEffect(() => {
+    getTemporadaGrupos().then((t) => setTemporadaAberta(t.aberta));
     (async () => {
       const { data } = await supabase
         .from("mem_grupos")
@@ -48,6 +51,10 @@ export default function InscricaoGruposScreen() {
 
   async function enviar() {
     setError(null);
+    if (temporadaAberta === false) {
+      setError(t("As inscrições de grupos estão fechadas no momento."));
+      return;
+    }
     if (!grupoId) {
       setError(t("Escolha um grupo."));
       return;
@@ -88,6 +95,11 @@ export default function InscricaoGruposScreen() {
       onSubmit={enviar}
       submitting={enviando || loading}
       enviado={enviado}
+      bloqueadoTexto={
+        temporadaAberta === false
+          ? t("A temporada de inscrição em grupos ainda não abriu. Avisaremos por aqui quando começar. 💙")
+          : undefined
+      }
       error={error}
     >
       <Text style={styles.label}>{t("Grupo")}</Text>

@@ -45,7 +45,12 @@
     "plugins": [
       "expo-router",
       "expo-apple-authentication",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "sounds": ["./assets/sounds/cbrio-chime.wav"]
+        }
+      ],
       [
         "expo-image-picker",
         {

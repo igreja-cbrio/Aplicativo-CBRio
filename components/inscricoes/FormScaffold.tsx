@@ -25,6 +25,8 @@ type Props = {
   submitting?: boolean;
   enviado: boolean;
   enviadoTexto?: string;
+  /** Quando preenchido, mostra um aviso de "bloqueado" no lugar do formulário. */
+  bloqueadoTexto?: string;
   error?: string | null;
   children: React.ReactNode;
 };
@@ -38,6 +40,7 @@ export function FormScaffold({
   submitting,
   enviado,
   enviadoTexto,
+  bloqueadoTexto,
   error,
   children,
 }: Props) {
@@ -62,7 +65,14 @@ export function FormScaffold({
             <View style={{ width: 24 }} />
           </View>
 
-          {enviado ? (
+          {bloqueadoTexto ? (
+            <View style={styles.card}>
+              <Ionicons name="lock-closed-outline" size={40} color={colors.textMuted} />
+              <Text style={styles.okTitle}>{t("Inscrições fechadas")}</Text>
+              <Text style={styles.okText}>{bloqueadoTexto}</Text>
+              <Button title={t("Voltar")} variant="ghost" onPress={() => router.back()} />
+            </View>
+          ) : enviado ? (
             <View style={styles.card}>
               <Ionicons name="checkmark-circle" size={40} color={colors.success} />
               <Text style={styles.okTitle}>{t("Inscrição enviada!")}</Text>
