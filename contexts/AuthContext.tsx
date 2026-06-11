@@ -56,6 +56,33 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+function ehRateLimit(error: unknown): boolean {
+  const e = error as { status?: number; code?: string; message?: string } | null;
+  return (
+    e?.status === 429 ||
+    e?.code === "over_request_rate_limit" ||
+    /rate limit|too many requests/i.test(e?.message ?? "")
+  );
+}
+
+/**
+ * Login com retry + backoff em caso de 429 (rate limit do Auth) — comum
+ * quando muita gente entra ao mesmo tempo na mesma rede (ex.: WiFi da
+ * igreja no culto, todos atrás de um IP). Espera crescente e tenta de novo.
+ */
+async function signInComBackoff(email: string, password: string) {
+  const esperas = [1200, 2500, 4000]; // ms
+  for (let tent = 0; tent <= esperas.length; tent++) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error) return;
+    if (ehRateLimit(error) && tent < esperas.length) {
+      await new Promise((r) => setTimeout(r, esperas[tent]));
+      continue;
+    }
+    throw error;
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -95,11 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setRememberSession(remember);
         setRememberPref(remember);
         await AsyncStorage.setItem(REMEMBER_PREF_KEY, String(remember));
-        const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
-        if (error) throw error;
+        await signInComBackoff(email.trim(), password);
       },
       async signUp(email, password, profile) {
         // Cadastro por e-mail/senha (sem SMS). Dados do perfil vão nos

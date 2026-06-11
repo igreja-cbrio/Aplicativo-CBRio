@@ -167,6 +167,8 @@ function traduzErro(msg: string) {
     return "E-mail ou senha incorretos.";
   if (msg.includes("Email not confirmed"))
     return "Confirme sua conta antes de entrar.";
+  if (/rate limit|too many requests/i.test(msg))
+    return "Muitos acessos agora. Tente de novo em instantes.";
   return msg;
 }
 

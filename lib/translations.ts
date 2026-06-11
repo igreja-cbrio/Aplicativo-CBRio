@@ -46,6 +46,7 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Não foi possível entrar.": { en: "Couldn't sign in.", es: "No se pudo iniciar sesión." },
   "E-mail ou senha incorretos.": { en: "Incorrect email or password.", es: "Correo o contraseña incorrectos." },
   "Confirme sua conta antes de entrar.": { en: "Confirm your account before signing in.", es: "Confirma tu cuenta antes de iniciar sesión." },
+  "Muitos acessos agora. Tente de novo em instantes.": { en: "Too many sign-ins right now. Try again in a moment.", es: "Demasiados accesos ahora. Inténtalo de nuevo en un momento." },
   "Lembrar de mim": { en: "Remember me", es: "Recordarme" },
   "Esqueci a senha": { en: "Forgot password", es: "Olvidé mi contraseña" },
   "Entrar": { en: "Sign in", es: "Iniciar sesión" },
