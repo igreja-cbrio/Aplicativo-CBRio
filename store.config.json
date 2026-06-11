@@ -1,0 +1,89 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "info": {
+      "pt-BR": {
+        "title": "CBRio",
+        "subtitle": "Sua igreja, mais perto de você",
+        "privacyPolicyUrl": "https://www.cbrio.org/privacidade",
+        "supportUrl": "https://www.cbrio.org/ajuda",
+        "marketingUrl": "https://www.cbrio.org",
+        "keywords": [
+          "igreja",
+          "CBRio",
+          "cristão",
+          "evangélico",
+          "culto",
+          "batismo",
+          "grupos",
+          "devocional",
+          "comunidade",
+          "voluntariado"
+        ],
+        "promoText": "Acompanhe os cultos, faça seu check-in, peça oração, sirva como voluntário e contribua com a obra — tudo em um só lugar.",
+        "description": "O app oficial da CBRio (Comunidade Batista do Rio de Janeiro) coloca a sua igreja no seu bolso.\n\nCom o CBRio você pode:\n\n• Ver os próximos cultos, horários e o que tem pra cada dia (online, kids e mais)\n• Carregar seu cartão de membro com QR Code e adicioná-lo à Carteira da Apple\n• Pedir oração e falar com um pastor quando precisar de cuidado\n• Inscrever-se em batismo, grupos e no NEXT\n• Servir como voluntário e acompanhar suas escalas\n• Contribuir com dízimos e ofertas por PIX, cartão ou Apple Pay\n• Receber avisos da igreja e acompanhar suas notificações\n• Escolher o idioma (português, inglês ou espanhol) e tema claro/escuro\n\nFeito com carinho pra você viver a comunidade de perto, onde estiver.\n\n\"Empoderados por Deus para alcançar pessoas pra Jesus.\""
+      },
+      "en-US": {
+        "title": "CBRio",
+        "subtitle": "Your church, closer to you",
+        "privacyPolicyUrl": "https://www.cbrio.org/privacidade",
+        "supportUrl": "https://www.cbrio.org/ajuda",
+        "marketingUrl": "https://www.cbrio.org",
+        "keywords": [
+          "church",
+          "CBRio",
+          "christian",
+          "baptist",
+          "service",
+          "baptism",
+          "groups",
+          "devotional",
+          "community",
+          "volunteer"
+        ],
+        "promoText": "Follow services, check in, request prayer, serve as a volunteer, and give — all in one place.",
+        "description": "The official CBRio app (Comunidade Batista do Rio de Janeiro) puts your church in your pocket.\n\nWith CBRio you can:\n\n• See upcoming services, times, and what's on for each day (online, kids, and more)\n• Carry your member card with a QR Code and add it to Apple Wallet\n• Request prayer and talk to a pastor whenever you need care\n• Sign up for baptism, groups, and NEXT\n• Serve as a volunteer and track your schedules\n• Give tithes and offerings via PIX, card, or Apple Pay\n• Get church announcements and follow your notifications\n• Choose your language (Portuguese, English, or Spanish) and light/dark theme\n\nBuilt with care so you can live in community wherever you are.\n\n\"Empowered by God to reach people for Jesus.\""
+      },
+      "es-ES": {
+        "title": "CBRio",
+        "subtitle": "Tu iglesia, más cerca de ti",
+        "privacyPolicyUrl": "https://www.cbrio.org/privacidade",
+        "supportUrl": "https://www.cbrio.org/ajuda",
+        "marketingUrl": "https://www.cbrio.org",
+        "keywords": [
+          "iglesia",
+          "CBRio",
+          "cristiano",
+          "bautista",
+          "culto",
+          "bautismo",
+          "grupos",
+          "devocional",
+          "comunidad",
+          "voluntariado"
+        ],
+        "promoText": "Sigue los cultos, haz tu check-in, pide oración, sirve como voluntario y contribuye — todo en un solo lugar.",
+        "description": "La app oficial de CBRio (Comunidade Batista do Rio de Janeiro) pone tu iglesia en tu bolsillo.\n\nCon CBRio puedes:\n\n• Ver los próximos cultos, horarios y lo que hay para cada día (en línea, niños y más)\n• Llevar tu tarjeta de miembro con código QR y añadirla a la Cartera de Apple\n• Pedir oración y hablar con un pastor cuando necesites cuidado\n• Inscribirte en bautismo, grupos y NEXT\n• Servir como voluntario y seguir tus escalas\n• Contribuir con diezmos y ofrendas por PIX, tarjeta o Apple Pay\n• Recibir avisos de la iglesia y seguir tus notificaciones\n• Elegir el idioma (portugués, inglés o español) y tema claro/oscuro\n\nHecho con cariño para que vivas la comunidad dondequiera que estés.\n\n\"Empoderados por Dios para alcanzar personas para Jesús.\""
+      }
+    },
+    "categories": ["LIFESTYLE", "REFERENCE"],
+    "advisory": {
+      "alcoholTobaccoOrDrugUseOrReferences": "NONE",
+      "contests": "NONE",
+      "gamblingSimulated": "NONE",
+      "horrorOrFearThemes": "NONE",
+      "matureOrSuggestiveThemes": "NONE",
+      "medicalOrTreatmentInformation": "NONE",
+      "profanityOrCrudeHumor": "NONE",
+      "sexualContentGraphicAndNudity": "NONE",
+      "sexualContentOrNudity": "NONE",
+      "violenceCartoonOrFantasy": "NONE",
+      "violenceRealistic": "NONE",
+      "violenceRealisticProlongedGraphicOrSadistic": "NONE",
+      "gambling": false,
+      "unrestrictedWebAccess": false,
+      "kidsAgeBand": null,
+      "seventeenPlus": false
+    }
+  }
+}
