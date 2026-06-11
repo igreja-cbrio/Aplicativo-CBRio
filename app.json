@@ -13,7 +13,7 @@
       "backgroundColor": "#0B1F26"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "br.com.cbrio.app",
       "usesAppleSignIn": true,
       "infoPlist": {
