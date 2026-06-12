@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Animated, Dimensions, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -11,6 +11,7 @@ import { BRAND_FONT } from "@/lib/fonts";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 const CARD_W = Math.round((SCREEN_W - spacing.lg * 2) * 0.74);
+const DURACAO_CULTO_MIN = 120; // janela em que o culto conta como "ao vivo"
 
 type Grupo = {
   data: string;
@@ -56,15 +57,78 @@ function agrupar(cultos: CultoUpcoming[]): Grupo[] {
   return [...map.values()];
 }
 
+function inicioDoCulto(c: CultoUpcoming): number {
+  return new Date(`${c.data}T${c.hora}`).getTime();
+}
+
+type StatusHorario = "passado" | "ao_vivo" | "proximo" | "futuro";
+
+/** Classifica cada horário de HOJE em relação a agora. */
+function statusDosHorarios(itens: CultoUpcoming[], agora: number): Map<string, StatusHorario> {
+  const ordenados = itens.slice().sort((a, b) => a.hora.localeCompare(b.hora));
+  const out = new Map<string, StatusHorario>();
+  let proximoMarcado = false;
+  for (const c of ordenados) {
+    const ini = inicioDoCulto(c);
+    if (agora >= ini && agora < ini + DURACAO_CULTO_MIN * 60_000) {
+      out.set(c.id, "ao_vivo");
+    } else if (agora >= ini) {
+      out.set(c.id, "passado");
+    } else if (!proximoMarcado) {
+      out.set(c.id, "proximo");
+      proximoMarcado = true;
+    } else {
+      out.set(c.id, "futuro");
+    }
+  }
+  return out;
+}
+
+function contagem(t: ReturnType<typeof useT>, msAte: number): string {
+  const totalMin = Math.max(1, Math.round(msAte / 60_000));
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h >= 24) {
+    return ""; // muito longe — sem countdown
+  }
+  if (h > 0) return `${t("começa em")} ${h}h${m > 0 ? ` ${m}min` : ""}`;
+  return `${t("começa em")} ${m}min`;
+}
+
 export function ProximosCultos({ cultos }: { cultos: CultoUpcoming[] }) {
   const colors = useColors();
   const styles = makeStyles(colors);
   const router = useRouter();
   const t = useT();
 
+  // Relógio: re-renderiza a cada 30s pro countdown/AO VIVO ficarem vivos.
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setAgora(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   if (!cultos.length) return null;
 
   const grupos = agrupar(cultos);
+
+  // Herói: grupo de HOJE com culto ao vivo agora ou com o próximo horário
+  // ainda por vir. Os demais grupos seguem no scroll horizontal.
+  const hoje = new Date(agora);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const hojeIso = `${hoje.getFullYear()}-${pad(hoje.getMonth() + 1)}-${pad(hoje.getDate())}`;
+
+  let heroi: Grupo | null = null;
+  for (const g of grupos) {
+    if (g.data !== hojeIso) continue;
+    const st = statusDosHorarios(g.itens, agora);
+    const temVivoOuProximo = [...st.values()].some((s) => s === "ao_vivo" || s === "proximo");
+    if (temVivoOuProximo) {
+      heroi = g;
+      break;
+    }
+  }
+  const restantes = grupos.filter((g) => g !== heroi);
 
   return (
     <View style={{ gap: spacing.sm, marginHorizontal: -spacing.lg }}>
@@ -73,29 +137,174 @@ export function ProximosCultos({ cultos }: { cultos: CultoUpcoming[] }) {
         <Text style={styles.titulo}>{t("Próximos cultos")}</Text>
       </View>
 
-      <FlatList
-        data={grupos.slice(0, 8)}
-        keyExtractor={(g) => `${g.data}-${g.nomeBase}`}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        snapToInterval={CARD_W + spacing.sm}
-        decelerationRate="fast"
-        contentContainerStyle={{ paddingHorizontal: spacing.lg }}
-        ItemSeparatorComponent={() => <View style={{ width: spacing.sm }} />}
-        renderItem={({ item }) => <CultoCard grupo={item} router={router} colors={colors} styles={styles} t={t} />}
-      />
+      {heroi && (
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <HeroiHoje grupo={heroi} agora={agora} router={router} colors={colors} styles={styles} t={t} />
+        </View>
+      )}
+
+      {restantes.length > 0 && (
+        <FlatList
+          data={restantes.slice(0, 8)}
+          keyExtractor={(g) => `${g.data}-${g.nomeBase}`}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={CARD_W + spacing.sm}
+          decelerationRate="fast"
+          contentContainerStyle={{ paddingHorizontal: spacing.lg }}
+          ItemSeparatorComponent={() => <View style={{ width: spacing.sm }} />}
+          renderItem={({ item }) => (
+            <CultoCard grupo={item} agora={agora} hojeIso={hojeIso} router={router} colors={colors} styles={styles} t={t} />
+          )}
+        />
+      )}
     </View>
   );
 }
 
-function CultoCard({
+/** Pill de horário ciente do tempo: passado apagado, próximo em destaque. */
+function HoraPill({
+  culto,
+  status,
+  cor,
+  router,
+  styles,
+  onLift,
+  onDrop,
+}: {
+  culto: CultoUpcoming;
+  status: StatusHorario | undefined;
+  cor: string;
+  router: ReturnType<typeof useRouter>;
+  styles: ReturnType<typeof makeStyles>;
+  onLift?: () => void;
+  onDrop?: () => void;
+}) {
+  const passado = status === "passado";
+  const destaque = status === "proximo" || status === "ao_vivo";
+  return (
+    <Pressable
+      onPress={() => router.navigate({ pathname: "/culto-detalhe", params: { id: culto.id } })}
+      onPressIn={onLift}
+      onPressOut={onDrop}
+      style={[
+        styles.horaPill,
+        destaque && { backgroundColor: cor, borderColor: cor },
+        passado && styles.horaPillPassada,
+      ]}
+    >
+      <Text
+        style={[
+          styles.horaTxt,
+          destaque && styles.horaTxtDestaque,
+          passado && styles.horaTxtPassada,
+        ]}
+      >
+        {formatCultoHora(culto.hora)}
+      </Text>
+    </Pressable>
+  );
+}
+
+/** Card-herói do culto de HOJE: countdown ao vivo ou badge AO VIVO. */
+function HeroiHoje({
   grupo,
+  agora,
   router,
   colors,
   styles,
   t,
 }: {
   grupo: Grupo;
+  agora: number;
+  router: ReturnType<typeof useRouter>;
+  colors: Palette;
+  styles: ReturnType<typeof makeStyles>;
+  t: ReturnType<typeof useT>;
+}) {
+  const cor = grupo.cor || colors.primary;
+  const st = statusDosHorarios(grupo.itens, agora);
+  const horarios = grupo.itens.slice().sort((a, b) => a.hora.localeCompare(b.hora));
+  const aoVivo = horarios.find((c) => st.get(c.id) === "ao_vivo") ?? null;
+  const proximo = horarios.find((c) => st.get(c.id) === "proximo") ?? null;
+  const alvo = aoVivo ?? proximo ?? horarios[0];
+
+  return (
+    <GlassCard style={{ overflow: "hidden" }}>
+      <Pressable
+        onPress={() => router.navigate({ pathname: "/culto-detalhe", params: { id: alvo.id } })}
+        style={[styles.card, styles.heroiCard]}
+      >
+        <View style={[styles.heroiBarra, { backgroundColor: cor }]} />
+        <View style={styles.headerCard}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={[styles.tag, { backgroundColor: cor }]}>
+              <Text style={styles.tagTxt}>{t("HOJE")}</Text>
+            </View>
+            {aoVivo && (
+              <View style={styles.aoVivoBadge}>
+                <View style={styles.aoVivoPonto} />
+                <Text style={styles.aoVivoTxt}>{t("AO VIVO agora")}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={[styles.nome, styles.heroiNome]} numberOfLines={1}>
+            {grupo.nomeBase}
+          </Text>
+          {!aoVivo && proximo && (
+            <Text style={styles.countdown}>
+              {contagem(t, inicioDoCulto(proximo) - agora) || formatCultoHora(proximo.hora)}
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.horarios}>
+          {horarios.map((c) => (
+            <HoraPill key={c.id} culto={c} status={st.get(c.id)} cor={cor} router={router} styles={styles} />
+          ))}
+        </View>
+
+        <View style={styles.feats}>
+          {grupo.has_online && (
+            <View style={styles.feat}>
+              <Ionicons name="videocam" size={11} color={colors.brandMid} />
+              <Text style={styles.featTxt}>{t("online")}</Text>
+            </View>
+          )}
+          {grupo.has_kids && (
+            <View style={styles.feat}>
+              <Ionicons name="happy" size={11} color={colors.brandMid} />
+              <Text style={styles.featTxt}>{t("kids")}</Text>
+            </View>
+          )}
+        </View>
+
+        {aoVivo && grupo.has_online && (
+          <Pressable
+            onPress={() => router.navigate({ pathname: "/culto-detalhe", params: { id: aoVivo.id } })}
+            style={[styles.assistirBtn, { backgroundColor: cor }]}
+          >
+            <Ionicons name="play" size={15} color="#fff" />
+            <Text style={styles.assistirTxt}>{t("Assistir online")}</Text>
+          </Pressable>
+        )}
+      </Pressable>
+    </GlassCard>
+  );
+}
+
+function CultoCard({
+  grupo,
+  agora,
+  hojeIso,
+  router,
+  colors,
+  styles,
+  t,
+}: {
+  grupo: Grupo;
+  agora: number;
+  hojeIso: string;
   router: ReturnType<typeof useRouter>;
   colors: Palette;
   styles: ReturnType<typeof makeStyles>;
@@ -103,7 +312,8 @@ function CultoCard({
 }) {
   const cor = grupo.cor || colors.primary;
   const dia = formatCultoDia(grupo.data);
-  const ehHoje = dia === "Hoje";
+  const ehHoje = grupo.data === hojeIso;
+  const st = ehHoje ? statusDosHorarios(grupo.itens, agora) : null;
   const horarios = grupo.itens
     .slice()
     .sort((a, b) => a.hora.localeCompare(b.hora));
@@ -151,9 +361,10 @@ function CultoCard({
           onPressOut={drop}
           style={styles.card}
         >
+          <View style={[styles.heroiBarra, { backgroundColor: cor }]} />
           <View style={styles.headerCard}>
             <View style={[styles.tag, { backgroundColor: cor }]}>
-              <Text style={styles.tagTxt}>{ehHoje ? t("HOJE") : dia.toUpperCase()}</Text>
+              <Text style={styles.tagTxt}>{ehHoje ? t("HOJE") : dia === "Amanhã" ? t("AMANHÃ") : dia.toUpperCase()}</Text>
             </View>
             <Text style={styles.nome} numberOfLines={1}>
               {grupo.nomeBase}
@@ -162,15 +373,16 @@ function CultoCard({
 
           <View style={styles.horarios}>
             {horarios.map((c) => (
-              <Pressable
+              <HoraPill
                 key={c.id}
-                onPress={() => router.navigate({ pathname: "/culto-detalhe", params: { id: c.id } })}
-                onPressIn={lift}
-                onPressOut={drop}
-                style={styles.horaPill}
-              >
-                <Text style={styles.horaTxt}>{formatCultoHora(c.hora)}</Text>
-              </Pressable>
+                culto={c}
+                status={st?.get(c.id)}
+                cor={cor}
+                router={router}
+                styles={styles}
+                onLift={lift}
+                onDrop={drop}
+              />
             ))}
           </View>
 
@@ -206,6 +418,44 @@ const makeStyles = (colors: Palette) =>
       padding: spacing.md,
       gap: spacing.sm,
     },
+    heroiCard: { paddingTop: spacing.md + 4 },
+    heroiBarra: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 3,
+      opacity: 0.9,
+    },
+    heroiNome: { fontSize: font.size.lg },
+    countdown: {
+      color: colors.brandMid,
+      fontSize: font.size.sm,
+      fontWeight: "700",
+    },
+    aoVivoBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      backgroundColor: "rgba(239,68,68,0.14)",
+      borderWidth: 1,
+      borderColor: "rgba(239,68,68,0.5)",
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: radius.full,
+    },
+    aoVivoPonto: { width: 6, height: 6, borderRadius: 999, backgroundColor: "#ef4444" },
+    aoVivoTxt: { color: "#ef4444", fontSize: 10, fontWeight: "900", letterSpacing: 0.4 },
+    assistirBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 10,
+      borderRadius: radius.full,
+      marginTop: 2,
+    },
+    assistirTxt: { color: "#fff", fontSize: font.size.sm, fontWeight: "800" },
     headerCard: { gap: 6 },
     tag: {
       alignSelf: "flex-start",
@@ -224,7 +474,10 @@ const makeStyles = (colors: Palette) =>
       borderWidth: 1,
       borderColor: colors.glassBorder,
     },
+    horaPillPassada: { opacity: 0.35 },
     horaTxt: { color: colors.text, fontSize: font.size.sm, fontWeight: "700" },
+    horaTxtDestaque: { color: "#fff" },
+    horaTxtPassada: { textDecorationLine: "line-through" },
     feats: { flexDirection: "row", gap: 8 },
     feat: {
       flexDirection: "row",
