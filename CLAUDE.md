@@ -48,6 +48,12 @@ módulo**. Roda em **Android e iOS**.
   custom (`components/ui/Dock.tsx`) — vidro fosco real com `expo-blur`, leve
   flutuação, ícone ativo destacado e ponto indicador. Abas: Home, Cuidados,
   Voluntariado, Generosidade, Menu (o Menu reúne perfil e demais opções).
+  **Lente arrastável** (estilo tab bar iOS 26): segurar ~0,2s ergue uma lente
+  sob o dedo; arrastar magnifica os ícones (macOS dock) e soltar navega —
+  `Gesture.Pan().activateAfterLongPress` + Reanimated + haptics.
+  ⚠️ **NUNCA aninhar `GlassView` dentro de `GlassView`** (a lente dentro do
+  dock glass apagava todos os ícones — validado no simulador); overlays
+  internos usam camada translúcida simples.
 
 ## Estrutura de pastas
 
