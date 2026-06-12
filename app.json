@@ -35,7 +35,9 @@
         "backgroundColor": "#eae3da"
       },
       "permissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
       ]
     },
     "web": {
@@ -48,7 +50,9 @@
       [
         "expo-notifications",
         {
-          "sounds": ["./assets/sounds/cbrio-chime.wav"]
+          "sounds": [
+            "./assets/sounds/cbrio-chime.wav"
+          ]
         }
       ],
       [
@@ -83,6 +87,12 @@
         "projectId": "3da60261-4811-458b-90c7-7e81f5511c51"
       }
     },
-    "owner": "mtoscano99"
+    "owner": "mtoscano99",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/3da60261-4811-458b-90c7-7e81f5511c51"
+    }
   }
 }

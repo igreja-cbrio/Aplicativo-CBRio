@@ -83,7 +83,9 @@
       "gambling": false,
       "unrestrictedWebAccess": false,
       "kidsAgeBand": null,
-      "seventeenPlus": false
+      "seventeenPlus": false,
+      "ageRatingOverride": "NONE",
+      "koreaAgeRatingOverride": "NONE"
     }
   }
 }

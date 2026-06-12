@@ -22,6 +22,13 @@ módulo**. Roda em **Android e iOS**.
   status do Voluntariado) e alertas (SOS) ficam SÓLIDOS pra legibilidade — não
   espalhar glass em tudo.
 - **Supabase** para autenticação (e futuramente dados)
+- **EAS Update (OTA):** `expo-updates` configurado (canais `development`/
+  `preview`/`production` no `eas.json`; `runtimeVersion.policy = appVersion`).
+  Mudança **só de JS** vai ao ar sem revisão da Apple:
+  `eas update --channel production --message "..."`. Só chega a builds com a
+  MESMA `version` do app.json e que já contenham `expo-updates` (build iOS
+  ≥ 20). Mudança nativa (módulo, plugin, permissão) continua exigindo
+  build novo + revisão.
 - **Estilização:** `StyleSheet` nativo (decisão: melhor performance/confiabilidade
   no celular; sem Tailwind/NativeWind). **Tema claro/escuro** com paletas em
   `constants/theme.ts` (`lightColors`/`darkColors`) e `ThemeContext` (segue o
