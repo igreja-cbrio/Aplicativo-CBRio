@@ -187,27 +187,27 @@ export function Dock({ items }: { items: DockItem[] }) {
     >
       <RNAnimated.View style={{ transform: [{ translateY: bob }] }}>
         <GestureDetector gesture={arrasto}>
-          {LIQUID ? (
-            <GlassView
-              glassEffectStyle="regular"
-              isInteractive
-              colorScheme={mode}
-              style={styles.dock}
-            >
-              {lente}
-              {botoes}
-            </GlassView>
-          ) : (
-            <BlurView
-              intensity={40}
-              tint={mode}
-              experimentalBlurMethod={Platform.OS === "android" ? "dimezisBlurView" : undefined}
-              style={[styles.dock, { backgroundColor: colors.dockBg }]}
-            >
-              {lente}
-              {botoes}
-            </BlurView>
-          )}
+          {/* O vidro é SÓ o fundo (absoluteFill) e os botões ficam FORA
+              dele, por cima. Filhos dentro da GlassView somem quando o
+              glass re-renderiza no toque (iOS 26) — visto em produção. */}
+          <View style={styles.dock} collapsable={false}>
+            {LIQUID ? (
+              <GlassView
+                glassEffectStyle="regular"
+                colorScheme={mode}
+                style={styles.fundoGlass}
+              />
+            ) : (
+              <BlurView
+                intensity={40}
+                tint={mode}
+                experimentalBlurMethod={Platform.OS === "android" ? "dimezisBlurView" : undefined}
+                style={[styles.fundoGlass, { backgroundColor: colors.dockBg }]}
+              />
+            )}
+            {lente}
+            {botoes}
+          </View>
         </GestureDetector>
       </RNAnimated.View>
     </View>
@@ -300,9 +300,14 @@ const makeStyles = (colors: Palette) =>
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.xl,
+    overflow: "visible",
+  },
+  fundoGlass: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: radius.xl,
     borderWidth: LIQUID ? 0 : 1,
     borderColor: colors.glassBorder,
-    overflow: "visible",
+    overflow: "hidden",
   },
   lente: {
     position: "absolute",
