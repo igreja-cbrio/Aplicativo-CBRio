@@ -111,7 +111,7 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Generosidade": { en: "Giving", es: "Generosidad" },
   "Meu perfil": { en: "My profile", es: "Mi perfil" },
   "Cartões": { en: "Cards", es: "Tarjetas" },
-  "Bíblia e devocionais": { en: "Bible & devotionals", es: "Biblia y devocionales" },
+  "Devocionais": { en: "Devotionals", es: "Devocionales" },
   "Configurações": { en: "Settings", es: "Ajustes" },
   "Sobre a CBRio": { en: "About CBRio", es: "Acerca de CBRio" },
   "Membro CBRio": { en: "CBRio member", es: "Miembro CBRio" },
