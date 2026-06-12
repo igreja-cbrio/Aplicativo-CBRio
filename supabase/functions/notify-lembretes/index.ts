@@ -149,6 +149,52 @@ async function lembreteNext(sb: SupabaseClient, hoje: string, minutosAgora: numb
   }
 }
 
+async function lembreteDevocional(sb: SupabaseClient, hoje: string, minutosAgora: number) {
+  // Dias úteis às 7h30 (janela 07:30–07:39), só se o devocional do dia existe
+  // e só pra quem ainda não fez o check-in de hoje.
+  const dow = new Date(`${hoje}T12:00:00Z`).getUTCDay();
+  if (dow < 1 || dow > 5) return;
+  if (minutosAgora < 7 * 60 + 30 || minutosAgora > 7 * 60 + 39) return;
+
+  const { data: item } = await sb
+    .from("devocional_itens")
+    .select("id, titulo, devocional_planos!inner(ativo)")
+    .eq("devocional_planos.ativo", true)
+    .eq("data", hoje)
+    .limit(1)
+    .maybeSingle();
+  if (!item) return;
+  if (!(await deduplicar(sb, `devocional:${item.id}`))) return;
+
+  // Todos com push, menos quem já leu hoje
+  const { data: tokens } = await sb.from("app_push_tokens").select("user_id");
+  const todos = [...new Set((tokens ?? []).map((t) => t.user_id as string))];
+  const { data: lidos } = await sb
+    .from("mem_devocionais")
+    .select("membro_id")
+    .eq("data_devocional", hoje)
+    .eq("tipo", "pessoal");
+  const membrosLidos = (lidos ?? []).map((l) => l.membro_id as string);
+  let usersLidos: string[] = [];
+  if (membrosLidos.length) {
+    const { data: profs } = await sb.from("profiles").select("id").in("membro_id", membrosLidos);
+    usersLidos = (profs ?? []).map((p) => p.id as string);
+  }
+  const userIds = todos.filter((u) => !usersLidos.includes(u));
+  if (!userIds.length) return;
+
+  await notificar(
+    { userIds },
+    {
+      tipo: "devocional",
+      titulo: "Seu devocional de hoje te espera 📖",
+      body: `“${item.titulo}” — 5 minutinhos com Deus antes do dia começar.`,
+      data: { item_id: item.id },
+    }
+  );
+  console.log(`[lembretes] devocional ${item.id} -> ${userIds.length} usuários`);
+}
+
 Deno.serve(async (_req) => {
   try {
     const sb = makeAdmin();
@@ -156,6 +202,7 @@ Deno.serve(async (_req) => {
     await lembreteCultoOnline(sb, hoje, minutos);
     await lembretesBatismo(sb, hoje, minutos);
     await lembreteNext(sb, hoje, minutos);
+    await lembreteDevocional(sb, hoje, minutos);
     return new Response(JSON.stringify({ ok: true }), {
       headers: { "Content-Type": "application/json" },
     });

@@ -36,6 +36,9 @@ export function attachNotifTapListener(): () => void {
       case "next":
         router.navigate("/");
         return;
+      case "devocional":
+        router.navigate("/devocional");
+        return;
       default:
         router.navigate("/notificacoes");
     }

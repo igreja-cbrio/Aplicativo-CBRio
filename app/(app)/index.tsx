@@ -42,10 +42,12 @@ type Atalho = {
     | "/perfil"
     | "/inscricoes"
     | "/batismo"
-    | "/grupos";
+    | "/grupos"
+    | "/devocional";
 };
 
 const ATALHOS: Atalho[] = [
+  { label: "Devocional", icon: "book", href: "/devocional" },
   { label: "Inscrições", icon: "create", href: "/inscricoes" },
   { label: "Batismo", icon: "water", href: "/batismo" },
   { label: "Grupos", icon: "people", href: "/grupos" },

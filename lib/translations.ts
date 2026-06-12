@@ -514,4 +514,27 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Senha redefinida ✅": { en: "Password reset ✅", es: "Contraseña restablecida ✅" },
   "Pronto! Você já está conectado com a nova senha.": { en: "Done! You're signed in with your new password.", es: "¡Listo! Ya estás conectado con tu nueva contraseña." },
   "Não foi possível redefinir.": { en: "Couldn't reset the password.", es: "No se pudo restablecer." },
+
+  // ───────────────── Devocional ─────────────────
+  "Devocional": { en: "Devotional", es: "Devocional" },
+  "nesta semana": { en: "this week", es: "esta semana" },
+  "Comece sua semana com a Palavra 💙": { en: "Start your week in the Word 💙", es: "Comienza tu semana con la Palabra 💙" },
+  "O devocional volta segunda-feira 💙": { en: "The devotional is back on Monday 💙", es: "El devocional vuelve el lunes 💙" },
+  "O devocional de hoje ainda não foi publicado.": { en: "Today's devotional hasn't been published yet.", es: "El devocional de hoy aún no se ha publicado." },
+  "Os devocionais vão de segunda a sexta. Ative as notificações pra saber quando sair.": {
+    en: "Devotionals run Monday to Friday. Turn on notifications to know when it's out.",
+    es: "Los devocionales van de lunes a viernes. Activa las notificaciones para saber cuándo sale.",
+  },
+  "Pra viver hoje": { en: "To live out today", es: "Para vivir hoy" },
+  "Oração": { en: "Prayer", es: "Oración" },
+  "O que Deus falou com você? (opcional)": { en: "What did God speak to you? (optional)", es: "¿Qué te habló Dios? (opcional)" },
+  "Li o devocional de hoje": { en: "I read today's devotional", es: "Leí el devocional de hoy" },
+  "Leitura registrada! 🎉": { en: "Reading recorded! 🎉", es: "¡Lectura registrada! 🎉" },
+  "Você já leu hoje. Deus te abençoe! 💙": { en: "You've already read today. God bless you! 💙", es: "Ya leíste hoy. ¡Dios te bendiga! 💙" },
+  "Vincule seu cadastro": { en: "Link your membership", es: "Vincula tu registro" },
+  "Pra registrar sua leitura, complete seu perfil com o CPF (Menu → Perfil).": {
+    en: "To record your reading, complete your profile with your CPF (Menu → Profile).",
+    es: "Para registrar tu lectura, completa tu perfil con el CPF (Menú → Perfil).",
+  },
+  "Não foi possível registrar.": { en: "Couldn't record it.", es: "No se pudo registrar." },
 };
