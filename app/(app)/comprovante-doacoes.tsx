@@ -99,15 +99,21 @@ export default function ComprovanteDoacoes() {
 
   useEffect(() => {
     let ativo = true;
+    if (!membro?.membroId) {
+      // Sem vínculo de membro (CPF) não há o que listar.
+      setItens([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    minhasContribuicoes(ano)
+    minhasContribuicoes(membro.membroId, ano)
       .then((r) => ativo && setItens(r))
       .catch(() => ativo && setItens([]))
       .finally(() => ativo && setLoading(false));
     return () => {
       ativo = false;
     };
-  }, [ano]);
+  }, [ano, membro?.membroId]);
 
   const total = itens.reduce((s, c) => s + Number(c.valor), 0);
 
