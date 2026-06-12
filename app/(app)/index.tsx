@@ -3,8 +3,15 @@ import { BRAND_FONT } from "@/lib/fonts";
 import { HeartRefresh } from "@/components/anim/HeartRefresh";
 import { HeartPulseOverlay } from "@/components/anim/HeartPulse";
 import { Skeleton } from "@/components/anim/Skeleton";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { BlurView } from "expo-blur";
+import Animated, {
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from "react-native-reanimated";
 import { ScreenBackground } from "@/components/ui/ScreenBackground";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,6 +30,7 @@ import { AnimatedBell } from "@/components/anim/AnimatedBell";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const LOGO_WORDMARK = require("../../assets/images/cbrio-wordmark.png");
+const HEADER_H = 52; // altura útil do header fixo (sem o inset do notch)
 
 function primeiroNome(nomeCompleto?: string, email?: string | null) {
   const nome = nomeCompleto?.trim();
@@ -65,6 +73,16 @@ export default function InicioScreen() {
   const router = useRouter();
   const t = useT();
   const { count: naoLidas } = useNotificacoesNaoLidas();
+  const insets = useSafeAreaInsets();
+
+  // Header fixo: vidro surge conforme o conteúdo passa por baixo.
+  const scrollY = useSharedValue(0);
+  const aoScrollar = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+  const estiloVidroHeader = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [0, 28], [0, 1], "clamp"),
+  }));
   const [destaques, setDestaques] = useState<Destaque[]>([]);
   const [cultos, setCultos] = useState<CultoUpcoming[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -95,14 +113,60 @@ export default function InicioScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <ScreenBackground />
       <HeartPulseOverlay visible={refreshing} />
-      <ScrollView
-        contentContainerStyle={styles.content}
+      <Animated.ScrollView
+        onScroll={aoScrollar}
+        scrollEventThrottle={16}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + HEADER_H + spacing.sm }]}
         refreshControl={<HeartRefresh refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Logo + ações */}
+        <Text style={styles.hello}>{t("Olá")}, {nome}</Text>
+
+        {carregando ? (
+          <Skeleton width="100%" height={180} borderRadius={20} />
+        ) : (
+          destaques.length > 0 && <Carrossel itens={destaques} />
+        )}
+
+        {carregando ? (
+          <View style={{ gap: spacing.sm }}>
+            <Skeleton width={160} height={18} borderRadius={6} />
+            <View style={{ flexDirection: "row", gap: spacing.sm }}>
+              <Skeleton width={220} height={140} borderRadius={20} />
+              <Skeleton width={220} height={140} borderRadius={20} />
+            </View>
+          </View>
+        ) : (
+          <ProximosCultos cultos={cultos} />
+        )}
+
+        {/* Atalhos para os módulos */}
+        <Text style={styles.sectionTitle}>{t("Atalhos")}</Text>
+        <View style={styles.grid}>
+          {ATALHOS.map((a, i) => (
+            <AnimatedShortcut
+              key={a.href}
+              index={i}
+              style={styles.shortcut}
+              onPress={() => router.navigate(a.href)}
+            >
+              <View style={styles.shortcutIcon}>
+                <Ionicons name={a.icon} size={22} color={colors.brandMid} />
+              </View>
+              <Text style={styles.shortcutLabel} numberOfLines={2}>{t(a.label)}</Text>
+            </AnimatedShortcut>
+          ))}
+        </View>
+      </Animated.ScrollView>
+
+      {/* Header fixo: logo + ações sempre à mão; o vidro só aparece
+          quando o conteúdo passa por baixo (padrão iOS). */}
+      <View style={[styles.headerFixo, { paddingTop: insets.top, height: insets.top + HEADER_H }]} pointerEvents="box-none">
+        <Animated.View style={[StyleSheet.absoluteFill, estiloVidroHeader]}>
+          <BlurView intensity={36} tint={mode} style={[StyleSheet.absoluteFill, styles.headerVidro]} />
+        </Animated.View>
         <View style={styles.brandRow}>
           <Image
             source={LOGO_WORDMARK}
@@ -142,45 +206,7 @@ export default function InicioScreen() {
             </Pressable>
           </View>
         </View>
-
-        <Text style={styles.hello}>{t("Olá")}, {nome}</Text>
-
-        {carregando ? (
-          <Skeleton width="100%" height={180} borderRadius={20} />
-        ) : (
-          destaques.length > 0 && <Carrossel itens={destaques} />
-        )}
-
-        {carregando ? (
-          <View style={{ gap: spacing.sm }}>
-            <Skeleton width={160} height={18} borderRadius={6} />
-            <View style={{ flexDirection: "row", gap: spacing.sm }}>
-              <Skeleton width={220} height={140} borderRadius={20} />
-              <Skeleton width={220} height={140} borderRadius={20} />
-            </View>
-          </View>
-        ) : (
-          <ProximosCultos cultos={cultos} />
-        )}
-
-        {/* Atalhos para os módulos */}
-        <Text style={styles.sectionTitle}>{t("Atalhos")}</Text>
-        <View style={styles.grid}>
-          {ATALHOS.map((a, i) => (
-            <AnimatedShortcut
-              key={a.href}
-              index={i}
-              style={styles.shortcut}
-              onPress={() => router.navigate(a.href)}
-            >
-              <View style={styles.shortcutIcon}>
-                <Ionicons name={a.icon} size={22} color={colors.brandMid} />
-              </View>
-              <Text style={styles.shortcutLabel} numberOfLines={2}>{t(a.label)}</Text>
-            </AnimatedShortcut>
-          ))}
-        </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -189,13 +215,23 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: "transparent" },
     content: { padding: spacing.lg, paddingBottom: 120, gap: spacing.lg },
+    headerFixo: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10,
+      justifyContent: "center",
+    },
+    headerVidro: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.glassBorder,
+    },
     brandRow: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      marginTop: 0,
-      marginLeft: -spacing.md,
-      paddingRight: spacing.md,
+      paddingHorizontal: spacing.md,
     },
     logo: { width: 150, height: 42 },
     actions: { flexDirection: "row", alignItems: "center", gap: spacing.sm },

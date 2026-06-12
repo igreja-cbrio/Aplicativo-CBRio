@@ -1,7 +1,5 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import {
-  Animated as RNAnimated,
-  Easing,
   Platform,
   Pressable,
   StyleSheet,
@@ -19,6 +17,8 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
+  withSequence,
   withSpring,
   withTiming,
 } from "react-native-reanimated";
@@ -53,7 +53,7 @@ export function Dock({ items }: { items: DockItem[] }) {
   const { colors, mode } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
-  const bob = useRef(new RNAnimated.Value(0)).current;
+  const bob = useSharedValue(0);
 
   // ── lente arrastável ──
   const lensX = useSharedValue(0);        // centro da lente (coord. do dock)
@@ -132,25 +132,18 @@ export function Dock({ items }: { items: DockItem[] }) {
   }));
 
   useEffect(() => {
-    const loop = RNAnimated.loop(
-      RNAnimated.sequence([
-        RNAnimated.timing(bob, {
-          toValue: -3,
-          duration: 4000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        RNAnimated.timing(bob, {
-          toValue: 0,
-          duration: 4000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
+    bob.value = withRepeat(
+      withSequence(
+        withTiming(-3, { duration: 4000, easing: ReEasing.inOut(ReEasing.ease) }),
+        withTiming(0, { duration: 4000, easing: ReEasing.inOut(ReEasing.ease) })
+      ),
+      -1
     );
-    loop.start();
-    return () => loop.stop();
   }, [bob]);
+
+  const estiloBob = useAnimatedStyle(() => ({
+    transform: [{ translateY: bob.value }],
+  }));
 
   // ⚠️ Nada de GlassView aqui: GlassView aninhada dentro da GlassView do
   // dock quebra a renderização dos filhos (ícones somem). A lente é uma
@@ -160,7 +153,7 @@ export function Dock({ items }: { items: DockItem[] }) {
       <View
         style={[
           styles.lenteVidro,
-          { backgroundColor: mode === "dark" ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.55)" },
+          { backgroundColor: mode === "dark" ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.9)" },
         ]}
       />
     </Animated.View>
@@ -171,9 +164,8 @@ export function Dock({ items }: { items: DockItem[] }) {
       key={item.key}
       item={item}
       index={i}
-      lensX={lensX}
+      hover={hover}
       lensAtiva={lensAtiva}
-      centros={centros}
       onLayoutItem={aoLayoutItem}
       colors={colors}
       styles={styles}
@@ -185,7 +177,7 @@ export function Dock({ items }: { items: DockItem[] }) {
       pointerEvents="box-none"
       style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}
     >
-      <RNAnimated.View style={{ transform: [{ translateY: bob }] }}>
+      <Animated.View style={estiloBob}>
         <GestureDetector gesture={arrasto}>
           {/* O vidro é SÓ o fundo (absoluteFill) e os botões ficam FORA
               dele, por cima. Filhos dentro da GlassView somem quando o
@@ -209,7 +201,7 @@ export function Dock({ items }: { items: DockItem[] }) {
             {botoes}
           </View>
         </GestureDetector>
-      </RNAnimated.View>
+      </Animated.View>
     </View>
   );
 }
@@ -217,41 +209,31 @@ export function Dock({ items }: { items: DockItem[] }) {
 function DockButton({
   item,
   index,
-  lensX,
+  hover,
   lensAtiva,
-  centros,
   onLayoutItem,
   colors,
   styles,
 }: {
   item: DockItem;
   index: number;
-  lensX: SharedValue<number>;
+  hover: SharedValue<number>;
   lensAtiva: SharedValue<number>;
-  centros: SharedValue<number[]>;
   onLayoutItem: (index: number, x: number, width: number) => void;
   colors: Palette;
   styles: ReturnType<typeof makeStyles>;
 }) {
-  const baseScale = useSharedValue(item.active ? 1.12 : 1);
-
-  useEffect(() => {
-    baseScale.value = withSpring(item.active ? 1.12 : 1, {
-      stiffness: 300,
-      damping: 20,
-      mass: 0.6,
-    });
-  }, [item.active, baseScale]);
-
-  // Magnificação: quanto mais perto a lente, maior o ícone (e levita um pouco)
+  // Magnificação POR ÍNDICE (hover) com withSpring dentro do estilo.
+  // ⚠️ A versão por distância contínua (lendo o ARRAY de centros no
+  // worklet de cada botão) fazia os ícones SUMIREM durante o gesto —
+  // confirmado por eliminação no simulador. Não voltar pra ela.
   const estilo = useAnimatedStyle(() => {
-    const cx = centros.value[index] ?? -9999;
-    const dist = Math.abs(lensX.value - cx);
-    const boost = lensAtiva.value * interpolate(dist, [0, 34, 90], [0.3, 0.12, 0], "clamp");
+    const base = item.active ? 1.12 : 1;
+    const focado = lensAtiva.value > 0.4 && hover.value === index;
     return {
       transform: [
-        { scale: baseScale.value + boost },
-        { translateY: -boost * 26 },
+        { scale: withSpring(focado ? 1.34 : base, { stiffness: 360, damping: 22, mass: 0.5 }) },
+        { translateY: withSpring(focado ? -10 : 0, { stiffness: 360, damping: 22, mass: 0.5 }) },
       ],
     };
   });
