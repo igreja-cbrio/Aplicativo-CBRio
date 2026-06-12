@@ -63,10 +63,13 @@ function RootNavigator() {
     if (loading) return;
 
     const inAuthGroup = segments[0] === "(auth)";
+    // Redefinição de senha: o deep link cria sessão ANTES do usuário digitar
+    // a nova senha — não pode ser expulso da tela pelo redirect de authed.
+    const inRedefinirSenha = segments.includes("redefinir-senha" as never);
 
     if (!authed && !inAuthGroup) {
       router.replace("/(auth)/login");
-    } else if (authed && inAuthGroup) {
+    } else if (authed && inAuthGroup && !inRedefinirSenha) {
       router.replace("/(app)");
     }
   }, [authed, loading, segments]);

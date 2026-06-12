@@ -51,6 +51,7 @@ type AuthContextValue = {
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  updatePassword: (novaSenha: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -215,9 +216,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error;
       },
       async resetPassword(email) {
+        // redirectTo deep link: sem ele o Supabase usa a site_url do projeto
+        // (https://www.cbrio.org — o sistema interno) e o usuário cai fora
+        // do app. cbrio://redefinir-senha está na allowlist do Auth.
         const { error } = await supabase.auth.resetPasswordForEmail(
-          email.trim()
+          email.trim(),
+          { redirectTo: "cbrio://redefinir-senha" }
         );
+        if (error) throw error;
+      },
+      async updatePassword(novaSenha) {
+        const { error } = await supabase.auth.updateUser({ password: novaSenha });
         if (error) throw error;
       },
       async signOut() {

@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
@@ -213,6 +213,33 @@ export default function GenerosidadeScreen() {
             styles={styles}
           />
         )}
+
+        <Pressable
+          onPress={() => router.push("/comprovante-doacoes")}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            marginTop: 24,
+            paddingVertical: 14,
+            paddingHorizontal: 16,
+            borderRadius: radius.lg,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.surface,
+          }}
+        >
+          <Ionicons name="receipt-outline" size={20} color={colors.brandMid} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.text, fontSize: 14, fontWeight: "600" }}>
+              {t("Comprovante de doações")}
+            </Text>
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 1 }}>
+              {t("Resumo anual pra declaração do IR")}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </Pressable>
       </ScrollView>
 
       <CheckoutWebView url={checkoutUrl} visible={checkoutAberto} onResult={fecharCheckout} />

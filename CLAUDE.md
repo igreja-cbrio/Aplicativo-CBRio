@@ -108,11 +108,19 @@ constants/
 |   ✅   | **Autenticação** | Login/cadastro e-mail/senha, Google, Apple, "lembrar de mim", recuperação de senha (SMS pronto, desligado até ter remetente BR). **Desbloqueio por Face ID/Touch ID** (`lib/biometria.ts` + `components/auth/BiometriaLock.tsx`): trava 1x por abertura quando há sessão salva e a opção está ligada em Configurações → Segurança. |
 |   ✅   | **Inscrições**   | Todos os formulários vão via `POST https://cbrio.org/api/app/inscricoes` (helper em `lib/api.ts`, fachada em `lib/inscricoes.ts`). Voluntariado puxa áreas dinâmicas de `GET /public/voluntariado/form-opcoes` (até 3 áreas, com Kids/Bridge exigindo CPF + nome da mãe). Grupos usa o mesmo endpoint com `tipo:"grupos"`. |
 |   🚧   | **Voluntariado** | Aba self-service: ver/confirmar **escalas** (`mem_escalas`) ✅. **Push** ao ser escalado: `lib/push.ts` salva token em `app_push_tokens`; Edge Function `supabase/functions/notify-escala` dispara (precisa EAS projectId + device físico + webhook). |
-|   ✅   | **Notificações** | `app_notificacoes` (histórico in-app), helper `supabase/functions/_shared/notify.ts`, tela `notificacoes.tsx` com badge e marca-como-lida, `lib/notifTap.ts` roteia o tap pra tela certa. Functions já deployadas (`notify-escala`, `notify-cuidado-sos`, `notify-grupo-pedido`). **Falta:** EAS projectId + Database Webhooks no dashboard. |
+|   ✅   | **Notificações** | `app_notificacoes` (histórico in-app), helper `supabase/functions/_shared/notify.ts`, tela `notificacoes.tsx` com badge e marca-como-lida, `lib/notifTap.ts` roteia o tap (tipos: escala, sos, grupo_pedido, batismo, culto, next). **Push funcionando ponta a ponta** (validado 12/06: triggers SQL de `webhooks_app.sql` aplicados, pg_net ativo, tokens em `app_push_tokens`). **Lembretes agendados** via pg_cron (a cada min) → Edge Function `notify-lembretes` (`supabase/lembretes.sql`): batismo (véspera 18h + dia 8h), NEXT (véspera 18h), culto online (5 min antes, broadcast). Dedup em `app_lembretes_enviados`. |
 |   🚧   | **Cuidados**     | Pedido de oração + aconselhamento (grava em `app_inscricoes`) e **SOS** (CVV 188/192 na hora + alerta push aos pastores via Edge Function `notify-cuidado-sos`). |
 |   ⬜   | _Próximos_       | A definir, construídos um a um                                   |
 
 ## Generosidade — notas de implementação
+
+- **Comprovante anual de doações (IR):** tela `comprovante-doacoes.tsx`
+  (link no rodapé da Generosidade). Lê `mem_contribuicoes` do membro logado
+  (RLS `membro_id = current_user_membro_id()` já permite), seletor de ano,
+  gera PDF via `expo-print` + compartilha via `expo-sharing`. Só doações
+  CONCLUÍDAS entram (cartão/Apple Pay via webhook Stripe; PIX quando o
+  financeiro concilia). Nota: doação a igreja não é dedutível — o comprovante
+  serve pra ficha "Doações Efetuadas" (código 99).
 
 - **Apple Pay:** módulo nativo local em `modules/apple-pay` (PassKit). A sheet
   devolve o token cru; a Edge Function `generosidade-apple-pay-confirm`
@@ -178,7 +186,16 @@ Métodos em `contexts/AuthContext.tsx`:
   `CodeInput` animado) fica guardada para quando o SMS for religado.
 - `signInWithGoogle()` — OAuth via Supabase + `expo-web-browser`.
 - `signInWithApple()` — `expo-apple-authentication` + `signInWithIdToken` (iOS).
-- `resetPassword(email)` — envia link de recuperação.
+- `resetPassword(email)` — envia link de recuperação com
+  `redirectTo: "cbrio://redefinir-senha"` (⚠️ sem isso o link cai na
+  site_url do projeto, que é o sistema interno). A tela
+  `(auth)/redefinir-senha.tsx` processa o deep link (tokens no fragmento →
+  `setSession`) e mostra o form de nova senha; o guard do `_layout` tem
+  exceção pra não expulsar dessa tela quando a sessão chega. O scheme
+  `cbrio://**` está na allowlist do Auth (config aplicada 12/06).
+- `updatePassword(novaSenha)` — `supabase.auth.updateUser({ password })`.
+- Troca de e-mail de login: no perfil, `updateUser({ email }, { emailRedirectTo:
+  "cbrio://perfil" })` — confirmação chega no novo e-mail.
 - `signOut()`.
 
 "Lembrar de mim": `lib/supabase.ts` usa um **storage híbrido** — quando ligado,

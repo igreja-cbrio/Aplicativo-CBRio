@@ -191,9 +191,12 @@ export default function PerfilScreen() {
       // 3) E-mail (via auth — pode exigir confirmação)
       let emailAviso = false;
       if (email.trim() && email.trim() !== user.email) {
-        const { error: eErr } = await supabase.auth.updateUser({
-          email: email.trim(),
-        });
+        const { error: eErr } = await supabase.auth.updateUser(
+          { email: email.trim() },
+          // Sem emailRedirectTo o link de confirmação cai na site_url do
+          // projeto (o sistema interno). cbrio:// traz de volta pro app.
+          { emailRedirectTo: "cbrio://perfil" }
+        );
         if (eErr) throw eErr;
         emailAviso = true;
       }

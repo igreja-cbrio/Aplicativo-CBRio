@@ -477,4 +477,41 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Ver": { en: "View", es: "Ver" },
   "Mostrar": { en: "Show", es: "Mostrar" },
   "Ocultar": { en: "Hide", es: "Ocultar" },
+
+  // ───────────────── Comprovante de doações (IR) ─────────────────
+  "Comprovante de doações": { en: "Giving statement", es: "Comprobante de donaciones" },
+  "Resumo anual pra declaração do IR": { en: "Yearly summary for your tax return", es: "Resumen anual para tu declaración de impuestos" },
+  "Resumo das suas contribuições concluídas no ano, pra usar na declaração do Imposto de Renda (ficha Doações Efetuadas).": {
+    en: "Summary of your completed contributions in the year, for your income tax return.",
+    es: "Resumen de tus contribuciones concluidas en el año, para tu declaración de impuestos.",
+  },
+  "Nenhuma contribuição registrada em": { en: "No contributions recorded in", es: "Ninguna contribución registrada en" },
+  "Total no ano": { en: "Total for the year", es: "Total del año" },
+  "Gerar comprovante (PDF)": { en: "Generate statement (PDF)", es: "Generar comprobante (PDF)" },
+  "Falha ao gerar o comprovante.": { en: "Failed to generate the statement.", es: "No se pudo generar el comprobante." },
+  "Doações a igrejas não são dedutíveis do IR, mas devem ser declaradas na ficha “Doações Efetuadas” (código 99). PIX feito direto no app do banco entra aqui quando o financeiro concilia o extrato.": {
+    en: "Church donations are not tax-deductible in Brazil, but must be declared under “Donations Made” (code 99). PIX made directly in your bank app appears here once the finance team reconciles the statement.",
+    es: "Las donaciones a iglesias no son deducibles de impuestos en Brasil, pero deben declararse en “Donaciones Efectuadas” (código 99). El PIX hecho directo en tu banco aparece aquí cuando finanzas concilia el extracto.",
+  },
+
+  // ───────────────── Redefinir senha ─────────────────
+  "Redefinir senha": { en: "Reset password", es: "Restablecer contraseña" },
+  "Validando seu link de redefinição…": { en: "Validating your reset link…", es: "Validando tu enlace…" },
+  "Esse link expirou ou já foi usado. Peça um novo e abra o e-mail pelo celular com o app instalado.": {
+    en: "This link expired or was already used. Request a new one and open the email on the phone with the app installed.",
+    es: "Ese enlace expiró o ya fue usado. Pide uno nuevo y abre el correo en el celular con la app instalada.",
+  },
+  "Pedir novo link": { en: "Request new link", es: "Pedir nuevo enlace" },
+  "Escolha sua nova senha.": { en: "Choose your new password.", es: "Elige tu nueva contraseña." },
+  "Nova senha": { en: "New password", es: "Nueva contraseña" },
+  "Confirmar nova senha": { en: "Confirm new password", es: "Confirmar nueva contraseña" },
+  "Salvar nova senha": { en: "Save new password", es: "Guardar nueva contraseña" },
+  "Salvando…": { en: "Saving…", es: "Guardando…" },
+  "Senha curta": { en: "Password too short", es: "Contraseña muy corta" },
+  "Use pelo menos 8 caracteres.": { en: "Use at least 8 characters.", es: "Usa al menos 8 caracteres." },
+  "Confira a senha": { en: "Check the password", es: "Verifica la contraseña" },
+  "As senhas digitadas não são iguais.": { en: "The passwords don't match.", es: "Las contraseñas no coinciden." },
+  "Senha redefinida ✅": { en: "Password reset ✅", es: "Contraseña restablecida ✅" },
+  "Pronto! Você já está conectado com a nova senha.": { en: "Done! You're signed in with your new password.", es: "¡Listo! Ya estás conectado con tu nueva contraseña." },
+  "Não foi possível redefinir.": { en: "Couldn't reset the password.", es: "No se pudo restablecer." },
 };

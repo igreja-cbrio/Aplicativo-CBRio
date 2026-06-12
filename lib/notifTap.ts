@@ -24,6 +24,18 @@ export function attachNotifTapListener(): () => void {
         else router.navigate("/grupos");
         return;
       }
+      case "batismo":
+        router.navigate("/batismo");
+        return;
+      case "culto": {
+        const cultoId = (data as { culto_id?: string }).culto_id;
+        if (cultoId) router.navigate({ pathname: "/culto-detalhe", params: { id: cultoId } });
+        else router.navigate("/");
+        return;
+      }
+      case "next":
+        router.navigate("/");
+        return;
       default:
         router.navigate("/notificacoes");
     }
