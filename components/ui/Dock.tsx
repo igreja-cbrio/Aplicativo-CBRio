@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Platform,
   Pressable,
@@ -60,16 +60,6 @@ export function Dock({ items }: { items: DockItem[] }) {
   const lensAtiva = useSharedValue(0);    // 0..1 (entrada/saída animada)
   const centros = useSharedValue<number[]>([]); // centro x de cada item
   const hover = useSharedValue(-1);       // índice sob a lente
-  // ⚠️ e.x do Pan não chega relativo ao dock (testado: todo press caía no
-  // 1º ícone). Usamos absoluteX - posição do dock na janela.
-  const dockRef = useRef<View>(null);
-  const dockX = useSharedValue(0);
-
-  function medirDock() {
-    dockRef.current?.measureInWindow((x) => {
-      if (Number.isFinite(x)) dockX.value = x;
-    });
-  }
 
   function aoLayoutItem(index: number, x: number, width: number) {
     const arr = centros.value.slice();
@@ -93,49 +83,6 @@ export function Dock({ items }: { items: DockItem[] }) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid);
   }
 
-  function posicionar(absoluteX: number, primeiraVez: boolean) {
-    "worklet";
-    const c = centros.value;
-    if (!c.length) return;
-    const x = absoluteX - dockX.value;
-    lensX.value = Math.min(Math.max(x, c[0]), c[c.length - 1]);
-    let idx = 0;
-    let menor = Number.MAX_VALUE;
-    for (let i = 0; i < c.length; i++) {
-      const d = Math.abs(lensX.value - c[i]);
-      if (d < menor) { menor = d; idx = i; }
-    }
-    if (idx !== hover.value) {
-      hover.value = idx;
-      if (!primeiraVez) runOnJS(hapticLeve)();
-    }
-  }
-
-  const arrasto = Gesture.Pan()
-    .activateAfterLongPress(220)
-    .maxPointers(1)
-    .onStart((e) => {
-      posicionar(e.absoluteX, true);
-      lensAtiva.value = withSpring(1, { stiffness: 320, damping: 22 });
-      runOnJS(hapticInicio)();
-    })
-    .onUpdate((e) => {
-      posicionar(e.absoluteX, false);
-    })
-    .onEnd((_e, sucesso) => {
-      const idx = hover.value;
-      lensAtiva.value = withTiming(0, { duration: 180, easing: ReEasing.out(ReEasing.quad) });
-      hover.value = -1;
-      // Só navega se o gesto TERMINOU de verdade (dedo levantou) — um pan
-      // cancelado pelo sistema também passa pelo onEnd e navegava sozinho.
-      if (sucesso && idx >= 0) runOnJS(selecionar)(idx);
-    })
-    .onFinalize(() => {
-      if (lensAtiva.value !== 0) {
-        lensAtiva.value = withTiming(0, { duration: 180 });
-        hover.value = -1;
-      }
-    });
 
   const estiloLente = useAnimatedStyle(() => ({
     opacity: lensAtiva.value,
@@ -180,7 +127,12 @@ export function Dock({ items }: { items: DockItem[] }) {
       item={item}
       index={i}
       hover={hover}
+      lensX={lensX}
       lensAtiva={lensAtiva}
+      centros={centros}
+      onSelecionar={selecionar}
+      onHapticInicio={hapticInicio}
+      onHapticLeve={hapticLeve}
       onLayoutItem={aoLayoutItem}
       colors={colors}
       styles={styles}
@@ -193,11 +145,10 @@ export function Dock({ items }: { items: DockItem[] }) {
       style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}
     >
       <Animated.View style={estiloBob}>
-        <GestureDetector gesture={arrasto}>
-          {/* O vidro é SÓ o fundo (absoluteFill) e os botões ficam FORA
-              dele, por cima. Filhos dentro da GlassView somem quando o
-              glass re-renderiza no toque (iOS 26) — visto em produção. */}
-          <View ref={dockRef} style={styles.dock} collapsable={false} onLayout={medirDock}>
+        {/* O vidro é SÓ o fundo (absoluteFill) e os botões ficam FORA
+            dele, por cima. Filhos dentro da GlassView somem quando o
+            glass re-renderiza no toque (iOS 26) — visto em produção. */}
+        <View style={styles.dock} collapsable={false}>
             {LIQUID ? (
               <GlassView
                 glassEffectStyle="regular"
@@ -212,10 +163,9 @@ export function Dock({ items }: { items: DockItem[] }) {
                 style={[styles.fundoGlass, { backgroundColor: colors.dockBg }]}
               />
             )}
-            {lente}
-            {botoes}
-          </View>
-        </GestureDetector>
+          {lente}
+          {botoes}
+        </View>
       </Animated.View>
     </View>
   );
@@ -225,7 +175,12 @@ function DockButton({
   item,
   index,
   hover,
+  lensX,
   lensAtiva,
+  centros,
+  onSelecionar,
+  onHapticInicio,
+  onHapticLeve,
   onLayoutItem,
   colors,
   styles,
@@ -233,11 +188,59 @@ function DockButton({
   item: DockItem;
   index: number;
   hover: SharedValue<number>;
+  lensX: SharedValue<number>;
   lensAtiva: SharedValue<number>;
+  centros: SharedValue<number[]>;
+  onSelecionar: (index: number) => void;
+  onHapticInicio: () => void;
+  onHapticLeve: () => void;
   onLayoutItem: (index: number, x: number, width: number) => void;
   colors: Palette;
   styles: ReturnType<typeof makeStyles>;
 }) {
+  // Gesto NO BOTÃO: o índice inicial é estático (este botão), sem
+  // depender de coordenadas (e.x/absoluteX falharam em produção) nem de
+  // onPressIn (o long-press do pan CANCELA os toques do Pressable antes
+  // dele disparar). O arrasto segue por translationX.
+  const arrasto = Gesture.Pan()
+    .activateAfterLongPress(220)
+    .maxPointers(1)
+    .onStart(() => {
+      const c = centros.value;
+      if (!c.length) return;
+      hover.value = index;
+      lensX.value = c[index] ?? c[0];
+      lensAtiva.value = withSpring(1, { stiffness: 320, damping: 22 });
+      runOnJS(onHapticInicio)();
+    })
+    .onUpdate((e) => {
+      const c = centros.value;
+      if (!c.length) return;
+      const x = (c[index] ?? c[0]) + e.translationX;
+      lensX.value = Math.min(Math.max(x, c[0]), c[c.length - 1]);
+      let idx = 0;
+      let menor = Number.MAX_VALUE;
+      for (let i = 0; i < c.length; i++) {
+        const d = Math.abs(lensX.value - c[i]);
+        if (d < menor) { menor = d; idx = i; }
+      }
+      if (idx !== hover.value) {
+        hover.value = idx;
+        runOnJS(onHapticLeve)();
+      }
+    })
+    .onEnd((_e, sucesso) => {
+      const idx = hover.value;
+      lensAtiva.value = withTiming(0, { duration: 180, easing: ReEasing.out(ReEasing.quad) });
+      hover.value = -1;
+      if (sucesso && idx >= 0) runOnJS(onSelecionar)(idx);
+    })
+    .onFinalize(() => {
+      if (lensAtiva.value !== 0) {
+        lensAtiva.value = withTiming(0, { duration: 180 });
+        hover.value = -1;
+      }
+    });
   // Magnificação POR ÍNDICE (hover) com withSpring dentro do estilo.
   // ⚠️ A versão por distância contínua (lendo o ARRAY de centros no
   // worklet de cada botão) fazia os ícones SUMIREM durante o gesto —
@@ -254,6 +257,7 @@ function DockButton({
   });
 
   return (
+    <GestureDetector gesture={arrasto}>
     <Pressable
       onPress={item.onPress}
       onLayout={(e) => onLayoutItem(index, e.nativeEvent.layout.x, e.nativeEvent.layout.width)}
@@ -278,6 +282,7 @@ function DockButton({
       </Animated.View>
       <View style={[styles.dot, item.active && styles.dotActive]} />
     </Pressable>
+    </GestureDetector>
   );
 }
 
