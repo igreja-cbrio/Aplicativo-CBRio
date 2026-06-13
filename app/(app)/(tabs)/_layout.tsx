@@ -1,4 +1,5 @@
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 
 /**
@@ -9,11 +10,22 @@ import { useT } from "@/lib/i18n";
  * de 3 rodadas de bugs com reconhecedores de gesto).
  * `minimizeBehavior="onScrollDown"`: a barra encolhe ao rolar pra
  * baixo e volta ao rolar pra cima, como nos apps do sistema.
+ *
+ * Identidade CBRio: `tintColor` pinta o item ATIVO com o teal da marca
+ * (tom mais claro no dark pra ler bem sobre o vidro escuro). Fundo e
+ * blur ficam por conta do sistema — pintar o fundo mataria o glass.
  */
 export default function TabsLayout() {
   const t = useT();
+  const { colors, mode } = useTheme();
+  const tint = mode === "dark" ? colors.brandMid : colors.primary;
+
   return (
-    <NativeTabs minimizeBehavior="onScrollDown">
+    <NativeTabs
+      minimizeBehavior="onScrollDown"
+      tintColor={tint}
+      labelStyle={{ fontWeight: "600" }}
+    >
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "house", selected: "house.fill" }} />
         <Label>{t("Home")}</Label>
