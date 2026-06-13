@@ -2,5 +2,5 @@
 module.exports = () => ({
   type: "widget",
   name: "Devocional",
-  deploymentTarget: "16.0",
+  deploymentTarget: "17.0",
 });
