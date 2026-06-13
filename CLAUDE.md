@@ -68,13 +68,12 @@ app/
     cadastro.tsx       # nome, e-mail, telefone, senha -> dispara SMS
     verificar-telefone.tsx  # confirmação do código SMS (OTP)
     recuperar-senha.tsx
-  (app)/               # área autenticada — navegação por abas (dock glass)
-    _layout.tsx        # Tabs do expo-router com o Dock como tabBar custom
-    index.tsx          # Home
-    cuidados.tsx       # placeholder (em breve)
-    voluntariado.tsx   # placeholder (em breve)
-    generosidade.tsx   # placeholder (em breve)
-    menu.tsx           # demais opções, aparência (tema) + Sair
+  (app)/               # área autenticada — Stack (telas push) sobre as abas
+    _layout.tsx        # Stack + MembroProvider
+    (tabs)/            # tab bar NATIVA (NativeTabs/UITabBarController)
+      _layout.tsx      # 5 triggers com SF Symbols + i18n
+      index.tsx        # Home (header fixo + carrossel + cultos + atalhos)
+      cuidados.tsx / voluntariado.tsx / generosidade.tsx / menu.tsx
     perfil.tsx         # editar e-mail/telefone/nascimento + CPF (vincula ao membro) + foto + cartões
     cartoes.tsx        # CARTÃO ÚNICO holográfico (toque vira; brilho holo reage ao giroscópio) + QR (mem_qrcodes.token) + botão oficial "Add to Apple Wallet"
     voluntariado.tsx   # inscrição de voluntariado (+ escalas em breve)
@@ -95,7 +94,7 @@ lib/
   wallet.ts            # baixa o .pkpass (API do ERP); iOS adiciona direto via PassKit (react-native-wallet-pass), Android compartilha
 components/
   cartao/              # HoloTicket + HolographicCard (Skia) + useDeviceTilt (giroscópio) + AddToWalletButton (PKAddPassButton oficial)
-  ui/                  # Button, Input, SocialButton, Checkbox, CodeInput, PhoneInput, Dock, ComingSoon
+  ui/                  # Button, Input, SocialButton, Checkbox, CodeInput, PhoneInput, ComingSoon
 constants/
   countries.ts         # lista de países (bandeira via emoji + DDI) p/ o PhoneInput
 lib/
