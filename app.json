@@ -76,7 +76,8 @@
         {
           "faceIDPermission": "O CBRio usa o Face ID para você desbloquear o app com segurança, sem digitar sua senha."
         }
-      ]
+      ],
+      "@bacons/apple-targets"
     ],
     "experiments": {
       "typedRoutes": true
