@@ -44,16 +44,18 @@ módulo**. Roda em **Android e iOS**.
 - **Apple Wallet:** `react-native-wallet-pass` expõe `PassKit.addPass(base64)`
   (abre a tela nativa de adicionar passe) e o componente `AddPassButton`
   (`PKAddPassButton` — botão oficial da Apple, HIG).
-- **Navegação autenticada:** abas via `expo-router` `Tabs` com **Dock glass**
-  custom (`components/ui/Dock.tsx`) — vidro fosco real com `expo-blur`, leve
-  flutuação, ícone ativo destacado e ponto indicador. Abas: Home, Cuidados,
-  Voluntariado, Generosidade, Menu (o Menu reúne perfil e demais opções).
-  **Lente arrastável** (estilo tab bar iOS 26): segurar ~0,2s ergue uma lente
-  sob o dedo; arrastar magnifica os ícones (macOS dock) e soltar navega —
-  `Gesture.Pan().activateAfterLongPress` + Reanimated + haptics.
-  ⚠️ **NUNCA aninhar `GlassView` dentro de `GlassView`** (a lente dentro do
-  dock glass apagava todos os ícones — validado no simulador); overlays
-  internos usam camada translúcida simples.
+- **Navegação autenticada:** tab bar **NATIVA** (`UITabBarController`) via
+  `expo-router/unstable-native-tabs` em `app/(app)/(tabs)/_layout.tsx` —
+  no iOS 26 vem com **Liquid Glass real** e a interação de pressionar e
+  arrastar a lente entre as abas, implementadas pela Apple
+  (`minimizeBehavior="onScrollDown"` encolhe a barra ao rolar). Ícones são
+  SF Symbols; rótulos passam pelo i18n. Abas: Home, Cuidados, Voluntariado,
+  Generosidade, Menu. As DEMAIS telas vivem em `app/(app)/` sob um Stack
+  (push de verdade por cima das abas). ⚠️ História: o Dock custom em JS
+  (glass + gesto próprio) foi aposentado em 12/06 após 3 rodadas de bugs
+  com reconhecedores de gesto (e.x/absoluteX corrompidos, onPressIn
+  cancelado pelo long-press, GlassView aninhada apagando filhos) — NÃO
+  reimplementar tab bar custom; usar a nativa.
 
 ## Estrutura de pastas
 

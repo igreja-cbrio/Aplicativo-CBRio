@@ -70,7 +70,7 @@ function RootNavigator() {
     if (!authed && !inAuthGroup) {
       router.replace("/(auth)/login");
     } else if (authed && inAuthGroup && !inRedefinirSenha) {
-      router.replace("/(app)");
+      router.replace("/");
     }
   }, [authed, loading, segments]);
 

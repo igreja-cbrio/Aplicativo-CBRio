@@ -29,7 +29,7 @@ import { AnimatedShortcut } from "@/components/anim/AnimatedShortcut";
 import { AnimatedBell } from "@/components/anim/AnimatedBell";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
-const LOGO_WORDMARK = require("../../assets/images/cbrio-wordmark.png");
+const LOGO_WORDMARK = require("../../../assets/images/cbrio-wordmark.png");
 const HEADER_H = 52; // altura útil do header fixo (sem o inset do notch)
 
 function primeiroNome(nomeCompleto?: string, email?: string | null) {

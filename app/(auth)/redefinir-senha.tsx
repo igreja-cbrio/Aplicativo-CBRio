@@ -85,7 +85,7 @@ export default function RedefinirSenha() {
     try {
       await updatePassword(senha);
       Alert.alert(t("Senha redefinida ✅"), t("Pronto! Você já está conectado com a nova senha."));
-      router.replace("/(app)");
+      router.replace("/");
     } catch (e) {
       Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível redefinir."));
     }
