@@ -118,17 +118,21 @@ export function ProximosCultos({ cultos }: { cultos: CultoUpcoming[] }) {
   const pad = (n: number) => String(n).padStart(2, "0");
   const hojeIso = `${hoje.getFullYear()}-${pad(hoje.getMonth() + 1)}-${pad(hoje.getDate())}`;
 
-  let heroi: Grupo | null = null;
-  for (const g of grupos) {
+  // Herói = primeiro grupo de HOJE com culto ao vivo ou próximo. Remove
+  // por ÍNDICE (não por referência) pra garantir que ele não duplique
+  // na lista de baixo.
+  let heroiIdx = -1;
+  for (let i = 0; i < grupos.length; i++) {
+    const g = grupos[i];
     if (g.data !== hojeIso) continue;
     const st = statusDosHorarios(g.itens, agora);
-    const temVivoOuProximo = [...st.values()].some((s) => s === "ao_vivo" || s === "proximo");
-    if (temVivoOuProximo) {
-      heroi = g;
+    if ([...st.values()].some((s) => s === "ao_vivo" || s === "proximo")) {
+      heroiIdx = i;
       break;
     }
   }
-  const restantes = grupos.filter((g) => g !== heroi);
+  const heroi = heroiIdx >= 0 ? grupos[heroiIdx] : null;
+  const restantes = grupos.filter((_, i) => i !== heroiIdx);
 
   return (
     <View style={{ gap: spacing.sm, marginHorizontal: -spacing.lg }}>

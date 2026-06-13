@@ -540,6 +540,16 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Compartilhar": { en: "Share", es: "Compartir" },
   "Não foi possível compartilhar.": { en: "Couldn't share.", es: "No se pudo compartir." },
 
+  // ───────────────── Cuidados — meus pedidos ─────────────────
+  "Servir": { en: "Serve", es: "Servir" },
+  "Doar": { en: "Give", es: "Donar" },
+  "Meus pedidos": { en: "My requests", es: "Mis pedidos" },
+  "Conversa com pastor": { en: "Talk with a pastor", es: "Charla con un pastor" },
+  "Pedido de ajuda": { en: "Help request", es: "Pedido de ayuda" },
+  "Recebido": { en: "Received", es: "Recibido" },
+  "Um pastor está cuidando 💙": { en: "A pastor is caring for you 💙", es: "Un pastor te está cuidando 💙" },
+  "Atendido": { en: "Handled", es: "Atendido" },
+
   // ───────────────── Próximos cultos (herói/countdown) ─────────────────
   "AMANHÃ": { en: "TOMORROW", es: "MAÑANA" },
   "começa em": { en: "starts in", es: "comienza en" },

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -19,8 +19,22 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { criarInscricao } from "@/lib/inscricoes";
+import { meusPedidosCuidado, type PedidoCuidado } from "@/lib/meusPedidos";
 import { useT } from "@/lib/i18n";
+import { useFocusEffect } from "expo-router";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+
+const TIPO_LABEL: Record<PedidoCuidado["tipo"], string> = {
+  oracao: "Pedido de oração",
+  aconselhamento: "Conversa com pastor",
+  sos: "Pedido de ajuda",
+};
+
+const STATUS_META: Record<PedidoCuidado["tratamento_status"], { label: string; cor: string; bg: string }> = {
+  pendente: { label: "Recebido", cor: "#9FB8BF", bg: "rgba(159,184,191,0.16)" },
+  em_andamento: { label: "Um pastor está cuidando 💙", cor: "#70A8B0", bg: "rgba(112,168,176,0.18)" },
+  concluido: { label: "Atendido", cor: "#3FA66B", bg: "rgba(63,166,107,0.16)" },
+};
 
 export default function CuidadosScreen() {
   const { user } = useAuth();
@@ -34,6 +48,13 @@ export default function CuidadosScreen() {
   const [enviandoSos, setEnviandoSos] = useState(false);
   const [enviandoAcons, setEnviandoAcons] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [pedidos, setPedidos] = useState<PedidoCuidado[]>([]);
+
+  const carregarPedidos = useCallback(() => {
+    meusPedidosCuidado().then(setPedidos).catch(() => {});
+  }, []);
+
+  useFocusEffect(carregarPedidos);
 
   async function enviarOracao() {
     if (!oracao.trim()) {
@@ -58,6 +79,7 @@ export default function CuidadosScreen() {
         t("Recebemos seu pedido 🙏"),
         t("Nossa equipe vai orar por você. Que Deus te console.")
       );
+      setTimeout(carregarPedidos, 1500);
     } catch (e) {
       setMsg(e instanceof Error ? e.message : t("Não foi possível enviar."));
     } finally {
@@ -82,6 +104,7 @@ export default function CuidadosScreen() {
         t("Pedido enviado"),
         t("Um pastor ou líder vai entrar em contato com você em breve.")
       );
+      setTimeout(carregarPedidos, 1500);
     } catch (e) {
       setMsg(e instanceof Error ? e.message : t("Não foi possível enviar."));
     } finally {
@@ -118,6 +141,7 @@ export default function CuidadosScreen() {
         t("Avisamos um pastor 💙"),
         t("Um pastor responsável foi notificado e vai te procurar. Se for emergência, ligue 192 (SAMU) ou 188 (CVV) agora.")
       );
+      setTimeout(carregarPedidos, 1500);
     } catch {
       Alert.alert(
         t("Não foi possível avisar agora"),
@@ -199,6 +223,33 @@ export default function CuidadosScreen() {
               loading={enviandoAcons}
             />
           </GlassCard>
+
+          {/* Meus pedidos — acompanhamento do que já enviei */}
+          {pedidos.length > 0 && (
+            <View style={styles.meusWrap}>
+              <Text style={styles.meusTitulo}>{t("Meus pedidos")}</Text>
+              {pedidos.map((p) => {
+                const st = STATUS_META[p.tratamento_status];
+                return (
+                  <View key={p.id} style={styles.pedido}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.pedidoTipo}>{t(TIPO_LABEL[p.tipo])}</Text>
+                      {p.mensagem ? (
+                        <Text style={styles.pedidoMsg} numberOfLines={1}>{p.mensagem}</Text>
+                      ) : null}
+                      <Text style={styles.pedidoData}>
+                        {new Date(p.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+                      </Text>
+                    </View>
+                    <View style={[styles.statusPill, { backgroundColor: st.bg }]}>
+                      <View style={[styles.statusDot, { backgroundColor: st.cor }]} />
+                      <Text style={[styles.statusTxt, { color: st.cor }]}>{t(st.label)}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -258,6 +309,31 @@ const makeStyles = (colors: Palette) =>
     },
     cardTitle: { color: colors.text, fontSize: font.size.lg, fontWeight: "700" },
     cardText: { color: colors.textMuted, fontSize: font.size.md, lineHeight: 22 },
+    meusWrap: { gap: spacing.sm, marginTop: spacing.sm },
+    meusTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "700", marginBottom: 2 },
+    pedido: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.lg,
+      padding: spacing.md,
+    },
+    pedidoTipo: { color: colors.text, fontSize: font.size.md, fontWeight: "600" },
+    pedidoMsg: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 1 },
+    pedidoData: { color: colors.textMuted, fontSize: 11, marginTop: 3 },
+    statusPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: radius.full,
+    },
+    statusDot: { width: 6, height: 6, borderRadius: 999 },
+    statusTxt: { fontSize: 11, fontWeight: "700" },
     textarea: {
       minHeight: 100,
       backgroundColor: colors.surfaceAlt,
