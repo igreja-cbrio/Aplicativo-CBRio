@@ -26,6 +26,7 @@ import {
   type DevocionalItem,
   type CheckinDevocional,
 } from "@/lib/devocional";
+import { compartilharDevocional } from "@/lib/devocionalShare";
 
 const DIAS_LABEL = ["S", "T", "Q", "Q", "S"]; // seg–sex
 
@@ -43,6 +44,7 @@ export default function DevocionalScreen() {
   const [salvando, setSalvando] = useState(false);
   const [obs, setObs] = useState("");
   const [celebra, setCelebra] = useState(false);
+  const [compartilhando, setCompartilhando] = useState(false);
 
   const hoje = hojeISO();
   const itensHoje = itens.filter((i) => i.data === hoje);
@@ -69,6 +71,18 @@ export default function DevocionalScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  async function compartilhar() {
+    if (!itemHoje) return;
+    setCompartilhando(true);
+    try {
+      Haptics.selectionAsync();
+      await compartilharDevocional(itemHoje);
+    } catch (e) {
+      Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível compartilhar."));
+    }
+    setCompartilhando(false);
+  }
 
   async function concluir() {
     if (!itemHoje) return;
@@ -241,6 +255,17 @@ export default function DevocionalScreen() {
                 </Pressable>
               </>
             )}
+
+            <Pressable onPress={compartilhar} disabled={compartilhando} style={styles.compartilhar}>
+              {compartilhando ? (
+                <ActivityIndicator color={colors.brandMid} />
+              ) : (
+                <>
+                  <Ionicons name="share-outline" size={18} color={colors.brandMid} />
+                  <Text style={styles.compartilharTxt}>{t("Compartilhar")}</Text>
+                </>
+              )}
+            </Pressable>
           </>
         )}
       </ScrollView>
@@ -346,5 +371,14 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
       paddingHorizontal: 14,
     },
     feitoTxt: { color: colors.text, fontSize: 14, fontWeight: "600", flex: 1 },
+    compartilhar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 12,
+      marginTop: 12,
+    },
+    compartilharTxt: { color: colors.brandMid, fontSize: 14, fontWeight: "700" },
   });
 }

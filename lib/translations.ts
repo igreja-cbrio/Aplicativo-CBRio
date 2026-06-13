@@ -537,6 +537,8 @@ export const TRANSLATIONS: Record<string, Traducao> = {
     es: "Para registrar tu lectura, completa tu perfil con el CPF (Menú → Perfil).",
   },
   "Não foi possível registrar.": { en: "Couldn't record it.", es: "No se pudo registrar." },
+  "Compartilhar": { en: "Share", es: "Compartir" },
+  "Não foi possível compartilhar.": { en: "Couldn't share.", es: "No se pudo compartir." },
 
   // ───────────────── Próximos cultos (herói/countdown) ─────────────────
   "AMANHÃ": { en: "TOMORROW", es: "MAÑANA" },
