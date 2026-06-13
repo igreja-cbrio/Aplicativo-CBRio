@@ -195,6 +195,40 @@ async function lembreteDevocional(sb: SupabaseClient, hoje: string, minutosAgora
   console.log(`[lembretes] devocional ${item.id} -> ${userIds.length} usuários`);
 }
 
+async function lembreteAniversario(sb: SupabaseClient, hoje: string, minutosAgora: number) {
+  // Todo dia às 9h (janela 09:00–09:09). Compara só mês+dia.
+  if (minutosAgora < 9 * 60 || minutosAgora > 9 * 60 + 9) return;
+  const [ano, mes, dia] = hoje.split("-");
+
+  // Poucos membros têm nascimento — busca só os do dia via filtro de mês/dia
+  // não é trivial no PostgREST, então traz os com data e filtra aqui.
+  const { data: membros } = await sb
+    .from("mem_membros")
+    .select("id, nome, data_nascimento")
+    .not("data_nascimento", "is", null);
+
+  const membroIds: string[] = [];
+  for (const m of membros ?? []) {
+    const nasc = String(m.data_nascimento); // YYYY-MM-DD
+    if (nasc.slice(5) !== `${mes}-${dia}`) continue;
+    // Dedup por ano: cada membro recebe 1x por aniversário
+    if (await deduplicar(sb, `aniversario:${ano}:${m.id}`)) {
+      membroIds.push(m.id as string);
+    }
+  }
+  if (!membroIds.length) return;
+
+  await notificar(
+    { membroIds },
+    {
+      tipo: "aniversario",
+      titulo: "Feliz aniversário! 🎂",
+      body: "A CBRio celebra a sua vida hoje. Que esse novo ano seja cheio da presença de Deus. 💙",
+    }
+  );
+  console.log(`[lembretes] aniversário -> ${membroIds.length} membros`);
+}
+
 Deno.serve(async (_req) => {
   try {
     const sb = makeAdmin();
@@ -203,6 +237,7 @@ Deno.serve(async (_req) => {
     await lembretesBatismo(sb, hoje, minutos);
     await lembreteNext(sb, hoje, minutos);
     await lembreteDevocional(sb, hoje, minutos);
+    await lembreteAniversario(sb, hoje, minutos);
     return new Response(JSON.stringify({ ok: true }), {
       headers: { "Content-Type": "application/json" },
     });
