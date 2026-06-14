@@ -131,5 +131,13 @@ export function useNotificacoesNaoLidas(intervaloMs = 120000) {
     };
   }, [carregar, intervaloMs]);
 
+  // Recarrega ao focar a tela (ex.: voltar de Notificações após marcar
+  // todas como lidas) — sem isso o badge só zerava no próximo polling/120s.
+  useFocusEffect(
+    useCallback(() => {
+      carregar();
+    }, [carregar])
+  );
+
   return { count, recarregar: carregar };
 }

@@ -121,7 +121,7 @@ function Canal({
   return (
     <Pressable style={styles.canal} onPress={onPress} accessibilityRole="button" accessibilityLabel={label}>
       <Ionicons name={icon} size={22} color={colors.brandMid} />
-      <Text style={styles.canalTxt}>{label}</Text>
+      <Text style={styles.canalTxt} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{label}</Text>
     </Pressable>
   );
 }
@@ -139,9 +139,9 @@ const makeStyles = (colors: Palette) =>
       flexDirection: "row", alignItems: "center", gap: 8,
       backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
       borderRadius: radius.lg, paddingHorizontal: 14, paddingVertical: 12,
-      flexGrow: 1, flexBasis: "45%", justifyContent: "center",
+      flexGrow: 1, flexBasis: "45%", minWidth: 0, justifyContent: "center",
     },
-    canalTxt: { color: colors.text, fontSize: font.size.md, fontWeight: "600" },
+    canalTxt: { color: colors.text, fontSize: font.size.md, fontWeight: "600", flexShrink: 1 },
     card: { gap: spacing.sm, marginTop: spacing.sm },
     cardTitle: { color: colors.text, fontSize: font.size.lg, fontWeight: "700" },
     cardText: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 19 },
