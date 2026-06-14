@@ -142,7 +142,7 @@ const makeStyles = (colors: Palette) =>
       flexGrow: 1, flexBasis: "45%", minWidth: 0, justifyContent: "center",
     },
     canalTxt: { color: colors.text, fontSize: font.size.md, fontWeight: "600", flexShrink: 1 },
-    card: { gap: spacing.sm, marginTop: spacing.sm },
+    card: { gap: spacing.sm, marginTop: spacing.sm, padding: spacing.lg },
     cardTitle: { color: colors.text, fontSize: font.size.lg, fontWeight: "700" },
     cardText: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 19 },
     textarea: {
