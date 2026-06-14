@@ -9,7 +9,9 @@ import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { TranslationProvider } from "@/lib/i18n";
 import { SplashPulse } from "@/components/brand/SplashPulse";
 import { BiometriaLock } from "@/components/auth/BiometriaLock";
+import { Onboarding } from "@/components/onboarding/Onboarding";
 import { biometriaAtiva } from "@/lib/biometria";
+import { onboardingVisto, marcarOnboardingVisto } from "@/lib/onboarding";
 import { registerForPush } from "@/lib/push";
 import { attachNotifTapListener } from "@/lib/notifTap";
 import { loadFontScale } from "@/lib/applyFontScale";
@@ -49,6 +51,8 @@ function RootNavigator() {
   // sessão salva e o usuário ativou a opção. null = ainda decidindo.
   const [precisaBiometria, setPrecisaBiometria] = useState<boolean | null>(null);
   const [desbloqueado, setDesbloqueado] = useState(false);
+  // Onboarding: mostra 1x pra quem nunca viu (após logar). null = decidindo.
+  const [mostrarOnboarding, setMostrarOnboarding] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -58,6 +62,15 @@ function RootNavigator() {
     }
     biometriaAtiva().then((ativa) => setPrecisaBiometria(ativa));
   }, [loading, session, preview]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!authed) {
+      setMostrarOnboarding(false);
+      return;
+    }
+    onboardingVisto().then((visto) => setMostrarOnboarding(!visto));
+  }, [loading, authed]);
 
   useEffect(() => {
     if (loading) return;
@@ -99,6 +112,21 @@ function RootNavigator() {
           onSair={() => {
             setDesbloqueado(true); // libera a navegação pro login
             signOut();
+          }}
+        />
+      </>
+    );
+  }
+
+  // Onboarding 1x pra novos usuários (depois da biometria, antes do app).
+  if (authed && mostrarOnboarding) {
+    return (
+      <>
+        <StatusBar style={mode === "light" ? "dark" : "light"} />
+        <Onboarding
+          onConcluir={() => {
+            marcarOnboardingVisto();
+            setMostrarOnboarding(false);
           }}
         />
       </>

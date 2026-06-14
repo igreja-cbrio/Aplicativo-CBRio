@@ -143,3 +143,40 @@ export async function streakDevocional(membroId: string): Promise<number> {
   }
   return streak;
 }
+
+export type Anotacao = {
+  id: string;
+  data: string; // data_devocional YYYY-MM-DD
+  texto: string;
+  passagem: string | null;
+  titulo: string | null;
+};
+
+/**
+ * Anotações pessoais do membro ("o que Deus falou"), gravadas no check-in
+ * (mem_devocionais.observacoes). Junta com o item pra mostrar a passagem.
+ */
+export async function listarAnotacoes(membroId: string): Promise<Anotacao[]> {
+  const { data, error } = await supabase
+    .from("mem_devocionais")
+    .select("id, data_devocional, observacoes, devocional_itens(passagem, titulo)")
+    .eq("membro_id", membroId)
+    .eq("tipo", "pessoal")
+    .not("observacoes", "is", null)
+    .order("data_devocional", { ascending: false })
+    .limit(100);
+  if (error) throw error;
+  type Row = { id: string; data_devocional: string; observacoes: string | null; devocional_itens?: { passagem: string | null; titulo: string | null } | { passagem: string | null; titulo: string | null }[] | null };
+  return ((data as Row[]) ?? [])
+    .filter((r) => (r.observacoes ?? "").trim().length > 0)
+    .map((r) => {
+      const it = Array.isArray(r.devocional_itens) ? r.devocional_itens[0] : r.devocional_itens;
+      return {
+        id: r.id,
+        data: r.data_devocional,
+        texto: (r.observacoes ?? "").trim(),
+        passagem: it?.passagem ?? null,
+        titulo: it?.titulo ?? null,
+      };
+    });
+}

@@ -17,7 +17,8 @@ export type TipoInscricao =
   | "voluntariado"
   | "oracao"
   | "aconselhamento"
-  | "sos";
+  | "sos"
+  | "contato";
 
 export async function criarInscricao(
   tipo: TipoInscricao,

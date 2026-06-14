@@ -148,6 +148,15 @@ export default function DevocionalScreen() {
               <Text style={styles.streakTxt}>🔥 {streak} {streak === 1 ? t("dia") : t("dias")}</Text>
             </View>
           )}
+          <Pressable
+            onPress={() => router.navigate("/anotacoes")}
+            hitSlop={8}
+            style={styles.anotacoesBtn}
+            accessibilityRole="button"
+            accessibilityLabel={t("Minhas anotações")}
+          >
+            <Ionicons name="bookmark-outline" size={20} color={colors.brandMid} />
+          </Pressable>
         </View>
 
         {/* Progresso da semana (seg–sex) */}
@@ -289,6 +298,16 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
       paddingVertical: 6,
     },
     streakTxt: { color: colors.text, fontWeight: "700", fontSize: 13 },
+    anotacoesBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
     semanaCard: {
       backgroundColor: colors.surface,
       borderWidth: 1,

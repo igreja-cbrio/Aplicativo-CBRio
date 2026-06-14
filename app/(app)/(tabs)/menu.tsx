@@ -31,6 +31,7 @@ export default function MenuScreen() {
 
   const options: Option[] = [
     { label: "Meu perfil", icon: "person-outline", onPress: () => router.navigate("/perfil") },
+    { label: "Sua jornada", icon: "trail-sign-outline", onPress: () => router.navigate("/jornada") },
     { label: "Início", icon: "home-outline", onPress: () => router.navigate("/") },
     { label: "Cartões", icon: "card-outline", onPress: () => router.navigate("/cartoes") },
     { label: "Inscrições", icon: "create-outline", onPress: () => router.navigate("/inscricoes") },
@@ -43,6 +44,7 @@ export default function MenuScreen() {
     { label: "Devocionais", icon: "book-outline", onPress: () => router.navigate("/devocional") },
     { label: "Notificações", icon: "notifications-outline", onPress: () => router.navigate("/notificacoes") },
     { label: "Configurações", icon: "settings-outline", onPress: () => router.navigate("/configuracoes") },
+    { label: "Fale conosco", icon: "chatbubble-ellipses-outline", onPress: () => router.navigate("/fale-conosco") },
     { label: "Sobre a CBRio", icon: "information-circle-outline", onPress: () => router.navigate("/sobre") },
   ];
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -201,7 +202,11 @@ export default function GruposScreen() {
           />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.listContent} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={<RefreshControl refreshing={loading} onRefresh={carregar} tintColor={colors.primary} />}
+        >
           {meusGrupos.length > 0 && (
             <View style={{ gap: spacing.sm }}>
               <Text style={styles.section}>{t("Meus grupos")}</Text>
