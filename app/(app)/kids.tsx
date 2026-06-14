@@ -38,6 +38,14 @@ type MeusFilhos = {
   preCheckin: PreCheckin | null;
 };
 
+type Solicitacao = {
+  id: string;
+  crianca_nome: string;
+  status: "pendente" | "aprovado" | "rejeitado" | "cancelado";
+  motivo_rejeicao: string | null;
+  created_at: string;
+};
+
 function idadeLabel(nascimento: string | null): string {
   if (!nascimento) return "";
   const nasc = new Date(nascimento);
@@ -73,6 +81,7 @@ export default function KidsScreen() {
   const [editando, setEditando] = useState(false);
   const [gerando, setGerando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
 
   const carregar = useCallback(async () => {
     setErro(null);
@@ -88,6 +97,10 @@ export default function KidsScreen() {
     } finally {
       setCarregando(false);
     }
+    // Solicitações de vínculo (best-effort · não bloqueia a tela).
+    apiGet<{ solicitacoes: Solicitacao[] }>("/app/kids/minhas-solicitacoes")
+      .then((r) => setSolicitacoes(r.solicitacoes || []))
+      .catch(() => {});
   }, [t]);
 
   useFocusEffect(
@@ -146,6 +159,27 @@ export default function KidsScreen() {
           {t("Prepare o check-in dos seus filhos pelo celular. No totem, a equipe escaneia seu código, confere com você e imprime as etiquetas. A entrada e a retirada continuam presenciais.")}
         </Text>
 
+        {/* Solicitações de vínculo em análise / recusadas */}
+        {solicitacoes
+          .filter((s) => s.status === "pendente" || s.status === "rejeitado")
+          .map((s) => (
+            <View key={s.id} style={[styles.solRow, s.status === "rejeitado" && styles.solRowRej]}>
+              <Ionicons
+                name={s.status === "pendente" ? "time-outline" : "close-circle-outline"}
+                size={20}
+                color={s.status === "pendente" ? "#F59E0B" : "#EF4444"}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.solNome}>{s.crianca_nome}</Text>
+                <Text style={styles.solStatus}>
+                  {s.status === "pendente"
+                    ? t("Em análise pela equipe Kids")
+                    : s.motivo_rejeicao || t("Solicitação recusada. Procure a equipe Kids.")}
+                </Text>
+              </View>
+            </View>
+          ))}
+
         {carregando ? (
           <View style={styles.center}>
             <ActivityIndicator color={colors.brandMid} />
@@ -160,8 +194,9 @@ export default function KidsScreen() {
             <Ionicons name="happy-outline" size={32} color={colors.brandMid} />
             <Text style={styles.cardTitle}>{t("Nenhuma criança vinculada")}</Text>
             <Text style={styles.cardText}>
-              {t("Você ainda não consta como responsável autorizado de nenhuma criança. Procure a equipe Kids para fazer o vínculo.")}
+              {t("Você ainda não consta como responsável autorizado de nenhuma criança. Solicite o vínculo enviando os documentos — a equipe Kids confere e libera.")}
             </Text>
+            <Button title={t("Solicitar vínculo de uma criança")} onPress={() => router.navigate("/kids-solicitar-vinculo")} />
           </GlassCard>
         ) : pre && !editando ? (
           // ── Código ativo: mostra QR + código pra apresentar no totem ──
@@ -235,6 +270,14 @@ export default function KidsScreen() {
             )}
           </>
         )}
+
+        {/* Vincular outra criança (quando já há filhos ou código ativo) */}
+        {!carregando && !erro && filhos.length > 0 && (
+          <Pressable onPress={() => router.navigate("/kids-solicitar-vinculo")} style={styles.linkRow} accessibilityRole="button">
+            <Ionicons name="add-circle-outline" size={18} color={colors.brandMid} />
+            <Text style={styles.linkTxt}>{t("Solicitar vínculo de outra criança")}</Text>
+          </Pressable>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -266,4 +309,10 @@ const makeStyles = (colors: Palette) =>
     filhoNome: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
     filhoIdade: { color: colors.textMuted, fontSize: font.size.sm },
     filhoObs: { color: "#F59E0B", fontSize: font.size.sm },
+    solRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: "rgba(245,158,11,0.10)", borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: "rgba(245,158,11,0.30)" },
+    solRowRej: { backgroundColor: "rgba(239,68,68,0.10)", borderColor: "rgba(239,68,68,0.30)" },
+    solNome: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
+    solStatus: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 2 },
+    linkRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: spacing.sm },
+    linkTxt: { color: colors.brandMid, fontSize: font.size.md, fontWeight: "600" },
   });
