@@ -15,6 +15,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "br.com.cbrio.app",
+      "appleTeamId": "AK67335XW5",
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "O CBRio usa sua localização para mostrar grupos próximos no mapa e confirmar sua presença no NEXT.",
