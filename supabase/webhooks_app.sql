@@ -95,3 +95,26 @@ drop trigger if exists mem_escalas_notify on public.mem_escalas;
 create trigger mem_escalas_notify
   after insert on public.mem_escalas
   for each row execute function public.tr_mem_escalas_notify();
+
+-- 5. UPDATE em kids_vinculo_solicitacoes (status -> aprovado/rejeitado)
+--    -> notify-kids-vinculo (avisa o responsável que pediu pelo app).
+create or replace function public.tr_kids_vinculo_notify()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.app_dispara_webhook(
+    'https://hhntwfawfnxvuobhdfkb.supabase.co/functions/v1/notify-kids-vinculo',
+    to_jsonb(NEW)
+  );
+  return NEW;
+end; $$;
+
+drop trigger if exists kids_vinculo_notify on public.kids_vinculo_solicitacoes;
+create trigger kids_vinculo_notify
+  after update on public.kids_vinculo_solicitacoes
+  for each row
+  when (NEW.status is distinct from OLD.status and NEW.status in ('aprovado','rejeitado'))
+  execute function public.tr_kids_vinculo_notify();
