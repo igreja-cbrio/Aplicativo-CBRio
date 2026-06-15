@@ -139,7 +139,7 @@ export default function DevocionalScreen() {
         }
       >
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
+          <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
           <Text style={styles.title}>{t("Devocional")}</Text>
