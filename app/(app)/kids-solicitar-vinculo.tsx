@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
 import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { useColors } from "@/contexts/ThemeContext";
@@ -43,6 +44,7 @@ export default function KidsSolicitarVinculoScreen() {
   const [obs, setObs] = useState("");
   const [paths, setPaths] = useState<Partial<Record<Slot, string>>>({});
   const [previews, setPreviews] = useState<Partial<Record<Slot, string>>>({});
+  const [nomes, setNomes] = useState<Partial<Record<Slot, string | null>>>({});
   const [uploading, setUploading] = useState<Slot | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -63,29 +65,57 @@ export default function KidsSolicitarVinculoScreen() {
 
   function escolherDoc(slot: Slot) {
     Alert.alert(t("Enviar documento"), t("Como você quer enviar?"), [
-      { text: t("Tirar foto"), onPress: () => enviarDoc(slot, "camera") },
-      { text: t("Escolher da galeria"), onPress: () => enviarDoc(slot, "galeria") },
+      { text: t("Tirar foto"), onPress: () => enviarFoto(slot, "camera") },
+      { text: t("Escolher da galeria"), onPress: () => enviarFoto(slot, "galeria") },
+      { text: t("Enviar arquivo (PDF)"), onPress: () => enviarArquivo(slot) },
       { text: t("Cancelar"), style: "cancel" },
     ]);
   }
 
-  async function enviarDoc(slot: Slot, fonte: "camera" | "galeria") {
-    if (!user?.id) return;
+  async function enviarFoto(slot: Slot, fonte: "camera" | "galeria") {
     const asset = await pegarImagem(fonte);
     if (!asset) return;
+    await uploadDoc(slot, { uri: asset.uri, mimeType: asset.mimeType ?? null, name: null });
+  }
+
+  async function enviarArquivo(slot: Slot) {
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: ["application/pdf", "image/*"],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (res.canceled || !res.assets?.[0]) return;
+      const a = res.assets[0];
+      await uploadDoc(slot, { uri: a.uri, mimeType: a.mimeType ?? null, name: a.name ?? null });
+    } catch {
+      Alert.alert(
+        t("Arquivos indisponíveis"),
+        t("Atualize o app para a versão mais recente para enviar arquivos. Por enquanto, use a câmera ou a galeria.")
+      );
+    }
+  }
+
+  // Upload genérico (foto ou arquivo) pro bucket privado.
+  async function uploadDoc(slot: Slot, file: { uri: string; mimeType: string | null; name: string | null }) {
+    if (!user?.id) return;
     setUploading(slot);
     try {
-      const resp = await fetch(asset.uri);
+      const resp = await fetch(file.uri);
       const arrayBuffer = await resp.arrayBuffer();
-      const ext = (asset.uri.split(".").pop() || "jpg").toLowerCase();
+      const extDoNome = file.name && file.name.includes(".") ? file.name.split(".").pop() : null;
+      const extDoUri = file.uri.split("?")[0].split(".").pop();
+      const ext = (extDoNome || extDoUri || "jpg").toLowerCase();
       const path = `${user.id}/${slot}-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from(BUCKET).upload(path, arrayBuffer, {
-        contentType: asset.mimeType ?? `image/${ext}`,
+        contentType: file.mimeType ?? (ext === "pdf" ? "application/pdf" : `image/${ext}`),
         upsert: true,
       });
       if (error) throw error;
+      const ehImagem = ext !== "pdf";
       setPaths((p) => ({ ...p, [slot]: path }));
-      setPreviews((p) => ({ ...p, [slot]: asset.uri }));
+      setPreviews((p) => ({ ...p, [slot]: ehImagem ? file.uri : undefined }));
+      setNomes((p) => ({ ...p, [slot]: ehImagem ? null : file.name || "Documento.pdf" }));
     } catch (e) {
       Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Falha ao enviar o documento."));
     } finally {
@@ -190,11 +220,11 @@ export default function KidsSolicitarVinculoScreen() {
           <GlassCard style={styles.card}>
             <Text style={styles.cardTitle}>{t("Documentos")}</Text>
             <Text style={styles.cardText}>
-              {t("Documento da criança é obrigatório. Do pai e/ou da mãe, envie pelo menos um.")}
+              {t("Pode ser foto (câmera/galeria) ou arquivo (PDF). Documento da criança é obrigatório; do pai e/ou da mãe, envie pelo menos um.")}
             </Text>
-            <DocSlot label={t("Documento da criança")} slot="crianca" obrigatorio preview={previews.crianca} done={!!paths.crianca} uploading={uploading === "crianca"} onPress={escolherDoc} styles={styles} colors={colors} />
-            <DocSlot label={t("Documento do pai")} slot="pai" preview={previews.pai} done={!!paths.pai} uploading={uploading === "pai"} onPress={escolherDoc} styles={styles} colors={colors} />
-            <DocSlot label={t("Documento da mãe")} slot="mae" preview={previews.mae} done={!!paths.mae} uploading={uploading === "mae"} onPress={escolherDoc} styles={styles} colors={colors} />
+            <DocSlot label={t("Documento da criança")} slot="crianca" obrigatorio preview={previews.crianca} fileName={nomes.crianca} done={!!paths.crianca} uploading={uploading === "crianca"} onPress={escolherDoc} styles={styles} colors={colors} />
+            <DocSlot label={t("Documento do pai")} slot="pai" preview={previews.pai} fileName={nomes.pai} done={!!paths.pai} uploading={uploading === "pai"} onPress={escolherDoc} styles={styles} colors={colors} />
+            <DocSlot label={t("Documento da mãe")} slot="mae" preview={previews.mae} fileName={nomes.mae} done={!!paths.mae} uploading={uploading === "mae"} onPress={escolherDoc} styles={styles} colors={colors} />
           </GlassCard>
 
           <GlassCard style={styles.card}>
@@ -221,12 +251,13 @@ export default function KidsSolicitarVinculoScreen() {
 }
 
 function DocSlot({
-  label, slot, obrigatorio, preview, done, uploading, onPress, styles, colors,
+  label, slot, obrigatorio, preview, fileName, done, uploading, onPress, styles, colors,
 }: {
   label: string;
   slot: Slot;
   obrigatorio?: boolean;
   preview?: string;
+  fileName?: string | null;
   done: boolean;
   uploading: boolean;
   onPress: (slot: Slot) => void;
@@ -239,15 +270,15 @@ function DocSlot({
         <Image source={{ uri: preview }} style={styles.docThumb} />
       ) : (
         <View style={[styles.docThumb, styles.docThumbEmpty]}>
-          <Ionicons name={done ? "checkmark" : "camera-outline"} size={22} color={done ? "#3FA66B" : colors.brandMid} />
+          <Ionicons name={done ? (fileName ? "document-text" : "checkmark") : "cloud-upload-outline"} size={22} color={done ? "#3FA66B" : colors.brandMid} />
         </View>
       )}
       <View style={{ flex: 1 }}>
         <Text style={styles.docLabel}>
           {label}{obrigatorio ? " *" : ""}
         </Text>
-        <Text style={[styles.docStatus, done && { color: "#3FA66B" }]}>
-          {uploading ? "Enviando…" : done ? "Enviado ✓ · toque pra trocar" : "Toque para enviar"}
+        <Text style={[styles.docStatus, done && { color: "#3FA66B" }]} numberOfLines={1}>
+          {uploading ? "Enviando…" : done ? (fileName ? `${fileName} ✓` : "Enviado ✓ · toque pra trocar") : "Foto ou arquivo (PDF)"}
         </Text>
       </View>
       {uploading && <ActivityIndicator color={colors.brandMid} />}
