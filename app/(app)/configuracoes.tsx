@@ -36,6 +36,7 @@ import {
   setMetodoPagamentoPadrao,
   type MetodoPagamento,
 } from "@/lib/preferenciaPagamento";
+import { apiGet, apiPost } from "@/lib/api";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const TEMA_OPCOES: { key: ThemePreference; label: string; icon: React.ComponentProps<typeof Ionicons>["name"] }[] = [
@@ -88,6 +89,22 @@ export default function ConfiguracoesScreen() {
     setMetodoPagamentoPadrao(m);
   }
   const [notifAtivas, setNotifAtivas] = useState<boolean | null>(null);
+
+  // Opt-in de WhatsApp (consentimento · LGPD)
+  const [whatsappOptin, setWhatsappOptin] = useState(false);
+  useEffect(() => {
+    apiGet<{ optin: boolean }>("/app/whatsapp-optin")
+      .then((r) => setWhatsappOptin(!!r.optin))
+      .catch(() => {});
+  }, []);
+  async function alternarWhatsapp(valor: boolean) {
+    setWhatsappOptin(valor); // otimista
+    try {
+      await apiPost("/app/whatsapp-optin", { optin: valor });
+    } catch {
+      setWhatsappOptin(!valor); // reverte se falhar
+    }
+  }
 
   // Desbloqueio por biometria (Face ID / Touch ID)
   const [biomSuportada, setBiomSuportada] = useState(false);
@@ -317,6 +334,19 @@ export default function ConfiguracoesScreen() {
             <Switch
               value={!!notifAtivas}
               onValueChange={alternarNotificacoes}
+              trackColor={{ true: colors.primary, false: colors.glassBorder }}
+            />
+          </View>
+          <View style={styles.switchRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>{t("Receber mensagens no WhatsApp")}</Text>
+              <Text style={styles.hint}>
+                {t("Lembretes, confirmações e avisos da CBRio pelo WhatsApp. Você pode desativar quando quiser.")}
+              </Text>
+            </View>
+            <Switch
+              value={whatsappOptin}
+              onValueChange={alternarWhatsapp}
               trackColor={{ true: colors.primary, false: colors.glassBorder }}
             />
           </View>
