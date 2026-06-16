@@ -124,6 +124,8 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Você ainda não consta como responsável autorizado de nenhuma criança. Solicite o vínculo enviando os documentos — a equipe Kids confere e libera.": { en: "You are not yet listed as an authorized guardian of any child. Request the link by sending the documents — the Kids team reviews and approves.", es: "Aún no figuras como responsable autorizado de ningún niño. Solicita el vínculo enviando los documentos — el equipo de Niños revisa y aprueba." },
   "Solicitar vínculo": { en: "Request link", es: "Solicitar vínculo" },
   "Para a segurança das crianças, o vínculo é conferido pela equipe Kids. Envie os documentos da criança e do(s) responsável(is); a equipe valida e libera.": { en: "For the children's safety, the link is reviewed by the Kids team. Send the child's and the guardian(s)' documents; the team validates and approves.", es: "Para la seguridad de los niños, el vínculo es revisado por el equipo de Niños. Envía los documentos del niño y del/los responsable(s); el equipo valida y aprueba." },
+  "Você frequenta o AMI ou o Bridge?": { en: "Do you attend AMI or Bridge?", es: "¿Asistes al AMI o al Bridge?" },
+  "Não frequento": { en: "I don't attend", es: "No asisto" },
   "Nome da criança": { en: "Child's name", es: "Nombre del niño" },
   "Seu parentesco": { en: "Your relationship", es: "Tu parentesco" },
   "Mãe": { en: "Mother", es: "Madre" },

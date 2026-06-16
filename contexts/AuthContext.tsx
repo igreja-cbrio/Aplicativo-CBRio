@@ -38,6 +38,7 @@ type AuthContextValue = {
       cpf: string;
       dataNascimento: string; // ISO AAAA-MM-DD
       telefone: string; // E.164, ex.: +5521999999999
+      frequentaArea?: "ami" | "bridge" | null; // ministério auto-declarado
     }
   ) => Promise<{ needsEmailConfirmation: boolean }>;
   signUpWithPhone: (
@@ -137,6 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               cpf: profile.cpf,
               data_nascimento: profile.dataNascimento,
               telefone: profile.telefone,
+              frequenta_area: profile.frequentaArea ?? null,
             },
           },
         });

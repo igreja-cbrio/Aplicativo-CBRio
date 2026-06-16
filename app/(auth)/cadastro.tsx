@@ -3,6 +3,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -41,6 +42,7 @@ export default function CadastroScreen() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [frequentaArea, setFrequentaArea] = useState<"ami" | "bridge" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -69,6 +71,7 @@ export default function CadastroScreen() {
         cpf: onlyDigits(cpf),
         dataNascimento: dateBRToISO(nascimento)!,
         telefone: `+${country.dial}${onlyDigits(phone)}`,
+        frequentaArea,
       });
       if (needsEmailConfirmation) {
         Alert.alert(
@@ -148,6 +151,30 @@ export default function CadastroScreen() {
                 secure
               />
 
+              <View style={styles.areaBlock}>
+                <Text style={styles.areaLabel}>{t("Você frequenta o AMI ou o Bridge?")}</Text>
+                <View style={styles.areaRow}>
+                  {([
+                    { v: "ami", label: "AMI" },
+                    { v: "bridge", label: "Bridge" },
+                    { v: null, label: t("Não frequento") },
+                  ] as const).map((opt) => {
+                    const ativo = frequentaArea === opt.v;
+                    return (
+                      <Pressable
+                        key={opt.label}
+                        onPress={() => setFrequentaArea(opt.v)}
+                        style={[styles.areaPill, ativo && styles.areaPillOn]}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: ativo }}
+                      >
+                        <Text style={[styles.areaPillTxt, ativo && styles.areaPillTxtOn]}>{opt.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+
               {error && <Text style={styles.error}>{error}</Text>}
 
               <Button
@@ -205,6 +232,17 @@ const makeStyles = (colors: Palette) =>
     marginBottom: spacing.lg,
   },
   form: { width: "100%", gap: spacing.md },
+  areaBlock: { gap: spacing.xs },
+  areaLabel: { color: colors.text, fontSize: font.size.sm, fontWeight: "600" },
+  areaRow: { flexDirection: "row", gap: spacing.sm },
+  areaPill: {
+    flex: 1, paddingVertical: 10, paddingHorizontal: 6, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.glassBorder, backgroundColor: colors.glass,
+    alignItems: "center", justifyContent: "center",
+  },
+  areaPillOn: { backgroundColor: colors.brandMid, borderColor: colors.brandMid },
+  areaPillTxt: { color: colors.text, fontSize: font.size.sm, fontWeight: "600", textAlign: "center" },
+  areaPillTxtOn: { color: "#ffffff" },
   error: { color: colors.danger, fontSize: font.size.sm },
   footer: {
     flexDirection: "row",

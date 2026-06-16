@@ -8,7 +8,7 @@
 --   - profiles (role 'assistente' + is_membro_only = true + membro_id)
 --   - role 'membro' NÃO existe (constraint); o gate de membro é is_membro_only.
 --   - se já existir membro por CPF/e-mail, apenas vincula (não duplica).
--- Metadados lidos do signup: nome, cpf, telefone, data_nascimento.
+-- Metadados lidos do signup: nome, cpf, telefone, data_nascimento, frequenta_area.
 -- ============================================================
 create or replace function public.handle_new_user()
 returns trigger
@@ -27,7 +27,12 @@ declare
     new.raw_user_meta_data->>'full_name',
     split_part(new.email, '@', 1)
   );
+  -- ministério auto-declarado no cadastro do app (só aceita ami/bridge)
+  v_freq text := nullif(new.raw_user_meta_data->>'frequenta_area', '');
 begin
+  if v_freq is not null and v_freq not in ('ami','bridge') then
+    v_freq := null;
+  end if;
   select area, cargo into rh_area, rh_cargo
   from rh_funcionarios
   where email = new.email and status = 'ativo'
@@ -49,7 +54,7 @@ begin
 
     if v_membro_id is null then
       insert into public.mem_membros
-        (id, nome, cpf, email, telefone, data_nascimento,
+        (id, nome, cpf, email, telefone, data_nascimento, frequenta_area,
          status, active, quer_servir, origem_cadastro, created_at, updated_at)
       values (
         gen_random_uuid(),
@@ -58,6 +63,7 @@ begin
         new.email,
         nullif(new.raw_user_meta_data->>'telefone', ''),
         nullif(new.raw_user_meta_data->>'data_nascimento', '')::date,
+        v_freq,
         'visitante',
         true,
         false,
@@ -66,6 +72,11 @@ begin
         now()
       )
       returning id into v_membro_id;
+    elsif v_freq is not null then
+      -- membro já existia: preenche o ministério se ainda não tiver
+      update public.mem_membros
+        set frequenta_area = coalesce(frequenta_area, v_freq), updated_at = now()
+        where id = v_membro_id;
     end if;
 
     insert into public.profiles (id, name, email, role, is_membro_only, membro_id)
