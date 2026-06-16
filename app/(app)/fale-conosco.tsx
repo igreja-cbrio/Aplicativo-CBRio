@@ -15,7 +15,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/ui/Button";
-import { GlassCard } from "@/components/ui/GlassCard";
 import { useColors } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMembro } from "@/lib/useMembro";
@@ -87,8 +86,8 @@ export default function FaleConoscoScreen() {
             <Canal icon="location" label={t("Como chegar")} onPress={() => Linking.openURL(MAPS)} colors={colors} styles={styles} t={t} />
           </View>
 
-          {/* Formulário */}
-          <GlassCard style={styles.card}>
+          {/* Formulário · sólido (form denso com textarea não usa glass · HIG) */}
+          <View style={styles.card}>
             <Text style={styles.cardTitle}>{t("Mande uma mensagem")}</Text>
             <Text style={styles.cardText}>{t("Dúvida, sugestão ou pedido — escreva aqui que a gente responde.")}</Text>
             <TextInput
@@ -101,7 +100,7 @@ export default function FaleConoscoScreen() {
               accessibilityLabel={t("Sua mensagem")}
             />
             <Button title={t("Enviar")} onPress={enviar} loading={enviando} />
-          </GlassCard>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -142,7 +141,7 @@ const makeStyles = (colors: Palette) =>
       flexGrow: 1, flexBasis: "45%", minWidth: 0, justifyContent: "center",
     },
     canalTxt: { color: colors.text, fontSize: font.size.md, fontWeight: "600", flexShrink: 1 },
-    card: { gap: spacing.sm, marginTop: spacing.sm, padding: spacing.lg },
+    card: { gap: spacing.sm, marginTop: spacing.sm, padding: spacing.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.glassBorder, borderRadius: radius.lg },
     cardTitle: { color: colors.text, fontSize: font.size.lg, fontWeight: "700" },
     cardText: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 19 },
     textarea: {

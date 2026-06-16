@@ -18,7 +18,6 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import { Button } from "@/components/ui/Button";
-import { GlassCard } from "@/components/ui/GlassCard";
 import { useColors } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/lib/i18n";
@@ -184,7 +183,7 @@ export default function KidsSolicitarVinculoScreen() {
             {t("Para a segurança das crianças, o vínculo é conferido pela equipe Kids. Envie os documentos da criança e do(s) responsável(is); a equipe valida e libera.")}
           </Text>
 
-          <GlassCard style={styles.card}>
+          <View style={styles.card}>
             <Text style={styles.label}>{t("Nome da criança")}</Text>
             <TextInput style={styles.input} value={nome} onChangeText={setNome} placeholder={t("Nome completo")} placeholderTextColor={colors.textMuted} />
 
@@ -215,9 +214,9 @@ export default function KidsSolicitarVinculoScreen() {
                 </Pressable>
               ))}
             </View>
-          </GlassCard>
+          </View>
 
-          <GlassCard style={styles.card}>
+          <View style={styles.card}>
             <Text style={styles.cardTitle}>{t("Documentos")}</Text>
             <Text style={styles.cardText}>
               {t("Pode ser foto (câmera/galeria) ou arquivo (PDF). Documento da criança é obrigatório; do pai e/ou da mãe, envie pelo menos um.")}
@@ -225,9 +224,9 @@ export default function KidsSolicitarVinculoScreen() {
             <DocSlot label={t("Documento da criança")} slot="crianca" obrigatorio preview={previews.crianca} fileName={nomes.crianca} done={!!paths.crianca} uploading={uploading === "crianca"} onPress={escolherDoc} styles={styles} colors={colors} />
             <DocSlot label={t("Documento do pai")} slot="pai" preview={previews.pai} fileName={nomes.pai} done={!!paths.pai} uploading={uploading === "pai"} onPress={escolherDoc} styles={styles} colors={colors} />
             <DocSlot label={t("Documento da mãe")} slot="mae" preview={previews.mae} fileName={nomes.mae} done={!!paths.mae} uploading={uploading === "mae"} onPress={escolherDoc} styles={styles} colors={colors} />
-          </GlassCard>
+          </View>
 
-          <GlassCard style={styles.card}>
+          <View style={styles.card}>
             <Text style={styles.label}>{t("Observação (opcional)")}</Text>
             <TextInput
               style={[styles.input, styles.textarea]}
@@ -237,7 +236,7 @@ export default function KidsSolicitarVinculoScreen() {
               placeholderTextColor={colors.textMuted}
               multiline
             />
-          </GlassCard>
+          </View>
 
           <Text style={styles.privacidade}>
             {t("🔒 Os documentos são privados, usados só para validar o vínculo, e visíveis apenas à equipe Kids.")}
@@ -294,7 +293,7 @@ const makeStyles = (colors: Palette) =>
     back: { width: 24 },
     title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
     intro: { color: colors.textMuted, fontSize: font.size.md, lineHeight: 21 },
-    card: { gap: spacing.sm, padding: spacing.lg, alignItems: "stretch" },
+    card: { gap: spacing.sm, padding: spacing.lg, alignItems: "stretch", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.glassBorder, borderRadius: radius.lg },
     cardTitle: { color: colors.text, fontSize: font.size.lg, fontWeight: "700" },
     cardText: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 19 },
     label: { color: colors.text, fontSize: font.size.sm, fontWeight: "600", marginTop: spacing.xs },

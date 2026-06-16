@@ -14,7 +14,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
-import { GlassCard } from "@/components/ui/GlassCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
@@ -195,8 +194,8 @@ export default function CuidadosScreen() {
             </Pressable>
           </View>
 
-          {/* Pedido de oração */}
-          <GlassCard style={styles.card}>
+          {/* Pedido de oração · sólido (form denso não usa glass · HIG) */}
+          <View style={styles.card}>
             <Text style={styles.cardTitle}>{t("Pedido de oração")}</Text>
             <TextInput
               style={styles.textarea}
@@ -208,10 +207,10 @@ export default function CuidadosScreen() {
             />
             {msg && <Text style={styles.err}>{msg}</Text>}
             <Button title={t("Enviar pedido")} onPress={enviarOracao} loading={enviandoOracao} />
-          </GlassCard>
+          </View>
 
-          {/* Aconselhamento */}
-          <GlassCard style={styles.card}>
+          {/* Aconselhamento · sólido */}
+          <View style={styles.card}>
             <Text style={styles.cardTitle}>{t("Conversar com um pastor")}</Text>
             <Text style={styles.cardText}>
               {t("Quer um aconselhamento ou uma conversa? Um pastor ou líder entra em contato com você.")}
@@ -222,7 +221,7 @@ export default function CuidadosScreen() {
               onPress={pedirAconselhamento}
               loading={enviandoAcons}
             />
-          </GlassCard>
+          </View>
 
           {/* Meus pedidos — acompanhamento do que já enviei */}
           {pedidos.length > 0 && (
@@ -303,6 +302,9 @@ const makeStyles = (colors: Palette) =>
       marginTop: spacing.xs,
     },
     card: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
       borderRadius: radius.lg,
       padding: spacing.lg,
       gap: spacing.sm,
