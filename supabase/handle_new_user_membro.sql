@@ -29,6 +29,9 @@ declare
   );
   -- ministério auto-declarado no cadastro do app (só aceita ami/bridge)
   v_freq text := nullif(new.raw_user_meta_data->>'frequenta_area', '');
+  -- origem: só o cadastro NATIVO do app manda 'app'; logins web/magic-link/admin
+  -- caem em 'auth' (não inflam a métrica de cadastros pelo app).
+  v_origem text := coalesce(nullif(new.raw_user_meta_data->>'origem', ''), 'auth');
 begin
   if v_freq is not null and v_freq not in ('ami','bridge') then
     v_freq := null;
@@ -67,7 +70,7 @@ begin
         'visitante',
         true,
         false,
-        'app',
+        v_origem,
         now(),
         now()
       )

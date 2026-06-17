@@ -139,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               data_nascimento: profile.dataNascimento,
               telefone: profile.telefone,
               frequenta_area: profile.frequentaArea ?? null,
+              origem: "app", // distingue cadastro nativo de logins web/magic-link
             },
           },
         });
