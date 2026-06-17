@@ -219,7 +219,7 @@ export default function ComprovanteDoacoes() {
 function makeStyles(colors: ReturnType<typeof useColors>) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 20, paddingBottom: 120 },
+    content: { padding: 20, paddingBottom: 40 },
     header: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
     back: { padding: 2 },
     title: { fontSize: 24, fontWeight: "800", color: colors.text },

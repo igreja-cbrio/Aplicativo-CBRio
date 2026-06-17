@@ -410,7 +410,7 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
     flex: { flex: 1 },
-    content: { padding: spacing.lg, paddingBottom: 120, gap: spacing.lg },
+    content: { padding: spacing.lg, paddingBottom: 100, gap: spacing.lg },
     header: { alignItems: "center", gap: spacing.sm, marginTop: spacing.md },
     badge: {
       width: 72,

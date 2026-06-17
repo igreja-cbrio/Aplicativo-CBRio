@@ -303,7 +303,7 @@ export default function GrupoEditarScreen() {
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
-    content: { padding: spacing.lg, paddingBottom: 120, gap: spacing.md },
+    content: { padding: spacing.lg, paddingBottom: 40, gap: spacing.md },
     header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: spacing.sm },
     back: { width: 24 },
     title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },

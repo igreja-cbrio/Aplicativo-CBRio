@@ -351,7 +351,7 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
     flex: { flex: 1 },
-    content: { padding: spacing.lg, paddingBottom: 120, gap: spacing.lg },
+    content: { padding: spacing.lg, paddingBottom: 40, gap: spacing.lg },
     topRow: {
       flexDirection: "row",
       alignItems: "center",

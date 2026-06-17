@@ -103,7 +103,7 @@ export default function MenuScreen() {
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
-    content: { padding: spacing.lg, paddingBottom: 120, gap: spacing.lg },
+    content: { padding: spacing.lg, paddingBottom: 100, gap: spacing.lg },
     header: {
       flexDirection: "row",
       alignItems: "center",
@@ -140,7 +140,7 @@ const makeStyles = (colors: Palette) =>
     rowLabel: { flex: 1, color: colors.text, fontSize: font.size.md },
     versao: {
       alignItems: "center",
-      paddingVertical: spacing.lg,
+      paddingTop: spacing.sm,
     },
     versaoTxt: { color: colors.textMuted, fontSize: 12 },
   });

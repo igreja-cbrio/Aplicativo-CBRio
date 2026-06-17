@@ -220,7 +220,7 @@ export default function InicioScreen() {
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: "transparent" },
-    content: { padding: spacing.lg, paddingBottom: 120, gap: spacing.lg },
+    content: { padding: spacing.lg, paddingBottom: 100, gap: spacing.lg },
     headerFixo: {
       position: "absolute",
       top: 0,

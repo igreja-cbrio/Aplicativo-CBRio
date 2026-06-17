@@ -82,7 +82,7 @@ const makeStyles = (colors: Palette) =>
     header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: spacing.lg, paddingBottom: spacing.md },
     back: { width: 24 },
     title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
-    list: { padding: spacing.lg, paddingTop: 0, paddingBottom: 120 },
+    list: { padding: spacing.lg, paddingTop: 0, paddingBottom: 40 },
     card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md, gap: 6 },
     cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
     passagem: { color: colors.brandMid, fontSize: font.size.sm, fontWeight: "700", flex: 1 },
