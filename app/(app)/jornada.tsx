@@ -35,6 +35,19 @@ export default function JornadaScreen() {
 
   const nome = membro?.nome?.split(/\s+/)[0] ?? "";
 
+  // Placar dos 5 valores + o próximo passo (primeiro valor ainda não vivido).
+  const resumo = useMemo(() => {
+    if (!dados) return null;
+    const dims = [
+      { on: dados.devocionalStreak > 0, titulo: "Comece seu devocional de hoje", rota: "/devocional" as const, icon: "book" as const },
+      { on: dados.emGrupo, titulo: "Entre num grupo de conexão", rota: "/grupos" as const, icon: "people" as const },
+      { on: dados.serveVoluntariado, titulo: "Comece a servir num ministério", rota: "/voluntariado" as const, icon: "hand-left" as const },
+      { on: dados.batizado, titulo: "Dê seu próximo passo: o batismo", rota: "/batismo" as const, icon: "water" as const },
+      { on: dados.generosidadeAno > 0, titulo: "Participe da generosidade", rota: "/generosidade" as const, icon: "gift" as const },
+    ];
+    return { score: dims.filter((d) => d.on).length, total: dims.length, dots: dims.map((d) => d.on), proximo: dims.find((d) => !d.on) ?? null };
+  }, [dados]);
+
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -63,6 +76,36 @@ export default function JornadaScreen() {
             <Text style={styles.intro}>
               {nome ? `${t("Sua caminhada na CBRio")}, ${nome} 💙` : t("Sua caminhada na CBRio 💙")}
             </Text>
+
+            {/* Placar dos 5 valores */}
+            {resumo && (
+              <View style={styles.placar}>
+                <View style={styles.placarTop}>
+                  <Text style={styles.placarTxt}>
+                    {t("Você está vivendo")} <Text style={styles.placarNum}>{resumo.score}</Text> {t("de")} {resumo.total} {t("valores")}
+                  </Text>
+                  <View style={styles.placarDots}>
+                    {resumo.dots.map((on, i) => (
+                      <View key={i} style={[styles.placarDot, on && styles.placarDotOn]} />
+                    ))}
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Próximo passo em destaque */}
+            {resumo?.proximo && (
+              <Pressable style={styles.proximo} onPress={() => router.navigate(resumo.proximo!.rota)} accessibilityRole="button">
+                <View style={styles.proximoIcone}>
+                  <Ionicons name={resumo.proximo.icon} size={22} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.proximoEyebrow}>{t("SEU PRÓXIMO PASSO")}</Text>
+                  <Text style={styles.proximoTitulo}>{t(resumo.proximo.titulo)}</Text>
+                </View>
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
+              </Pressable>
+            )}
 
             {/* Devocional — card destaque */}
             <Pressable style={styles.heroCard} onPress={() => router.navigate("/devocional")} accessibilityRole="button" accessibilityLabel={t("Devocional")}>
@@ -147,6 +190,17 @@ const makeStyles = (colors: Palette) =>
     back: { width: 24 },
     title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
     intro: { color: colors.textMuted, fontSize: font.size.md },
+    placar: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md },
+    placarTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+    placarTxt: { color: colors.text, fontSize: font.size.md, fontWeight: "600", flex: 1 },
+    placarNum: { color: colors.brandMid, fontWeight: "900" },
+    placarDots: { flexDirection: "row", gap: 6 },
+    placarDot: { width: 11, height: 11, borderRadius: 6, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder },
+    placarDotOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+    proximo: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.primary, borderRadius: radius.lg, padding: spacing.md },
+    proximoIcone: { width: 42, height: 42, borderRadius: 21, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center" },
+    proximoEyebrow: { color: colors.brandPale, fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },
+    proximoTitulo: { color: "#fff", fontSize: font.size.md, fontWeight: "800", marginTop: 2 },
     heroCard: {
       backgroundColor: colors.primary, borderRadius: radius.xl, padding: spacing.lg, gap: 4,
     },
