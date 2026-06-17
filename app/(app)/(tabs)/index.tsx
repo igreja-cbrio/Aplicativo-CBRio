@@ -50,7 +50,8 @@ type Atalho = {
     | "/perfil"
     | "/inscricoes"
     | "/batismo"
-    | "/grupos"
+    | "/meu-grupo"
+    | "/kids"
     | "/devocional"
     | "/jornada";
 };
@@ -60,7 +61,8 @@ const ATALHOS: Atalho[] = [
   { label: "Sua jornada", icon: "trail-sign", href: "/jornada" },
   { label: "Inscrições", icon: "create", href: "/inscricoes" },
   { label: "Batismo", icon: "water", href: "/batismo" },
-  { label: "Grupos", icon: "people", href: "/grupos" },
+  { label: "Meu grupo", icon: "people-circle", href: "/meu-grupo" },
+  { label: "Kids", icon: "happy", href: "/kids" },
   { label: "Cuidados", icon: "heart", href: "/cuidados" },
   { label: "Voluntariado", icon: "hand-left", href: "/voluntariado" },
   { label: "Generosidade", icon: "gift", href: "/generosidade" },

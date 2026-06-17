@@ -1,4 +1,5 @@
 import "react-native-url-polyfill/auto";
+import { AppState } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
 
@@ -63,4 +64,15 @@ export const supabase = createClient(
     persistSession: true,
     detectSessionInUrl: false,
   },
+});
+
+// Auto-refresh do token ciente do ciclo de vida do app (padrão Supabase p/ RN).
+// Sem isto, o timer de refresh não roda de forma confiável em background e o
+// access_token expira: chamadas ao backend (que valida o JWT via getUser)
+// passam a falhar com "Token inválido". Liga/desliga o refresh conforme o app
+// fica ativo/em background.
+supabase.auth.startAutoRefresh();
+AppState.addEventListener("change", (state) => {
+  if (state === "active") supabase.auth.startAutoRefresh();
+  else supabase.auth.stopAutoRefresh();
 });

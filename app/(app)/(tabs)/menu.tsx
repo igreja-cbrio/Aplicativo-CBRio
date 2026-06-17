@@ -45,6 +45,7 @@ export default function MenuScreen() {
     { label: "Check-in Kids", icon: "happy-outline", onPress: () => router.navigate("/kids") },
     { label: "Generosidade", icon: "gift-outline", onPress: () => router.navigate("/generosidade") },
     { label: "Devocionais", icon: "book-outline", onPress: () => router.navigate("/devocional") },
+    { label: "Pregações", icon: "play-circle-outline", onPress: () => router.navigate("/videos") },
     { label: "Notificações", icon: "notifications-outline", onPress: () => router.navigate("/notificacoes") },
     { label: "Configurações", icon: "settings-outline", onPress: () => router.navigate("/configuracoes") },
     { label: "Fale conosco", icon: "chatbubble-ellipses-outline", onPress: () => router.navigate("/fale-conosco") },

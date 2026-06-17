@@ -119,7 +119,8 @@ constants/
 |   🚧   | **Cuidados**     | Pedido de oração + aconselhamento (grava em `app_inscricoes`) e **SOS** (CVV 188/192 na hora + alerta push aos pastores via Edge Function `notify-cuidado-sos`). |
 |   ✅   | **Devocional**   | Tela `devocional.tsx` (atalho na Home): devocionais de **seg a sex** dos planos ativos do sistema (lê `devocional_itens`+`devocional_planos` direto, RLS liberada p/ authenticated). Check-in grava em `mem_devocionais` (tipo pessoal, upsert por membro+data — **é a tabela que alimenta os KPIs** do valor Investir). Incentivo: streak de dias úteis (`lib/devocional.ts`), bolhas da semana, haptic + push lembrete 7h30 (seg–sex, só quem não leu — `notify-lembretes`). Conteúdo é criado no SISTEMA (Cuidados → planos, manual ou IA). |
 |   ✅   | **Check-in Kids** | Tela `kids.tsx` (atalho no Menu): **pré-check-in** dos filhos. Lê `GET /app/kids/meus-filhos` (crianças de quem o membro é responsável `autorizado_buscar`), o membro marca quem vai e gera código/QR via `POST /app/kids/pre-checkin` (válido 12h, 1 ativo por responsável). QR = `react-native-qrcode-svg` com o código de 6 chars. No totem (sistema), o voluntário escaneia/digita, confere e imprime. **Sem checkout remoto** — entrada/retirada continuam presenciais (decisão de segurança das crianças). **Solicitar vínculo** (`kids-solicitar-vinculo.tsx`): quem não tem filho vinculado pede o vínculo enviando documentos (criança + pai e/ou mãe) — **foto** (`expo-image-picker` câmera/galeria) **ou arquivo PDF** (`expo-document-picker` · ⚠️ módulo NATIVO → só funciona a partir do **build 21**; no build 20 o app cai num aviso "atualize o app"). Upload direto pro bucket **privado** `kids-documentos` (path `{user.id}/...`, helper `uploadDoc` infere ext/contentType) e `POST /app/kids/solicitar-vinculo` manda só os paths; a equipe Kids confere e aprova. Status (em análise/recusada) aparece na própria tela (`GET /app/kids/minhas-solicitacoes`) e via push (`notify-kids-vinculo`). |
-|   ⬜   | _Próximos_       | A definir, construídos um a um                                   |
+|   ✅   | **Pregações**    | Tela `videos.tsx` (`/videos` · atalho na Home + item "Pregações" no Menu): vídeos recentes + séries do YouTube (módulo Online do sistema) + **Assistir ao vivo**. Lê `GET /api/app/videos` (30 vídeos `online_videos` + 20 séries `online_series` + `canal_live`). Tap no vídeo → `Linking.openURL` `youtube.com/watch?v=ID`; série → playlist; ao vivo → `channel/<id>/live`. `trackEvento` em cada abertura. Fase 5 (Transmissão/Séries). |
+|   ⬜   | _Próximos_       | A definir, construídos um a um (Fase 6: Generosidade recorrência) |
 
 ## Generosidade — notas de implementação
 
@@ -202,7 +203,10 @@ Métodos em `contexts/AuthContext.tsx`:
   `setSession`) e mostra o form de nova senha; o guard do `_layout` tem
   exceção pra não expulsar dessa tela quando a sessão chega. O scheme
   `cbrio://**` está na allowlist do Auth (config aplicada 12/06).
-- `updatePassword(novaSenha)` — `supabase.auth.updateUser({ password })`.
+- `updatePassword(novaSenha)` — `supabase.auth.updateUser({ password })`. Exposto
+  ao usuário logado em **Configurações → Segurança → Trocar senha** (tela
+  `app/(app)/trocar-senha.tsx`): confirma a senha atual via `signInWithPassword`
+  (re-auth do mesmo usuário, não derruba a sessão) antes de aplicar a nova.
 - Troca de e-mail de login: no perfil, `updateUser({ email }, { emailRedirectTo:
   "cbrio://perfil" })` — confirmação chega no novo e-mail.
 - `signOut()`.
@@ -210,6 +214,20 @@ Métodos em `contexts/AuthContext.tsx`:
 "Lembrar de mim": `lib/supabase.ts` usa um **storage híbrido** — quando ligado,
 a sessão é gravada no `AsyncStorage` (persiste após fechar o app); quando
 desligado, fica só em memória (some ao reiniciar o app).
+
+**⚠️ Auto-refresh do token (anti-regressão · 2026-06-17):** o backend Express
+(`cbrio.org/api`) valida o JWT via `supabase.auth.getUser(token)` — um
+`access_token` vencido vira **401 "Token inválido"**. Sintoma clássico: telas
+que batem no backend (Kids, Avisos/Mural, Meu grupo, Pregações, inscrições)
+quebram com "Token inválido"/lista vazia, **enquanto** as que usam o supabase
+direto (perfil, cartão, devocional) seguem OK — porque o supabase-js renova o
+token nas próprias chamadas, mas o `authHeaders()` pegava o token armazenado
+(expirado). Dois mecanismos garantem token válido: (1) **AppState wiring** em
+`lib/supabase.ts` (`startAutoRefresh`/`stopAutoRefresh` no ciclo ativo/
+background — padrão Supabase p/ RN, sem ele o timer não roda confiável em
+background); (2) **refresh proativo** em `lib/api.ts` `authHeaders()` (se o
+token expira em <60s, chama `refreshSession()` antes de montar o header).
+NÃO remover nenhum dos dois.
 
 **Desbloqueio por biometria (Face ID / Touch ID):** `expo-local-authentication`.
 `lib/biometria.ts` expõe `biometriaSuportada`, `rotuloBiometria`,
