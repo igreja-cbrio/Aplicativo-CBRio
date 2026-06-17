@@ -124,6 +124,8 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Você ainda não consta como responsável autorizado de nenhuma criança. Solicite o vínculo enviando os documentos — a equipe Kids confere e libera.": { en: "You are not yet listed as an authorized guardian of any child. Request the link by sending the documents — the Kids team reviews and approves.", es: "Aún no figuras como responsable autorizado de ningún niño. Solicita el vínculo enviando los documentos — el equipo de Niños revisa y aprueba." },
   "Solicitar vínculo": { en: "Request link", es: "Solicitar vínculo" },
   "Para a segurança das crianças, o vínculo é conferido pela equipe Kids. Envie os documentos da criança e do(s) responsável(is); a equipe valida e libera.": { en: "For the children's safety, the link is reviewed by the Kids team. Send the child's and the guardian(s)' documents; the team validates and approves.", es: "Para la seguridad de los niños, el vínculo es revisado por el equipo de Niños. Envía los documentos del niño y del/los responsable(s); el equipo valida y aprueba." },
+  "Avisos": { en: "Announcements", es: "Avisos" },
+  "Nenhum aviso por enquanto.": { en: "No announcements yet.", es: "Ningún aviso por ahora." },
   "Receber mensagens no WhatsApp": { en: "Receive WhatsApp messages", es: "Recibir mensajes por WhatsApp" },
   "Lembretes, confirmações e avisos da CBRio pelo WhatsApp. Você pode desativar quando quiser.": { en: "Reminders, confirmations and notices from CBRio via WhatsApp. You can turn it off anytime.", es: "Recordatorios, confirmaciones y avisos de CBRio por WhatsApp. Puedes desactivarlo cuando quieras." },
   "Você frequenta o AMI ou o Bridge?": { en: "Do you attend AMI or Bridge?", es: "¿Asistes al AMI o al Bridge?" },
