@@ -254,6 +254,15 @@ export default function KidsScreen() {
                         </Text>
                       )}
                     </View>
+                    <Pressable
+                      onPress={() => router.navigate({ pathname: "/kids-filho", params: { id: f.id } })}
+                      hitSlop={10}
+                      style={styles.filhoInfo}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("Ver histórico")}
+                    >
+                      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                    </Pressable>
                   </Pressable>
                 );
               })}
@@ -309,6 +318,7 @@ const makeStyles = (colors: Palette) =>
     filhoNome: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
     filhoIdade: { color: colors.textMuted, fontSize: font.size.sm },
     filhoObs: { color: "#F59E0B", fontSize: font.size.sm },
+    filhoInfo: { padding: 4 },
     solRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: "rgba(245,158,11,0.10)", borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: "rgba(245,158,11,0.30)" },
     solRowRej: { backgroundColor: "rgba(239,68,68,0.10)", borderColor: "rgba(239,68,68,0.30)" },
     solNome: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
