@@ -304,9 +304,9 @@ export default function ConfiguracoesScreen() {
           ))}
         </Section>
 
-        {/* NOTIFICAÇÕES */}
-        {biomSuportada && (
-          <Section title={t("Segurança")} colors={colors} styles={styles}>
+        {/* SEGURANÇA */}
+        <Section title={t("Segurança")} colors={colors} styles={styles}>
+          {biomSuportada && (
             <View style={styles.switchRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.label}>{t("Desbloquear com")} {biomRotulo}</Text>
@@ -320,8 +320,13 @@ export default function ConfiguracoesScreen() {
                 trackColor={{ true: colors.primary, false: colors.glassBorder }}
               />
             </View>
-          </Section>
-        )}
+          )}
+          <Pressable style={styles.navRow} onPress={() => router.navigate("/trocar-senha")}>
+            <Ionicons name="key-outline" size={20} color={colors.text} />
+            <Text style={[styles.label, { flex: 1 }]}>{t("Trocar senha")}</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </Pressable>
+        </Section>
 
         <Section title={t("Notificações")} colors={colors} styles={styles}>
           <View style={styles.switchRow}>
@@ -499,6 +504,7 @@ const makeStyles = (colors: Palette) =>
     optTxt: { color: colors.textMuted, fontWeight: "700", fontSize: font.size.sm },
     optTxtSel: { color: "#fff" },
     switchRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+    navRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: 10 },
     radioRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 6 },
     radio: {
       width: 22,

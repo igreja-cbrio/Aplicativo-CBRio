@@ -14,9 +14,19 @@ import { supabase } from "./supabase";
 const BASE = "https://www.cbrio.org/api";
 
 async function authHeaders(): Promise<Record<string, string>> {
-  const {
+  let {
     data: { session },
   } = await supabase.auth.getSession();
+  // Renova proativamente se o token expirou (ou expira em <60s). O backend
+  // valida o JWT via getUser; um access_token vencido vira 401 "Token inválido"
+  // (sintoma: telas que batem no backend — Kids, Avisos, Meu grupo — quebram,
+  // enquanto as que usam o supabase direto seguem funcionando). O auto-refresh
+  // pode não ter rodado se o app ficou em background, então forçamos aqui.
+  const expMs = session?.expires_at ? session.expires_at * 1000 : 0;
+  if (session && expMs && expMs < Date.now() + 60_000) {
+    const { data, error } = await supabase.auth.refreshSession();
+    if (!error && data.session) session = data.session;
+  }
   const token = session?.access_token;
   if (!token) throw new Error("Sessão expirada. Faça login novamente.");
   return { Authorization: `Bearer ${token}` };
