@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, useRouter, useSegments, usePathname } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -13,6 +13,7 @@ import { Onboarding } from "@/components/onboarding/Onboarding";
 import { biometriaAtiva } from "@/lib/biometria";
 import { onboardingVisto, marcarOnboardingVisto } from "@/lib/onboarding";
 import { registerForPush } from "@/lib/push";
+import { initTelemetria, trackTela } from "@/lib/telemetria";
 import { attachNotifTapListener } from "@/lib/notifTap";
 import { loadFontScale } from "@/lib/applyFontScale";
 import { useFontsCbrio, applyCbrioFontGlobally } from "@/lib/fonts";
@@ -45,7 +46,12 @@ function RootNavigator() {
   const { colors, mode } = useTheme();
   const segments = useSegments();
   const router = useRouter();
+  const pathname = usePathname();
   const authed = !!session || preview;
+
+  // Telemetria: inicializa 1x (handler de erros + flush) e registra cada tela.
+  useEffect(() => { initTelemetria(); }, []);
+  useEffect(() => { if (pathname) trackTela(pathname); }, [pathname]);
 
   // Desbloqueio por biometria: trava UMA vez por abertura do app quando há
   // sessão salva e o usuário ativou a opção. null = ainda decidindo.
