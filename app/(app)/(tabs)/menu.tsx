@@ -33,6 +33,7 @@ export default function MenuScreen() {
     { label: "Meu perfil", icon: "person-outline", onPress: () => router.navigate("/perfil") },
     { label: "Sua jornada", icon: "trail-sign-outline", onPress: () => router.navigate("/jornada") },
     { label: "Início", icon: "home-outline", onPress: () => router.navigate("/") },
+    { label: "No culto", icon: "flame-outline", onPress: () => router.navigate("/modo-culto") },
     { label: "Avisos", icon: "megaphone-outline", onPress: () => router.navigate("/mural") },
     { label: "Cartões", icon: "card-outline", onPress: () => router.navigate("/cartoes") },
     { label: "Inscrições", icon: "create-outline", onPress: () => router.navigate("/inscricoes") },

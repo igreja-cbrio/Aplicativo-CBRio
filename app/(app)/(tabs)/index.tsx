@@ -52,11 +52,13 @@ type Atalho = {
     | "/batismo"
     | "/meu-grupo"
     | "/kids"
+    | "/modo-culto"
     | "/devocional"
     | "/jornada";
 };
 
 const ATALHOS: Atalho[] = [
+  { label: "No culto", icon: "flame", href: "/modo-culto" },
   { label: "Devocional", icon: "book", href: "/devocional" },
   { label: "Sua jornada", icon: "trail-sign", href: "/jornada" },
   { label: "Inscrições", icon: "create", href: "/inscricoes" },
