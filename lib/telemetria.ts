@@ -13,7 +13,7 @@ const BASE = "https://www.cbrio.org/api";
 const APP_VERSION = Constants.expoConfig?.version ?? "?";
 
 type Evento = {
-  tipo: "tela" | "acao" | "erro";
+  tipo: "tela" | "acao" | "erro" | "ping";
   nome: string;
   props?: Record<string, unknown>;
 };
@@ -106,4 +106,10 @@ export function initTelemetria() {
   AppState.addEventListener("change", (s) => {
     if (s !== "active") flushTelemetria();
   });
+
+  // Heartbeat de presença (pra "online agora" no painel ao vivo): 1 ping/min
+  // enquanto o app está em primeiro plano. Pings não contam nas analytics.
+  setInterval(() => {
+    if (AppState.currentState === "active") enfileirar({ tipo: "ping", nome: "heartbeat" });
+  }, 60000);
 }
