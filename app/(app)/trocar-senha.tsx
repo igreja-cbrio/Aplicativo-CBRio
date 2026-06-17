@@ -123,7 +123,7 @@ export default function TrocarSenha() {
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
-    content: { padding: spacing.lg, gap: spacing.md, paddingBottom: 120 },
+    content: { padding: spacing.lg, gap: spacing.md, paddingBottom: 40 },
     header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
     back: { width: 24 },
     title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },

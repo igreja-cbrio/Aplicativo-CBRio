@@ -180,6 +180,7 @@ export default function NotificacoesScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          style={styles.chipsBar}
           contentContainerStyle={styles.chips}
         >
           {chips.map((c) => {
@@ -225,12 +226,13 @@ const makeStyles = (colors: Palette) =>
     back: { width: 24 },
     title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
     acao: { color: colors.primary, fontSize: font.size.sm, fontWeight: "700" },
-    chips: { paddingHorizontal: spacing.lg, gap: 8, paddingBottom: spacing.md },
-    chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: radius.full, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+    chipsBar: { flexGrow: 0, flexShrink: 0 },
+    chips: { paddingHorizontal: spacing.lg, gap: 8, paddingBottom: spacing.md, alignItems: "center" },
+    chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.full, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
     chipSel: { backgroundColor: colors.primary, borderColor: colors.primary },
-    chipTxt: { color: colors.text, fontSize: font.size.sm, fontWeight: "600" },
+    chipTxt: { color: colors.text, fontSize: font.size.sm, fontWeight: "600", lineHeight: 20 },
     chipTxtSel: { color: "#fff" },
-    list: { padding: spacing.lg, paddingTop: 0, paddingBottom: 120 },
+    list: { padding: spacing.lg, paddingTop: 0, paddingBottom: 40 },
     secaoTitulo: { color: colors.textMuted, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginTop: spacing.md, marginBottom: spacing.sm },
     item: { flexDirection: "row", gap: spacing.md, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.glassBorder, alignItems: "flex-start" },
     itemNaoLida: { borderColor: colors.primary },

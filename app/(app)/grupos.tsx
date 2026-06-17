@@ -243,7 +243,7 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
     header: { padding: spacing.lg, paddingBottom: spacing.md, gap: spacing.md },
-    listContent: { paddingHorizontal: spacing.lg, paddingBottom: 120, gap: spacing.md },
+    listContent: { paddingHorizontal: spacing.lg, paddingBottom: 40, gap: spacing.md },
     mapWrap: { flex: 1, paddingHorizontal: spacing.lg, paddingBottom: 100 },
     topRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: spacing.sm },
     back: { width: 24 },
