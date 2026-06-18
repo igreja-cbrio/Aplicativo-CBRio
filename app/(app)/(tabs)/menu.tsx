@@ -12,6 +12,7 @@ import { useMembro } from "@/lib/useMembro";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { FEATURES } from "@/lib/features";
 
 type Option = {
   label: string;
@@ -44,7 +45,7 @@ export default function MenuScreen() {
     { label: "Cuidados", icon: "heart-outline", onPress: () => router.navigate("/cuidados") },
     { label: "Voluntariado", icon: "hand-left-outline", onPress: () => router.navigate("/voluntariado") },
     { label: "Check-in Kids", icon: "happy-outline", onPress: () => router.navigate("/kids") },
-    { label: "Generosidade", icon: "gift-outline", onPress: () => router.navigate("/generosidade") },
+    ...(FEATURES.generosidade ? [{ label: "Generosidade", icon: "gift-outline" as const, onPress: () => router.navigate("/generosidade") }] : []),
     { label: "Devocionais", icon: "book-outline", onPress: () => router.navigate("/devocional") },
     { label: "Pregações", icon: "play-circle-outline", onPress: () => router.navigate("/videos") },
     { label: "Notificações", icon: "notifications-outline", onPress: () => router.navigate("/notificacoes") },

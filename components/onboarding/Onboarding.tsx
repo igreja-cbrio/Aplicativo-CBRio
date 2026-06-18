@@ -18,7 +18,7 @@ type Slide = {
 const SLIDES: Slide[] = [
   { icon: "heart-brand", titulo: "Bem-vindo à CBRio", texto: "Sua igreja no bolso. Tudo que você vive na CBRio, num só lugar." },
   { icon: "card", titulo: "Seu cartão e os cultos", texto: "Cartão de membro com QR, próximos cultos e o devocional do dia na tela inicial." },
-  { icon: "hand-left", titulo: "Sirva e participe", texto: "Voluntariado, grupos, batismo e generosidade — dê os próximos passos da sua jornada." },
+  { icon: "hand-left", titulo: "Sirva e participe", texto: "Voluntariado, grupos, batismo e mais — dê os próximos passos da sua jornada." },
   { icon: "heart", titulo: "A gente cuida de você", texto: "Peça oração, fale com um pastor e acompanhe tudo pelo app. Você não está sozinho. 💙" },
 ];
 

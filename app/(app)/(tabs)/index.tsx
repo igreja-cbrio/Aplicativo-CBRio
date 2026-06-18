@@ -23,6 +23,7 @@ import { useNotificacoesNaoLidas } from "@/lib/useNotificacoes";
 import { useT } from "@/lib/i18n";
 import { destaquesAtivos, type Destaque } from "@/lib/destaques";
 import { proximosCultos, type CultoUpcoming } from "@/lib/cultos";
+import { FEATURES } from "@/lib/features";
 import { Carrossel } from "@/components/home/Carrossel";
 import { ProximosCultos } from "@/components/home/ProximosCultos";
 import { AnimatedShortcut } from "@/components/anim/AnimatedShortcut";
@@ -151,7 +152,7 @@ export default function InicioScreen() {
         {/* Atalhos para os módulos */}
         <Text style={styles.sectionTitle}>{t("Atalhos")}</Text>
         <View style={styles.grid}>
-          {ATALHOS.map((a, i) => (
+          {ATALHOS.filter((a) => FEATURES.generosidade || a.href !== "/generosidade").map((a, i) => (
             <AnimatedShortcut
               key={a.href}
               index={i}

@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { FEATURES } from "@/lib/features";
 
 function brl(v: number): string {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -43,7 +44,9 @@ export default function JornadaScreen() {
       { on: dados.emGrupo, titulo: "Entre num grupo de conexão", rota: "/grupos" as const, icon: "people" as const },
       { on: dados.serveVoluntariado, titulo: "Comece a servir num ministério", rota: "/voluntariado" as const, icon: "hand-left" as const },
       { on: dados.batizado, titulo: "Dê seu próximo passo: o batismo", rota: "/batismo" as const, icon: "water" as const },
-      { on: dados.generosidadeAno > 0, titulo: "Participe da generosidade", rota: "/generosidade" as const, icon: "gift" as const },
+      ...(FEATURES.generosidade
+        ? [{ on: dados.generosidadeAno > 0, titulo: "Participe da generosidade", rota: "/generosidade" as const, icon: "gift" as const }]
+        : []),
     ];
     return { score: dims.filter((d) => d.on).length, total: dims.length, dots: dims.map((d) => d.on), proximo: dims.find((d) => !d.on) ?? null };
   }, [dados]);
@@ -142,13 +145,15 @@ export default function JornadaScreen() {
                 onPress={() => router.navigate("/batismo")}
                 colors={colors} styles={styles}
               />
-              <Card
-                icon="gift" titulo={t("Generosidade")}
-                valor={dados.generosidadeAno > 0 ? `${brl(dados.generosidadeAno)} ${t("no ano")}` : t("Contribua")}
-                ativo={dados.generosidadeAno > 0}
-                onPress={() => router.navigate("/generosidade")}
-                colors={colors} styles={styles}
-              />
+              {FEATURES.generosidade && (
+                <Card
+                  icon="gift" titulo={t("Generosidade")}
+                  valor={dados.generosidadeAno > 0 ? `${brl(dados.generosidadeAno)} ${t("no ano")}` : t("Contribua")}
+                  ativo={dados.generosidadeAno > 0}
+                  onPress={() => router.navigate("/generosidade")}
+                  colors={colors} styles={styles}
+                />
+              )}
             </View>
 
             <Text style={styles.rodape}>{t("Cada passo conta. Continue crescendo na fé. 🌱")}</Text>
