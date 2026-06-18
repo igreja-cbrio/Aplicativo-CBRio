@@ -111,7 +111,7 @@ export default function KidsFilhoScreen() {
       const path = `${user.id}/foto-crianca/${id}-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from(FOTO_BUCKET).upload(path, arrayBuffer, {
         contentType: asset.mimeType ?? `image/${ext}`,
-        upsert: true,
+        upsert: false, // bucket privado sem policy de SELECT → upsert dá RLS; path é único
       });
       if (error) throw error;
       await apiPost(`/app/kids/filho/${id}/foto`, { storage_path: path, consentimento: true, versao_consentimento: CONSENT_VERSAO });
