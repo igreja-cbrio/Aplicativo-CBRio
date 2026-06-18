@@ -9,7 +9,8 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Stack, router } from "expo-router";
+import { Stack, router, Redirect } from "expo-router";
+import { FEATURES } from "@/lib/features";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
@@ -53,6 +54,9 @@ function formatBRL(centavos: number): string {
 }
 
 export default function GenerosidadeScreen() {
+  // Desativado temporariamente (App Store · aguardando Benevity). Guard
+  // defensivo: se alguém navegar direto, volta pra Home.
+  if (!FEATURES.generosidade) return <Redirect href="/" />;
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();

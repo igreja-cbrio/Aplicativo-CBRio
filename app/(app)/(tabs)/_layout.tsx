@@ -1,6 +1,7 @@
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { FEATURES } from "@/lib/features";
 
 /**
  * Tab bar NATIVA (UITabBarController via expo-router NativeTabs).
@@ -33,10 +34,12 @@ export default function TabsLayout() {
         <Icon sf={{ default: "hand.raised", selected: "hand.raised.fill" }} />
         <Label>{t("Servir")}</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="generosidade">
-        <Icon sf={{ default: "gift", selected: "gift.fill" }} />
-        <Label>{t("Doar")}</Label>
-      </NativeTabs.Trigger>
+      {FEATURES.generosidade && (
+        <NativeTabs.Trigger name="generosidade">
+          <Icon sf={{ default: "gift", selected: "gift.fill" }} />
+          <Label>{t("Doar")}</Label>
+        </NativeTabs.Trigger>
+      )}
       <NativeTabs.Trigger name="menu">
         <Icon sf={{ default: "square.grid.2x2", selected: "square.grid.2x2.fill" }} />
         <Label>{t("Menu")}</Label>
