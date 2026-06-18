@@ -108,7 +108,7 @@ export default function KidsSolicitarVinculoScreen() {
       const path = `${user.id}/${slot}-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from(BUCKET).upload(path, arrayBuffer, {
         contentType: file.mimeType ?? (ext === "pdf" ? "application/pdf" : `image/${ext}`),
-        upsert: true,
+        upsert: false, // bucket privado sem policy de SELECT → upsert dá RLS; path é único
       });
       if (error) throw error;
       const ehImagem = ext !== "pdf";
