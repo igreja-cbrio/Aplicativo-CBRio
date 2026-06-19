@@ -17,6 +17,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { apiGet } from "@/lib/api";
 import { trackEvento } from "@/lib/telemetria";
+import { abrirRota } from "@/lib/navegacao";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Material = { id: string; nome: string; comentario: string | null; url: string | null };
@@ -26,6 +27,11 @@ type Grupo = {
   dia_semana: number | null;
   horario: string | null;
   local: string | null;
+  endereco: string | null;
+  bairro: string | null;
+  complemento: string | null;
+  lat: number | null;
+  lng: number | null;
   foto_url: string | null;
   funcao: string | null;
   lider: { nome: string; telefone: string | null } | null;
@@ -119,6 +125,17 @@ export default function MeuGrupoScreen() {
                   <Button title={`${t("Falar com")} ${g.lider.nome.split(" ")[0]}`} onPress={() => falarComLider(g)} />
                 ) : g.lider?.nome ? (
                   <Text style={styles.liderInfo}>{t("Líder")}: {g.lider.nome}</Text>
+                ) : null}
+
+                {((g.lat != null && g.lng != null) || g.local || g.endereco || g.bairro) ? (
+                  <Button
+                    title={t("Como chegar")}
+                    variant="ghost"
+                    onPress={() => abrirRota(
+                      { lat: g.lat, lng: g.lng, endereco: [g.local, g.endereco, g.bairro].filter(Boolean).join(", ") },
+                      { titulo: t("Como chegar"), cancelar: t("Cancelar") },
+                    )}
+                  />
                 ) : null}
 
                 {g.materiais.length > 0 && (

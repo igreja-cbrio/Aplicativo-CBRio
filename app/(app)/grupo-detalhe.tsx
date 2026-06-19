@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
-  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -22,6 +21,7 @@ import { useAdminGrupo } from "@/lib/useAdminGrupo";
 import { useT } from "@/lib/i18n";
 import { diaHorario } from "./grupos";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { abrirRota } from "@/lib/navegacao";
 
 type GrupoDetalhe = {
   id: string;
@@ -130,11 +130,11 @@ export default function GrupoDetalheScreen() {
   }
 
   function abrirMapa() {
-    if (grupo?.lat && grupo?.lng) {
-      Linking.openURL(`http://maps.apple.com/?ll=${grupo.lat},${grupo.lng}`);
-    } else if (grupo?.endereco) {
-      Linking.openURL(`http://maps.apple.com/?q=${encodeURIComponent(grupo.endereco)}`);
-    }
+    const endereco = [grupo?.local, grupo?.endereco, grupo?.bairro].filter(Boolean).join(", ");
+    abrirRota(
+      { lat: grupo?.lat, lng: grupo?.lng, endereco },
+      { titulo: t("Como chegar"), cancelar: t("Cancelar") },
+    );
   }
 
   return (
