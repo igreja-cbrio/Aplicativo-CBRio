@@ -331,4 +331,40 @@ splash nativa (`splash.png`) são compostos com `sharp` e referenciados no
   (pill), cor primária `#408097`.
 - Sempre que um módulo for adicionado/alterado, atualizar a tabela de Módulos
   e os detalhes correspondentes aqui.
+
+## Lançamento Android — checklist (memória p/ quando for implementar)
+
+> O app é **um código só** (Expo/React Native) que roda em iOS e Android — **não
+> é preciso refazer nada do zero**. O `app.json` já tem o bloco `android`
+> (`package: br.com.cbrio.app`, adaptiveIcon). Tudo que é específico de iOS já
+> está protegido por `Platform.OS === "ios"`, então no Android os botões da Apple
+> simplesmente não aparecem. Este checklist reúne os pontos a revisar/implementar.
+
+**Como rodar/buildar Android:** `npx expo run:android` (device/emulador) para
+testar; `eas build --platform android` (já há `eas.json` + `projectId`) para gerar
+o `.aab` da Play Store. Publicação no **Google Play Console** (conta dev Google,
+taxa única US$ 25).
+
+### O que hoje é só iOS (e o que fazer no Android)
+
+| Recurso | Arquivos | Estado no Android | A fazer p/ Android |
+| --- | --- | --- | --- |
+| **Apple Pay** (doação) | `lib/applePay.ts`, `modules/apple-pay/*` (módulo nativo custom; o `ApplePayModule.kt` é só um stub vazio), gating em `app/(app)/generosidade.tsx` (`Platform.OS === "ios"`) | Aba "Apple Pay" some; ficam Pix + Cartão | Integrar **Google Pay** (ex.: via Stripe `@stripe/stripe-react-native` PlatformPay, ou Payment Sheet). Implementar o lado Android do módulo ou trocar por lib pronta. Backend Stripe (`generosidade-apple-pay-confirm`) já tokeniza cartão — criar/adaptar function p/ Google Pay. |
+| **Login com Apple** | `app/(auth)/login.tsx` (`APPLE_SIGNIN_ENABLED && Platform.OS === "ios"`), `contexts/AuthContext.tsx` (`signInWithApple` bloqueia fora do iOS) | Botão Apple some; ficam Google + e-mail/senha | Nada obrigatório (Google + e-mail já cobrem). Apple Sign-In no Android exigiria fluxo web OAuth — geralmente desnecessário. |
+| **Apple Wallet** (cartão) | `lib/wallet.ts` (`Platform.OS === "ios"` → PassKit; senão `expo-sharing`), `components/cartao/AddToWalletButton.tsx` (iOS → `PKAddPassButton`; senão botão estilizado) | Botão cai no compartilhar o `.pkpass` (inútil no Android) | Opcional: integrar **Google Wallet** (gera JWT no backend + `addPassToGoogleWallet`). Enquanto isso, esconder/repaginar o botão no Android. |
+| **Liquid Glass (Dock)** | `components/ui/Dock.tsx`, `components/ui/GlassCard.tsx` (`isLiquidGlassAvailable()`) | Já cai no fallback `expo-blur` automaticamente | Só validar visual do blur no Android. |
+| **Cartão holográfico** | `components/cartao/*` (Skia + Reanimated + giroscópio) | Funciona (libs são cross-platform) | Validar performance/giroscópio em aparelhos Android variados. |
+| **Push** | `lib/push.ts` | Funciona via Expo, mas precisa **FCM** | Configurar **Firebase Cloud Messaging** (google-services.json) no projeto/EAS. |
+
+### Ajustes gerais de plataforma a revisar
+- **Permissões Android** (`app.json` → `android.permissions`): hoje só
+  `RECORD_AUDIO`. Revisar localização (mapa de grupos/NEXT — `expo-location`),
+  notificações, etc.
+- **Ícone adaptativo / splash**: conferir `adaptiveIcon` e splash no aparelho.
+- **`useFrameworks: static`** está setado p/ iOS (`expo-build-properties`); no
+  Android verificar build do `@maplibre/maplibre-react-native` e do módulo
+  `apple-pay` (stub não deve quebrar o build).
+- **Back gesture / navegação**: validar o botão físico/voltar do Android nas Tabs.
+- **Status bar / safe areas / Dock flutuante**: validar em telas com notch e a
+  barra de gestos do Android.
 ```
