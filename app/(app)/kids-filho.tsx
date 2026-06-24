@@ -7,12 +7,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { useColors } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/lib/i18n";
@@ -37,6 +39,9 @@ type Detalhe = {
   crianca: {
     id: string; nome: string; idade_meses: number | null;
     observacoes_medicas: string | null; necessidades_especiais: string | null;
+    tem_espectro: boolean | null; espectro_qual: string | null;
+    tem_alergia: boolean | null; alergia_qual: string | null;
+    tem_limitacao_fisica: boolean | null; limitacao_fisica_qual: string | null;
     parentesco: string | null; foto_url: string | null; foto_consentida?: boolean;
   };
   sala_sugerida: { nome: string; cor: string } | null;
@@ -62,10 +67,29 @@ export default function KidsFilhoScreen() {
   const [aceito, setAceito] = useState(false);
   const [salvandoFoto, setSalvandoFoto] = useState(false);
 
+  // Saúde (editável)
+  const [saude, setSaude] = useState({
+    tem_espectro: false, espectro_qual: "",
+    tem_alergia: false, alergia_qual: "",
+    tem_limitacao_fisica: false, limitacao_fisica_qual: "",
+    observacoes_medicas: "",
+  });
+  const [saudeDirty, setSaudeDirty] = useState(false);
+  const [salvandoSaude, setSalvandoSaude] = useState(false);
+
   const carregar = useCallback(async () => {
     if (!id) return;
     try {
-      setD(await apiGet<Detalhe>(`/app/kids/filho/${id}`));
+      const r = await apiGet<Detalhe>(`/app/kids/filho/${id}`);
+      setD(r);
+      const cc = r.crianca;
+      setSaude({
+        tem_espectro: !!cc.tem_espectro, espectro_qual: cc.espectro_qual ?? "",
+        tem_alergia: !!cc.tem_alergia, alergia_qual: cc.alergia_qual ?? "",
+        tem_limitacao_fisica: !!cc.tem_limitacao_fisica, limitacao_fisica_qual: cc.limitacao_fisica_qual ?? "",
+        observacoes_medicas: cc.observacoes_medicas ?? "",
+      });
+      setSaudeDirty(false);
       setErro(null);
     } catch (e) {
       setErro(e instanceof Error ? e.message : t("Não foi possível carregar."));
@@ -73,6 +97,34 @@ export default function KidsFilhoScreen() {
   }, [id, t]);
 
   useFocusEffect(useCallback(() => { carregar(); }, [carregar]));
+
+  function setSaudeCampo<K extends keyof typeof saude>(k: K, v: (typeof saude)[K]) {
+    setSaude((s) => ({ ...s, [k]: v }));
+    setSaudeDirty(true);
+  }
+
+  async function salvarSaude() {
+    if (!id) return;
+    setSalvandoSaude(true);
+    try {
+      await apiPost(`/app/kids/filho/${id}/saude`, {
+        tem_espectro: saude.tem_espectro,
+        espectro_qual: saude.tem_espectro ? saude.espectro_qual.trim() || null : null,
+        tem_alergia: saude.tem_alergia,
+        alergia_qual: saude.tem_alergia ? saude.alergia_qual.trim() || null : null,
+        tem_limitacao_fisica: saude.tem_limitacao_fisica,
+        limitacao_fisica_qual: saude.tem_limitacao_fisica ? saude.limitacao_fisica_qual.trim() || null : null,
+        observacoes_medicas: saude.observacoes_medicas.trim() || null,
+      });
+      setSaudeDirty(false);
+      await carregar();
+      Alert.alert(t("Pronto 💙"), t("Informações de saúde salvas."));
+    } catch (e) {
+      Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível salvar."));
+    } finally {
+      setSalvandoSaude(false);
+    }
+  }
 
   const c = d?.crianca;
 
@@ -233,6 +285,43 @@ export default function KidsFilhoScreen() {
               </View>
             )}
 
+            {/* Saúde da criança (editável pelo responsável · a equipe Kids vê no check-in) */}
+            <View style={styles.saudeCard}>
+              <Text style={styles.saudeTitulo}>{t("Saúde da criança")}</Text>
+              <Text style={styles.saudeSub}>{t("Ajuda a equipe Kids a cuidar bem. Visível só para a equipe no check-in.")}</Text>
+
+              <Checkbox checked={saude.tem_alergia} onChange={(v) => setSaudeCampo("tem_alergia", v)} label={t("Tem alergia")} />
+              {saude.tem_alergia && (
+                <TextInput style={styles.saudeInput} value={saude.alergia_qual} onChangeText={(v) => setSaudeCampo("alergia_qual", v)} placeholder={t("Qual alergia?")} placeholderTextColor={colors.textMuted} />
+              )}
+
+              <Checkbox checked={saude.tem_espectro} onChange={(v) => setSaudeCampo("tem_espectro", v)} label={t("Está dentro do espectro autista")} />
+              {saude.tem_espectro && (
+                <TextInput style={styles.saudeInput} value={saude.espectro_qual} onChangeText={(v) => setSaudeCampo("espectro_qual", v)} placeholder={t("Qual? (nível, observações)")} placeholderTextColor={colors.textMuted} />
+              )}
+
+              <Checkbox checked={saude.tem_limitacao_fisica} onChange={(v) => setSaudeCampo("tem_limitacao_fisica", v)} label={t("Tem alguma limitação física")} />
+              {saude.tem_limitacao_fisica && (
+                <TextInput style={styles.saudeInput} value={saude.limitacao_fisica_qual} onChangeText={(v) => setSaudeCampo("limitacao_fisica_qual", v)} placeholder={t("Qual limitação?")} placeholderTextColor={colors.textMuted} />
+              )}
+
+              <Text style={styles.saudeLabel}>{t("Mais informações")}</Text>
+              <TextInput
+                style={[styles.saudeInput, styles.saudeTextarea]}
+                value={saude.observacoes_medicas}
+                onChangeText={(v) => setSaudeCampo("observacoes_medicas", v)}
+                placeholder={t("Medicação, cuidados, o que a equipe precisa saber...")}
+                placeholderTextColor={colors.textMuted}
+                multiline
+              />
+
+              {saudeDirty && (
+                <Pressable style={styles.btnPrim} onPress={salvarSaude} disabled={salvandoSaude} accessibilityRole="button">
+                  {salvandoSaude ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.btnPrimTxt}>{t("Salvar saúde")}</Text>}
+                </Pressable>
+              )}
+            </View>
+
             <View style={styles.histHeader}>
               <Text style={styles.histTitulo}>{t("Histórico de presença")}</Text>
               {d ? <Text style={styles.histTotal}>{d.total_checkins}</Text> : null}
@@ -297,6 +386,12 @@ const makeStyles = (colors: Palette) =>
     btnPrimTxt: { color: "#fff", fontSize: font.size.md, fontWeight: "800" },
     alerta: { flexDirection: "row", gap: spacing.sm, backgroundColor: "rgba(245,158,11,0.12)", borderWidth: 1, borderColor: "rgba(245,158,11,0.3)", borderRadius: radius.md, padding: spacing.md },
     alertaTxt: { color: "#92400E", fontSize: font.size.sm, lineHeight: 19 },
+    saudeCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.glassBorder, borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm },
+    saudeTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800" },
+    saudeSub: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 18, marginBottom: spacing.xs },
+    saudeLabel: { color: colors.text, fontSize: font.size.sm, fontWeight: "600", marginTop: spacing.xs },
+    saudeInput: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.sm, color: colors.text, fontSize: font.size.md },
+    saudeTextarea: { minHeight: 70, textAlignVertical: "top" },
     histHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: spacing.sm },
     histTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
     histTotal: { color: colors.brandMid, fontSize: font.size.md, fontWeight: "800" },

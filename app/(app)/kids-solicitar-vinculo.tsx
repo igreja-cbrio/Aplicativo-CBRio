@@ -17,6 +17,7 @@ import { Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { useColors } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/lib/i18n";
@@ -42,7 +43,13 @@ export default function KidsSolicitarVinculoScreen() {
   const [maeNome, setMaeNome] = useState("");
   const [paiNome, setPaiNome] = useState("");
   const [serie, setSerie] = useState("");
-  const [necessidade, setNecessidade] = useState("");
+  const [temAlergia, setTemAlergia] = useState(false);
+  const [alergiaQual, setAlergiaQual] = useState("");
+  const [temEspectro, setTemEspectro] = useState(false);
+  const [espectroQual, setEspectroQual] = useState("");
+  const [temLimitacao, setTemLimitacao] = useState(false);
+  const [limitacaoQual, setLimitacaoQual] = useState("");
+  const [obsMedicas, setObsMedicas] = useState("");
   const [consentMkt, setConsentMkt] = useState<boolean | null>(null);
   const [obs, setObs] = useState("");
 
@@ -176,7 +183,13 @@ export default function KidsSolicitarVinculoScreen() {
         mae_nome: maeNome.trim() || null,
         pai_nome: paiNome.trim() || null,
         serie: serie.trim() || null,
-        necessidade_especial: necessidade.trim() || null,
+        tem_alergia: temAlergia,
+        alergia_qual: temAlergia ? alergiaQual.trim() || null : null,
+        tem_espectro: temEspectro,
+        espectro_qual: temEspectro ? espectroQual.trim() || null : null,
+        tem_limitacao_fisica: temLimitacao,
+        limitacao_fisica_qual: temLimitacao ? limitacaoQual.trim() || null : null,
+        observacoes_medicas: obsMedicas.trim() || null,
         consent_marketing: consentMkt,
         foto_mae_path: maeFotoPath,
         foto_pai_path: paiFotoPath,
@@ -239,15 +252,28 @@ export default function KidsSolicitarVinculoScreen() {
               maxLength={80}
             />
 
-            <Text style={styles.label}>{t("Necessidade específica ou alergia (opcional)")}</Text>
+            <Text style={[styles.label, { marginTop: spacing.sm, fontWeight: "700" }]}>{t("Saúde da criança (opcional)")}</Text>
+            <Checkbox checked={temAlergia} onChange={setTemAlergia} label={t("Tem alergia")} />
+            {temAlergia && (
+              <TextInput style={styles.input} value={alergiaQual} onChangeText={setAlergiaQual} placeholder={t("Qual alergia?")} placeholderTextColor={colors.textMuted} maxLength={500} />
+            )}
+            <Checkbox checked={temEspectro} onChange={setTemEspectro} label={t("Está dentro do espectro autista")} />
+            {temEspectro && (
+              <TextInput style={styles.input} value={espectroQual} onChangeText={setEspectroQual} placeholder={t("Qual? (nível, observações)")} placeholderTextColor={colors.textMuted} maxLength={500} />
+            )}
+            <Checkbox checked={temLimitacao} onChange={setTemLimitacao} label={t("Tem alguma limitação física")} />
+            {temLimitacao && (
+              <TextInput style={styles.input} value={limitacaoQual} onChangeText={setLimitacaoQual} placeholder={t("Qual limitação?")} placeholderTextColor={colors.textMuted} maxLength={500} />
+            )}
+            <Text style={styles.label}>{t("Mais informações")}</Text>
             <TextInput
               style={[styles.input, styles.textarea]}
-              value={necessidade}
-              onChangeText={setNecessidade}
-              placeholder={t("Ex.: alergia a amendoim, TEA, usa medicação...")}
+              value={obsMedicas}
+              onChangeText={setObsMedicas}
+              placeholder={t("Medicação, cuidados, o que a equipe precisa saber...")}
               placeholderTextColor={colors.textMuted}
               multiline
-              maxLength={500}
+              maxLength={1000}
             />
           </View>
 
