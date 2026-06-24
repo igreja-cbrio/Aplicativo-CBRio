@@ -16,7 +16,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import * as DocumentPicker from "expo-document-picker";
 import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,10 +25,10 @@ import { maskDateBR, isValidDateBR, dateBRToISO } from "@/lib/validators";
 import { supabase } from "@/lib/supabase";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
-type Slot = "crianca" | "pai" | "mae";
 type Parentesco = "mae" | "pai" | "outro";
 
 const BUCKET = "kids-documentos";
+const CONSENT_VERSAO = "eca-lgpd-v1";
 
 export default function KidsSolicitarVinculoScreen() {
   const colors = useColors();
@@ -40,11 +39,17 @@ export default function KidsSolicitarVinculoScreen() {
   const [nome, setNome] = useState("");
   const [nascimento, setNascimento] = useState("");
   const [parentesco, setParentesco] = useState<Parentesco>("mae");
+  const [maeNome, setMaeNome] = useState("");
+  const [paiNome, setPaiNome] = useState("");
   const [obs, setObs] = useState("");
-  const [paths, setPaths] = useState<Partial<Record<Slot, string>>>({});
-  const [previews, setPreviews] = useState<Partial<Record<Slot, string>>>({});
-  const [nomes, setNomes] = useState<Partial<Record<Slot, string | null>>>({});
-  const [uploading, setUploading] = useState<Slot | null>(null);
+
+  // Foto da criança (opcional · consentimento ECA/LGPD)
+  const [consentAberto, setConsentAberto] = useState(false);
+  const [aceito, setAceito] = useState(false);
+  const [fotoPath, setFotoPath] = useState<string | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [salvandoFoto, setSalvandoFoto] = useState(false);
+
   const [enviando, setEnviando] = useState(false);
 
   async function pegarImagem(fonte: "camera" | "galeria") {
@@ -53,73 +58,53 @@ export default function KidsSolicitarVinculoScreen() {
         ? await ImagePicker.requestCameraPermissionsAsync()
         : await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert(t("Permissão necessária"), t("Permita o acesso para enviar o documento."));
+      Alert.alert(t("Permissão necessária"), t("Permita o acesso para enviar a foto."));
       return null;
     }
-    const opts = { mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6, allowsEditing: false } as const;
+    const opts = { mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6, allowsEditing: true, aspect: [1, 1] as [number, number] };
     const res = fonte === "camera" ? await ImagePicker.launchCameraAsync(opts) : await ImagePicker.launchImageLibraryAsync(opts);
     if (res.canceled || !res.assets?.[0]) return null;
     return res.assets[0];
   }
 
-  function escolherDoc(slot: Slot) {
-    Alert.alert(t("Enviar documento"), t("Como você quer enviar?"), [
-      { text: t("Tirar foto"), onPress: () => enviarFoto(slot, "camera") },
-      { text: t("Escolher da galeria"), onPress: () => enviarFoto(slot, "galeria") },
-      { text: t("Enviar arquivo (PDF)"), onPress: () => enviarArquivo(slot) },
+  function escolherFoto() {
+    if (!aceito) return;
+    Alert.alert(t("Foto da criança"), t("Como você quer enviar?"), [
+      { text: t("Tirar foto"), onPress: () => enviarFoto("camera") },
+      { text: t("Escolher da galeria"), onPress: () => enviarFoto("galeria") },
       { text: t("Cancelar"), style: "cancel" },
     ]);
   }
 
-  async function enviarFoto(slot: Slot, fonte: "camera" | "galeria") {
+  async function enviarFoto(fonte: "camera" | "galeria") {
+    if (!user?.id) return;
     const asset = await pegarImagem(fonte);
     if (!asset) return;
-    await uploadDoc(slot, { uri: asset.uri, mimeType: asset.mimeType ?? null, name: null });
-  }
-
-  async function enviarArquivo(slot: Slot) {
+    setSalvandoFoto(true);
     try {
-      const res = await DocumentPicker.getDocumentAsync({
-        type: ["application/pdf", "image/*"],
-        copyToCacheDirectory: true,
-        multiple: false,
-      });
-      if (res.canceled || !res.assets?.[0]) return;
-      const a = res.assets[0];
-      await uploadDoc(slot, { uri: a.uri, mimeType: a.mimeType ?? null, name: a.name ?? null });
-    } catch {
-      Alert.alert(
-        t("Arquivos indisponíveis"),
-        t("Atualize o app para a versão mais recente para enviar arquivos. Por enquanto, use a câmera ou a galeria.")
-      );
-    }
-  }
-
-  // Upload genérico (foto ou arquivo) pro bucket privado.
-  async function uploadDoc(slot: Slot, file: { uri: string; mimeType: string | null; name: string | null }) {
-    if (!user?.id) return;
-    setUploading(slot);
-    try {
-      const resp = await fetch(file.uri);
+      const resp = await fetch(asset.uri);
       const arrayBuffer = await resp.arrayBuffer();
-      const extDoNome = file.name && file.name.includes(".") ? file.name.split(".").pop() : null;
-      const extDoUri = file.uri.split("?")[0].split(".").pop();
-      const ext = (extDoNome || extDoUri || "jpg").toLowerCase();
-      const path = `${user.id}/${slot}-${Date.now()}.${ext}`;
+      const ext = (asset.uri.split("?")[0].split(".").pop() || "jpg").toLowerCase();
+      const path = `${user.id}/foto-crianca/vinculo-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from(BUCKET).upload(path, arrayBuffer, {
-        contentType: file.mimeType ?? (ext === "pdf" ? "application/pdf" : `image/${ext}`),
+        contentType: asset.mimeType ?? `image/${ext}`,
         upsert: false, // bucket privado sem policy de SELECT → upsert dá RLS; path é único
       });
       if (error) throw error;
-      const ehImagem = ext !== "pdf";
-      setPaths((p) => ({ ...p, [slot]: path }));
-      setPreviews((p) => ({ ...p, [slot]: ehImagem ? file.uri : undefined }));
-      setNomes((p) => ({ ...p, [slot]: ehImagem ? null : file.name || "Documento.pdf" }));
+      setFotoPath(path);
+      setFotoPreview(asset.uri);
+      setConsentAberto(false);
     } catch (e) {
-      Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Falha ao enviar o documento."));
+      Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível enviar a foto."));
     } finally {
-      setUploading(null);
+      setSalvandoFoto(false);
     }
+  }
+
+  function removerFoto() {
+    setFotoPath(null);
+    setFotoPreview(null);
+    setAceito(false);
   }
 
   async function enviar() {
@@ -127,12 +112,8 @@ export default function KidsSolicitarVinculoScreen() {
       Alert.alert(t("Falta o nome"), t("Informe o nome da criança."));
       return;
     }
-    if (!paths.crianca) {
-      Alert.alert(t("Falta documento"), t("Envie o documento da criança."));
-      return;
-    }
-    if (!paths.pai && !paths.mae) {
-      Alert.alert(t("Falta documento"), t("Envie o documento do pai e/ou da mãe."));
+    if (!maeNome.trim() && !paiNome.trim()) {
+      Alert.alert(t("Falta o nome dos pais"), t("Informe o nome da mãe e/ou do pai."));
       return;
     }
     let dataISO: string | null = null;
@@ -149,14 +130,16 @@ export default function KidsSolicitarVinculoScreen() {
         crianca_nome: nome.trim(),
         crianca_data_nascimento: dataISO,
         parentesco,
+        mae_nome: maeNome.trim() || null,
+        pai_nome: paiNome.trim() || null,
         observacao: obs.trim() || null,
-        crianca_doc_path: paths.crianca,
-        doc_pai_path: paths.pai || null,
-        doc_mae_path: paths.mae || null,
+        crianca_foto_path: fotoPath,
+        foto_consentimento: !!fotoPath,
+        foto_consentimento_versao: fotoPath ? CONSENT_VERSAO : null,
       });
       Alert.alert(
         t("Solicitação enviada 💙"),
-        t("A equipe Kids vai conferir os documentos e liberar o vínculo. Você acompanha o resultado na tela de Check-in Kids."),
+        t("A equipe Kids vai conferir e liberar o vínculo. Você acompanha o resultado na tela de Check-in Kids."),
         [{ text: "OK", onPress: () => router.back() }]
       );
     } catch (e) {
@@ -180,14 +163,14 @@ export default function KidsSolicitarVinculoScreen() {
           </View>
 
           <Text style={styles.intro}>
-            {t("Para a segurança das crianças, o vínculo é conferido pela equipe Kids. Envie os documentos da criança e do(s) responsável(is); a equipe valida e libera.")}
+            {t("Para a segurança das crianças, o vínculo é conferido pela equipe Kids. Informe o nome da criança e dos pais; a equipe valida e libera.")}
           </Text>
 
           <View style={styles.card}>
             <Text style={styles.label}>{t("Nome da criança")}</Text>
             <TextInput style={styles.input} value={nome} onChangeText={setNome} placeholder={t("Nome completo")} placeholderTextColor={colors.textMuted} />
 
-            <Text style={styles.label}>{t("Data de nascimento")}</Text>
+            <Text style={styles.label}>{t("Data de nascimento (opcional)")}</Text>
             <TextInput
               style={styles.input}
               value={nascimento}
@@ -197,6 +180,17 @@ export default function KidsSolicitarVinculoScreen() {
               keyboardType="number-pad"
               maxLength={10}
             />
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{t("Nome dos pais")}</Text>
+            <Text style={styles.cardText}>{t("Informe ao menos um dos responsáveis.")}</Text>
+
+            <Text style={styles.label}>{t("Nome da mãe")}</Text>
+            <TextInput style={styles.input} value={maeNome} onChangeText={setMaeNome} placeholder={t("Nome completo")} placeholderTextColor={colors.textMuted} />
+
+            <Text style={styles.label}>{t("Nome do pai")}</Text>
+            <TextInput style={styles.input} value={paiNome} onChangeText={setPaiNome} placeholder={t("Nome completo")} placeholderTextColor={colors.textMuted} />
 
             <Text style={styles.label}>{t("Seu parentesco")}</Text>
             <View style={styles.segment}>
@@ -216,14 +210,42 @@ export default function KidsSolicitarVinculoScreen() {
             </View>
           </View>
 
+          {/* Foto da criança — opcional, com consentimento ECA/LGPD */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>{t("Documentos")}</Text>
+            <Text style={styles.cardTitle}>{t("Foto da criança (opcional)")}</Text>
             <Text style={styles.cardText}>
-              {t("Pode ser foto (câmera/galeria) ou arquivo (PDF). Documento da criança é obrigatório; do pai e/ou da mãe, envie pelo menos um.")}
+              {t("Ajuda a equipe a identificar a criança na entrada e retirada. Só é enviada com sua autorização.")}
             </Text>
-            <DocSlot label={t("Documento da criança")} slot="crianca" obrigatorio preview={previews.crianca} fileName={nomes.crianca} done={!!paths.crianca} uploading={uploading === "crianca"} onPress={escolherDoc} styles={styles} colors={colors} />
-            <DocSlot label={t("Documento do pai")} slot="pai" preview={previews.pai} fileName={nomes.pai} done={!!paths.pai} uploading={uploading === "pai"} onPress={escolherDoc} styles={styles} colors={colors} />
-            <DocSlot label={t("Documento da mãe")} slot="mae" preview={previews.mae} fileName={nomes.mae} done={!!paths.mae} uploading={uploading === "mae"} onPress={escolherDoc} styles={styles} colors={colors} />
+
+            {fotoPreview ? (
+              <View style={styles.fotoRow}>
+                <Image source={{ uri: fotoPreview }} style={styles.foto} />
+                <Pressable onPress={removerFoto} hitSlop={6} style={styles.removerFoto} accessibilityRole="button">
+                  <Ionicons name="trash-outline" size={15} color={colors.danger} />
+                  <Text style={styles.removerFotoTxt}>{t("Remover foto")}</Text>
+                </Pressable>
+              </View>
+            ) : !consentAberto ? (
+              <Pressable onPress={() => setConsentAberto(true)} hitSlop={6} style={styles.addFoto} accessibilityRole="button">
+                <Ionicons name="camera-outline" size={16} color={colors.brandMid} />
+                <Text style={styles.addFotoTxt}>{t("Adicionar foto")}</Text>
+              </Pressable>
+            ) : (
+              <View style={styles.consent}>
+                <Text style={styles.consentTitulo}>{t("Autorização de uso da imagem")}</Text>
+                <Text style={styles.consentTxt}>
+                  {t("Autorizo a CBRio a usar a foto do(a) meu/minha filho(a) exclusivamente para identificá-lo(a) no check-in do Kids (segurança na entrada e retirada). A imagem fica armazenada de forma privada, visível apenas a mim e à equipe do Kids autorizada — não será publicada nem compartilhada. Declaro ser o responsável legal e posso revogar esta autorização a qualquer momento, removendo a foto.")}
+                </Text>
+                <Text style={styles.consentLei}>{t("ECA (Lei 8.069/90, arts. 17 e 18) · LGPD (Lei 13.709/18, art. 14).")}</Text>
+                <Pressable style={styles.checkRow} onPress={() => setAceito((v) => !v)} accessibilityRole="checkbox" accessibilityState={{ checked: aceito }}>
+                  <Ionicons name={aceito ? "checkbox" : "square-outline"} size={22} color={aceito ? colors.primary : colors.textMuted} />
+                  <Text style={styles.checkTxt}>{t("Li e autorizo o uso da imagem.")}</Text>
+                </Pressable>
+                <Pressable style={[styles.btnPrim, !aceito && styles.btnPrimOff]} onPress={escolherFoto} disabled={!aceito || salvandoFoto} accessibilityRole="button">
+                  {salvandoFoto ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.btnPrimTxt}>{t("Escolher foto")}</Text>}
+                </Pressable>
+              </View>
+            )}
           </View>
 
           <View style={styles.card}>
@@ -239,49 +261,13 @@ export default function KidsSolicitarVinculoScreen() {
           </View>
 
           <Text style={styles.privacidade}>
-            {t("🔒 Os documentos são privados, usados só para validar o vínculo, e visíveis apenas à equipe Kids.")}
+            {t("🔒 Seus dados são privados, usados só para validar o vínculo, e visíveis apenas à equipe Kids.")}
           </Text>
 
           <Button title={t("Enviar solicitação")} onPress={enviar} loading={enviando} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
-  );
-}
-
-function DocSlot({
-  label, slot, obrigatorio, preview, fileName, done, uploading, onPress, styles, colors,
-}: {
-  label: string;
-  slot: Slot;
-  obrigatorio?: boolean;
-  preview?: string;
-  fileName?: string | null;
-  done: boolean;
-  uploading: boolean;
-  onPress: (slot: Slot) => void;
-  styles: ReturnType<typeof makeStyles>;
-  colors: Palette;
-}) {
-  return (
-    <Pressable style={({ pressed }) => [styles.docSlot, pressed && { opacity: 0.7 }]} onPress={() => onPress(slot)} accessibilityRole="button" accessibilityLabel={label}>
-      {preview ? (
-        <Image source={{ uri: preview }} style={styles.docThumb} />
-      ) : (
-        <View style={[styles.docThumb, styles.docThumbEmpty]}>
-          <Ionicons name={done ? (fileName ? "document-text" : "checkmark") : "cloud-upload-outline"} size={22} color={done ? "#3FA66B" : colors.brandMid} />
-        </View>
-      )}
-      <View style={{ flex: 1 }}>
-        <Text style={styles.docLabel}>
-          {label}{obrigatorio ? " *" : ""}
-        </Text>
-        <Text style={[styles.docStatus, done && { color: "#3FA66B" }]} numberOfLines={1}>
-          {uploading ? "Enviando…" : done ? (fileName ? `${fileName} ✓` : "Enviado ✓ · toque pra trocar") : "Foto ou arquivo (PDF)"}
-        </Text>
-      </View>
-      {uploading && <ActivityIndicator color={colors.brandMid} />}
-    </Pressable>
   );
 }
 
@@ -307,10 +293,20 @@ const makeStyles = (colors: Palette) =>
     segItemOn: { backgroundColor: colors.brandMid, borderColor: colors.brandMid },
     segTxt: { color: colors.text, fontWeight: "600", fontSize: font.size.md },
     segTxtOn: { color: "#ffffff" },
-    docSlot: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.sm },
-    docThumb: { width: 52, height: 52, borderRadius: radius.md, backgroundColor: colors.surface },
-    docThumbEmpty: { alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border },
-    docLabel: { color: colors.text, fontSize: font.size.md, fontWeight: "600" },
-    docStatus: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 2 },
+    fotoRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginTop: spacing.xs },
+    foto: { width: 72, height: 72, borderRadius: radius.md, backgroundColor: colors.surface },
+    addFoto: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", marginTop: spacing.xs },
+    addFotoTxt: { color: colors.brandMid, fontSize: font.size.md, fontWeight: "600" },
+    removerFoto: { flexDirection: "row", alignItems: "center", gap: 4 },
+    removerFotoTxt: { color: colors.danger, fontSize: font.size.sm, fontWeight: "600" },
+    consent: { gap: spacing.sm, marginTop: spacing.sm, padding: spacing.md, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.glassBorder, borderRadius: radius.md },
+    consentTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
+    consentTxt: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 19 },
+    consentLei: { color: colors.textMuted, fontSize: 11, fontStyle: "italic" },
+    checkRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 4 },
+    checkTxt: { color: colors.text, fontSize: font.size.sm, flex: 1 },
+    btnPrim: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 12, alignItems: "center" },
+    btnPrimOff: { opacity: 0.5 },
+    btnPrimTxt: { color: "#fff", fontWeight: "700", fontSize: font.size.md },
     privacidade: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 18, textAlign: "center", paddingHorizontal: spacing.sm },
   });
