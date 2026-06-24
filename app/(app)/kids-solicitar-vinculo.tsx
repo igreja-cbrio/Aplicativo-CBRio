@@ -41,7 +41,17 @@ export default function KidsSolicitarVinculoScreen() {
   const [parentesco, setParentesco] = useState<Parentesco>("mae");
   const [maeNome, setMaeNome] = useState("");
   const [paiNome, setPaiNome] = useState("");
+  const [serie, setSerie] = useState("");
+  const [necessidade, setNecessidade] = useState("");
+  const [consentMkt, setConsentMkt] = useState<boolean | null>(null);
   const [obs, setObs] = useState("");
+
+  // Foto da mãe e do pai (opcional · identificação na retirada)
+  const [maeFotoPath, setMaeFotoPath] = useState<string | null>(null);
+  const [maeFotoPreview, setMaeFotoPreview] = useState<string | null>(null);
+  const [paiFotoPath, setPaiFotoPath] = useState<string | null>(null);
+  const [paiFotoPreview, setPaiFotoPreview] = useState<string | null>(null);
+  const [salvandoFotoResp, setSalvandoFotoResp] = useState<"mae" | "pai" | null>(null);
 
   // Foto da criança (opcional · consentimento ECA/LGPD)
   const [consentAberto, setConsentAberto] = useState(false);
@@ -107,6 +117,39 @@ export default function KidsSolicitarVinculoScreen() {
     setAceito(false);
   }
 
+  // Foto da mãe/pai (sem o consentimento ECA da criança · é foto de adulto)
+  async function enviarFotoResp(qual: "mae" | "pai", fonte: "camera" | "galeria") {
+    if (!user?.id) return;
+    const asset = await pegarImagem(fonte);
+    if (!asset) return;
+    setSalvandoFotoResp(qual);
+    try {
+      const resp = await fetch(asset.uri);
+      const arrayBuffer = await resp.arrayBuffer();
+      const ext = (asset.uri.split("?")[0].split(".").pop() || "jpg").toLowerCase();
+      const path = `${user.id}/foto-responsavel/${qual}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from(BUCKET).upload(path, arrayBuffer, {
+        contentType: asset.mimeType ?? `image/${ext}`,
+        upsert: false,
+      });
+      if (error) throw error;
+      if (qual === "mae") { setMaeFotoPath(path); setMaeFotoPreview(asset.uri); }
+      else { setPaiFotoPath(path); setPaiFotoPreview(asset.uri); }
+    } catch (e) {
+      Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível enviar a foto."));
+    } finally {
+      setSalvandoFotoResp(null);
+    }
+  }
+
+  function escolherFotoResp(qual: "mae" | "pai") {
+    Alert.alert(qual === "mae" ? t("Foto da mãe") : t("Foto do pai"), t("Como você quer enviar?"), [
+      { text: t("Tirar foto"), onPress: () => enviarFotoResp(qual, "camera") },
+      { text: t("Escolher da galeria"), onPress: () => enviarFotoResp(qual, "galeria") },
+      { text: t("Cancelar"), style: "cancel" },
+    ]);
+  }
+
   async function enviar() {
     if (!nome.trim()) {
       Alert.alert(t("Falta o nome"), t("Informe o nome da criança."));
@@ -132,6 +175,11 @@ export default function KidsSolicitarVinculoScreen() {
         parentesco,
         mae_nome: maeNome.trim() || null,
         pai_nome: paiNome.trim() || null,
+        serie: serie.trim() || null,
+        necessidade_especial: necessidade.trim() || null,
+        consent_marketing: consentMkt,
+        foto_mae_path: maeFotoPath,
+        foto_pai_path: paiFotoPath,
         observacao: obs.trim() || null,
         crianca_foto_path: fotoPath,
         foto_consentimento: !!fotoPath,
@@ -179,6 +227,27 @@ export default function KidsSolicitarVinculoScreen() {
               placeholderTextColor={colors.textMuted}
               keyboardType="number-pad"
               maxLength={10}
+            />
+
+            <Text style={styles.label}>{t("Série que está cursando (opcional)")}</Text>
+            <TextInput
+              style={styles.input}
+              value={serie}
+              onChangeText={setSerie}
+              placeholder={t("Ex.: 3º ano do Fundamental, Maternal II")}
+              placeholderTextColor={colors.textMuted}
+              maxLength={80}
+            />
+
+            <Text style={styles.label}>{t("Necessidade específica ou alergia (opcional)")}</Text>
+            <TextInput
+              style={[styles.input, styles.textarea]}
+              value={necessidade}
+              onChangeText={setNecessidade}
+              placeholder={t("Ex.: alergia a amendoim, TEA, usa medicação...")}
+              placeholderTextColor={colors.textMuted}
+              multiline
+              maxLength={500}
             />
           </View>
 
@@ -246,6 +315,70 @@ export default function KidsSolicitarVinculoScreen() {
                 </Pressable>
               </View>
             )}
+          </View>
+
+          {/* Foto dos pais — opcional, pra identificação na retirada */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{t("Foto dos pais (opcional)")}</Text>
+            <Text style={styles.cardText}>
+              {t("Ajuda a equipe a identificar quem pode retirar a criança. Fica privada, só a equipe Kids vê.")}
+            </Text>
+
+            <Text style={styles.label}>{t("Foto da mãe")}</Text>
+            {maeFotoPreview ? (
+              <View style={styles.fotoRow}>
+                <Image source={{ uri: maeFotoPreview }} style={styles.foto} />
+                <Pressable onPress={() => { setMaeFotoPath(null); setMaeFotoPreview(null); }} hitSlop={6} style={styles.removerFoto} accessibilityRole="button">
+                  <Ionicons name="trash-outline" size={15} color={colors.danger} />
+                  <Text style={styles.removerFotoTxt}>{t("Remover foto")}</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable onPress={() => escolherFotoResp("mae")} hitSlop={6} style={styles.addFoto} disabled={salvandoFotoResp === "mae"} accessibilityRole="button">
+                {salvandoFotoResp === "mae" ? <ActivityIndicator size="small" color={colors.brandMid} /> : <Ionicons name="camera-outline" size={16} color={colors.brandMid} />}
+                <Text style={styles.addFotoTxt}>{t("Adicionar foto")}</Text>
+              </Pressable>
+            )}
+
+            <Text style={[styles.label, { marginTop: 12 }]}>{t("Foto do pai")}</Text>
+            {paiFotoPreview ? (
+              <View style={styles.fotoRow}>
+                <Image source={{ uri: paiFotoPreview }} style={styles.foto} />
+                <Pressable onPress={() => { setPaiFotoPath(null); setPaiFotoPreview(null); }} hitSlop={6} style={styles.removerFoto} accessibilityRole="button">
+                  <Ionicons name="trash-outline" size={15} color={colors.danger} />
+                  <Text style={styles.removerFotoTxt}>{t("Remover foto")}</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable onPress={() => escolherFotoResp("pai")} hitSlop={6} style={styles.addFoto} disabled={salvandoFotoResp === "pai"} accessibilityRole="button">
+                {salvandoFotoResp === "pai" ? <ActivityIndicator size="small" color={colors.brandMid} /> : <Ionicons name="camera-outline" size={16} color={colors.brandMid} />}
+                <Text style={styles.addFotoTxt}>{t("Adicionar foto")}</Text>
+              </Pressable>
+            )}
+          </View>
+
+          {/* Consentimento de uso de imagem em divulgação (FELCA / ECA Digital) */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{t("Uso de imagem em divulgação")}</Text>
+            <Text style={styles.cardText}>
+              {t("Durante o culto Kids são feitas fotos/vídeos das atividades. Você autoriza o uso da imagem do(a) seu/sua filho(a) em marketing, posts e campanhas da CBRio?")}
+            </Text>
+            <Text style={styles.consentLei}>
+              {t("Conforme a FELCA e as diretrizes do ECA Digital (LGPD Lei 13.709/18, art. 14). Você pode alterar essa autorização quando quiser com a equipe Kids.")}
+            </Text>
+            <View style={styles.segment}>
+              {[{ k: true, l: t("Autorizo") }, { k: false, l: t("Não autorizo") }].map((opt) => (
+                <Pressable
+                  key={String(opt.k)}
+                  onPress={() => setConsentMkt(opt.k)}
+                  style={[styles.segItem, consentMkt === opt.k && styles.segItemOn]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: consentMkt === opt.k }}
+                >
+                  <Text style={[styles.segTxt, consentMkt === opt.k && styles.segTxtOn]}>{opt.l}</Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
 
           <View style={styles.card}>
