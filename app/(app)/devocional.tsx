@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
+  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -17,6 +19,8 @@ import * as Haptics from "expo-haptics";
 
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { apiGet } from "@/lib/api";
+import { trackEvento } from "@/lib/telemetria";
 import { useMembro } from "@/lib/useMembro";
 import {
   semanaDevocional,
@@ -29,6 +33,8 @@ import {
 import { compartilharDevocional } from "@/lib/devocionalShare";
 
 const DIAS_LABEL = ["S", "T", "Q", "Q", "S"]; // seg–sex
+
+type PenseVideo = { video_id: string; titulo: string; thumbnail_url: string | null; publicado_em: string | null };
 
 export default function DevocionalScreen() {
   const colors = useColors();
@@ -45,6 +51,7 @@ export default function DevocionalScreen() {
   const [obs, setObs] = useState("");
   const [celebra, setCelebra] = useState(false);
   const [compartilhando, setCompartilhando] = useState(false);
+  const [pense, setPense] = useState<PenseVideo | null>(null);
 
   const hoje = hojeISO();
   const itensHoje = itens.filter((i) => i.data === hoje);
@@ -71,6 +78,19 @@ export default function DevocionalScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Último "Pense" do Pr. Pedrão (YouTube @CanalPense) — atalho de vídeo.
+  useEffect(() => {
+    apiGet<{ video: PenseVideo | null }>("/app/pense-ultimo")
+      .then((r) => setPense(r.video))
+      .catch(() => {});
+  }, []);
+
+  function abrirPense() {
+    if (!pense) return;
+    trackEvento("pense_aberto", { id: pense.video_id });
+    Linking.openURL(`https://www.youtube.com/watch?v=${pense.video_id}`);
+  }
 
   async function compartilhar() {
     if (!itemHoje) return;
@@ -186,6 +206,27 @@ export default function DevocionalScreen() {
               : t("Comece sua semana com a Palavra 💙")}
           </Text>
         </View>
+
+        {/* Atalho: último "Pense" do Pr. Pedrão (YouTube) */}
+        {pense && (
+          <Pressable style={styles.penseCard} onPress={abrirPense} accessibilityRole="button" accessibilityLabel={t("Assista ao Pense")}>
+            <View style={styles.penseThumbWrap}>
+              {pense.thumbnail_url ? (
+                <Image source={{ uri: pense.thumbnail_url }} style={styles.penseThumb} />
+              ) : (
+                <View style={[styles.penseThumb, styles.penseThumbVazio]}>
+                  <Ionicons name="logo-youtube" size={24} color="#FF0000" />
+                </View>
+              )}
+              <View style={styles.pensePlay}><Ionicons name="play" size={18} color="#fff" /></View>
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.penseLabel}>{t("Pense · Pr. Pedrão")}</Text>
+              <Text style={styles.penseTitulo} numberOfLines={2}>{pense.titulo}</Text>
+              <Text style={styles.penseCta}>{t("Assista ao último vídeo")} ›</Text>
+            </View>
+          </Pressable>
+        )}
 
         {loading ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
@@ -332,6 +373,18 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
     diaBolhaHoje: { borderColor: colors.primary },
     diaLabel: { color: colors.textMuted, fontWeight: "700", fontSize: 13 },
     semanaResumo: { color: colors.textMuted, fontSize: 12, textAlign: "center", marginTop: 10 },
+    penseCard: {
+      flexDirection: "row", gap: 12, alignItems: "center", marginTop: 14,
+      backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.glassBorder,
+      borderRadius: 16, padding: 10,
+    },
+    penseThumbWrap: { position: "relative" },
+    penseThumb: { width: 116, height: 70, borderRadius: 10, backgroundColor: colors.background },
+    penseThumbVazio: { alignItems: "center", justifyContent: "center" },
+    pensePlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" },
+    penseLabel: { color: colors.brandMid, fontSize: 12, fontWeight: "700" },
+    penseTitulo: { color: colors.text, fontSize: 14, fontWeight: "600" },
+    penseCta: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
     vazio: { alignItems: "center", gap: 8, paddingVertical: 48, paddingHorizontal: 16 },
     vazioTitulo: { color: colors.text, fontSize: 15, fontWeight: "700", textAlign: "center" },
     vazioTxt: { color: colors.textMuted, fontSize: 13, textAlign: "center", lineHeight: 19 },
