@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Linking, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { Button } from "@/components/ui/Button";
 import { FormScaffold } from "@/components/inscricoes/FormScaffold";
+import { apiGet } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
@@ -36,6 +38,13 @@ export default function InscricaoBatismoScreen() {
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  const [grupoUrl, setGrupoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiGet<{ grupo_url?: string | null }>("/public/batismo/horarios", { auth: false })
+      .then((r) => setGrupoUrl(r?.grupo_url ?? null))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (membro) {
@@ -92,6 +101,12 @@ export default function InscricaoBatismoScreen() {
       onSubmit={enviar}
       submitting={enviando || loading}
       enviado={enviado}
+      enviadoTexto={grupoUrl ? t("Inscrição confirmada! Entre no grupo do batismo pra receber os próximos passos.") : undefined}
+      successExtra={
+        grupoUrl ? (
+          <Button title={t("Entrar no grupo do batismo")} onPress={() => Linking.openURL(grupoUrl)} />
+        ) : undefined
+      }
       error={error}
     >
       <View style={styles.banner}>
