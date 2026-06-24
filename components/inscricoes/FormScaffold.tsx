@@ -25,6 +25,8 @@ type Props = {
   submitting?: boolean;
   enviado: boolean;
   enviadoTexto?: string;
+  /** Elemento extra mostrado na tela de sucesso (ex.: botão de entrar no grupo). */
+  successExtra?: React.ReactNode;
   /** Quando preenchido, mostra um aviso de "bloqueado" no lugar do formulário. */
   bloqueadoTexto?: string;
   error?: string | null;
@@ -40,6 +42,7 @@ export function FormScaffold({
   submitting,
   enviado,
   enviadoTexto,
+  successExtra,
   bloqueadoTexto,
   error,
   children,
@@ -79,6 +82,7 @@ export function FormScaffold({
               <Text style={styles.okText}>
                 {enviadoTexto ?? t("Recebemos sua inscrição. Em breve falamos com você. 💙")}
               </Text>
+              {successExtra}
               <Button title={t("Voltar")} variant="ghost" onPress={() => router.back()} />
             </View>
           ) : (
