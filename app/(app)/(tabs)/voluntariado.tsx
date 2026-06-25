@@ -15,13 +15,21 @@ import { Input } from "@/components/ui/Input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
-import { criarInscricaoApi, getVoluntariadoOpcoes, type VoluntariadoOpcao } from "@/lib/api";
+import { apiGet, apiPost, criarInscricaoApi, getVoluntariadoOpcoes, type VoluntariadoOpcao } from "@/lib/api";
 import { useVoluntariadoSync } from "@/lib/useVoluntariadoSync";
-import { getMeuVolProfileId } from "@/lib/disponibilidade";
-import { minhasEscalas, type MinhaEscala } from "@/lib/escalas";
+import { type MinhaEscala } from "@/lib/escalas";
+
+type EscalaApi = {
+  id: string;
+  team_name: string | null;
+  position_name: string | null;
+  confirmation_status: string | null;
+  service?: { name: string | null; service_type_name: string | null; scheduled_at: string | null } | null;
+};
+type CheckinHist = { id: string; checked_in_at: string | null; servico: string | null; data: string | null };
+type EscalasResp = { escalas: EscalaApi[]; historico: CheckinHist[]; vol_profile_id: string | null };
 import { Disponibilidade } from "@/components/voluntariado/Disponibilidade";
 import { isValidCPF, maskCPF, onlyDigits } from "@/lib/validators";
-import { supabase } from "@/lib/supabase";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
@@ -49,32 +57,41 @@ export default function VoluntariadoScreen() {
   // antes do estado real (flash).
   const { me } = useVoluntariadoSync(loading ? undefined : membro?.membroId ?? null);
   const [volProfileId, setVolProfileId] = useState<string | null>(null);
-  useEffect(() => {
-    if (!user?.id) return;
-    getMeuVolProfileId(user.id, membro?.membroId ?? null).then((id) => {
-      setVolProfileId(id);
-    });
-  }, [user?.id, membro?.membroId]);
   const statusIns = me?.inscricao?.status ?? null;
   const semInscricao = me !== null && me.inscricao === null;
   const inscrito = statusIns === "inscrito";
   const enviadoMinisterio = statusIns === "enviado_ministerio";
   const integrado = statusIns === "integrado" || me?.voluntario_ativo === true;
 
-  // ---- Minhas escalas (vol_schedules + vol_services) ----
+  // ---- Minhas escalas + histórico de check-in (via backend · service_role) ----
   const [escalas, setEscalas] = useState<MinhaEscala[]>([]);
+  const [historico, setHistorico] = useState<CheckinHist[]>([]);
   const [carregandoEscalas, setCarregandoEscalas] = useState(false);
   const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
 
   const carregarEscalas = useCallback(async () => {
-    if (!volProfileId) return;
     setCarregandoEscalas(true);
     try {
-      setEscalas(await minhasEscalas(volProfileId));
+      const r = await apiGet<EscalasResp>("/app/voluntariado/escalas");
+      setEscalas(
+        (r.escalas || []).map((e) => ({
+          id: e.id,
+          service_id: null,
+          team_name: e.team_name,
+          position_name: e.position_name,
+          confirmation_status: e.confirmation_status,
+          data: e.service?.scheduled_at ?? null,
+          culto: e.service?.name ?? e.service?.service_type_name ?? null,
+        }))
+      );
+      setHistorico(r.historico || []);
+      if (r.vol_profile_id) setVolProfileId(r.vol_profile_id);
+    } catch {
+      // mantém o que tem
     } finally {
       setCarregandoEscalas(false);
     }
-  }, [volProfileId]);
+  }, []);
 
   useEffect(() => {
     carregarEscalas();
@@ -82,16 +99,16 @@ export default function VoluntariadoScreen() {
 
   async function confirmar(id: string) {
     setConfirmandoId(id);
-    const { error } = await supabase
-      .from("vol_schedules")
-      .update({ confirmation_status: "confirmed" })
-      .eq("id", id);
-    if (!error) {
+    try {
+      await apiPost(`/app/voluntariado/escalas/${id}/responder`, { status: "confirmed" });
       setEscalas((prev) =>
         prev.map((e) => (e.id === id ? { ...e, confirmation_status: "confirmed" } : e))
       );
+    } catch {
+      // silencioso · o usuário pode tentar de novo
+    } finally {
+      setConfirmandoId(null);
     }
-    setConfirmandoId(null);
   }
 
   // ---- Inscrição de voluntariado ----
@@ -304,6 +321,27 @@ export default function VoluntariadoScreen() {
                 })
               )}
               {volProfileId && <Disponibilidade volProfileId={volProfileId} />}
+
+              {historico.length > 0 && (
+                <View style={{ marginTop: spacing.lg }}>
+                  <Text style={styles.sectionTitle}>{t("Histórico de check-in")}</Text>
+                  {historico.map((h) => {
+                    const det = [h.servico, h.data ? fmtDataIso(h.data) : null].filter(Boolean).join(" · ");
+                    return (
+                      <View key={h.id} style={styles.escala}>
+                        <View style={styles.escalaInfo}>
+                          <Text style={styles.escalaMin}>{h.servico ?? t("Culto")}</Text>
+                          {!!det && <Text style={styles.escalaMeta}>{det}</Text>}
+                        </View>
+                        <View style={styles.confirmado}>
+                          <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                          <Text style={styles.confirmadoTxt}>{t("Presente")}</Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
             </View>
           ) : enviado ? (
             <View style={styles.emptyCard}>
