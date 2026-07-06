@@ -16,7 +16,8 @@ import { Input } from "@/components/ui/Input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
-import { apiGet, apiPost, criarInscricaoApi, getVoluntariadoOpcoes, type VoluntariadoOpcao } from "@/lib/api";
+import { apiGet, apiPost, criarInscricaoApi, getVoluntariadoOpcoes, getSupervisorInfo, type VoluntariadoOpcao } from "@/lib/api";
+import { useRouter } from "expo-router";
 import { useVoluntariadoSync } from "@/lib/useVoluntariadoSync";
 import { type MinhaEscala } from "@/lib/escalas";
 
@@ -48,6 +49,11 @@ function fmtDataIso(iso: string) {
 export default function VoluntariadoScreen() {
   const { user } = useAuth();
   const { membro, loading } = useMembro();
+  const router = useRouter();
+  const [ehSupervisor, setEhSupervisor] = useState(false);
+  useEffect(() => {
+    getSupervisorInfo().then((r) => setEhSupervisor(!!r?.supervisor)).catch(() => {});
+  }, []);
   const colors = useColors();
   const t = useT();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -251,6 +257,17 @@ export default function VoluntariadoScreen() {
             </View>
             <Text style={styles.title}>{t("Voluntariado")}</Text>
           </View>
+
+          {ehSupervisor && (
+            <Pressable style={styles.supervisorCard} onPress={() => router.push("/escala-supervisor" as any)}>
+              <Ionicons name="calendar" size={22} color={colors.brandPale} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.supervisorTitulo}>{t("Montar escala")}</Text>
+                <Text style={styles.supervisorTxt}>{t("Você é supervisor · monte e veja as escalas da sua área.")}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </Pressable>
+          )}
 
           {inscrito ? (
             <View style={styles.section}>
@@ -480,6 +497,19 @@ const makeStyles = (colors: Palette) =>
       backgroundColor: colors.surface,
       alignItems: "flex-start",
     },
+    supervisorCard: {
+      flexDirection: "row",
+      gap: spacing.md,
+      padding: spacing.md,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      backgroundColor: colors.primary + "18",
+      alignItems: "center",
+      marginBottom: spacing.md,
+    },
+    supervisorTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800" },
+    supervisorTxt: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 18 },
     statusTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800", marginBottom: 4 },
     statusTxt: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 20 },
     muted: { color: colors.textMuted, fontSize: font.size.md, textAlign: "center", lineHeight: 22 },

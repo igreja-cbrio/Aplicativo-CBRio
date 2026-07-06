@@ -79,6 +79,49 @@ export async function apiPost<T>(
   return resp.json().catch(() => ({}) as T);
 }
 
+export async function apiDelete<T>(path: string): Promise<T> {
+  const headers: Record<string, string> = { Accept: "application/json", ...(await authHeaders()) };
+  const resp = await fetch(`${BASE}${path}`, { method: "DELETE", headers });
+  if (!resp.ok) {
+    const err = new Error(await parseErro(resp)) as Error & { status?: number };
+    err.status = resp.status;
+    throw err;
+  }
+  return resp.json().catch(() => ({}) as T);
+}
+
+// ===== Supervisor de área · montar escala pelo app =====
+export type SupervisorInfo = { supervisor: boolean; areas: string[] };
+export type EscalaServico = { id: string; service_type_name: string | null; scheduled_at: string | null };
+export type EscalaItem = {
+  id: string;
+  volunteer_id: string | null;
+  volunteer_name: string;
+  team_name: string | null;
+  position_name: string | null;
+  confirmation_status: string | null;
+};
+export type PoolVoluntario = { id: string; full_name: string; planning_center_id: string | null };
+
+export function getSupervisorInfo() {
+  return apiGet<SupervisorInfo>("/app/voluntariado/supervisor");
+}
+export function getEscalaServicos() {
+  return apiGet<{ areas: string[]; servicos: EscalaServico[] }>("/app/voluntariado/escala/servicos");
+}
+export function getEscala(serviceId: string) {
+  return apiGet<EscalaItem[]>(`/app/voluntariado/escala/${serviceId}`);
+}
+export function buscarEscalaPool(q: string) {
+  return apiGet<PoolVoluntario[]>(`/app/voluntariado/escala-pool?q=${encodeURIComponent(q)}`);
+}
+export function adicionarNaEscala(body: { service_id: string; volunteer_id: string; team_name?: string; position_name?: string }) {
+  return apiPost<EscalaItem>("/app/voluntariado/escala", body);
+}
+export function removerDaEscala(id: string) {
+  return apiDelete<{ ok: boolean }>(`/app/voluntariado/escala/${id}`);
+}
+
 // ===== Tipos do form de voluntariado =====
 export type VoluntariadoOpcao = {
   label: string;
