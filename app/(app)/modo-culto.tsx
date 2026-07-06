@@ -32,7 +32,11 @@ const TIPOS: { key: string; label: string }[] = [
 ];
 
 function hojeISO() {
-  return new Date().toISOString().slice(0, 10);
+  // Data LOCAL do aparelho — toISOString() é UTC e, das 21h em diante (BRT),
+  // devolvia o dia SEGUINTE: as anotações do culto da noite rachavam em duas
+  // chaves no meio do culto (20h→dia D, 21h+→dia D+1).
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export default function ModoCulto() {

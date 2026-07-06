@@ -82,6 +82,7 @@ export default function KidsScreen() {
   const [gerando, setGerando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
+  const [solicitacoesFalhou, setSolicitacoesFalhou] = useState(false);
 
   const carregar = useCallback(async () => {
     setErro(null);
@@ -97,10 +98,12 @@ export default function KidsScreen() {
     } finally {
       setCarregando(false);
     }
-    // Solicitações de vínculo (best-effort · não bloqueia a tela).
+    // Solicitações de vínculo (best-effort · não bloqueia a tela) — mas a
+    // falha precisa ser visível: quem tem vínculo em análise via a tela limpa
+    // e achava que a solicitação tinha sumido.
     apiGet<{ solicitacoes: Solicitacao[] }>("/app/kids/minhas-solicitacoes")
-      .then((r) => setSolicitacoes(r.solicitacoes || []))
-      .catch(() => {});
+      .then((r) => { setSolicitacoes(r.solicitacoes || []); setSolicitacoesFalhou(false); })
+      .catch(() => setSolicitacoesFalhou(true));
   }, [t]);
 
   useFocusEffect(
@@ -160,6 +163,14 @@ export default function KidsScreen() {
         </Text>
 
         {/* Solicitações de vínculo em análise / recusadas */}
+        {solicitacoesFalhou && solicitacoes.length === 0 && (
+          <View style={styles.solRow}>
+            <Ionicons name="cloud-offline-outline" size={20} color={colors.textMuted} />
+            <Text style={[styles.solStatus, { flex: 1 }]}>
+              {t("Não foi possível verificar suas solicitações de vínculo. Puxe pra atualizar.")}
+            </Text>
+          </View>
+        )}
         {solicitacoes
           .filter((s) => s.status === "pendente" || s.status === "rejeitado")
           .map((s) => (

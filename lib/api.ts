@@ -25,7 +25,14 @@ async function authHeaders(): Promise<Record<string, string>> {
   const expMs = session?.expires_at ? session.expires_at * 1000 : 0;
   if (session && expMs && expMs < Date.now() + 60_000) {
     const { data, error } = await supabase.auth.refreshSession();
-    if (!error && data.session) session = data.session;
+    if (!error && data.session) {
+      session = data.session;
+    } else if (expMs < Date.now()) {
+      // Token JÁ vencido e o refresh falhou (sem rede / servidor fora): a
+      // chamada morreria num 401 "Token inválido" enganoso. Erro honesto —
+      // é conexão, não sessão; resolve sozinho quando a rede voltar.
+      throw new Error("Não foi possível conectar. Verifique sua internet e tente novamente.");
+    }
   }
   const token = session?.access_token;
   if (!token) throw new Error("Sessão expirada. Faça login novamente.");

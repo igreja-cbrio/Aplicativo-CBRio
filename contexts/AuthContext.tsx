@@ -18,6 +18,7 @@ import {
 } from "@/lib/supabase";
 import { limparCache } from "@/lib/cache";
 import { definirBiometriaAtiva } from "@/lib/biometria";
+import { unregisterPush } from "@/lib/push";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -236,6 +237,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setPreview(false);
         await limparCache(); // descarta cache local (destaques/cultos) da sessão
         await definirBiometriaAtiva(false); // cada conta reativa o desbloqueio
+        // Remove o push token deste aparelho ANTES de derrubar a sessão (a RLS
+        // de delete exige o dono logado) — senão o token fica órfão e a conta
+        // antiga/excluída seguiria recebendo pushes neste aparelho.
+        await unregisterPush();
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
       },

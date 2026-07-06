@@ -48,9 +48,14 @@ export default function CuidadosScreen() {
   const [enviandoAcons, setEnviandoAcons] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [pedidos, setPedidos] = useState<PedidoCuidado[]>([]);
+  const [pedidosFalhou, setPedidosFalhou] = useState(false);
 
   const carregarPedidos = useCallback(() => {
-    meusPedidosCuidado().then(setPedidos).catch(() => {});
+    // Falha NÃO pode ser silenciosa: quem tem pedido em andamento veria a
+    // seção sumir e acharia que o pedido foi apagado/ignorado.
+    meusPedidosCuidado()
+      .then((p) => { setPedidos(p); setPedidosFalhou(false); })
+      .catch(() => setPedidosFalhou(true));
   }, []);
 
   useFocusEffect(carregarPedidos);
@@ -224,6 +229,16 @@ export default function CuidadosScreen() {
           </View>
 
           {/* Meus pedidos — acompanhamento do que já enviei */}
+          {pedidosFalhou && pedidos.length === 0 && (
+            <View style={styles.meusWrap}>
+              <Text style={styles.meusTitulo}>{t("Meus pedidos")}</Text>
+              <Pressable onPress={carregarPedidos} accessibilityRole="button">
+                <Text style={{ color: colors.textMuted, fontSize: font.size.sm }}>
+                  {t("Não foi possível carregar seus pedidos. Toque pra tentar de novo.")}
+                </Text>
+              </Pressable>
+            </View>
+          )}
           {pedidos.length > 0 && (
             <View style={styles.meusWrap}>
               <Text style={styles.meusTitulo}>{t("Meus pedidos")}</Text>

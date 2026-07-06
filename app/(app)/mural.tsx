@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { apiGet } from "@/lib/api";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { trackEvento } from "@/lib/telemetria";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
@@ -29,7 +30,9 @@ type Comunicado = {
 
 function quando(iso: string | null): string {
   if (!iso) return "";
-  const dias = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return ""; // data inválida no banco → não renderiza "Há NaN dias"
+  const dias = Math.floor((Date.now() - t) / 86400000);
   if (dias <= 0) return "Hoje";
   if (dias === 1) return "Ontem";
   if (dias < 7) return `Há ${dias} dias`;
@@ -43,13 +46,17 @@ export default function MuralScreen() {
   const [itens, setItens] = useState<Comunicado[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [falhou, setFalhou] = useState(false);
 
   const carregar = useCallback(async () => {
     try {
       const r = await apiGet<{ comunicados: Comunicado[] }>("/app/comunicados");
       setItens(r.comunicados || []);
+      setFalhou(false);
     } catch {
-      /* mantém o que tem */
+      // mantém o que tem — mas se não tem NADA, a tela precisa dizer que foi
+      // erro (antes mostrava "Nenhum aviso" e o usuário acreditava).
+      setFalhou(true);
     } finally {
       setCarregando(false);
       setRefreshing(false);
@@ -79,6 +86,8 @@ export default function MuralScreen() {
 
         {carregando ? (
           <View style={styles.center}><ActivityIndicator color={colors.brandMid} /></View>
+        ) : itens.length === 0 && falhou ? (
+          <ErrorState onRetry={() => { setCarregando(true); carregar(); }} />
         ) : itens.length === 0 ? (
           <View style={styles.center}>
             <Ionicons name="megaphone-outline" size={32} color={colors.textMuted} />

@@ -15,6 +15,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { GruposMapa } from "@/components/ui/GruposMapa";
 import { useMembro } from "@/lib/useMembro";
 import { supabase } from "@/lib/supabase";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
@@ -69,19 +70,23 @@ export default function GruposScreen() {
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [meusIds, setMeusIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [falhou, setFalhou] = useState(false);
   const [busca, setBusca] = useState("");
   const [view, setView] = useState<"lista" | "mapa">("lista");
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("mem_grupos")
       .select("id, nome, categoria, bairro, dia_semana, horario, foto_url, lat, lng")
       .eq("ativo", true)
       .is("deleted_at", null)
       .in("status_temporada", ["ativo", "novo", "a_confirmar"])
       .order("nome");
-    setGrupos((data as Grupo[]) ?? []);
+    // Erro de rede/servidor NÃO pode virar "Nenhum grupo encontrado" — o
+    // usuário acreditava que não havia grupos. Marca a falha pra tela avisar.
+    setFalhou(!!error);
+    if (!error) setGrupos((data as Grupo[]) ?? []);
 
     if (membro?.membroId) {
       const { data: meus } = await supabase
@@ -216,7 +221,9 @@ export default function GruposScreen() {
             </View>
           )}
 
-          {filtrados.length === 0 ? (
+          {filtrados.length === 0 && falhou ? (
+            <ErrorState onRetry={carregar} />
+          ) : filtrados.length === 0 ? (
             <Text style={styles.muted}>{t("Nenhum grupo encontrado.")}</Text>
           ) : (
             secoes.map(({ categoria, itens }) => (

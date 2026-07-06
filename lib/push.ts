@@ -68,3 +68,24 @@ export async function registerForPush(userId: string): Promise<string | null> {
     return null;
   }
 }
+
+/**
+ * Remove o push token deste dispositivo de `app_push_tokens`. Chamar ANTES do
+ * supabase.auth.signOut() (a RLS de delete exige a sessão do dono). Sem isso o
+ * token fica órfão e o ex-usuário (ou a conta excluída) continuaria recebendo
+ * pushes destinados à conta antiga neste aparelho. Best-effort: nunca lança.
+ */
+export async function unregisterPush(): Promise<void> {
+  try {
+    const projectId =
+      (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)
+        ?.eas?.projectId ?? (Constants as { easConfig?: { projectId?: string } }).easConfig?.projectId;
+    if (!projectId) return;
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+    if (tokenData?.data) {
+      await supabase.from("app_push_tokens").delete().eq("token", tokenData.data);
+    }
+  } catch (e) {
+    console.log("[push] falha ao desregistrar:", e);
+  }
+}

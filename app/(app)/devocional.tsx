@@ -19,6 +19,7 @@ import * as Haptics from "expo-haptics";
 
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { apiGet } from "@/lib/api";
 import { trackEvento } from "@/lib/telemetria";
 import { useMembro } from "@/lib/useMembro";
@@ -47,6 +48,7 @@ export default function DevocionalScreen() {
   const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [falhou, setFalhou] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [obs, setObs] = useState("");
   const [celebra, setCelebra] = useState(false);
@@ -65,9 +67,12 @@ export default function DevocionalScreen() {
         const r = await semanaDevocional(membro?.membroId ?? null);
         setItens(r.itens);
         setCheckins(r.checkins);
+        setFalhou(false);
         if (membro?.membroId) setStreak(await streakDevocional(membro.membroId));
       } catch {
-        // mantém o que tem; tela mostra estado vazio se necessário
+        // mantém o que tem — mas sem dado NENHUM a tela precisa dizer que foi
+        // erro de conexão (antes mostrava "ainda não foi publicado", mentira).
+        setFalhou(true);
       }
       setLoading(false);
       setRefreshing(false);
@@ -230,6 +235,8 @@ export default function DevocionalScreen() {
 
         {loading ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
+        ) : !itemHoje && falhou && itens.length === 0 ? (
+          <ErrorState onRetry={() => load()} />
         ) : !itemHoje ? (
           <View style={styles.vazio}>
             <Ionicons name="book-outline" size={32} color={colors.textMuted} />
