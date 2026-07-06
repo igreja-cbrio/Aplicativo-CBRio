@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -105,7 +106,12 @@ export default function VoluntariadoScreen() {
         prev.map((e) => (e.id === id ? { ...e, confirmation_status: "confirmed" } : e))
       );
     } catch {
-      // silencioso · o usuário pode tentar de novo
+      // ⚠️ Nunca falhar em silêncio: sem isso o usuário achava que confirmou
+      // a escala quando o POST falhou (rede/servidor) e ninguém ficava sabendo.
+      Alert.alert(
+        t("Não foi possível confirmar"),
+        t("Verifique sua conexão e tente novamente.")
+      );
     } finally {
       setConfirmandoId(null);
     }

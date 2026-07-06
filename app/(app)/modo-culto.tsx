@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   Pressable,
   ScrollView,
@@ -16,7 +17,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { apiGet, apiPost } from "@/lib/api";
-import { trackTela, trackEvento } from "@/lib/telemetria";
+import { trackTela, trackEvento, trackErro } from "@/lib/telemetria";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Culto = { id: string; nome: string; data: string; hora: string | null };
@@ -94,7 +95,13 @@ export default function ModoCulto() {
       trackEvento("decisao_registrada", { tipo });
       setRegistrou(true);
     } catch (e) {
-      // erro: mantém na tela pra tentar de novo
+      // ⚠️ Nunca falhar em silêncio: é uma decisão de fé — o usuário PRECISA
+      // saber que não foi registrada pra tentar de novo.
+      trackErro("decisao_falhou", { message: e instanceof Error ? e.message : String(e) });
+      Alert.alert(
+        t("Não foi possível registrar"),
+        t("Sua decisão não foi enviada. Verifique sua conexão e tente novamente.")
+      );
     } finally {
       setEnviando(false);
     }
