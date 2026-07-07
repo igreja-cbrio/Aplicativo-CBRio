@@ -7,10 +7,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, { useAnimatedStyle, useSharedValue, runOnJS } from "react-native-reanimated";
 import { useColors } from "@/contexts/ThemeContext";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import {
-  getEscalaServicos, getEscala, buscarEscalaPool, adicionarNaEscala, removerDaEscala,
+  getEscalaServicos, getEscala, buscarEscalaPool, adicionarNaEscala, removerDaEscala, moverNaEscala,
   type EscalaServico, type EscalaItem, type PoolVoluntario,
 } from "@/lib/api";
 
@@ -69,6 +71,49 @@ export default function EscalaSupervisorScreen() {
   const [removendoId, setRemovendoId] = useState<string | null>(null);
   const buscaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const buscaSeq = useRef(0);
+
+  // ── Drag & drop: apertar e arrastar o nome pra outra equipe ──
+  const scrollWrapRef = useRef<View>(null);
+  const scrollTopRef = useRef(0);
+  const scrollYRef = useRef(0);
+  const teamLayoutRef = useRef<Record<string, { y: number; h: number }>>({});
+  const dragItemRef = useRef<EscalaItem | null>(null);
+  const hoverRef = useRef<string | null>(null);
+  const [dragItem, setDragItem] = useState<EscalaItem | null>(null);
+  const [hoverTeam, setHoverTeam] = useState<string | null>(null);
+  const ghostX = useSharedValue(0);
+  const ghostY = useSharedValue(0);
+  const ghostStyle = useAnimatedStyle(() => ({ transform: [{ translateX: ghostX.value - 120 }, { translateY: ghostY.value - 22 }] }));
+
+  function teamNoPonto(absY: number): string | null {
+    const contentY = absY - scrollTopRef.current + scrollYRef.current;
+    for (const [team, z] of Object.entries(teamLayoutRef.current)) {
+      if (contentY >= z.y && contentY <= z.y + z.h) return team;
+    }
+    return null;
+  }
+  function iniciarDrag(item: EscalaItem, ax: number, ay: number) {
+    dragItemRef.current = item; setDragItem(item);
+    ghostX.value = ax; ghostY.value = ay;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    scrollWrapRef.current?.measureInWindow?.((_x: number, y: number) => { scrollTopRef.current = y; });
+  }
+  function atualizarHover(absY: number) {
+    const t = teamNoPonto(absY);
+    if (t !== hoverRef.current) { hoverRef.current = t; setHoverTeam(t); }
+  }
+  async function soltarDrag() {
+    const item = dragItemRef.current; const alvo = hoverRef.current;
+    dragItemRef.current = null; hoverRef.current = null;
+    setDragItem(null); setHoverTeam(null);
+    if (!item || !alvo) return;
+    const atualTeam = item.team_name || "Sem equipe";
+    if (alvo === atualTeam) return;
+    setEscala(prev => prev.map(e => e.id === item.id ? { ...e, team_name: alvo === "Sem equipe" ? null : alvo } : e));
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    try { await moverNaEscala(item.id, alvo === "Sem equipe" ? null : alvo); }
+    catch (e: any) { Alert.alert("Erro", e?.message || "Erro ao mover"); if (servicoSel) carregarEscala(servicoSel.id); }
+  }
 
   const carregarServicos = useCallback(async (autoSel = false) => {
     try {
@@ -245,8 +290,12 @@ export default function EscalaSupervisorScreen() {
           ) : carregandoEscala && !refrescando ? (
             <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
           ) : (
+            <View ref={scrollWrapRef} style={{ flex: 1 }}>
             <ScrollView
               contentContainerStyle={{ padding: spacing.md, paddingBottom: 100, gap: 8 }}
+              onScroll={e => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+              scrollEventThrottle={16}
+              scrollEnabled={!dragItem}
               refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.primary} />}
             >
               {/* Resumo de confirmações */}
@@ -257,14 +306,22 @@ export default function EscalaSupervisorScreen() {
                   {resumo.rec > 0 && <Text style={[styles.resumoTxt, { color: statusInfo("declined").cor }]}>{resumo.rec} recusaram</Text>}
                 </View>
               )}
+              {escala.length > 0 && (
+                <Text style={[styles.pequeno, { color: colors.textMuted, paddingHorizontal: 2 }]}>
+                  Segure um nome e arraste pra mudar de equipe.
+                </Text>
+              )}
 
               {grupos.length === 0 ? (
                 <Text style={styles.muted}>Ninguém escalado ainda. Toque em “Adicionar” pra começar.</Text>
               ) : grupos.map(([team, lista]) => {
                 const aberto = !recolhidos.has(team);
                 const conf = lista.filter(x => x.confirmation_status === "confirmed").length;
+                const alvoDrop = !!dragItem && hoverTeam === team && (dragItem.team_name || "Sem equipe") !== team;
                 return (
-                  <View key={team} style={styles.teamCard}>
+                  <View key={team}
+                    onLayout={e => { teamLayoutRef.current[team] = { y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height }; }}
+                    style={[styles.teamCard, alvoDrop && { borderColor: colors.primary, borderWidth: 2, backgroundColor: colors.primary + "12" }]}>
                     <Pressable style={styles.teamHead} onPress={() => toggle(team)} accessibilityRole="button" accessibilityLabel={`Equipe ${team}, ${aberto ? "recolher" : "expandir"}`}>
                       <Ionicons name={aberto ? "chevron-down" : "chevron-forward"} size={18} color={colors.textMuted} />
                       <Text style={styles.teamNome} numberOfLines={1}>{team}</Text>
@@ -274,20 +331,27 @@ export default function EscalaSupervisorScreen() {
                       <View>
                         {lista.map(item => {
                           const si = statusInfo(item.confirmation_status);
+                          const pan = Gesture.Pan().activateAfterLongPress(250)
+                            .onStart(e => { runOnJS(iniciarDrag)(item, e.absoluteX, e.absoluteY); })
+                            .onUpdate(e => { ghostX.value = e.absoluteX; ghostY.value = e.absoluteY; runOnJS(atualizarHover)(e.absoluteY); })
+                            .onFinalize(() => { runOnJS(soltarDrag)(); });
                           return (
-                            <View key={item.id} style={styles.pessoa}>
-                              <View style={[styles.avatar, { backgroundColor: si.cor + "22" }]}>
-                                <Text style={[styles.avatarTxt, { color: si.cor }]}>{iniciais(item.volunteer_name)}</Text>
+                            <GestureDetector key={item.id} gesture={pan}>
+                              <View style={[styles.pessoa, dragItem?.id === item.id && { opacity: 0.35 }]}>
+                                <Ionicons name="reorder-three" size={18} color={colors.textMuted} />
+                                <View style={[styles.avatar, { backgroundColor: si.cor + "22" }]}>
+                                  <Text style={[styles.avatarTxt, { color: si.cor }]}>{iniciais(item.volunteer_name)}</Text>
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={styles.pessoaNome} numberOfLines={1}>{item.volunteer_name}</Text>
+                                  <Text style={[styles.pequeno, { color: si.cor }]}>{si.label}{item.position_name ? ` · ${item.position_name}` : ""}</Text>
+                                </View>
+                                {removendoId === item.id ? <ActivityIndicator color={colors.textMuted} />
+                                  : <Pressable onPress={() => remover(item)} hitSlop={14} accessibilityRole="button" accessibilityLabel={`Remover ${item.volunteer_name} da escala`}>
+                                      <Ionicons name="close-circle" size={22} color={colors.textMuted} />
+                                    </Pressable>}
                               </View>
-                              <View style={{ flex: 1 }}>
-                                <Text style={styles.pessoaNome} numberOfLines={1}>{item.volunteer_name}</Text>
-                                <Text style={[styles.pequeno, { color: si.cor }]}>{si.label}{item.position_name ? ` · ${item.position_name}` : ""}</Text>
-                              </View>
-                              {removendoId === item.id ? <ActivityIndicator color={colors.textMuted} />
-                                : <Pressable onPress={() => remover(item)} hitSlop={14} accessibilityRole="button" accessibilityLabel={`Remover ${item.volunteer_name} da escala`}>
-                                    <Ionicons name="close-circle" size={22} color={colors.textMuted} />
-                                  </Pressable>}
-                            </View>
+                            </GestureDetector>
                           );
                         })}
                         <Pressable onPress={() => abrirAdd(team)} style={styles.addInline} accessibilityRole="button">
@@ -300,6 +364,17 @@ export default function EscalaSupervisorScreen() {
                 );
               })}
             </ScrollView>
+            </View>
+          )}
+
+          {/* Fantasma que segue o dedo durante o arraste */}
+          {dragItem && (
+            <Animated.View pointerEvents="none" style={[styles.ghost, ghostStyle]}>
+              <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.avatarTxt, { color: "#fff" }]}>{iniciais(dragItem.volunteer_name)}</Text>
+              </View>
+              <Text style={styles.ghostTxt} numberOfLines={1}>{dragItem.volunteer_name}</Text>
+            </Animated.View>
           )}
 
           {servicoSel && !carregandoEscala && (
@@ -414,5 +489,7 @@ function makeStyles(c: Palette) {
     searchBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: c.surfaceAlt, borderRadius: radius.md, paddingHorizontal: 12, marginTop: spacing.md, marginBottom: spacing.sm, borderWidth: 1, borderColor: c.border },
     searchInput: { flex: 1, color: c.text, paddingVertical: 10, fontSize: font.size.md },
     resultado: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 },
+    ghost: { position: "absolute", top: 0, left: 0, flexDirection: "row", alignItems: "center", gap: 8, maxWidth: 240, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.full, backgroundColor: c.surface, borderWidth: 1, borderColor: c.primary, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 8, zIndex: 999 },
+    ghostTxt: { color: c.text, fontSize: font.size.sm, fontWeight: "700", flexShrink: 1 },
   });
 }

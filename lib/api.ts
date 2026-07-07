@@ -79,6 +79,17 @@ export async function apiPost<T>(
   return resp.json().catch(() => ({}) as T);
 }
 
+export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
+  const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json", ...(await authHeaders()) };
+  const resp = await fetch(`${BASE}${path}`, { method: "PATCH", headers, body: JSON.stringify(body) });
+  if (!resp.ok) {
+    const err = new Error(await parseErro(resp)) as Error & { status?: number };
+    err.status = resp.status;
+    throw err;
+  }
+  return resp.json().catch(() => ({}) as T);
+}
+
 export async function apiDelete<T>(path: string): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json", ...(await authHeaders()) };
   const resp = await fetch(`${BASE}${path}`, { method: "DELETE", headers });
@@ -120,6 +131,9 @@ export function adicionarNaEscala(body: { service_id: string; volunteer_id: stri
 }
 export function removerDaEscala(id: string) {
   return apiDelete<{ ok: boolean }>(`/app/voluntariado/escala/${id}`);
+}
+export function moverNaEscala(id: string, team_name: string | null) {
+  return apiPatch<EscalaItem>(`/app/voluntariado/escala/${id}`, { team_name });
 }
 
 // ===== Tipos do form de voluntariado =====
