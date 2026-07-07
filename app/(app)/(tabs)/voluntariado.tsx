@@ -327,6 +327,7 @@ export default function VoluntariadoScreen() {
               ) : (
                 escalas.map((e) => {
                   const confirmado = e.confirmation_status === "confirmed";
+                  const passou = e.data ? new Date(e.data).getTime() < Date.now() : false;
                   const titulo = e.culto ?? e.team_name ?? t("Escala");
                   const detalhes = [
                     e.data ? fmtDataIso(e.data) : null,
@@ -341,7 +342,22 @@ export default function VoluntariadoScreen() {
                         <Text style={styles.escalaMin}>{titulo}</Text>
                         {!!detalhes && <Text style={styles.escalaMeta}>{detalhes}</Text>}
                       </View>
-                      {confirmado ? (
+                      {passou ? (
+                        // Culto já passou: sem ações (não dá pra recusar depois).
+                        confirmado ? (
+                          <View style={styles.confirmado}>
+                            <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                            <Text style={styles.confirmadoTxt}>{t("Confirmada")}</Text>
+                          </View>
+                        ) : e.confirmation_status === "declined" ? (
+                          <View style={styles.recusadaTag}>
+                            <Ionicons name="close-circle" size={18} color={colors.danger} />
+                            <Text style={styles.recusadaTxt}>{t("Recusada")}</Text>
+                          </View>
+                        ) : (
+                          <Text style={styles.encerradoTxt}>{t("Encerrado")}</Text>
+                        )
+                      ) : confirmado ? (
                         <View style={styles.escalaAcoes}>
                           <View style={styles.confirmado}>
                             <Ionicons name="checkmark-circle" size={18} color={colors.success} />
@@ -626,6 +642,7 @@ const makeStyles = (colors: Palette) =>
     recusadaTag: { flexDirection: "row", alignItems: "center", gap: 4 },
     recusadaTxt: { color: colors.danger, fontSize: font.size.sm, fontWeight: "600" },
     recusarLink: { color: colors.textMuted, fontSize: font.size.sm - 1, textDecorationLine: "underline" },
+    encerradoTxt: { color: colors.textMuted, fontSize: font.size.sm, fontStyle: "italic" },
     modalWrap: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" },
     sheet: { backgroundColor: colors.background, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.lg, gap: spacing.md },
     sheetHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },

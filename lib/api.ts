@@ -136,6 +136,20 @@ export function removerDaEscala(id: string) {
 export function moverNaEscala(id: string, team_name: string | null) {
   return apiPatch<EscalaItem>(`/app/voluntariado/escala/${id}`, { team_name });
 }
+export type VoluntarioDetalhe = {
+  id: string;
+  full_name: string;
+  avatar_url: string | null;
+  telefone: string | null;
+  equipes: string[];
+  total_checkins: number;
+  total_escalas: number;
+  checkins: { culto: string | null; data: string | null }[];
+  escalas: { culto: string | null; data: string | null; equipe: string | null; posicao: string | null; status: string | null }[];
+};
+export function getVoluntarioDetalhe(volProfileId: string) {
+  return apiGet<VoluntarioDetalhe>(`/app/voluntariado/voluntario/${volProfileId}/detalhe`);
+}
 
 // ===== Tipos do form de voluntariado =====
 export type VoluntariadoOpcao = {

@@ -11,10 +11,20 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, runOnJS } from "react-native-reanimated";
 import { useColors } from "@/contexts/ThemeContext";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { Linking } from "react-native";
 import {
   getEscalaServicos, getEscala, buscarEscalaPool, adicionarNaEscala, removerDaEscala, moverNaEscala,
-  type EscalaServico, type EscalaItem, type PoolVoluntario,
+  getVoluntarioDetalhe,
+  type EscalaServico, type EscalaItem, type PoolVoluntario, type VoluntarioDetalhe,
 } from "@/lib/api";
+
+function waLink(tel: string | null): string | null {
+  if (!tel) return null;
+  let d = String(tel).replace(/\D/g, "");
+  if (!d) return null;
+  if (d.length <= 11 && !d.startsWith("55")) d = "55" + d;
+  return `https://wa.me/${d}`;
+}
 
 const DIA_MS = 86400000;
 function fmtData(iso: string | null): string {
@@ -81,6 +91,10 @@ export default function EscalaSupervisorScreen() {
   const hoverRef = useRef<string | null>(null);
   const [dragItem, setDragItem] = useState<EscalaItem | null>(null);
   const [hoverTeam, setHoverTeam] = useState<string | null>(null);
+  // Ficha do voluntário
+  const [detalhe, setDetalhe] = useState<VoluntarioDetalhe | null>(null);
+  const [detalheOpen, setDetalheOpen] = useState(false);
+  const [carregandoDetalhe, setCarregandoDetalhe] = useState(false);
   const ghostX = useSharedValue(0);
   const ghostY = useSharedValue(0);
   const ghostStyle = useAnimatedStyle(() => ({ transform: [{ translateX: ghostX.value - 120 }, { translateY: ghostY.value - 22 }] }));
@@ -228,6 +242,14 @@ export default function EscalaSupervisorScreen() {
     } finally { setSalvandoId(null); }
   }
 
+  async function abrirDetalhe(volId: string | null) {
+    if (!volId) { Alert.alert("Ficha indisponível", "Esse voluntário ainda não tem cadastro vinculado no sistema."); return; }
+    setDetalheOpen(true); setDetalhe(null); setCarregandoDetalhe(true);
+    try { setDetalhe(await getVoluntarioDetalhe(volId)); }
+    catch (e: any) { Alert.alert("Erro", e?.message || "Erro ao carregar a ficha"); setDetalheOpen(false); }
+    finally { setCarregandoDetalhe(false); }
+  }
+
   function remover(item: EscalaItem) {
     Alert.alert("Remover da escala", `Tirar ${item.volunteer_name} da escala?`, [
       { text: "Cancelar", style: "cancel" },
@@ -339,13 +361,15 @@ export default function EscalaSupervisorScreen() {
                             <GestureDetector key={item.id} gesture={pan}>
                               <View style={[styles.pessoa, dragItem?.id === item.id && { opacity: 0.35 }]}>
                                 <Ionicons name="reorder-three" size={18} color={colors.textMuted} />
-                                <View style={[styles.avatar, { backgroundColor: si.cor + "22" }]}>
-                                  <Text style={[styles.avatarTxt, { color: si.cor }]}>{iniciais(item.volunteer_name)}</Text>
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                  <Text style={styles.pessoaNome} numberOfLines={1}>{item.volunteer_name}</Text>
-                                  <Text style={[styles.pequeno, { color: si.cor }]}>{si.label}{item.confirmation_status === "declined" && item.recusa_motivo ? ` · ${item.recusa_motivo}` : (item.position_name ? ` · ${item.position_name}` : "")}</Text>
-                                </View>
+                                <Pressable style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10 }} onPress={() => abrirDetalhe(item.volunteer_id)} accessibilityRole="button" accessibilityLabel={`Ver ficha de ${item.volunteer_name}`}>
+                                  <View style={[styles.avatar, { backgroundColor: si.cor + "22" }]}>
+                                    <Text style={[styles.avatarTxt, { color: si.cor }]}>{iniciais(item.volunteer_name)}</Text>
+                                  </View>
+                                  <View style={{ flex: 1 }}>
+                                    <Text style={styles.pessoaNome} numberOfLines={1}>{item.volunteer_name}</Text>
+                                    <Text style={[styles.pequeno, { color: si.cor }]}>{si.label}{item.confirmation_status === "declined" && item.recusa_motivo ? ` · ${item.recusa_motivo}` : (item.position_name ? ` · ${item.position_name}` : "")}</Text>
+                                  </View>
+                                </Pressable>
                                 {removendoId === item.id ? <ActivityIndicator color={colors.textMuted} />
                                   : <Pressable onPress={() => remover(item)} hitSlop={14} accessibilityRole="button" accessibilityLabel={`Remover ${item.volunteer_name} da escala`}>
                                       <Ionicons name="close-circle" size={22} color={colors.textMuted} />
@@ -385,6 +409,58 @@ export default function EscalaSupervisorScreen() {
           )}
         </>
       )}
+
+      {/* Ficha do voluntário */}
+      <Modal visible={detalheOpen} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setDetalheOpen(false)}>
+        <View style={styles.modalWrap}>
+          <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom, maxHeight: "85%" }]}>
+            <View style={styles.sheetHead}>
+              <Text style={styles.sheetTitle}>Ficha do voluntário</Text>
+              <Pressable onPress={() => setDetalheOpen(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Fechar"><Ionicons name="close" size={24} color={colors.text} /></Pressable>
+            </View>
+            {carregandoDetalhe || !detalhe ? (
+              <View style={{ paddingVertical: 30 }}><ActivityIndicator color={colors.primary} /></View>
+            ) : (
+              <ScrollView keyboardShouldPersistTaps="handled">
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: spacing.md }}>
+                  <View style={[styles.avatar, { height: 48, width: 48, borderRadius: 24, backgroundColor: colors.primary + "22" }]}>
+                    <Text style={[styles.avatarTxt, { color: colors.primary, fontSize: font.size.md }]}>{iniciais(detalhe.full_name)}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.pessoaNome, { fontSize: font.size.md, fontWeight: "800" }]}>{detalhe.full_name}</Text>
+                    {detalhe.equipes.length > 0 && <Text style={styles.muted} numberOfLines={2}>{detalhe.equipes.join(" · ")}</Text>}
+                  </View>
+                </View>
+
+                {waLink(detalhe.telefone) ? (
+                  <Pressable style={styles.waBtn} onPress={() => Linking.openURL(waLink(detalhe.telefone)!)} accessibilityRole="button">
+                    <Ionicons name="logo-whatsapp" size={18} color="#fff" />
+                    <Text style={styles.waTxt}>WhatsApp · {detalhe.telefone}</Text>
+                  </Pressable>
+                ) : (
+                  <Text style={[styles.muted, { marginBottom: spacing.sm }]}>Sem telefone cadastrado.</Text>
+                )}
+
+                <Text style={[styles.section, { fontSize: font.size.sm }]}>Escalas ({detalhe.total_escalas})</Text>
+                {detalhe.escalas.length === 0 ? <Text style={styles.muted}>Nenhuma escala.</Text> : detalhe.escalas.map((e, i) => (
+                  <View key={i} style={styles.histRow}>
+                    <Text style={styles.histCulto} numberOfLines={1}>{e.culto || "Culto"}{e.equipe ? ` · ${e.equipe}` : ""}</Text>
+                    <Text style={styles.histData}>{fmtData(e.data)}</Text>
+                  </View>
+                ))}
+
+                <Text style={[styles.section, { fontSize: font.size.sm, marginTop: spacing.md }]}>Check-ins ({detalhe.total_checkins})</Text>
+                {detalhe.checkins.length === 0 ? <Text style={styles.muted}>Nenhum check-in registrado.</Text> : detalhe.checkins.map((c, i) => (
+                  <View key={i} style={styles.histRow}>
+                    <Text style={styles.histCulto} numberOfLines={1}>{c.culto || "Culto"}</Text>
+                    <Text style={styles.histData}>{fmtData(c.data)}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal de adicionar */}
       <Modal visible={addOpen} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setAddOpen(false)}>
@@ -491,5 +567,11 @@ function makeStyles(c: Palette) {
     resultado: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 },
     ghost: { position: "absolute", top: 0, left: 0, flexDirection: "row", alignItems: "center", gap: 8, maxWidth: 240, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.full, backgroundColor: c.surface, borderWidth: 1, borderColor: c.primary, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 8, zIndex: 999 },
     ghostTxt: { color: c.text, fontSize: font.size.sm, fontWeight: "700", flexShrink: 1 },
+    section: { color: c.text, fontWeight: "700", marginBottom: 6 },
+    waBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#25D366", borderRadius: radius.full, paddingVertical: 10, marginBottom: spacing.md },
+    waTxt: { color: "#fff", fontWeight: "700", fontSize: font.size.sm },
+    histRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, paddingVertical: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
+    histCulto: { color: c.text, fontSize: font.size.sm, flex: 1 },
+    histData: { color: c.textMuted, fontSize: font.size.sm - 1 },
   });
 }
