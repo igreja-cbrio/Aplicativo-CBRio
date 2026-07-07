@@ -344,7 +344,7 @@ export default function EscalaSupervisorScreen() {
                                 </View>
                                 <View style={{ flex: 1 }}>
                                   <Text style={styles.pessoaNome} numberOfLines={1}>{item.volunteer_name}</Text>
-                                  <Text style={[styles.pequeno, { color: si.cor }]}>{si.label}{item.position_name ? ` · ${item.position_name}` : ""}</Text>
+                                  <Text style={[styles.pequeno, { color: si.cor }]}>{si.label}{item.confirmation_status === "declined" && item.recusa_motivo ? ` · ${item.recusa_motivo}` : (item.position_name ? ` · ${item.position_name}` : "")}</Text>
                                 </View>
                                 {removendoId === item.id ? <ActivityIndicator color={colors.textMuted} />
                                   : <Pressable onPress={() => remover(item)} hitSlop={14} accessibilityRole="button" accessibilityLabel={`Remover ${item.volunteer_name} da escala`}>

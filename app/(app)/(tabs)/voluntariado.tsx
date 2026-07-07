@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -103,6 +104,23 @@ export default function VoluntariadoScreen() {
   useEffect(() => {
     carregarEscalas();
   }, [carregarEscalas]);
+
+  const [recusaId, setRecusaId] = useState<string | null>(null); // escala abrindo o modal de motivo
+  const [recusandoId, setRecusandoId] = useState<string | null>(null); // em envio
+  const MOTIVOS_RECUSA = ["Viagem", "Estou doente", "Saí da igreja", "Troquei de área", "Outros"];
+
+  async function recusar(id: string, motivo?: string) {
+    setRecusandoId(id);
+    try {
+      await apiPost(`/app/voluntariado/escalas/${id}/responder`, { status: "declined", motivo: motivo || undefined });
+      setEscalas((prev) => prev.map((e) => (e.id === id ? { ...e, confirmation_status: "declined" } : e)));
+      setRecusaId(null);
+    } catch {
+      Alert.alert(t("Não foi possível recusar"), t("Verifique sua conexão e tente novamente."));
+    } finally {
+      setRecusandoId(null);
+    }
+  }
 
   async function confirmar(id: string) {
     setConfirmandoId(id);
@@ -324,20 +342,29 @@ export default function VoluntariadoScreen() {
                         {!!detalhes && <Text style={styles.escalaMeta}>{detalhes}</Text>}
                       </View>
                       {confirmado ? (
-                        <View style={styles.confirmado}>
-                          <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                          <Text style={styles.confirmadoTxt}>{t("Confirmada")}</Text>
+                        <View style={styles.escalaAcoes}>
+                          <View style={styles.confirmado}>
+                            <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                            <Text style={styles.confirmadoTxt}>{t("Confirmada")}</Text>
+                          </View>
+                          <Pressable onPress={() => setRecusaId(e.id)} hitSlop={8} disabled={recusandoId === e.id} accessibilityRole="button" accessibilityLabel={t("Recusar")}>
+                            <Text style={styles.recusarLink}>{t("Recusar")}</Text>
+                          </Pressable>
                         </View>
-                      ) : (
-                        <Pressable
-                          style={styles.confirmarBtn}
-                          onPress={() => confirmar(e.id)}
-                          disabled={confirmandoId === e.id}
-                        >
-                          <Text style={styles.confirmarTxt}>
-                            {confirmandoId === e.id ? "..." : t("Confirmar")}
-                          </Text>
+                      ) : e.confirmation_status === "declined" ? (
+                        <Pressable style={styles.recusadaTag} onPress={() => confirmar(e.id)} disabled={confirmandoId === e.id}>
+                          <Ionicons name="close-circle" size={18} color={colors.danger} />
+                          <Text style={styles.recusadaTxt}>{confirmandoId === e.id ? "..." : t("Recusada")}</Text>
                         </Pressable>
+                      ) : (
+                        <View style={styles.escalaAcoes}>
+                          <Pressable style={styles.recusarBtn} onPress={() => setRecusaId(e.id)} disabled={recusandoId === e.id}>
+                            <Text style={styles.recusarTxt}>{t("Recusar")}</Text>
+                          </Pressable>
+                          <Pressable style={styles.confirmarBtn} onPress={() => confirmar(e.id)} disabled={confirmandoId === e.id}>
+                            <Text style={styles.confirmarTxt}>{confirmandoId === e.id ? "..." : t("Confirmar")}</Text>
+                          </Pressable>
+                        </View>
                       )}
                     </View>
                   );
@@ -463,6 +490,31 @@ export default function VoluntariadoScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Recusar escala · motivo opcional */}
+      <Modal visible={!!recusaId} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setRecusaId(null)}>
+        <View style={styles.modalWrap}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHead}>
+              <Text style={styles.sheetTitle}>{t("Recusar escala")}</Text>
+              <Pressable onPress={() => setRecusaId(null)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </Pressable>
+            </View>
+            <Text style={styles.muted2}>{t("Quer dizer o motivo? (opcional)")}</Text>
+            <View style={styles.chips}>
+              {MOTIVOS_RECUSA.map((m) => (
+                <Pressable key={m} style={styles.chip} disabled={!!recusandoId} onPress={() => recusaId && recusar(recusaId, m)}>
+                  <Text style={styles.chipTxt}>{t(m)}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Pressable style={styles.recusarSemMotivo} disabled={!!recusandoId} onPress={() => recusaId && recusar(recusaId)}>
+              <Text style={styles.recusarSemMotivoTxt}>{recusandoId ? "..." : t("Recusar sem dizer o motivo")}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -568,6 +620,19 @@ const makeStyles = (colors: Palette) =>
     confirmarTxt: { color: "#fff", fontSize: font.size.sm, fontWeight: "700" },
     confirmado: { flexDirection: "row", alignItems: "center", gap: 4 },
     confirmadoTxt: { color: colors.success, fontSize: font.size.sm, fontWeight: "600" },
+    escalaAcoes: { flexDirection: "row", alignItems: "center", gap: 8 },
+    recusarBtn: { borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.border },
+    recusarTxt: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "700" },
+    recusadaTag: { flexDirection: "row", alignItems: "center", gap: 4 },
+    recusadaTxt: { color: colors.danger, fontSize: font.size.sm, fontWeight: "600" },
+    recusarLink: { color: colors.textMuted, fontSize: font.size.sm - 1, textDecorationLine: "underline" },
+    modalWrap: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" },
+    sheet: { backgroundColor: colors.background, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.lg, gap: spacing.md },
+    sheetHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+    sheetTitle: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
+    muted2: { color: colors.textMuted, fontSize: font.size.sm },
+    recusarSemMotivo: { alignItems: "center", paddingVertical: spacing.sm },
+    recusarSemMotivoTxt: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "600", textDecorationLine: "underline" },
     soon: {
       flexDirection: "row",
       alignItems: "center",

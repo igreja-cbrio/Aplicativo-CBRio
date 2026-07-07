@@ -111,6 +111,7 @@ export type EscalaItem = {
   team_name: string | null;
   position_name: string | null;
   confirmation_status: string | null;
+  recusa_motivo?: string | null;
 };
 export type PoolVoluntario = { id: string; full_name: string; planning_center_id: string | null };
 
