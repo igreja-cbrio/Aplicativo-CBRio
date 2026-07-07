@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable,
+  RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { useColors } from "@/contexts/ThemeContext";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import {
@@ -12,6 +14,7 @@ import {
   type EscalaServico, type EscalaItem, type PoolVoluntario,
 } from "@/lib/api";
 
+const DIA_MS = 86400000;
 function fmtData(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
@@ -23,7 +26,13 @@ function fmtData(iso: string | null): string {
   const mm = String(brt.getUTCMonth() + 1).padStart(2, "0");
   const hh = String(brt.getUTCHours()).padStart(2, "0");
   const mi = String(brt.getUTCMinutes()).padStart(2, "0");
-  return `${dias[brt.getUTCDay()]} ${dd}/${mm} ${hh}:${mi}`;
+  // Rótulo relativo (Hoje/Amanhã) pra escolher o culto certo rápido.
+  const hojeBrt = new Date(Date.now() - 3 * 3600 * 1000);
+  const diaAlvo = Date.UTC(brt.getUTCFullYear(), brt.getUTCMonth(), brt.getUTCDate());
+  const diaHoje = Date.UTC(hojeBrt.getUTCFullYear(), hojeBrt.getUTCMonth(), hojeBrt.getUTCDate());
+  const delta = Math.round((diaAlvo - diaHoje) / DIA_MS);
+  const rel = delta === 0 ? "Hoje" : delta === 1 ? "Amanhã" : `${dias[brt.getUTCDay()]} ${dd}/${mm}`;
+  return `${rel} ${hh}:${mi}`;
 }
 function iniciais(nome: string): string {
   const p = (nome || "").trim().split(/\s+/).filter(Boolean);
@@ -33,6 +42,7 @@ function iniciais(nome: string): string {
 
 export default function EscalaSupervisorScreen() {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
 
@@ -43,28 +53,37 @@ export default function EscalaSupervisorScreen() {
   const [servicoSel, setServicoSel] = useState<EscalaServico | null>(null);
   const [escala, setEscala] = useState<EscalaItem[]>([]);
   const [carregandoEscala, setCarregandoEscala] = useState(false);
+  const [refrescando, setRefrescando] = useState(false);
   const [recolhidos, setRecolhidos] = useState<Set<string>>(new Set());
 
   // Modal de adicionar
   const [addOpen, setAddOpen] = useState(false);
   const [addTeam, setAddTeam] = useState<string>("");
   const [novaEquipe, setNovaEquipe] = useState("");
+  const [posicao, setPosicao] = useState("");
   const [busca, setBusca] = useState("");
   const [resultados, setResultados] = useState<PoolVoluntario[]>([]);
   const [buscando, setBuscando] = useState(false);
+  const [buscaErro, setBuscaErro] = useState(false);
   const [salvandoId, setSalvandoId] = useState<string | null>(null);
+  const [removendoId, setRemovendoId] = useState<string | null>(null);
   const buscaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const buscaSeq = useRef(0);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const r = await getEscalaServicos();
-        setServicos(r.servicos || []);
-      } catch (e: any) {
-        setErro(e?.message || "Erro ao carregar cultos");
-      } finally { setCarregando(false); }
-    })();
+  const carregarServicos = useCallback(async (autoSel = false) => {
+    try {
+      const r = await getEscalaServicos();
+      const lista = r.servicos || [];
+      setServicos(lista);
+      setErro(null);
+      if (autoSel && lista.length && !servicoSel) selecionar(lista[0]); // culto mais próximo
+    } catch (e: any) {
+      setErro(e?.message || "Erro ao carregar cultos");
+    } finally { setCarregando(false); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => { carregarServicos(true); }, [carregarServicos]);
 
   const carregarEscala = useCallback(async (serviceId: string) => {
     setCarregandoEscala(true);
@@ -77,6 +96,14 @@ export default function EscalaSupervisorScreen() {
     setServicoSel(s);
     setRecolhidos(new Set());
     carregarEscala(s.id);
+  }
+
+  async function refrescar() {
+    if (!servicoSel) return;
+    setRefrescando(true);
+    try { setEscala(await getEscala(servicoSel.id)); await carregarServicos(); }
+    catch { /* silencioso no pull */ }
+    finally { setRefrescando(false); }
   }
 
   const grupos = useMemo(() => {
@@ -93,64 +120,92 @@ export default function EscalaSupervisorScreen() {
   }, [escala]);
 
   const equipes = useMemo(() => grupos.map(([t]) => t).filter(t => t !== "Sem equipe"), [grupos]);
+  const resumo = useMemo(() => ({
+    total: escala.length,
+    conf: escala.filter(e => e.confirmation_status === "confirmed").length,
+    rec: escala.filter(e => e.confirmation_status === "declined").length,
+  }), [escala]);
+
+  // Já escalados NA EQUIPE destino (permite a mesma pessoa em outra equipe).
+  const teamAtual = novaEquipe.trim() || addTeam;
+  const jaNaEquipe = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of escala) if ((e.team_name || "Sem equipe") === teamAtual && e.volunteer_id) set.add(e.volunteer_id);
+    return set;
+  }, [escala, teamAtual]);
 
   function toggle(team: string) {
     setRecolhidos(prev => { const n = new Set(prev); n.has(team) ? n.delete(team) : n.add(team); return n; });
   }
 
-  // Busca com debounce (300ms) — evita disparar a cada tecla.
+  // Busca com debounce (300ms) + guarda de sequência (ignora resposta obsoleta).
   function onBusca(q: string) {
     setBusca(q);
+    setBuscaErro(false);
     if (buscaTimer.current) clearTimeout(buscaTimer.current);
     if (q.trim().length < 2) { setResultados([]); setBuscando(false); return; }
     setBuscando(true);
+    const seq = ++buscaSeq.current;
     buscaTimer.current = setTimeout(async () => {
-      try { setResultados(await buscarEscalaPool(q.trim())); }
-      catch { setResultados([]); }
-      finally { setBuscando(false); }
+      try {
+        const r = await buscarEscalaPool(q.trim());
+        if (seq === buscaSeq.current) { setResultados(r); setBuscaErro(false); }
+      } catch {
+        if (seq === buscaSeq.current) { setResultados([]); setBuscaErro(true); }
+      } finally {
+        if (seq === buscaSeq.current) setBuscando(false);
+      }
     }, 300);
   }
 
   function abrirAdd(team?: string) {
-    setAddTeam(team || equipes[0] || "Sem equipe");
-    setNovaEquipe(""); setBusca(""); setResultados([]);
+    setAddTeam(team || "Sem equipe");
+    setNovaEquipe(""); setPosicao(""); setBusca(""); setResultados([]); setBuscaErro(false);
     setAddOpen(true);
   }
 
-  const jaEscalados = useMemo(() => new Set(escala.map(e => e.volunteer_id).filter(Boolean)), [escala]);
-
   async function adicionar(vol: PoolVoluntario) {
     if (!servicoSel) return;
-    const team = (novaEquipe.trim() || addTeam);
+    const team = teamAtual;
     setSalvandoId(vol.id);
     try {
-      await adicionarNaEscala({ service_id: servicoSel.id, volunteer_id: vol.id, team_name: team === "Sem equipe" ? undefined : team });
-      await carregarEscala(servicoSel.id);
-      // mantém o painel aberto pra adicionar vários seguidos; limpa a busca.
+      const novo = await adicionarNaEscala({
+        service_id: servicoSel.id, volunteer_id: vol.id,
+        team_name: team === "Sem equipe" ? undefined : team,
+        position_name: posicao.trim() || undefined,
+      });
+      // Otimista: usa a resposta, sem refetch bloqueante.
+      setEscala(prev => [...prev, novo]);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setBusca(""); setResultados([]);
-    } catch (e: any) { Alert.alert("Erro", e?.message || "Erro ao escalar"); }
-    finally { setSalvandoId(null); }
+    } catch (e: any) {
+      Alert.alert("Erro", e?.message || "Erro ao escalar");
+    } finally { setSalvandoId(null); }
   }
 
   function remover(item: EscalaItem) {
     Alert.alert("Remover da escala", `Tirar ${item.volunteer_name} da escala?`, [
       { text: "Cancelar", style: "cancel" },
       { text: "Remover", style: "destructive", onPress: async () => {
-        try { await removerDaEscala(item.id); if (servicoSel) await carregarEscala(servicoSel.id); }
+        setRemovendoId(item.id);
+        try { await removerDaEscala(item.id); setEscala(prev => prev.filter(e => e.id !== item.id)); }
         catch (e: any) { Alert.alert("Erro", e?.message || "Erro ao remover"); }
+        finally { setRemovendoId(null); }
       } },
     ]);
   }
 
   const statusInfo = (s: string | null) =>
-    s === "confirmed" ? { cor: "#22c55e", label: "confirmado" }
-    : s === "declined" ? { cor: "#ef4444", label: "recusou" }
+    s === "confirmed" ? { cor: (colors as any).success || "#22c55e", label: "confirmado" }
+    : s === "declined" ? { cor: (colors as any).danger || "#ef4444", label: "recusou" }
     : { cor: colors.textMuted, label: "pendente" };
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={10}><Ionicons name="chevron-back" size={26} color={colors.text} /></Pressable>
+        <Pressable onPress={() => router.back()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Voltar">
+          <Ionicons name="chevron-back" size={26} color={colors.text} />
+        </Pressable>
         <Text style={styles.title}>Montar escala</Text>
         <View style={{ width: 26 }} />
       </View>
@@ -158,7 +213,13 @@ export default function EscalaSupervisorScreen() {
       {carregando ? (
         <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
       ) : erro ? (
-        <View style={styles.center}><Text style={styles.muted}>{erro}</Text></View>
+        <View style={styles.center}>
+          <Text style={[styles.muted, { marginBottom: 12 }]}>{erro}</Text>
+          <Pressable style={styles.retry} onPress={() => { setCarregando(true); carregarServicos(true); }} accessibilityRole="button">
+            <Ionicons name="refresh" size={16} color={colors.primary} />
+            <Text style={[styles.pequeno, { color: colors.primary }]}>Tentar de novo</Text>
+          </Pressable>
+        </View>
       ) : (
         <>
           {/* Seletor de culto · chips horizontais (compacto) */}
@@ -168,10 +229,11 @@ export default function EscalaSupervisorScreen() {
               {servicos.map(s => {
                 const ativo = servicoSel?.id === s.id;
                 return (
-                  <Pressable key={s.id} onPress={() => selecionar(s)}
+                  <Pressable key={s.id} onPress={() => selecionar(s)} accessibilityRole="button"
+                    accessibilityLabel={`${s.service_type_name || "Culto"}, ${fmtData(s.scheduled_at)}, ${s.escalados || 0} escalados`}
                     style={[styles.cultoChip, ativo && { borderColor: colors.primary, backgroundColor: colors.primary }]}>
                     <Text style={[styles.cultoChipNome, ativo && { color: "#fff" }]} numberOfLines={1}>{s.service_type_name || "Culto"}</Text>
-                    <Text style={[styles.cultoChipData, ativo && { color: "#fff" }]}>{fmtData(s.scheduled_at)}</Text>
+                    <Text style={[styles.cultoChipData, ativo && { color: "#fff" }]}>{fmtData(s.scheduled_at)} · {s.escalados || 0} esc.</Text>
                   </Pressable>
                 );
               })}
@@ -180,10 +242,22 @@ export default function EscalaSupervisorScreen() {
 
           {!servicoSel ? (
             <View style={styles.center}><Text style={styles.muted}>Escolha um culto acima pra montar a escala.</Text></View>
-          ) : carregandoEscala ? (
+          ) : carregandoEscala && !refrescando ? (
             <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
           ) : (
-            <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: 100, gap: 8 }}>
+            <ScrollView
+              contentContainerStyle={{ padding: spacing.md, paddingBottom: 100, gap: 8 }}
+              refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.primary} />}
+            >
+              {/* Resumo de confirmações */}
+              {escala.length > 0 && (
+                <View style={styles.resumo}>
+                  <Text style={styles.resumoTxt}>{resumo.total} escalados</Text>
+                  <Text style={[styles.resumoTxt, { color: statusInfo("confirmed").cor }]}>{resumo.conf} confirmados</Text>
+                  {resumo.rec > 0 && <Text style={[styles.resumoTxt, { color: statusInfo("declined").cor }]}>{resumo.rec} recusaram</Text>}
+                </View>
+              )}
+
               {grupos.length === 0 ? (
                 <Text style={styles.muted}>Ninguém escalado ainda. Toque em “Adicionar” pra começar.</Text>
               ) : grupos.map(([team, lista]) => {
@@ -191,7 +265,7 @@ export default function EscalaSupervisorScreen() {
                 const conf = lista.filter(x => x.confirmation_status === "confirmed").length;
                 return (
                   <View key={team} style={styles.teamCard}>
-                    <Pressable style={styles.teamHead} onPress={() => toggle(team)}>
+                    <Pressable style={styles.teamHead} onPress={() => toggle(team)} accessibilityRole="button" accessibilityLabel={`Equipe ${team}, ${aberto ? "recolher" : "expandir"}`}>
                       <Ionicons name={aberto ? "chevron-down" : "chevron-forward"} size={18} color={colors.textMuted} />
                       <Text style={styles.teamNome} numberOfLines={1}>{team}</Text>
                       <View style={styles.badge}><Text style={styles.badgeTxt}>{conf}/{lista.length}</Text></View>
@@ -209,11 +283,14 @@ export default function EscalaSupervisorScreen() {
                                 <Text style={styles.pessoaNome} numberOfLines={1}>{item.volunteer_name}</Text>
                                 <Text style={[styles.pequeno, { color: si.cor }]}>{si.label}{item.position_name ? ` · ${item.position_name}` : ""}</Text>
                               </View>
-                              <Pressable onPress={() => remover(item)} hitSlop={8}><Ionicons name="close-circle" size={22} color={colors.textMuted} /></Pressable>
+                              {removendoId === item.id ? <ActivityIndicator color={colors.textMuted} />
+                                : <Pressable onPress={() => remover(item)} hitSlop={14} accessibilityRole="button" accessibilityLabel={`Remover ${item.volunteer_name} da escala`}>
+                                    <Ionicons name="close-circle" size={22} color={colors.textMuted} />
+                                  </Pressable>}
                             </View>
                           );
                         })}
-                        <Pressable onPress={() => abrirAdd(team)} style={styles.addInline}>
+                        <Pressable onPress={() => abrirAdd(team)} style={styles.addInline} accessibilityRole="button">
                           <Ionicons name="add" size={16} color={colors.primary} />
                           <Text style={[styles.pequeno, { color: colors.primary }]}>Adicionar a {team}</Text>
                         </Pressable>
@@ -225,9 +302,8 @@ export default function EscalaSupervisorScreen() {
             </ScrollView>
           )}
 
-          {/* Botão flutuante · adicionar voluntário */}
           {servicoSel && !carregandoEscala && (
-            <Pressable style={styles.fab} onPress={() => abrirAdd()}>
+            <Pressable style={styles.fab} onPress={() => abrirAdd()} accessibilityRole="button" accessibilityLabel="Adicionar voluntário">
               <Ionicons name="person-add" size={20} color="#fff" />
               <Text style={styles.fabTxt}>Adicionar</Text>
             </Pressable>
@@ -235,16 +311,15 @@ export default function EscalaSupervisorScreen() {
         </>
       )}
 
-      {/* Modal de adicionar · busca única com debounce + seletor de equipe */}
-      <Modal visible={addOpen} animationType="slide" transparent onRequestClose={() => setAddOpen(false)}>
-        <View style={styles.modalWrap}>
-          <View style={styles.sheet}>
+      {/* Modal de adicionar */}
+      <Modal visible={addOpen} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setAddOpen(false)}>
+        <KeyboardAvoidingView style={styles.modalWrap} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>Adicionar voluntário</Text>
-              <Pressable onPress={() => setAddOpen(false)} hitSlop={10}><Ionicons name="close" size={24} color={colors.text} /></Pressable>
+              <Pressable onPress={() => setAddOpen(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Fechar"><Ionicons name="close" size={24} color={colors.text} /></Pressable>
             </View>
 
-            {/* Equipe destino */}
             <Text style={styles.sheetLabel}>Equipe</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
               {[...equipes, "Sem equipe"].map(t => {
@@ -257,10 +332,13 @@ export default function EscalaSupervisorScreen() {
                 );
               })}
             </ScrollView>
-            <TextInput style={[styles.input, { marginTop: 6 }]} placeholder="…ou nova equipe" placeholderTextColor={colors.textMuted}
-              value={novaEquipe} onChangeText={setNovaEquipe} />
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 6 }}>
+              <TextInput style={[styles.input, { flex: 1 }]} placeholder="…ou nova equipe" placeholderTextColor={colors.textMuted}
+                value={novaEquipe} onChangeText={setNovaEquipe} />
+              <TextInput style={[styles.input, { flex: 1 }]} placeholder="Função (opcional)" placeholderTextColor={colors.textMuted}
+                value={posicao} onChangeText={setPosicao} />
+            </View>
 
-            {/* Busca */}
             <View style={styles.searchBox}>
               <Ionicons name="search" size={18} color={colors.textMuted} />
               <TextInput style={styles.searchInput} placeholder="Buscar voluntário pelo nome…" placeholderTextColor={colors.textMuted}
@@ -268,28 +346,32 @@ export default function EscalaSupervisorScreen() {
               {buscando && <ActivityIndicator color={colors.primary} />}
             </View>
 
-            <ScrollView style={{ maxHeight: 320 }} keyboardShouldPersistTaps="handled">
+            <ScrollView style={{ maxHeight: 300 }} keyboardShouldPersistTaps="handled">
               {busca.trim().length < 2 ? (
                 <Text style={[styles.muted, { padding: spacing.md, textAlign: "center" }]}>Digite ao menos 2 letras do nome.</Text>
+              ) : buscaErro ? (
+                <Pressable style={{ padding: spacing.md, alignItems: "center" }} onPress={() => onBusca(busca)}>
+                  <Text style={[styles.muted, { textAlign: "center" }]}>Falha ao buscar. Toque pra tentar de novo.</Text>
+                </Pressable>
               ) : (!buscando && resultados.length === 0) ? (
                 <Text style={[styles.muted, { padding: spacing.md, textAlign: "center" }]}>Nenhum voluntário encontrado.</Text>
               ) : resultados.map(v => {
-                const escalado = v.id ? jaEscalados.has(v.id) : false;
+                const escalado = v.id ? jaNaEquipe.has(v.id) : false;
                 return (
-                  <Pressable key={v.id} style={styles.resultado} disabled={!!salvandoId || escalado} onPress={() => adicionar(v)}>
+                  <Pressable key={v.id} style={styles.resultado} disabled={!!salvandoId || escalado} onPress={() => adicionar(v)} accessibilityRole="button" accessibilityLabel={`Adicionar ${v.full_name}`}>
                     <View style={[styles.avatar, { backgroundColor: colors.primary + "22" }]}>
                       <Text style={[styles.avatarTxt, { color: colors.primary }]}>{iniciais(v.full_name)}</Text>
                     </View>
                     <Text style={[styles.pessoaNome, { flex: 1 }]} numberOfLines={1}>{v.full_name}</Text>
                     {salvandoId === v.id ? <ActivityIndicator color={colors.primary} />
-                      : escalado ? <Text style={[styles.pequeno, { color: colors.textMuted }]}>já na escala</Text>
+                      : escalado ? <Text style={[styles.pequeno, { color: colors.textMuted }]}>nesta equipe</Text>
                       : <Ionicons name="add-circle" size={24} color={colors.primary} />}
                   </Pressable>
                 );
               })}
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -303,10 +385,13 @@ function makeStyles(c: Palette) {
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.lg },
     muted: { color: c.textMuted, fontSize: font.size.sm },
     pequeno: { fontSize: font.size.sm },
+    retry: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.full, borderWidth: 1, borderColor: c.primary },
     cultoBar: { paddingVertical: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
     cultoChip: { minWidth: 150, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface },
     cultoChipNome: { color: c.text, fontSize: font.size.sm, fontWeight: "700" },
     cultoChipData: { color: c.textMuted, fontSize: font.size.sm - 1, marginTop: 2 },
+    resumo: { flexDirection: "row", flexWrap: "wrap", gap: 12, paddingHorizontal: 4, paddingBottom: 2 },
+    resumoTxt: { color: c.textMuted, fontSize: font.size.sm, fontWeight: "600" },
     teamCard: { backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, overflow: "hidden" },
     teamHead: { flexDirection: "row", alignItems: "center", gap: 8, padding: spacing.md },
     teamNome: { color: c.text, fontSize: font.size.md, fontWeight: "700", flex: 1 },
@@ -320,7 +405,7 @@ function makeStyles(c: Palette) {
     fab: { position: "absolute", right: spacing.md, bottom: spacing.lg, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: c.primary, paddingHorizontal: 16, paddingVertical: 12, borderRadius: radius.full, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
     fabTxt: { color: "#fff", fontWeight: "700", fontSize: font.size.sm },
     modalWrap: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" },
-    sheet: { backgroundColor: c.background, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.md, paddingBottom: spacing.xl },
+    sheet: { backgroundColor: c.background, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.md },
     sheetHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.sm },
     sheetTitle: { color: c.text, fontSize: font.size.lg, fontWeight: "800" },
     sheetLabel: { color: c.textMuted, fontSize: font.size.sm - 1, marginBottom: 2 },

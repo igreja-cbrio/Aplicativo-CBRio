@@ -92,7 +92,7 @@ export async function apiDelete<T>(path: string): Promise<T> {
 
 // ===== Supervisor de área · montar escala pelo app =====
 export type SupervisorInfo = { supervisor: boolean; areas: string[] };
-export type EscalaServico = { id: string; service_type_name: string | null; scheduled_at: string | null };
+export type EscalaServico = { id: string; service_type_name: string | null; scheduled_at: string | null; escalados?: number };
 export type EscalaItem = {
   id: string;
   volunteer_id: string | null;
