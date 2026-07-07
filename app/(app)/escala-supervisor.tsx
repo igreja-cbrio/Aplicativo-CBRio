@@ -14,13 +14,16 @@ import {
 
 function fmtData(iso: string | null): string {
   if (!iso) return "";
-  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  const t = iso.match(/T(\d{2}):(\d{2})/);
-  if (!m) return iso;
-  const dias = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
   const d = new Date(iso);
-  const dow = isNaN(d.getTime()) ? "" : dias[d.getUTCDay()] + " ";
-  return `${dow}${m[3]}/${m[2]}${t ? ` ${t[1]}:${t[2]}` : ""}`;
+  if (isNaN(d.getTime())) return iso;
+  // scheduled_at vem em UTC · converte pra horário de Brasília (UTC-3, sem DST).
+  const brt = new Date(d.getTime() - 3 * 3600 * 1000);
+  const dias = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+  const dd = String(brt.getUTCDate()).padStart(2, "0");
+  const mm = String(brt.getUTCMonth() + 1).padStart(2, "0");
+  const hh = String(brt.getUTCHours()).padStart(2, "0");
+  const mi = String(brt.getUTCMinutes()).padStart(2, "0");
+  return `${dias[brt.getUTCDay()]} ${dd}/${mm} ${hh}:${mi}`;
 }
 
 export default function EscalaSupervisorScreen() {
