@@ -156,6 +156,46 @@ export default function VoluntariadoScreen() {
   const [enviado, setEnviado] = useState(false);
   const [sucessoMsg, setSucessoMsg] = useState<string | null>(null);
 
+  // ---- "Já sirvo": cruzar CPF na 1ª entrada pra achar o cadastro de voluntário
+  const [cpfBusca, setCpfBusca] = useState("");
+  const [buscandoCpf, setBuscandoCpf] = useState(false);
+  const [cpfMsg, setCpfMsg] = useState<string | null>(null);
+  const [reconhecidoVol, setReconhecidoVol] = useState(false);
+
+  async function buscarPorCpf() {
+    setCpfMsg(null);
+    if (!isValidCPF(cpfBusca)) {
+      setCpfMsg(t("Informe um CPF válido."));
+      return;
+    }
+    setBuscandoCpf(true);
+    try {
+      const r = await apiPost<{ found: boolean; nome?: string; integrado?: boolean }>(
+        "/app/voluntariado/vincular-cpf",
+        { cpf: onlyDigits(cpfBusca) }
+      );
+      if (r.found) {
+        // Achou e vinculou o cadastro de voluntário → carrega as escalas dele
+        // e mostra a área de voluntário (em vez do formulário de inscrição).
+        await carregarEscalas();
+        setReconhecidoVol(true);
+      } else {
+        setCpfMsg(
+          t("Não encontramos um cadastro de voluntário com esse CPF. Escolha as áreas abaixo pra se inscrever.")
+        );
+      }
+    } catch (e) {
+      const err = e as Error & { status?: number };
+      if (err.status === 409) {
+        setCpfMsg(t("Este cadastro de voluntário já está vinculado a outra conta. Fale com a coordenação."));
+      } else {
+        setCpfMsg(err.message || t("Não foi possível cruzar o CPF."));
+      }
+    } finally {
+      setBuscandoCpf(false);
+    }
+  }
+
   useEffect(() => {
     if (membro) {
       setNome((v) => v || membro.nome);
@@ -314,7 +354,7 @@ export default function VoluntariadoScreen() {
                 </View>
               </View>
             </View>
-          ) : integrado ? (
+          ) : (integrado || reconhecidoVol) ? (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>{t("Minhas escalas")}</Text>
               {carregandoEscalas ? (
@@ -437,6 +477,28 @@ export default function VoluntariadoScreen() {
             </View>
           ) : (
             <View style={styles.section}>
+              {/* Já serve? Cruza o CPF com o cadastro de voluntário existente */}
+              <View style={styles.cpfCard}>
+                <Text style={styles.cpfTitulo}>{t("Você já serve na CBRio?")}</Text>
+                <Text style={styles.cpfTxt}>
+                  {t("Informe seu CPF pra encontrarmos seu cadastro de voluntário e suas escalas.")}
+                </Text>
+                <Input
+                  label={t("CPF")}
+                  value={cpfBusca}
+                  onChangeText={(v) => setCpfBusca(maskCPF(v))}
+                  keyboardType="number-pad"
+                  placeholder="000.000.000-00"
+                />
+                {!!cpfMsg && <Text style={styles.cpfMsg}>{cpfMsg}</Text>}
+                <Button
+                  title={buscandoCpf ? t("Buscando…") : t("Já sirvo — buscar meu cadastro")}
+                  onPress={buscarPorCpf}
+                  disabled={buscandoCpf}
+                />
+                <Text style={styles.cpfOu}>{t("Ainda não serve? Preencha abaixo pra se inscrever.")}</Text>
+              </View>
+
               <Text style={styles.subtitle}>
                 {t("Sirva com a gente na CBRio. Escolha as áreas e preencha seus dados.")}
               </Text>
@@ -578,6 +640,19 @@ const makeStyles = (colors: Palette) =>
     },
     supervisorTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800" },
     supervisorTxt: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 18 },
+    cpfCard: {
+      padding: spacing.md,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      backgroundColor: colors.primary + "12",
+      gap: spacing.sm,
+      marginBottom: spacing.lg,
+    },
+    cpfTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800" },
+    cpfTxt: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 18 },
+    cpfMsg: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 18 },
+    cpfOu: { color: colors.textMuted, fontSize: font.size.sm, textAlign: "center", marginTop: 2 },
     statusTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800", marginBottom: 4 },
     statusTxt: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 20 },
     muted: { color: colors.textMuted, fontSize: font.size.md, textAlign: "center", lineHeight: 22 },
