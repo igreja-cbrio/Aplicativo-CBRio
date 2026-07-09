@@ -39,3 +39,7 @@ yarn-error.*
 # IDE
 .vscode/
 .idea/
+
+# Builds locais / config MCP (não versionar)
+*.ipa
+.mcp.json
