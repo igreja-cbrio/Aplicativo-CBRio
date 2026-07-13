@@ -231,6 +231,45 @@ export async function getVoluntariadoMe(): Promise<VoluntariadoMe> {
   return obj as VoluntariadoMe;
 }
 
+// ===== /app/grupos/* (líder aprova inscrições do grupo) =====
+export type GrupoPapel = {
+  lider: boolean;
+  admin_grupos: boolean;
+  grupos_liderados: { id: string; nome: string }[];
+};
+
+export type GrupoPedido = {
+  id: string;
+  grupo_id: string;
+  grupo_nome: string;
+  nome: string;
+  telefone: string | null;
+  email: string | null;
+  origem: string | null;
+  created_at: string;
+};
+
+export function getGrupoPapel(): Promise<GrupoPapel> {
+  return apiGet<GrupoPapel>("/app/grupos/papel");
+}
+
+export function listarPedidosGrupo(): Promise<{ admin: boolean; pedidos: GrupoPedido[] }> {
+  return apiGet<{ admin: boolean; pedidos: GrupoPedido[] }>("/app/grupos/pedidos");
+}
+
+export async function contarPedidosGrupo(): Promise<number> {
+  const r = await apiGet<{ count: number }>("/app/grupos/pedidos/count");
+  return r?.count ?? 0;
+}
+
+export function aprovarPedidoGrupo(id: string): Promise<{ ok: boolean }> {
+  return apiPost<{ ok: boolean }>(`/app/grupos/pedidos/${encodeURIComponent(id)}/aprovar`, {});
+}
+
+export function recusarPedidoGrupo(id: string, motivo: string): Promise<{ ok: boolean }> {
+  return apiPost<{ ok: boolean }>(`/app/grupos/pedidos/${encodeURIComponent(id)}/rejeitar`, { motivo });
+}
+
 // ===== /app/next (NEXT) =====
 export type NextEncontro = {
   id: string;

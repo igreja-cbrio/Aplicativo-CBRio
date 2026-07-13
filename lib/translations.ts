@@ -6,6 +6,30 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  // ───────────────── Inscrições do grupo (líder) ─────────────────
+  "Inscrições do grupo": { en: "Group registrations", es: "Inscripciones del grupo" },
+  "Aceitar": { en: "Accept", es: "Aceptar" },
+  "Recusar": { en: "Decline", es: "Rechazar" },
+  "Aceitar inscrição": { en: "Accept registration", es: "Aceptar inscripción" },
+  "Recusar inscrição": { en: "Decline registration", es: "Rechazar inscripción" },
+  "Aprovar": { en: "Approve", es: "Aprobar" },
+  "no grupo": { en: "in the group", es: "en el grupo" },
+  "Recusar a inscrição de": { en: "Decline the registration of", es: "Rechazar la inscripción de" },
+  "Ex.: grupo lotado, pessoa já em outro grupo…": { en: "E.g. group is full, already in another group…", es: "Ej.: grupo lleno, ya está en otro grupo…" },
+  "Confirmar recusa": { en: "Confirm decline", es: "Confirmar rechazo" },
+  "Não foi possível aprovar.": { en: "Could not approve.", es: "No se pudo aprobar." },
+  "Não foi possível recusar.": { en: "Could not decline.", es: "No se pudo rechazar." },
+  "Erro ao carregar as inscrições.": { en: "Error loading registrations.", es: "Error al cargar las inscripciones." },
+  "Esta área é só para líderes de grupo.": { en: "This area is for group leaders only.", es: "Esta área es solo para líderes de grupo." },
+  "Nenhuma inscrição aguardando no momento.": { en: "No registrations pending right now.", es: "No hay inscripciones pendientes por ahora." },
+  "inscrição aguardando": { en: "registration pending", es: "inscripción pendiente" },
+  "inscrições aguardando": { en: "registrations pending", es: "inscripciones pendientes" },
+  "Nenhuma inscrição aguardando": { en: "No registrations pending", es: "Sin inscripciones pendientes" },
+  "WhatsApp": { en: "WhatsApp", es: "WhatsApp" },
+  "hoje": { en: "today", es: "hoy" },
+  "1 dia atrás": { en: "1 day ago", es: "hace 1 día" },
+  "dias atrás": { en: "days ago", es: "días atrás" },
+
   // ───────────────── Comuns / botões ─────────────────
   "Cancelar": { en: "Cancel", es: "Cancelar" },
   "Confirmar": { en: "Confirm", es: "Confirmar" },

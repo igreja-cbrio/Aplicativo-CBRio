@@ -18,12 +18,10 @@ export function attachNotifTapListener(): () => void {
         router.navigate(id ? { pathname: "/cuidados", params: { sos: id } } : "/cuidados");
         return;
       }
-      case "grupo_pedido": {
-        const grupoId = (data as { grupo_id?: string }).grupo_id;
-        if (grupoId) router.navigate({ pathname: "/grupo-detalhe", params: { id: grupoId } });
-        else router.navigate("/grupos");
+      case "grupo_pedido":
+        // Pedido de entrada no grupo → tela do líder aprovar/recusar.
+        router.navigate("/grupo-inscricoes");
         return;
-      }
       case "batismo":
         router.navigate("/batismo");
         return;

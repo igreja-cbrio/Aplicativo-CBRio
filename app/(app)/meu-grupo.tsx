@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
-import { apiGet } from "@/lib/api";
+import { apiGet, contarPedidosGrupo } from "@/lib/api";
 import { trackEvento } from "@/lib/telemetria";
 import { abrirRota } from "@/lib/navegacao";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -60,11 +60,19 @@ export default function MeuGrupoScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
   const [grupos, setGrupos] = useState<Grupo[] | null>(null);
+  const [pedidosPend, setPedidosPend] = useState(0);
 
   const carregar = useCallback(async () => {
     try {
       const r = await apiGet<{ grupos: Grupo[] }>("/app/meu-grupo");
-      setGrupos(r.grupos || []);
+      const lista = r.grupos || [];
+      setGrupos(lista);
+      // Se lidera algum grupo, mostra quantas inscrições estão aguardando.
+      if (lista.some((g) => g.funcao === "lider")) {
+        contarPedidosGrupo().then(setPedidosPend).catch(() => setPedidosPend(0));
+      } else {
+        setPedidosPend(0);
+      }
     } catch {
       setGrupos([]);
     }
@@ -91,6 +99,24 @@ export default function MeuGrupoScreen() {
           <Text style={styles.title}>{t("Meu grupo")}</Text>
           <View style={{ width: 24 }} />
         </View>
+
+        {grupos && grupos.some((g) => g.funcao === "lider") && (
+          <Pressable style={styles.pedidosCard} onPress={() => router.navigate("/grupo-inscricoes")} accessibilityRole="button">
+            <View style={styles.pedidosIcon}>
+              <Ionicons name="person-add-outline" size={20} color={colors.brandMid} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.pedidosTitulo}>{t("Inscrições do grupo")}</Text>
+              <Text style={styles.pedidosSub}>
+                {pedidosPend > 0
+                  ? `${pedidosPend} ${pedidosPend === 1 ? t("inscrição aguardando") : t("inscrições aguardando")}`
+                  : t("Nenhuma inscrição aguardando")}
+              </Text>
+            </View>
+            {pedidosPend > 0 && <View style={styles.pedidosBadge}><Text style={styles.pedidosBadgeTxt}>{pedidosPend}</Text></View>}
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </Pressable>
+        )}
 
         {grupos === null ? (
           <View style={styles.center}><ActivityIndicator color={colors.brandMid} /></View>
@@ -199,4 +225,10 @@ const makeStyles = (colors: Palette) =>
     materiaisTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
     material: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.glassBorder },
     materialNome: { color: colors.text, fontSize: font.size.md, flex: 1 },
+    pedidosCard: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.glassBorder, borderRadius: radius.lg, padding: spacing.md },
+    pedidosIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.glass, alignItems: "center", justifyContent: "center" },
+    pedidosTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
+    pedidosSub: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 2 },
+    pedidosBadge: { minWidth: 24, height: 24, borderRadius: 12, paddingHorizontal: 6, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
+    pedidosBadgeTxt: { color: "#fff", fontSize: font.size.sm, fontWeight: "800" },
   });

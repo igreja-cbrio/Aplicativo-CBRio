@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -13,6 +13,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { FEATURES } from "@/lib/features";
+import { getGrupoPapel } from "@/lib/api";
 
 type Option = {
   label: string;
@@ -30,6 +31,16 @@ export default function MenuScreen() {
   const nome =
     membro?.nome || (user?.user_metadata?.nome as string) || t("Membro CBRio");
 
+  // Item "Inscrições do grupo" só aparece pra líder de grupo de conexão.
+  const [ehLider, setEhLider] = useState(false);
+  useEffect(() => {
+    let vivo = true;
+    getGrupoPapel()
+      .then((p) => { if (vivo) setEhLider(!!p?.lider); })
+      .catch(() => { /* silencioso: não-líder ou offline */ });
+    return () => { vivo = false; };
+  }, []);
+
   const options: Option[] = [
     { label: "Meu perfil", icon: "person-outline", onPress: () => router.navigate("/perfil") },
     { label: "Sua jornada", icon: "trail-sign-outline", onPress: () => router.navigate("/jornada") },
@@ -42,6 +53,7 @@ export default function MenuScreen() {
     { label: "NEXT", icon: "sparkles-outline", onPress: () => router.navigate("/next") },
     { label: "Grupos", icon: "people-outline", onPress: () => router.navigate("/grupos") },
     { label: "Meu grupo", icon: "people-circle-outline", onPress: () => router.navigate("/meu-grupo") },
+    ...(ehLider ? [{ label: "Inscrições do grupo", icon: "checkmark-done-outline" as const, onPress: () => router.navigate("/grupo-inscricoes") }] : []),
     { label: "Cuidados", icon: "heart-outline", onPress: () => router.navigate("/cuidados") },
     { label: "Voluntariado", icon: "hand-left-outline", onPress: () => router.navigate("/voluntariado") },
     { label: "Check-in Kids", icon: "happy-outline", onPress: () => router.navigate("/kids") },

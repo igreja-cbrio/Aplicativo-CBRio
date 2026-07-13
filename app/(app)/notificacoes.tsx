@@ -111,12 +111,8 @@ export default function NotificacoesScreen() {
       case "sos":
       case "cuidado":
         router.navigate("/cuidados"); return;
-      case "grupo_pedido": {
-        const grupoId = (data as { grupo_id?: string }).grupo_id;
-        if (grupoId) router.navigate({ pathname: "/grupo-detalhe", params: { id: grupoId } });
-        else router.navigate("/grupos");
-        return;
-      }
+      case "grupo_pedido":
+        router.navigate("/grupo-inscricoes"); return;
       case "batismo":
         router.navigate("/batismo"); return;
       case "devocional":
