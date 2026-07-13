@@ -53,7 +53,7 @@ export default function MenuScreen() {
     { label: "NEXT", icon: "sparkles-outline", onPress: () => router.navigate("/next") },
     { label: "Grupos", icon: "people-outline", onPress: () => router.navigate("/grupos") },
     { label: "Meu grupo", icon: "people-circle-outline", onPress: () => router.navigate("/meu-grupo") },
-    ...(ehLider ? [{ label: "Inscrições do grupo", icon: "checkmark-done-outline" as const, onPress: () => router.navigate("/grupo-inscricoes") }] : []),
+    ...(ehLider ? [{ label: "Meus grupos", icon: "people-circle-outline" as const, onPress: () => router.navigate("/grupo-inscricoes") }] : []),
     { label: "Cuidados", icon: "heart-outline", onPress: () => router.navigate("/cuidados") },
     { label: "Voluntariado", icon: "hand-left-outline", onPress: () => router.navigate("/voluntariado") },
     { label: "Check-in Kids", icon: "happy-outline", onPress: () => router.navigate("/kids") },

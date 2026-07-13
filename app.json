@@ -52,7 +52,7 @@
         "expo-notifications",
         {
           "sounds": [
-            "./assets/sounds/cbrio-chime.wav"
+            "./assets/sounds/cbrio_chime.wav"
           ]
         }
       ],

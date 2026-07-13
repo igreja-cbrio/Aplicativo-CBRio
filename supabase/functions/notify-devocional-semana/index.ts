@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     // push via Expo
     const messages = tokens.map((t) => ({
       to: t.token,
-      sound: "cbrio-chime.wav",
+      sound: "cbrio_chime.wav",
       channelId: "default",
       title: titulo,
       body: corpo,

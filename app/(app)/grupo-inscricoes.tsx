@@ -12,8 +12,17 @@ import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import {
   listarPedidosGrupo, aprovarPedidoGrupo, recusarPedidoGrupo,
-  type GrupoPedido,
+  listarMeusGruposLider,
+  type GrupoPedido, type GrupoMeu,
 } from "@/lib/api";
+
+const DIAS_SEMANA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+function quandoGrupo(dia: number | null, horario: string | null): string {
+  const p: string[] = [];
+  if (dia != null && dia >= 0 && dia <= 6) p.push(DIAS_SEMANA[dia]);
+  if (horario) p.push(String(horario).slice(0, 5));
+  return p.join(" · ");
+}
 
 function waLink(tel: string | null): string | null {
   if (!tel) return null;
@@ -47,6 +56,7 @@ export default function GrupoInscricoesScreen() {
   const t = useT();
 
   const [pedidos, setPedidos] = useState<GrupoPedido[] | null>(null);
+  const [grupos, setGrupos] = useState<GrupoMeu[]>([]);
   const [multiGrupo, setMultiGrupo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [semPermissao, setSemPermissao] = useState(false);
@@ -60,6 +70,10 @@ export default function GrupoInscricoesScreen() {
   const carregar = useCallback(async (silencioso = false) => {
     if (!silencioso) setErro(null);
     try {
+      // Meus grupos (não crítico) em paralelo com os pedidos.
+      listarMeusGruposLider()
+        .then((r) => setGrupos(Array.isArray(r?.grupos) ? r.grupos : []))
+        .catch(() => {});
       const r = await listarPedidosGrupo();
       const lista = r.pedidos || [];
       setPedidos(lista);
@@ -137,7 +151,7 @@ export default function GrupoInscricoesScreen() {
         <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
           <Ionicons name="chevron-back" size={26} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>{t("Inscrições do grupo")}</Text>
+        <Text style={styles.title}>{t("Meus grupos")}</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -161,8 +175,41 @@ export default function GrupoInscricoesScreen() {
           contentContainerStyle={{ padding: spacing.lg, paddingBottom: 40, gap: spacing.md }}
           refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.primary} />}
         >
+          {grupos.length > 0 && (
+            <View style={{ gap: spacing.sm }}>
+              <Text style={styles.secLabel}>{t("Meus grupos")} ({grupos.length})</Text>
+              {grupos.map((g) => {
+                const sub = [quandoGrupo(g.dia_semana, g.horario), g.local || g.bairro].filter(Boolean).join("  ·  ");
+                return (
+                  <Pressable
+                    key={g.id}
+                    style={styles.grupoCard}
+                    onPress={() => router.navigate({ pathname: "/grupo-membros", params: { id: g.id, nome: g.nome } } as any)}
+                    accessibilityRole="button"
+                    accessibilityLabel={g.nome}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.nome} numberOfLines={2}>{g.nome}</Text>
+                      {!!sub && <Text style={[styles.pequeno, { marginTop: 2 }]} numberOfLines={1}>{sub}</Text>}
+                      <Text style={[styles.pequeno, { marginTop: 2 }]}>
+                        {g.membros_ativos} {g.membros_ativos === 1 ? t("membro") : t("membros")}
+                      </Text>
+                    </View>
+                    {g.pendentes > 0 && (
+                      <View style={styles.grupoBadge}><Text style={styles.grupoBadgeTxt}>{g.pendentes}</Text></View>
+                    )}
+                    <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+
+          <Text style={styles.secLabel}>
+            {t("Inscrições pendentes")}{pedidos.length ? ` (${pedidos.length})` : ""}
+          </Text>
           {pedidos.length === 0 ? (
-            <View style={[styles.center, { paddingTop: spacing.xl * 2 }]}>
+            <View style={[styles.center, { paddingTop: spacing.lg }]}>
               <Ionicons name="checkmark-done-circle-outline" size={40} color={colors.textMuted} />
               <Text style={styles.muted}>{t("Nenhuma inscrição aguardando no momento.")}</Text>
             </View>
@@ -283,6 +330,10 @@ function makeStyles(c: Palette) {
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.lg, gap: spacing.md },
     muted: { color: c.textMuted, fontSize: font.size.md, textAlign: "center" },
     pequeno: { color: c.textMuted, fontSize: font.size.sm },
+    secLabel: { color: c.textMuted, fontSize: font.size.sm - 1, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginTop: spacing.xs },
+    grupoCard: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: c.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: c.glassBorder, padding: spacing.md },
+    grupoBadge: { minWidth: 24, height: 24, borderRadius: 12, paddingHorizontal: 6, backgroundColor: c.primary, alignItems: "center", justifyContent: "center" },
+    grupoBadgeTxt: { color: "#fff", fontSize: font.size.sm, fontWeight: "800" },
     retry: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.full, borderWidth: 1, borderColor: c.primary },
     card: { backgroundColor: c.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: c.glassBorder, padding: spacing.md, gap: spacing.sm },
     cardHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
