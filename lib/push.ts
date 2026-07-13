@@ -21,7 +21,7 @@ export async function registerForPush(userId: string): Promise<string | null> {
       await Notifications.setNotificationChannelAsync("default", {
         name: "CBRio",
         importance: Notifications.AndroidImportance.HIGH,
-        sound: "cbrio-chime.wav",
+        sound: "cbrio_chime.wav",
         vibrationPattern: [0, 250, 250, 250],
       });
     }
