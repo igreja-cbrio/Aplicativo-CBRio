@@ -270,6 +270,46 @@ export function recusarPedidoGrupo(id: string, motivo: string): Promise<{ ok: bo
   return apiPost<{ ok: boolean }>(`/app/grupos/pedidos/${encodeURIComponent(id)}/rejeitar`, { motivo });
 }
 
+// Grupos que EU lidero (líder) — com contagens. Faz o app "ver o meu grupo"
+// mesmo sem nenhuma inscrição pendente.
+export type GrupoMeu = {
+  id: string;
+  nome: string;
+  dia_semana: number | null;
+  horario: string | null;
+  local: string | null;
+  bairro: string | null;
+  categoria: string | null;
+  aceitando_inscricoes: boolean | null;
+  membros_ativos: number;
+  pendentes: number;
+};
+export function listarMeusGruposLider(): Promise<{ admin: boolean; grupos: GrupoMeu[] }> {
+  return apiGet<{ admin: boolean; grupos: GrupoMeu[] }>("/app/grupos/meus");
+}
+
+// Detalhe do grupo (líder): roster ativo + inscrições pendentes daquele grupo.
+export type GrupoMembro = {
+  id: string;
+  nome: string;
+  telefone: string | null;
+  funcao: string | null;
+  entrou_em: string | null;
+  presencas: number | null;
+};
+export type GrupoRoster = {
+  grupo: {
+    id: string; nome: string; dia_semana: number | null; horario: string | null;
+    local: string | null; endereco: string | null; bairro: string | null;
+    descricao: string | null; categoria: string | null; aceitando_inscricoes: boolean | null;
+  };
+  membros: GrupoMembro[];
+  pendentes: GrupoPedido[];
+};
+export function getGrupoRoster(id: string): Promise<GrupoRoster> {
+  return apiGet<GrupoRoster>(`/app/grupos/${encodeURIComponent(id)}/membros`);
+}
+
 // ===== /app/next (NEXT) =====
 export type NextEncontro = {
   id: string;
