@@ -56,14 +56,24 @@ async function serveVol(): Promise<boolean> {
 
 async function estaEmGrupo(membroId: string): Promise<boolean> {
   try {
-    const { data } = await supabase
-      .from("mem_grupo_membros")
-      .select("id")
-      .eq("membro_id", membroId)
-      .is("saiu_em", null)
-      .is("deleted_at", null)
-      .limit(1);
-    return !!(data && data.length);
+    // Conta como "em um grupo" quem participa (mem_grupo_membros) OU quem LIDERA
+    // um grupo de conexão (líder também está conectado).
+    const [membro, lider] = await Promise.all([
+      supabase
+        .from("mem_grupo_membros")
+        .select("id")
+        .eq("membro_id", membroId)
+        .is("saiu_em", null)
+        .is("deleted_at", null)
+        .limit(1),
+      supabase
+        .from("mem_grupos")
+        .select("id")
+        .eq("lider_id", membroId)
+        .is("deleted_at", null)
+        .limit(1),
+    ]);
+    return !!(membro.data && membro.data.length) || !!(lider.data && lider.data.length);
   } catch {
     return false;
   }
@@ -71,7 +81,13 @@ async function estaEmGrupo(membroId: string): Promise<boolean> {
 
 async function foiBatizado(membroId: string): Promise<boolean> {
   try {
-    const b = await meuBatismo(membroId);
+    // Batizado em outra igreja (auto-declarado) também vale — não precisa
+    // aparecer como próximo passo pra quem já foi batizado.
+    const [ant, b] = await Promise.all([
+      supabase.from("mem_membros").select("batizado_outra_igreja").eq("id", membroId).maybeSingle(),
+      meuBatismo(membroId),
+    ]);
+    if ((ant.data as { batizado_outra_igreja?: boolean } | null)?.batizado_outra_igreja) return true;
     return b?.status === "realizado";
   } catch {
     return false;
