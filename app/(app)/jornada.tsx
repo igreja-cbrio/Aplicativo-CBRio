@@ -16,6 +16,20 @@ function brl(v: number): string {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 }
 
+const NODE = 40;
+const NODE_MT = 4;
+const RAIL_W = 44;
+
+type Passo = {
+  key: string;
+  valor: string; // rótulo do valor (eyebrow)
+  titulo: string;
+  status: string;
+  on: boolean;
+  rota: "/devocional" | "/grupos" | "/voluntariado" | "/batismo" | "/generosidade";
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+};
+
 export default function JornadaScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -36,19 +50,44 @@ export default function JornadaScreen() {
 
   const nome = membro?.nome?.split(/\s+/)[0] ?? "";
 
-  // Placar dos 5 valores + o próximo passo (primeiro valor ainda não vivido).
-  const resumo = useMemo(() => {
+  // Trilha na ordem da jornada CBRio: Seguir → Conectar → Investir → Servir → Generosidade.
+  const trilha = useMemo(() => {
     if (!dados) return null;
-    const dims = [
-      { on: dados.devocionalStreak > 0, titulo: "Comece seu devocional de hoje", rota: "/devocional" as const, icon: "book" as const },
-      { on: dados.emGrupo, titulo: "Entre num grupo de conexão", rota: "/grupos" as const, icon: "people" as const },
-      { on: dados.serveVoluntariado, titulo: "Comece a servir num ministério", rota: "/voluntariado" as const, icon: "hand-left" as const },
-      { on: dados.batizado, titulo: "Dê seu próximo passo: o batismo", rota: "/batismo" as const, icon: "water" as const },
+    const streak = dados.devocionalStreak;
+    const passos: Passo[] = [
+      {
+        key: "seguir", valor: "Seguir a Jesus", titulo: "Batismo",
+        status: dados.batizado ? "Batizado(a) ✓" : "Dê seu próximo passo",
+        on: dados.batizado, rota: "/batismo", icon: "water",
+      },
+      {
+        key: "conectar", valor: "Conectar", titulo: "Grupo de conexão",
+        status: dados.emGrupo ? "Em um grupo 💙" : "Encontre um grupo perto de você",
+        on: dados.emGrupo, rota: "/grupos", icon: "people",
+      },
+      {
+        key: "investir", valor: "Investir", titulo: "Devocional",
+        status: streak > 0
+          ? `🔥 ${streak} ${streak === 1 ? "dia seguido" : "dias seguidos"} · ${dados.devocionalTotal} leituras`
+          : `Comece hoje · ${dados.devocionalTotal} leituras no total`,
+        on: streak > 0, rota: "/devocional", icon: "book",
+      },
+      {
+        key: "servir", valor: "Servir", titulo: "Voluntariado",
+        status: dados.serveVoluntariado ? "Servindo 💙" : "Comece a servir num ministério",
+        on: dados.serveVoluntariado, rota: "/voluntariado", icon: "hand-left",
+      },
       ...(FEATURES.generosidade
-        ? [{ on: dados.generosidadeAno > 0, titulo: "Participe da generosidade", rota: "/generosidade" as const, icon: "gift" as const }]
+        ? [{
+            key: "generosidade", valor: "Generosidade", titulo: "Generosidade",
+            status: dados.generosidadeAno > 0 ? `${brl(dados.generosidadeAno)} no ano` : "Participe da generosidade",
+            on: dados.generosidadeAno > 0, rota: "/generosidade" as const, icon: "gift" as const,
+          } satisfies Passo]
         : []),
     ];
-    return { score: dims.filter((d) => d.on).length, total: dims.length, dots: dims.map((d) => d.on), proximo: dims.find((d) => !d.on) ?? null };
+    const score = passos.filter((p) => p.on).length;
+    const proximoIdx = passos.findIndex((p) => !p.on);
+    return { passos, score, total: passos.length, proximoIdx };
   }, [dados]);
 
   return (
@@ -74,86 +113,78 @@ export default function JornadaScreen() {
             texto={t("Vincule seu CPF no perfil pra acompanhar sua jornada na CBRio.")}
             acao={{ label: t("Ir para o perfil"), onPress: () => router.navigate("/perfil") }}
           />
-        ) : dados ? (
+        ) : dados && trilha ? (
           <>
             <Text style={styles.intro}>
               {nome ? `${t("Sua caminhada na CBRio")}, ${nome} 💙` : t("Sua caminhada na CBRio 💙")}
             </Text>
 
-            {/* Placar dos 5 valores */}
-            {resumo && (
-              <View style={styles.placar}>
-                <View style={styles.placarTop}>
-                  <Text style={styles.placarTxt}>
-                    {t("Você está vivendo")} <Text style={styles.placarNum}>{resumo.score}</Text> {t("de")} {resumo.total} {t("valores")}
-                  </Text>
-                  <View style={styles.placarDots}>
-                    {resumo.dots.map((on, i) => (
-                      <View key={i} style={[styles.placarDot, on && styles.placarDotOn]} />
-                    ))}
+            {/* Progresso geral da trilha */}
+            <View style={styles.progressCard}>
+              <View style={styles.progressTop}>
+                <Text style={styles.progressTxt}>
+                  <Text style={styles.progressNum}>{trilha.score}</Text> {t("de")} {trilha.total} {t("valores")}
+                </Text>
+                <Text style={styles.progressPct}>{Math.round((trilha.score / trilha.total) * 100)}%</Text>
+              </View>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${(trilha.score / trilha.total) * 100}%` }]} />
+              </View>
+            </View>
+
+            {/* Trilha (track) */}
+            <View style={styles.track}>
+              {trilha.passos.map((p, i) => {
+                const prevDone = i > 0 && trilha.passos[i - 1].on;
+                const isNext = i === trilha.proximoIdx;
+                const primeiro = i === 0;
+                const ultimo = i === trilha.passos.length - 1;
+                return (
+                  <View key={p.key} style={styles.row}>
+                    {/* Rail com linha + nó */}
+                    <View style={styles.rail}>
+                      {!primeiro && <View style={[styles.lineTop, prevDone && styles.lineOn]} />}
+                      {!ultimo && <View style={[styles.lineBottom, p.on && styles.lineOn]} />}
+                      <View style={[styles.node, p.on && styles.nodeDone, isNext && !p.on && styles.nodeNext]}>
+                        {p.on ? (
+                          <Ionicons name="checkmark" size={22} color="#fff" />
+                        ) : (
+                          <Ionicons name={p.icon} size={20} color={isNext ? colors.primary : colors.textMuted} />
+                        )}
+                      </View>
+                    </View>
+
+                    {/* Cartão do passo */}
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.stepCard,
+                        isNext && styles.stepCardNext,
+                        p.on && styles.stepCardDone,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() => router.navigate(p.rota)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t(p.titulo)}. ${t(p.status)}`}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.stepEyebrowRow}>
+                          <Text style={[styles.stepEyebrow, isNext && { color: colors.brandMid }]}>
+                            {t(p.valor).toUpperCase()}
+                          </Text>
+                          {isNext && (
+                            <View style={styles.badgeNext}>
+                              <Text style={styles.badgeNextTxt}>{t("PRÓXIMO PASSO")}</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={styles.stepTitulo}>{t(p.titulo)}</Text>
+                        <Text style={[styles.stepStatus, p.on && { color: colors.text }]}>{t(p.status)}</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                    </Pressable>
                   </View>
-                </View>
-              </View>
-            )}
-
-            {/* Próximo passo em destaque */}
-            {resumo?.proximo && (
-              <Pressable style={styles.proximo} onPress={() => router.navigate(resumo.proximo!.rota)} accessibilityRole="button">
-                <View style={styles.proximoIcone}>
-                  <Ionicons name={resumo.proximo.icon} size={22} color="#fff" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.proximoEyebrow}>{t("SEU PRÓXIMO PASSO")}</Text>
-                  <Text style={styles.proximoTitulo}>{t(resumo.proximo.titulo)}</Text>
-                </View>
-                <Ionicons name="arrow-forward" size={20} color="#fff" />
-              </Pressable>
-            )}
-
-            {/* Devocional — card destaque */}
-            <Pressable style={styles.heroCard} onPress={() => router.navigate("/devocional")} accessibilityRole="button" accessibilityLabel={t("Devocional")}>
-              <View style={styles.heroTop}>
-                <Text style={styles.heroEyebrow}>{t("DEVOCIONAL")}</Text>
-                <Ionicons name="book" size={18} color={colors.brandPale} />
-              </View>
-              <Text style={styles.heroNum}>🔥 {dados.devocionalStreak}</Text>
-              <Text style={styles.heroLabel}>
-                {dados.devocionalStreak === 1 ? t("dia seguido") : t("dias seguidos")} · {dados.devocionalTotal} {t("leituras no total")}
-              </Text>
-            </Pressable>
-
-            {/* Grid de dimensões */}
-            <View style={styles.grid}>
-              <Card
-                icon="hand-left" titulo={t("Voluntariado")}
-                valor={dados.serveVoluntariado ? t("Servindo 💙") : t("Comece a servir")}
-                ativo={dados.serveVoluntariado}
-                onPress={() => router.navigate("/voluntariado")}
-                colors={colors} styles={styles}
-              />
-              <Card
-                icon="people" titulo={t("Grupo")}
-                valor={dados.emGrupo ? t("Em um grupo") : t("Encontre um grupo")}
-                ativo={dados.emGrupo}
-                onPress={() => router.navigate("/grupos")}
-                colors={colors} styles={styles}
-              />
-              <Card
-                icon="water" titulo={t("Batismo")}
-                valor={dados.batizado ? t("Batizado(a) ✓") : t("Quero me batizar")}
-                ativo={dados.batizado}
-                onPress={() => router.navigate("/batismo")}
-                colors={colors} styles={styles}
-              />
-              {FEATURES.generosidade && (
-                <Card
-                  icon="gift" titulo={t("Generosidade")}
-                  valor={dados.generosidadeAno > 0 ? `${brl(dados.generosidadeAno)} ${t("no ano")}` : t("Contribua")}
-                  ativo={dados.generosidadeAno > 0}
-                  onPress={() => router.navigate("/generosidade")}
-                  colors={colors} styles={styles}
-                />
-              )}
+                );
+              })}
             </View>
 
             <Text style={styles.rodape}>{t("Cada passo conta. Continue crescendo na fé. 🌱")}</Text>
@@ -161,29 +192,6 @@ export default function JornadaScreen() {
         ) : null}
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function Card({
-  icon, titulo, valor, ativo, onPress, colors, styles,
-}: {
-  icon: React.ComponentProps<typeof Ionicons>["name"];
-  titulo: string; valor: string; ativo: boolean; onPress: () => void;
-  colors: Palette; styles: ReturnType<typeof makeStyles>;
-}) {
-  return (
-    <Pressable
-      style={[styles.card, ativo && styles.cardAtivo]}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${titulo}. ${valor}`}
-    >
-      <View style={[styles.cardIcon, ativo && styles.cardIconAtivo]}>
-        <Ionicons name={icon} size={20} color={ativo ? "#fff" : colors.brandMid} />
-      </View>
-      <Text style={styles.cardTitulo}>{titulo}</Text>
-      <Text style={[styles.cardValor, ativo && { color: colors.text }]}>{valor}</Text>
-    </Pressable>
   );
 }
 
@@ -195,37 +203,55 @@ const makeStyles = (colors: Palette) =>
     back: { width: 24 },
     title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
     intro: { color: colors.textMuted, fontSize: font.size.md },
-    placar: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md },
-    placarTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
-    placarTxt: { color: colors.text, fontSize: font.size.md, fontWeight: "600", flex: 1 },
-    placarNum: { color: colors.brandMid, fontWeight: "900" },
-    placarDots: { flexDirection: "row", gap: 6 },
-    placarDot: { width: 11, height: 11, borderRadius: 6, backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder },
-    placarDotOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-    proximo: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.primary, borderRadius: radius.lg, padding: spacing.md },
-    proximoIcone: { width: 42, height: 42, borderRadius: 21, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center" },
-    proximoEyebrow: { color: colors.brandPale, fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },
-    proximoTitulo: { color: "#fff", fontSize: font.size.md, fontWeight: "800", marginTop: 2 },
-    heroCard: {
-      backgroundColor: colors.primary, borderRadius: radius.xl, padding: spacing.lg, gap: 4,
+    // progresso
+    progressCard: {
+      backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+      borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm,
     },
-    heroTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-    heroEyebrow: { color: colors.brandPale, fontSize: 11, fontWeight: "800", letterSpacing: 2 },
-    heroNum: { color: "#fff", fontSize: 44, fontWeight: "900" },
-    heroLabel: { color: "rgba(255,255,255,0.9)", fontSize: font.size.sm, fontWeight: "600" },
-    grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-    card: {
-      flexGrow: 1, flexBasis: "45%", gap: 6,
+    progressTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+    progressTxt: { color: colors.text, fontSize: font.size.md, fontWeight: "600" },
+    progressNum: { color: colors.brandMid, fontWeight: "900", fontSize: font.size.lg },
+    progressPct: { color: colors.brandMid, fontSize: font.size.md, fontWeight: "800" },
+    progressBar: { height: 8, borderRadius: radius.full, backgroundColor: colors.glass, overflow: "hidden" },
+    progressFill: { height: "100%", borderRadius: radius.full, backgroundColor: colors.primary },
+    // trilha
+    track: { marginTop: spacing.xs },
+    row: { flexDirection: "row" },
+    rail: { width: RAIL_W, position: "relative", alignItems: "center" },
+    lineTop: {
+      position: "absolute", top: 0, height: NODE_MT + NODE / 2,
+      left: RAIL_W / 2 - 1, width: 2, backgroundColor: colors.glassBorder,
+    },
+    lineBottom: {
+      position: "absolute", top: NODE_MT + NODE / 2, bottom: 0,
+      left: RAIL_W / 2 - 1, width: 2, backgroundColor: colors.glassBorder,
+    },
+    lineOn: { backgroundColor: colors.primary },
+    node: {
+      marginTop: NODE_MT, width: NODE, height: NODE, borderRadius: NODE / 2,
+      backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder,
+      alignItems: "center", justifyContent: "center", zIndex: 2,
+    },
+    nodeDone: { backgroundColor: colors.primary, borderColor: colors.primary },
+    nodeNext: { backgroundColor: colors.surface, borderColor: colors.primary, borderWidth: 2 },
+    // cartão do passo
+    stepCard: {
+      flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.sm,
       backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
       borderRadius: radius.lg, padding: spacing.md,
+      marginLeft: spacing.sm, marginBottom: spacing.md,
     },
-    cardAtivo: { borderColor: "rgba(112,168,176,0.5)" },
-    cardIcon: {
-      width: 38, height: 38, borderRadius: 19, backgroundColor: colors.glass,
-      alignItems: "center", justifyContent: "center", marginBottom: 2,
+    stepCardNext: { borderColor: colors.primary, backgroundColor: "rgba(64,128,151,0.10)" },
+    stepCardDone: { borderColor: "rgba(112,168,176,0.45)" },
+    pressed: { opacity: 0.7 },
+    stepEyebrowRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, flexWrap: "wrap" },
+    stepEyebrow: { color: colors.textMuted, fontSize: 10, fontWeight: "800", letterSpacing: 1.2 },
+    badgeNext: {
+      backgroundColor: colors.primary, borderRadius: radius.full,
+      paddingHorizontal: 8, paddingVertical: 2,
     },
-    cardIconAtivo: { backgroundColor: colors.primary },
-    cardTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
-    cardValor: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "600" },
+    badgeNextTxt: { color: "#fff", fontSize: 9, fontWeight: "800", letterSpacing: 0.6 },
+    stepTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "700", marginTop: 3 },
+    stepStatus: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "600", marginTop: 2 },
     rodape: { color: colors.textMuted, fontSize: font.size.sm, textAlign: "center", marginTop: spacing.sm },
   });
