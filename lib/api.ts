@@ -195,6 +195,37 @@ export type InscricaoGrupo = {
   email: string;
 };
 
+// ===== Descoberta pública de grupos (mesma fonte do formulário do site) =====
+// Endpoint público /api/public/grupos/buscar — traz os campos ricos (código,
+// recorrência, faixa etária, líder) que o Supabase direto não junta. Permite
+// os mesmos filtros do formulário público.
+export type GrupoPublico = {
+  id: string;
+  codigo: string | null;
+  nome: string;
+  categoria: string | null;
+  faixa_etaria: string | null;
+  dia_semana: number | null;
+  horario: string | null;
+  recorrencia: string | null;
+  local: string | null;
+  descricao: string | null;
+  bairro: string | null;
+  lat: number | null;
+  lng: number | null;
+  lider_id: string | null;
+  lider_nome: string | null;
+  lider_foto: string | null;
+  status_temporada: string | null;
+  temporada: string | null;
+  foto_url: string | null;
+  dist_km?: number;
+};
+
+export function buscarGruposPublico(): Promise<GrupoPublico[]> {
+  return apiGet<GrupoPublico[]>("/public/grupos/buscar", { auth: false });
+}
+
 export type InscricaoQualquer = InscricaoVoluntariado | InscricaoGrupo | (Record<string, unknown> & { tipo: string });
 
 export function criarInscricaoApi(body: InscricaoQualquer): Promise<{ ok: boolean; message?: string }> {
