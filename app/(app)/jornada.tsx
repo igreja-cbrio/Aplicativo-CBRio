@@ -11,6 +11,7 @@ import { carregarJornada, type Jornada } from "@/lib/jornada";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useT } from "@/lib/i18n";
+import { irPara } from "@/lib/nav";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { FEATURES } from "@/lib/features";
 
@@ -59,6 +60,7 @@ type Passo = {
   rota: "/devocional" | "/grupos" | "/voluntariado" | "/batismo" | "/generosidade";
   icon: React.ComponentProps<typeof Ionicons>["name"];
 };
+
 
 export default function JornadaScreen() {
   const colors = useColors();
@@ -227,7 +229,7 @@ export default function JornadaScreen() {
                       ]}
                       onPress={() => {
                         if (p.key === "generosidade" && !FEATURES.generosidade) setModalGen(true);
-                        else router.navigate(p.rota);
+                        else irPara(p.rota);
                       }}
                       accessibilityRole="button"
                       accessibilityLabel={`${t(p.titulo)}. ${t(p.status)}`}

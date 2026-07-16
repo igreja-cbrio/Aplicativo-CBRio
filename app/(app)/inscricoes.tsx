@@ -7,6 +7,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { carregarStatusInscricoes, type InscricoesStatus, type StatusInscricao } from "@/lib/inscricoesStatus";
 import { useT } from "@/lib/i18n";
+import { irPara } from "@/lib/nav";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Chave = keyof InscricoesStatus;
@@ -71,7 +72,7 @@ export default function InscricoesScreen() {
             <Pressable
               key={it.href}
               style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-              onPress={() => router.navigate(it.href)}
+              onPress={() => irPara(it.href)}
               accessibilityRole="button"
               accessibilityLabel={`${t(it.label)}. ${st === "ativo" ? t("Inscrito") : st === "pendente" ? t("Pendente") : t(it.desc)}`}
             >

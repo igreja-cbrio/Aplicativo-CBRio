@@ -15,6 +15,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useNotificacoes, type AppNotificacao } from "@/lib/useNotificacoes";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useT } from "@/lib/i18n";
+import { irPara } from "@/lib/nav";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -107,10 +108,10 @@ export default function NotificacoesScreen() {
     const data = n.data ?? {};
     switch (n.tipo) {
       case "escala":
-        router.navigate("/voluntariado"); return;
+        irPara("/voluntariado"); return;
       case "sos":
       case "cuidado":
-        router.navigate("/cuidados"); return;
+        irPara("/cuidados"); return;
       case "grupo_pedido":
         router.navigate("/grupo-inscricoes"); return;
       case "batismo":
