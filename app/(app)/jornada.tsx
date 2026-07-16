@@ -1,5 +1,7 @@
-import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,6 +22,34 @@ const NODE = 40;
 const NODE_MT = 4;
 const RAIL_W = 44;
 
+// Segmento da linha da trilha que "cresce" de cima pra baixo quando concluído.
+function TrailLine({
+  active, delay, kind, colors,
+}: {
+  active: boolean; delay: number; kind: "top" | "bottom"; colors: Palette;
+}) {
+  const p = useSharedValue(0);
+  useEffect(() => {
+    p.value = active
+      ? withDelay(delay, withTiming(1, { duration: 340, easing: Easing.out(Easing.quad) }))
+      : withTiming(0, { duration: 150 });
+  }, [active, delay, p]);
+  const anim = useAnimatedStyle(() => ({ transform: [{ scaleY: p.value }] }));
+  const base = kind === "top"
+    ? { top: 0, height: NODE_MT + NODE / 2 }
+    : { top: NODE_MT + NODE / 2, bottom: 0 };
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        { position: "absolute", left: RAIL_W / 2 - 1, width: 2, backgroundColor: colors.primary, transformOrigin: "top" },
+        base,
+        anim,
+      ]}
+    />
+  );
+}
+
 type Passo = {
   key: string;
   valor: string; // rótulo do valor (eyebrow)
@@ -37,6 +67,21 @@ export default function JornadaScreen() {
   const { membro } = useMembro();
   const [dados, setDados] = useState<Jornada | null>(null);
   const [estado, setEstado] = useState<"loading" | "pronto" | "erro">("loading");
+  // Generosidade auto-declarada (pagamento no app ainda não ativo) · por membro.
+  const [generosidadeDecl, setGenerosidadeDecl] = useState<"sim" | "nao" | null>(null);
+  const [modalGen, setModalGen] = useState(false);
+  const genKey = membro?.membroId ? `cbrio:generosidade_declarada:${membro.membroId}` : null;
+
+  useEffect(() => {
+    if (!genKey) return;
+    AsyncStorage.getItem(genKey).then((v) => setGenerosidadeDecl(v === "sim" || v === "nao" ? v : null));
+  }, [genKey]);
+
+  const marcarGenerosidade = useCallback((v: "sim" | "nao") => {
+    setGenerosidadeDecl(v);
+    if (genKey) AsyncStorage.setItem(genKey, v).catch(() => {});
+    setModalGen(false);
+  }, [genKey]);
 
   const carregar = useCallback(() => {
     if (!membro?.membroId) { setEstado("pronto"); return; }
@@ -77,18 +122,34 @@ export default function JornadaScreen() {
         status: dados.serveVoluntariado ? "Servindo 💙" : "Comece a servir num ministério",
         on: dados.serveVoluntariado, rota: "/voluntariado", icon: "hand-left",
       },
-      ...(FEATURES.generosidade
-        ? [{
-            key: "generosidade", valor: "Generosidade", titulo: "Generosidade",
-            status: dados.generosidadeAno > 0 ? `${brl(dados.generosidadeAno)} no ano` : "Participe da generosidade",
-            on: dados.generosidadeAno > 0, rota: "/generosidade" as const, icon: "gift" as const,
-          } satisfies Passo]
-        : []),
     ];
+    // Generosidade é sempre o 5º passo. Com pagamento no app (FEATURES) usa o
+    // valor real do ano; sem ele, a pessoa auto-declara se contribui (delicado,
+    // sem cobrança).
+    const genOn = FEATURES.generosidade ? dados.generosidadeAno > 0 : generosidadeDecl === "sim";
+    const genStatus = FEATURES.generosidade
+      ? (dados.generosidadeAno > 0 ? `${brl(dados.generosidadeAno)} no ano` : "Participe da generosidade")
+      : generosidadeDecl === "sim"
+        ? "Você contribui 💙"
+        : generosidadeDecl === "nao"
+          ? "Cada passo tem seu tempo 🌱"
+          : "Você contribui? Toque para marcar";
+    passos.push({
+      key: "generosidade", valor: "Generosidade", titulo: "Generosidade",
+      status: genStatus, on: genOn, rota: "/generosidade", icon: "gift",
+    });
     const score = passos.filter((p) => p.on).length;
     const proximoIdx = passos.findIndex((p) => !p.on);
     return { passos, score, total: passos.length, proximoIdx };
-  }, [dados]);
+  }, [dados, generosidadeDecl]);
+
+  // Barra de progresso animada (largura 0 → % ao carregar).
+  const pct = trilha ? trilha.score / trilha.total : 0;
+  const barW = useSharedValue(0);
+  useEffect(() => {
+    barW.value = withTiming(pct, { duration: 650, easing: Easing.out(Easing.cubic) });
+  }, [pct, barW]);
+  const barStyle = useAnimatedStyle(() => ({ width: `${barW.value * 100}%` }));
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
@@ -128,7 +189,7 @@ export default function JornadaScreen() {
                 <Text style={styles.progressPct}>{Math.round((trilha.score / trilha.total) * 100)}%</Text>
               </View>
               <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${(trilha.score / trilha.total) * 100}%` }]} />
+                <Animated.View style={[styles.progressFill, barStyle]} />
               </View>
             </View>
 
@@ -143,8 +204,10 @@ export default function JornadaScreen() {
                   <View key={p.key} style={styles.row}>
                     {/* Rail com linha + nó */}
                     <View style={styles.rail}>
-                      {!primeiro && <View style={[styles.lineTop, prevDone && styles.lineOn]} />}
-                      {!ultimo && <View style={[styles.lineBottom, p.on && styles.lineOn]} />}
+                      {!primeiro && <View style={styles.lineTop} />}
+                      {!ultimo && <View style={styles.lineBottom} />}
+                      {!primeiro && <TrailLine active={prevDone} delay={i * 160} kind="top" colors={colors} />}
+                      {!ultimo && <TrailLine active={p.on} delay={i * 160 + 80} kind="bottom" colors={colors} />}
                       <View style={[styles.node, p.on && styles.nodeDone, isNext && !p.on && styles.nodeNext]}>
                         {p.on ? (
                           <Ionicons name="checkmark" size={22} color="#fff" />
@@ -162,7 +225,10 @@ export default function JornadaScreen() {
                         p.on && styles.stepCardDone,
                         pressed && styles.pressed,
                       ]}
-                      onPress={() => router.navigate(p.rota)}
+                      onPress={() => {
+                        if (p.key === "generosidade" && !FEATURES.generosidade) setModalGen(true);
+                        else router.navigate(p.rota);
+                      }}
                       accessibilityRole="button"
                       accessibilityLabel={`${t(p.titulo)}. ${t(p.status)}`}
                     >
@@ -191,6 +257,31 @@ export default function JornadaScreen() {
           </>
         ) : null}
       </ScrollView>
+
+      {/* Auto-declaração de generosidade (delicada · sem cobrança) */}
+      <Modal visible={modalGen} transparent animationType="fade" onRequestClose={() => setModalGen(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setModalGen(false)}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalIcone}>
+              <Ionicons name="gift" size={24} color="#fff" />
+            </View>
+            <Text style={styles.modalTitulo}>{t("Generosidade")} 💙</Text>
+            <Text style={styles.modalTexto}>
+              {t("A generosidade faz parte da sua jornada. Por enquanto as contribuições não passam pelo app — queremos só entender onde você está, sem nenhuma cobrança.")}
+            </Text>
+            <Text style={styles.modalPergunta}>{t("Você contribui com dízimos e ofertas na CBRio?")}</Text>
+            <Pressable style={styles.modalBtnPrim} onPress={() => marcarGenerosidade("sim")} accessibilityRole="button">
+              <Text style={styles.modalBtnPrimTxt}>{t("Sim, eu contribuo")} 💙</Text>
+            </Pressable>
+            <Pressable style={styles.modalBtnSec} onPress={() => marcarGenerosidade("nao")} accessibilityRole="button">
+              <Text style={styles.modalBtnSecTxt}>{t("Ainda não")}</Text>
+            </Pressable>
+            <Pressable onPress={() => setModalGen(false)} hitSlop={8} style={styles.modalFechar}>
+              <Text style={styles.modalFecharTxt}>{t("Agora não")}</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -254,4 +345,33 @@ const makeStyles = (colors: Palette) =>
     stepTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "700", marginTop: 3 },
     stepStatus: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "600", marginTop: 2 },
     rodape: { color: colors.textMuted, fontSize: font.size.sm, textAlign: "center", marginTop: spacing.sm },
+    // modal de generosidade
+    modalOverlay: {
+      flex: 1, backgroundColor: "rgba(0,0,0,0.55)",
+      alignItems: "center", justifyContent: "center", padding: spacing.lg,
+    },
+    modalCard: {
+      width: "100%", maxWidth: 420, backgroundColor: colors.surface,
+      borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border,
+      padding: spacing.lg, gap: spacing.sm, alignItems: "stretch",
+    },
+    modalIcone: {
+      width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primary,
+      alignItems: "center", justifyContent: "center", alignSelf: "flex-start",
+    },
+    modalTitulo: { color: colors.text, fontSize: font.size.lg, fontWeight: "800", marginTop: spacing.xs },
+    modalTexto: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 20 },
+    modalPergunta: { color: colors.text, fontSize: font.size.md, fontWeight: "700", marginTop: spacing.xs },
+    modalBtnPrim: {
+      backgroundColor: colors.primary, borderRadius: radius.full,
+      paddingVertical: spacing.md, alignItems: "center", marginTop: spacing.xs,
+    },
+    modalBtnPrimTxt: { color: "#fff", fontSize: font.size.md, fontWeight: "800" },
+    modalBtnSec: {
+      backgroundColor: colors.glass, borderRadius: radius.full,
+      paddingVertical: spacing.md, alignItems: "center",
+    },
+    modalBtnSecTxt: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
+    modalFechar: { alignSelf: "center", paddingVertical: spacing.xs, marginTop: 2 },
+    modalFecharTxt: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "600" },
   });
