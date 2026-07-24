@@ -32,7 +32,7 @@
     "android": {
       "package": "br.com.cbrio.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/cbrio-heart.png",
+        "foregroundImage": "./assets/images/cbrio-heart-adaptive.png",
         "backgroundColor": "#eae3da"
       },
       "permissions": [
