@@ -29,6 +29,15 @@ módulo**. Roda em **Android e iOS**.
   MESMA `version` do app.json e que já contenham `expo-updates` (build iOS
   ≥ 20). Mudança nativa (módulo, plugin, permissão) continua exigindo
   build novo + revisão.
+- **EAS Submit — Play Store (Android):** configurado no `eas.json` (`submit.production.android`)
+  com `serviceAccountKeyPath: ./google-play-service-account.json` (JSON da conta de
+  serviço `eas-submit@crm-cbrio.iam.gserviceaccount.com` · projeto Cloud `crm-cbrio` ·
+  **gitignored, NUNCA commitar**) e `track: internal`. Fluxo: `eas build -p android
+  --profile production` (gera **AAB**, `autoIncrement` no versionCode) →
+  `eas submit -p android --profile production --latest`. Cai no track **internal**;
+  promover pra produção no Play Console. A permissão da conta de serviço no Play é
+  "Release apps to testing tracks" (Users and permissions). iOS submit já existia
+  (`ascAppId`/`appleTeamId`).
 - **Estilização:** `StyleSheet` nativo (decisão: melhor performance/confiabilidade
   no celular; sem Tailwind/NativeWind). **Tema claro/escuro** com paletas em
   `constants/theme.ts` (`lightColors`/`darkColors`) e `ThemeContext` (segue o
