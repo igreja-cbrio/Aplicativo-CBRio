@@ -187,7 +187,7 @@ export default function InicioScreen() {
           <View style={styles.actions}>
             <AnimatedBell count={naoLidas}>
               <Pressable
-                onPress={() => router.navigate("/notificacoes")}
+                onPress={() => router.push("/notificacoes")}
                 style={styles.bellWrap}
                 hitSlop={8}
                 accessibilityRole="button"

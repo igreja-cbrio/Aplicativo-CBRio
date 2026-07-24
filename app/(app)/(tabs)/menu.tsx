@@ -60,7 +60,7 @@ export default function MenuScreen() {
     ...(FEATURES.generosidade ? [{ label: "Generosidade", icon: "gift-outline" as const, onPress: () => router.navigate("/generosidade") }] : []),
     { label: "Devocionais", icon: "book-outline", onPress: () => router.navigate("/devocional") },
     { label: "Pregações", icon: "play-circle-outline", onPress: () => router.navigate("/videos") },
-    { label: "Notificações", icon: "notifications-outline", onPress: () => router.navigate("/notificacoes") },
+    { label: "Notificações", icon: "notifications-outline", onPress: () => router.push("/notificacoes") },
     { label: "Configurações", icon: "settings-outline", onPress: () => router.navigate("/configuracoes") },
     { label: "Fale conosco", icon: "chatbubble-ellipses-outline", onPress: () => router.navigate("/fale-conosco") },
     { label: "Sobre a CBRio", icon: "information-circle-outline", onPress: () => router.navigate("/sobre") },

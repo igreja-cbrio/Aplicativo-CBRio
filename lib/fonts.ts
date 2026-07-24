@@ -81,7 +81,13 @@ function patchComponent(Comp: typeof Text | typeof TextInput) {
     if (flat.fontFamily) return el;
     const italic = flat.fontStyle === "italic";
     const fam = familyParaPeso(flat.fontWeight, italic);
-    const styled: TextStyle = { ...flat, fontFamily: fam };
+    // ⚠️ Android: manter fontWeight/fontStyle JUNTO de uma fontFamily que já é
+    // do peso certo (ex.: Gotham-Black) faz o sistema aplicar FAUX-BOLD por cima
+    // → texto borrado, com "brilho". iOS ignora o peso quando a família é
+    // explícita, por isso só aparecia no Android. Removemos os dois; o peso/
+    // itálico já está embutido na família resolvida.
+    const { fontWeight: _fw, fontStyle: _fs, ...rest } = flat;
+    const styled: TextStyle = { ...rest, fontFamily: fam };
     (el.props as { style?: unknown }).style = styled;
     return el;
   };
