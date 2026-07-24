@@ -43,6 +43,10 @@
         "ascAppId": "6778156310",
         "appleTeamId": "AK67335XW5",
         "bundleIdentifier": "br.com.cbrio.app"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "internal"
       }
     }
   }
