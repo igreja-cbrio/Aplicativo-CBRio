@@ -43,3 +43,6 @@ yarn-error.*
 # Builds locais / config MCP (não versionar)
 *.ipa
 .mcp.json
+
+# Google Play service account (NUNCA commitar)
+google-play-service-account.json
