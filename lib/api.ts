@@ -419,3 +419,69 @@ export async function checkinNext(
     } as NextCheckinErro;
   }
 }
+
+// ===== /app/next — RESPONSÁVEL de turma =====
+// Espelha o líder de grupo, mas para a turma do Next. O papel vem do membro
+// logado: turmas onde next_turmas.responsavel_id = membro.id.
+export type NextTurmaResumo = {
+  id: string;
+  nome: string;
+  status: string;
+  observacoes?: string | null;
+  origem_mes?: string | null;
+  created_at?: string | null;
+};
+
+export type NextPapel = {
+  responsavel: boolean;
+  turmas: NextTurmaResumo[];
+};
+
+export function getNextPapel(): Promise<NextPapel> {
+  return apiGet<NextPapel>("/app/next/papel");
+}
+
+export type NextTurmaEncontro = {
+  id: string;
+  turma_id: string;
+  numero: number | null;
+  data: string | null;
+  tema: string | null;
+};
+
+export type NextMatricula = {
+  id: string;
+  nome: string | null;
+  sobrenome: string | null;
+  telefone: string | null;
+  status: string | null;
+  check_in_at: string | null;
+};
+
+export type NextPresenca = {
+  encontro_id: string;
+  matricula_id: string;
+  presente: boolean;
+};
+
+export type NextTurmaDetalhe = {
+  turma: NextTurmaResumo & { responsavel_id?: string | null };
+  encontros: NextTurmaEncontro[];
+  matriculas: NextMatricula[];
+  presencas: NextPresenca[];
+};
+
+export function getNextTurma(turmaId: string): Promise<NextTurmaDetalhe> {
+  return apiGet<NextTurmaDetalhe>(`/app/next/turmas/${encodeURIComponent(turmaId)}`);
+}
+
+export function marcarPresencaNext(
+  encontroId: string,
+  matriculaId: string,
+  presente: boolean
+): Promise<{ ok: boolean; presente: boolean }> {
+  return apiPost<{ ok: boolean; presente: boolean }>(
+    `/app/next/encontros/${encodeURIComponent(encontroId)}/presenca`,
+    { matricula_id: matriculaId, presente }
+  );
+}

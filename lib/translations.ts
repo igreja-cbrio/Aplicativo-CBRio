@@ -6,6 +6,29 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  // ───────────────── Next · responsável de turma ─────────────────
+  "Turmas que você conduz": { en: "Classes you lead", es: "Clases que conduces" },
+  "Gerenciar turma": { en: "Manage class", es: "Gestionar clase" },
+  "Turma": { en: "Class", es: "Clase" },
+  "Aberta": { en: "Open", es: "Abierta" },
+  "Encerrada": { en: "Closed", es: "Cerrada" },
+  "Erro ao carregar a turma.": { en: "Error loading the class.", es: "Error al cargar la clase." },
+  "Você não é o responsável por esta turma.": { en: "You are not the leader of this class.", es: "No eres el responsable de esta clase." },
+  "Presença por encontro": { en: "Attendance by gathering", es: "Asistencia por encuentro" },
+  "Toque em cada encontro pra marcar a presença do inscrito. Quem for presente em todos os encontros vira 'Formado'.": { en: "Tap each gathering to mark the person's attendance. Whoever attends every gathering becomes 'Graduated'.", es: "Toca cada encuentro para marcar la asistencia del inscrito. Quien asista a todos los encuentros pasa a 'Graduado'." },
+  "Inscritos": { en: "Enrolled", es: "Inscritos" },
+  "inscrito": { en: "enrolled", es: "inscrito" },
+  "inscritos": { en: "enrolled", es: "inscritos" },
+  "encontro": { en: "gathering", es: "encuentro" },
+  "encontros": { en: "gatherings", es: "encuentros" },
+  "formados": { en: "graduated", es: "graduados" },
+  "Encontro": { en: "Gathering", es: "Encuentro" },
+  "Ninguém matriculado nesta turma ainda.": { en: "No one enrolled in this class yet.", es: "Nadie matriculado en esta clase todavía." },
+  "Não foi possível marcar presença.": { en: "Could not mark attendance.", es: "No se pudo marcar la asistencia." },
+  "Matriculado": { en: "Enrolled", es: "Matriculado" },
+  "Formado": { en: "Graduated", es: "Graduado" },
+  "Incompleto": { en: "Incomplete", es: "Incompleto" },
+  "Desistiu": { en: "Dropped out", es: "Desistió" },
   // ───────────────── Inscrições do grupo (líder) ─────────────────
   "Inscrições do grupo": { en: "Group registrations", es: "Inscripciones del grupo" },
   "Aceitar": { en: "Accept", es: "Aceptar" },

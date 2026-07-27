@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -9,7 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
@@ -18,7 +18,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { Skeleton } from "@/components/anim/Skeleton";
 import { useNextSync } from "@/lib/useNextSync";
-import { inscreverNext, checkinNext, type NextEncontro } from "@/lib/api";
+import { inscreverNext, checkinNext, getNextPapel, type NextEncontro, type NextTurmaResumo } from "@/lib/api";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { BRAND_FONT } from "@/lib/fonts";
 
@@ -59,6 +59,19 @@ export default function NextScreen() {
 
   const [inscrevendo, setInscrevendo] = useState(false);
   const [checkinId, setCheckinId] = useState<string | null>(null);
+
+  // Papel do membro logado: se for responsável por turma(s), a tela revela a
+  // seção "Turmas que você conduz" (adapta pelo papel, sem aba nova).
+  const [turmasResp, setTurmasResp] = useState<NextTurmaResumo[]>([]);
+  useFocusEffect(
+    useCallback(() => {
+      let vivo = true;
+      getNextPapel()
+        .then((p) => { if (vivo) setTurmasResp(p.responsavel ? p.turmas : []); })
+        .catch(() => { if (vivo) setTurmasResp([]); });
+      return () => { vivo = false; };
+    }, [])
+  );
 
   async function inscrever() {
     setInscrevendo(true);
@@ -148,6 +161,32 @@ export default function NextScreen() {
           <Text style={styles.title}>NEXT</Text>
           <View style={{ width: 24 }} />
         </View>
+
+        {turmasResp.length > 0 && (
+          <View style={{ gap: spacing.sm }}>
+            <Text style={styles.section}>{t("Turmas que você conduz")}</Text>
+            {turmasResp.map((turma) => (
+              <Pressable
+                key={turma.id}
+                style={styles.turmaCard}
+                onPress={() => router.push({ pathname: "/next-turma", params: { id: turma.id, nome: turma.nome } } as any)}
+                accessibilityRole="button"
+                accessibilityLabel={`${t("Gerenciar turma")} ${turma.nome}`}
+              >
+                <View style={styles.turmaIcon}>
+                  <Ionicons name="people" size={20} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.turmaNome} numberOfLines={1}>{turma.nome}</Text>
+                  <Text style={styles.turmaSub}>
+                    {turma.status === "aberta" ? t("Aberta") : turma.status === "encerrada" ? t("Encerrada") : turma.status}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+              </Pressable>
+            ))}
+          </View>
+        )}
 
         {loading ? (
           <View style={{ gap: spacing.md }}>
@@ -323,4 +362,24 @@ const makeStyles = (colors: Palette) =>
       paddingVertical: spacing.sm,
     },
     indisponivelTxt: { color: colors.textMuted, fontSize: font.size.sm },
+    turmaCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+      padding: spacing.md,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      backgroundColor: colors.surface,
+    },
+    turmaIcon: {
+      height: 40,
+      width: 40,
+      borderRadius: 20,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.primary + "1A",
+    },
+    turmaNome: { color: colors.text, fontSize: font.size.md, fontWeight: "800" },
+    turmaSub: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 2 },
   });
