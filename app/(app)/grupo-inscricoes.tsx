@@ -160,7 +160,7 @@ export default function GrupoInscricoesScreen() {
       ) : semPermissao ? (
         <View style={styles.center}>
           <Ionicons name="lock-closed-outline" size={32} color={colors.textMuted} />
-          <Text style={styles.muted}>{t("Esta área é só para líderes de grupo.")}</Text>
+          <Text style={styles.muted}>{t("Esta área é só para quem gerencia um grupo.")}</Text>
         </View>
       ) : erro ? (
         <View style={styles.center}>

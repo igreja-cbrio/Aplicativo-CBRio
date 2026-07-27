@@ -21,6 +21,7 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Não foi possível recusar.": { en: "Could not decline.", es: "No se pudo rechazar." },
   "Erro ao carregar as inscrições.": { en: "Error loading registrations.", es: "Error al cargar las inscripciones." },
   "Esta área é só para líderes de grupo.": { en: "This area is for group leaders only.", es: "Esta área es solo para líderes de grupo." },
+  "Esta área é só para quem gerencia um grupo.": { en: "This area is only for people who manage a group.", es: "Esta área es solo para quienes gestionan un grupo." },
   "Nenhuma inscrição aguardando no momento.": { en: "No registrations pending right now.", es: "No hay inscripciones pendientes por ahora." },
   "inscrição aguardando": { en: "registration pending", es: "inscripción pendiente" },
   "inscrições aguardando": { en: "registrations pending", es: "inscripciones pendientes" },

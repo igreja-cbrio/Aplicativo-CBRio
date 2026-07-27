@@ -262,11 +262,13 @@ export async function getVoluntariadoMe(): Promise<VoluntariadoMe> {
   return obj as VoluntariadoMe;
 }
 
-// ===== /app/grupos/* (líder aprova inscrições do grupo) =====
+// ===== /app/grupos/* (líder/supervisor aprova inscrições do grupo) =====
 export type GrupoPapel = {
   lider: boolean;
+  supervisor: boolean;
   admin_grupos: boolean;
   grupos_liderados: { id: string; nome: string }[];
+  grupos_supervisionados: { id: string; nome: string }[];
 };
 
 export type GrupoPedido = {
@@ -301,8 +303,8 @@ export function recusarPedidoGrupo(id: string, motivo: string): Promise<{ ok: bo
   return apiPost<{ ok: boolean }>(`/app/grupos/pedidos/${encodeURIComponent(id)}/rejeitar`, { motivo });
 }
 
-// Grupos que EU lidero (líder) — com contagens. Faz o app "ver o meu grupo"
-// mesmo sem nenhuma inscrição pendente.
+// Grupos que EU gerencio (líder OU supervisor) — com contagens. Faz o app
+// "ver os grupos que gerencio" mesmo sem nenhuma inscrição pendente.
 export type GrupoMeu = {
   id: string;
   nome: string;

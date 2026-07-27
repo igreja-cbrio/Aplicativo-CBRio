@@ -31,13 +31,14 @@ export default function MenuScreen() {
   const nome =
     membro?.nome || (user?.user_metadata?.nome as string) || t("Membro CBRio");
 
-  // Item "Inscrições do grupo" só aparece pra líder de grupo de conexão.
-  const [ehLider, setEhLider] = useState(false);
+  // Item "Meus grupos" aparece pra quem gerencia grupo de conexão (líder OU
+  // supervisor).
+  const [gerenciaGrupo, setGerenciaGrupo] = useState(false);
   useEffect(() => {
     let vivo = true;
     getGrupoPapel()
-      .then((p) => { if (vivo) setEhLider(!!p?.lider); })
-      .catch(() => { /* silencioso: não-líder ou offline */ });
+      .then((p) => { if (vivo) setGerenciaGrupo(!!p?.lider || !!p?.supervisor); })
+      .catch(() => { /* silencioso: não gerencia ou offline */ });
     return () => { vivo = false; };
   }, []);
 
@@ -53,7 +54,7 @@ export default function MenuScreen() {
     { label: "NEXT", icon: "sparkles-outline", onPress: () => router.navigate("/next") },
     { label: "Grupos", icon: "people-outline", onPress: () => router.navigate("/grupos") },
     { label: "Meu grupo", icon: "people-circle-outline", onPress: () => router.navigate("/meu-grupo") },
-    ...(ehLider ? [{ label: "Meus grupos", icon: "people-circle-outline" as const, onPress: () => router.navigate("/grupo-inscricoes") }] : []),
+    ...(gerenciaGrupo ? [{ label: "Meus grupos", icon: "people-circle-outline" as const, onPress: () => router.navigate("/grupo-inscricoes") }] : []),
     { label: "Cuidados", icon: "heart-outline", onPress: () => router.navigate("/cuidados") },
     { label: "Voluntariado", icon: "hand-left-outline", onPress: () => router.navigate("/voluntariado") },
     { label: "Check-in Kids", icon: "happy-outline", onPress: () => router.navigate("/kids") },
