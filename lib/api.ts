@@ -485,3 +485,48 @@ export function marcarPresencaNext(
     { matricula_id: matriculaId, presente }
   );
 }
+
+// ===== Família · convite de familiar =====
+export type FamiliarMembro = {
+  id: string;
+  nome: string;
+  foto_url?: string | null;
+  status?: string | null;
+  parentesco?: string | null;
+};
+export type MinhaFamilia = {
+  familia: { id: string; nome: string } | null;
+  familiares: FamiliarMembro[];
+};
+export type ConviteFamilia = {
+  codigo: string;
+  parentesco: string;
+  rotulo: string;
+  link: string;
+  mensagem: string;
+  expira_em: string;
+};
+export type ConviteInfo = { criador_nome: string; parentesco: string; rotulo: string };
+
+// Parentesco que a pessoa escolhe ao convidar (do ponto de vista do CONVIDADO).
+export type ParentescoConvite = "filho" | "pai_mae" | "conjuge" | "irmao" | "outro";
+
+export function getMinhaFamilia(): Promise<MinhaFamilia> {
+  return apiGet<MinhaFamilia>("/app/familia");
+}
+
+export function criarConviteFamilia(parentesco: ParentescoConvite): Promise<ConviteFamilia> {
+  return apiPost<ConviteFamilia>("/app/familia/convite", { parentesco });
+}
+
+export function infoConviteFamilia(codigo: string): Promise<ConviteInfo> {
+  return apiGet<ConviteInfo>(`/app/familia/convite-info?codigo=${encodeURIComponent(codigo)}`);
+}
+
+export function aceitarConviteFamilia(codigo: string): Promise<MinhaFamilia & { ok: boolean; familia: { id: string; nome: string } | null }> {
+  return apiPost("/app/familia/aceitar", { codigo });
+}
+
+export function removerDaFamilia(outroId: string): Promise<MinhaFamilia & { ok: boolean }> {
+  return apiDelete(`/app/familia/vinculo/${encodeURIComponent(outroId)}`);
+}
