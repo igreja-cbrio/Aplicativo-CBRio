@@ -44,6 +44,7 @@ export default function MenuScreen() {
 
   const options: Option[] = [
     { label: "Meu perfil", icon: "person-outline", onPress: () => router.navigate("/perfil") },
+    { label: "Minha família", icon: "people-outline", onPress: () => router.navigate("/familia") },
     { label: "Sua jornada", icon: "trail-sign-outline", onPress: () => router.navigate("/jornada") },
     { label: "Início", icon: "home-outline", onPress: () => router.navigate("/") },
     { label: "No culto", icon: "flame-outline", onPress: () => router.navigate("/modo-culto") },
