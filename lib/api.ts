@@ -530,3 +530,26 @@ export function aceitarConviteFamilia(codigo: string): Promise<MinhaFamilia & { 
 export function removerDaFamilia(outroId: string): Promise<MinhaFamilia & { ok: boolean }> {
   return apiDelete(`/app/familia/vinculo/${encodeURIComponent(outroId)}`);
 }
+
+// ===== Inscrições · eventos publicados (espinha /inscricoes do sistema) =====
+export type EventoAberto = {
+  id: string;
+  nome: string;
+  slug: string;
+  descricao: string | null;
+  area: string | null;
+  tipo: string | null;
+  data: string | null;
+  hora: string | null;
+  local: string | null;
+  capa_url: string | null;
+  vagas: number | null;
+  tem_sorteio: boolean;
+  pago: boolean;
+  valor_centavos: number | null;
+  url: string;
+};
+
+export function buscarEventosAbertos(): Promise<{ eventos: EventoAberto[] }> {
+  return apiGet<{ eventos: EventoAberto[] }>("/app/eventos");
+}

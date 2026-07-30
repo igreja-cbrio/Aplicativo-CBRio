@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import * as Notifications from "expo-notifications";
+import { abrirInscricaoEvento } from "./eventos";
 
 /**
  * Roteia o tap em uma push (foreground ou background) pra tela certa,
@@ -46,6 +47,14 @@ export function attachNotifTapListener(): () => void {
       case "comunicado":
         router.navigate("/mural");
         return;
+      case "inscricao_evento": {
+        // Push de evento publicado → abre o formulário público do evento
+        // (mesmo fluxo do site · gratuito ou pago→Asaas). Sem slug, cai na aba.
+        const slug = (data as { slug?: string }).slug;
+        if (slug) abrirInscricaoEvento(slug);
+        else router.navigate("/inscricoes");
+        return;
+      }
       default:
         router.navigate("/notificacoes");
     }
