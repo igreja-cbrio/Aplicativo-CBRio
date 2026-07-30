@@ -1,14 +1,29 @@
 import { useCallback, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack, useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { carregarStatusInscricoes, type InscricoesStatus, type StatusInscricao } from "@/lib/inscricoesStatus";
+import { buscarEventosAbertos, type EventoAberto } from "@/lib/api";
+import { abrirInscricaoEvento } from "@/lib/eventos";
 import { useT } from "@/lib/i18n";
 import { irPara } from "@/lib/nav";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+
+function formatarDataEvento(data: string | null, hora: string | null): string | null {
+  if (!data) return null;
+  const d = new Date(`${data}T${(hora || "00:00").slice(0, 5)}:00`);
+  if (isNaN(d.getTime())) return null;
+  const dia = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  return hora ? `${dia} · ${hora.slice(0, 5)}` : dia;
+}
+
+function formatarValor(centavos: number | null): string | null {
+  if (!centavos || centavos <= 0) return null;
+  return `R$ ${(centavos / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
 type Chave = keyof InscricoesStatus;
 
@@ -47,10 +62,12 @@ export default function InscricoesScreen() {
   const t = useT();
   const { membro } = useMembro();
   const [status, setStatus] = useState<InscricoesStatus | null>(null);
+  const [eventos, setEventos] = useState<EventoAberto[] | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       carregarStatusInscricoes(membro?.membroId ?? null).then(setStatus).catch(() => {});
+      buscarEventosAbertos().then((r) => setEventos(r.eventos || [])).catch(() => setEventos([]));
     }, [membro?.membroId])
   );
 
@@ -88,6 +105,62 @@ export default function InscricoesScreen() {
             </Pressable>
           );
         })}
+
+        {/* Eventos publicados no sistema (espinha /inscricoes) */}
+        {eventos && eventos.length > 0 && (
+          <>
+            <Text style={styles.secao}>{t("Eventos abertos")}</Text>
+            {eventos.map((ev) => {
+              const quando = formatarDataEvento(ev.data, ev.hora);
+              const valor = ev.pago ? formatarValor(ev.valor_centavos) : null;
+              return (
+                <Pressable
+                  key={ev.id}
+                  style={({ pressed }) => [styles.eventoCard, pressed && styles.pressed]}
+                  onPress={() => abrirInscricaoEvento(ev.url)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${ev.nome}. ${t("Toque para se inscrever")}`}
+                >
+                  {ev.capa_url ? (
+                    <Image source={{ uri: ev.capa_url }} style={styles.eventoCapa} resizeMode="cover" />
+                  ) : (
+                    <View style={[styles.eventoCapa, styles.eventoCapaVazia]}>
+                      <Ionicons name="calendar" size={26} color={colors.brandMid} />
+                    </View>
+                  )}
+                  <View style={styles.eventoBody}>
+                    <Text style={styles.rowLabel} numberOfLines={2}>{ev.nome}</Text>
+                    <View style={styles.eventoMeta}>
+                      {quando ? (
+                        <View style={styles.metaChip}>
+                          <Ionicons name="calendar-outline" size={12} color={colors.textMuted} />
+                          <Text style={styles.metaTxt}>{quando}</Text>
+                        </View>
+                      ) : null}
+                      {ev.local ? (
+                        <View style={styles.metaChip}>
+                          <Ionicons name="location-outline" size={12} color={colors.textMuted} />
+                          <Text style={styles.metaTxt} numberOfLines={1}>{ev.local}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <View style={styles.eventoTags}>
+                      {valor ? (
+                        <View style={styles.tagPago}><Text style={styles.tagPagoTxt}>{valor}</Text></View>
+                      ) : (
+                        <View style={styles.tagGratis}><Text style={styles.tagGratisTxt}>{t("Gratuito")}</Text></View>
+                      )}
+                      {ev.tem_sorteio ? (
+                        <View style={styles.tagSorteio}><Text style={styles.tagSorteioTxt}>{t("Sorteio")}</Text></View>
+                      ) : null}
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                </Pressable>
+              );
+            })}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -108,4 +181,19 @@ const makeStyles = (colors: Palette) =>
     badge: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: radius.full },
     badgeDot: { width: 6, height: 6, borderRadius: 3 },
     badgeTxt: { fontSize: 11, fontWeight: "700" },
+    secao: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.5, marginTop: spacing.md, marginBottom: 2 },
+    eventoCard: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.glassBorder, padding: spacing.md },
+    eventoCapa: { width: 56, height: 56, borderRadius: radius.md, backgroundColor: colors.glass },
+    eventoCapaVazia: { alignItems: "center", justifyContent: "center" },
+    eventoBody: { flex: 1, gap: 5 },
+    eventoMeta: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    metaChip: { flexDirection: "row", alignItems: "center", gap: 3, maxWidth: 160 },
+    metaTxt: { color: colors.textMuted, fontSize: font.size.sm },
+    eventoTags: { flexDirection: "row", gap: 6, marginTop: 1 },
+    tagPago: { backgroundColor: "rgba(63,166,107,0.16)", borderRadius: radius.full, paddingHorizontal: 9, paddingVertical: 3 },
+    tagPagoTxt: { color: "#3FA66B", fontSize: 11, fontWeight: "800" },
+    tagGratis: { backgroundColor: colors.glass, borderRadius: radius.full, paddingHorizontal: 9, paddingVertical: 3 },
+    tagGratisTxt: { color: colors.textMuted, fontSize: 11, fontWeight: "700" },
+    tagSorteio: { backgroundColor: "rgba(112,168,176,0.18)", borderRadius: radius.full, paddingHorizontal: 9, paddingVertical: 3 },
+    tagSorteioTxt: { color: colors.brandMid, fontSize: 11, fontWeight: "700" },
   });

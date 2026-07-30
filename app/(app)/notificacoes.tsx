@@ -16,6 +16,7 @@ import { useNotificacoes, type AppNotificacao } from "@/lib/useNotificacoes";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useT } from "@/lib/i18n";
 import { irPara } from "@/lib/nav";
+import { abrirInscricaoEvento } from "@/lib/eventos";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -28,6 +29,7 @@ const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
   next: "sparkles",
   devocional: "book",
   aniversario: "gift",
+  inscricao_evento: "calendar",
 };
 
 // tipo técnico -> categoria amigável (pros filtros)
@@ -41,6 +43,7 @@ const CATEGORIA: Record<string, string> = {
   next: "NEXT",
   devocional: "Devocional",
   aniversario: "Outros",
+  inscricao_evento: "Inscrições",
 };
 
 function iconePorTipo(tipo: string): keyof typeof Ionicons.glyphMap {
@@ -121,6 +124,12 @@ export default function NotificacoesScreen() {
       case "culto": {
         const cultoId = (data as { culto_id?: string }).culto_id;
         if (cultoId) router.navigate({ pathname: "/culto-detalhe", params: { id: cultoId } });
+        return;
+      }
+      case "inscricao_evento": {
+        const slug = (data as { slug?: string }).slug;
+        if (slug) abrirInscricaoEvento(slug);
+        else router.navigate("/inscricoes");
         return;
       }
     }
