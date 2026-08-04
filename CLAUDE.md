@@ -33,6 +33,9 @@ módulo**. Roda em **Android e iOS**.
   conta pessoal `mtoscano99`; `owner: "cbrio"` no app.json — mesmo projectId,
   OTAs/builds/credenciais preservados). Membros: mtoscano99 (owner) +
   infra@cbrio.com.br + matheus@cbrio.com.br (admins) — qualquer um publica.
+  **O CBRio-Staff (app do staff · repo `igreja-cbrio/CBRio-Staff`) também
+  está na mesma organização** (movido em 04/08/2026 — o owner do app.json de
+  lá precisa dizer `cbrio` antes do próximo update/build daquele projeto).
   Login do eas-cli é browser-flow: pra trocar de conta, deslogar do SITE
   expo.dev antes (o CLI reaproveita a sessão do navegador em silêncio).
 - **EAS Submit — Play Store (Android):** configurado no `eas.json` (`submit.production.android`)
