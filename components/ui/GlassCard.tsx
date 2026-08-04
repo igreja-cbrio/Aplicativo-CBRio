@@ -43,12 +43,11 @@ export function GlassCard({
     );
   }
 
-  if (Platform.OS === "ios" || Platform.OS === "android") {
+  if (Platform.OS === "ios") {
     return (
       <BlurView
         intensity={intensity}
         tint={mode}
-        experimentalBlurMethod={Platform.OS === "android" ? "dimezisBlurView" : undefined}
         style={[baseStyle, { backgroundColor: colors.surface }, style]}
       >
         {children}
@@ -56,6 +55,12 @@ export function GlassCard({
     );
   }
 
+  // ANDROID (e web): superfície sólida translúcida, SEM BlurView.
+  // ⚠️ NÃO voltar ao `experimentalBlurMethod="dimezisBlurView"`: o blur
+  // experimental do expo-blur crasha NATIVO no Android — "o app foi fechado
+  // forçadamente" ao rolar a Home (ProximosCultos) e ao abrir a aba Menu
+  // (a lista inteira vive num GlassCard) — reproduzido em Xiaomi/MIUI
+  // (Marcos · 04/08/2026). O borrão no Android não vale um crash.
   return (
     <View
       style={[
