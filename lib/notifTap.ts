@@ -7,7 +7,21 @@ import { abrirInscricaoEvento } from "./eventos";
  * baseado em data.tipo. Use uma vez no _layout raiz.
  */
 export function attachNotifTapListener(): () => void {
-  function go(data: Notifications.NotificationContent["data"]) {
+  // ⚠️ Dedup por identifier: no ANDROID o sistema re-entrega a MESMA resposta
+  // de notificação a cada recriação da Activity — inclusive depois de um
+  // crash. Sem isto (e sem o clear no cold start, abaixo), o app REABRIA
+  // sempre na tela da última push e o usuário ficava preso (caso "preso em
+  // Notificações", Xiaomi · Marcos 04/08/2026 — só apagar os dados resolvia).
+  const processadas = new Set<string>();
+
+  function go(resp: Notifications.NotificationResponse | null) {
+    if (!resp) return;
+    const id = resp.notification.request.identifier;
+    if (id) {
+      if (processadas.has(id)) return;
+      processadas.add(id);
+    }
+    const data = resp.notification.request.content.data;
     if (!data || typeof data !== "object") return;
     const tipo = (data as { tipo?: string }).tipo;
     switch (tipo) {
@@ -62,12 +76,16 @@ export function attachNotifTapListener(): () => void {
 
   // Tap em foreground/background -> abriu o app a partir da notif.
   const subResp = Notifications.addNotificationResponseReceivedListener((resp) => {
-    go(resp.notification.request.content.data);
+    go(resp);
   });
 
-  // Caso o app tenha sido aberto **frio** vindo de uma notif.
+  // Caso o app tenha sido aberto **frio** vindo de uma notif. CONSOME a
+  // resposta na hora (clear) — senão o Android devolve a mesma resposta em
+  // TODA abertura seguinte e o app fica "grudado" na tela da push.
   Notifications.getLastNotificationResponseAsync().then((resp) => {
-    if (resp) go(resp.notification.request.content.data);
+    if (!resp) return;
+    Notifications.clearLastNotificationResponseAsync().catch(() => {});
+    go(resp);
   });
 
   return () => {

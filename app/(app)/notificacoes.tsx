@@ -164,7 +164,10 @@ export default function NotificacoesScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
         <Pressable
-          onPress={() => router.back()}
+          // Fallback pra Home quando esta é a PRIMEIRA rota (app aberto
+          // direto aqui por uma push): back() sem histórico não faz nada e o
+          // usuário ficava preso (Xiaomi · 04/08).
+          onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
           hitSlop={8}
           style={styles.back}
           accessibilityRole="button"
