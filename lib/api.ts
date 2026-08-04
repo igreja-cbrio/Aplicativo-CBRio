@@ -574,10 +574,14 @@ export function statusIdentidade(): Promise<IdentidadeStatus> {
 export type IdentidadePorCpf = {
   encontrado: boolean;
   pode_confirmar?: boolean;
-  motivo?: "nao_encontrado" | "sem_telefone" | "sem_canal";
+  // 'sem_email' = cadastro achado, mas sem e-mail pra provar posse ·
+  // 'email_compartilhado' = e-mail em 2+ cadastros (família) — não serve de
+  // prova · 'sem_canal' = canal de envio indisponível no servidor.
+  motivo?: "nao_encontrado" | "sem_email" | "email_compartilhado" | "sem_telefone" | "sem_canal";
   verificacao_id?: string;
   nome_mascarado?: string | null;
   telefone_mascarado?: string | null;
+  email_mascarado?: string | null;
   expira_em_min?: number;
   canal?: string;
 };
