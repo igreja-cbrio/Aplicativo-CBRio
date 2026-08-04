@@ -288,6 +288,18 @@ admin/diretor (via `profiles.role`) ou líder do grupo (via
 No app: `lib/useAdminGrupo.ts` gera o flag isAdmin, e `app/(app)/grupo-editar.tsx`
 é a tela protegida.
 
+**⚠️ Temporada + grupos de INSCRIÇÃO vêm do backend (2026-08-04):**
+`lib/temporadaGrupos.ts` lê `GET /public/grupos/app-inscricao` (sem auth) e
+devolve `{ aberta, titulo, grupos[] }` — a MESMA régua do formulário público do
+site (grupo ativo, aceitando inscrições, não fechado/pausado, temporada aberta
+ou `sempre_aberto`). Consumidores: `inscricao-grupos.tsx` (lista + gate) e
+`grupo-detalhe.tsx` (gate do botão "Quero participar"). **NUNCA voltar a ler**
+a tabela `app_grupos_temporada` (paralela e órfã — dizia "fechada" com a
+temporada aberta; item 1 da auditoria de 03/08) nem `mem_grupos` cru pra lista
+de inscrição (perde as travas de grupo fechado/pausado). Falha de rede ⇒
+`aberta:false` (fail-closed). `dia_semana`: 0 = domingo (0 é falsy — comparar
+com `!= null`).
+
 > Os arquivos `supabase/profiles.sql` e a config antiga referem-se ao projeto
 > inicial do app (`otzemqmlprwhtvfxbvkj`), antes da unificação.
 
