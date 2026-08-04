@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { cacheSWR } from "./cache";
+import { apiGet } from "./api";
 
 export type CultoUpcoming = {
   id: string;
@@ -65,6 +66,31 @@ export async function proximosCultos(
     () => buscarProximosCultos(diasFrente),
     { forcar }
   );
+}
+
+export type CultoAoVivo = {
+  culto: { id: string; nome: string; data: string; hora: string | null } | null;
+  ao_vivo: boolean;
+  canal_live: string;
+  jaRegistrou: boolean;
+};
+
+/**
+ * "Tem culto acontecendo AGORA?" — quem decide é o servidor
+ * (`GET /app/culto/agora`), que resolve o dia em BRT e a janela do culto.
+ *
+ * ⚠️ Sem cache de propósito: é o dado mais perecível da Home. Servir do cache
+ * mostraria "estamos ao vivo" depois do culto acabar.
+ * ⚠️ `ao_vivo` chegou em 04/08/2026. Build/OTA antigo contra backend novo
+ * ignora o campo (não usa); app novo contra backend antigo recebe `undefined`
+ * e simplesmente não mostra o card — nunca mostra por engano.
+ */
+export async function cultoAoVivo(): Promise<CultoAoVivo | null> {
+  try {
+    return await apiGet<CultoAoVivo>("/app/culto/agora");
+  } catch {
+    return null;
+  }
 }
 
 const DOW = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];

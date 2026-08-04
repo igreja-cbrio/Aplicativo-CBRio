@@ -36,6 +36,7 @@ import {
   setMetodoPagamentoPadrao,
   type MetodoPagamento,
 } from "@/lib/preferenciaPagamento";
+import { FEATURES } from "@/lib/features";
 import { apiGet, apiPost } from "@/lib/api";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
@@ -285,7 +286,14 @@ export default function ConfiguracoesScreen() {
           ))}
         </Section>
 
-        {/* PAGAMENTO */}
+        {/* PAGAMENTO — ⚠️ é só a preferência de qual método abre na tela de
+            Generosidade, então fica escondido enquanto o módulo de doações
+            está desligado por flag (FEATURES.generosidade · aguardando a
+            Benevity). Mostrar aqui seria configurar uma tela que não existe.
+            ⚠️ NÃO é "cartão salvo": o app NUNCA guarda dado de cartão (o
+            checkout é hospedado no provedor — escopo PCI fora de nós), então
+            não existe "salvar/descadastrar cartão" pra oferecer. */}
+        {FEATURES.generosidade && (
         <Section title={t("Forma de pagamento")} colors={colors} styles={styles}>
           <Text style={styles.hint}>
             {t("Método aberto por padrão na tela de Generosidade.")}
@@ -303,6 +311,7 @@ export default function ConfiguracoesScreen() {
             />
           ))}
         </Section>
+        )}
 
         {/* SEGURANÇA */}
         <Section title={t("Segurança")} colors={colors} styles={styles}>
@@ -360,6 +369,21 @@ export default function ConfiguracoesScreen() {
             variant="ghost"
             onPress={() => Linking.openSettings()}
           />
+        </Section>
+
+        {/* AJUDA — "Fale conosco" e "Sobre a CBRio" saíram do menu e vieram
+            pra cá (ponto 7 do Marcos, 04/08/2026). */}
+        <Section title={t("Ajuda")} colors={colors} styles={styles}>
+          <Pressable style={styles.navRow} onPress={() => router.navigate("/fale-conosco")}>
+            <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.text} />
+            <Text style={[styles.label, { flex: 1 }]}>{t("Fale conosco")}</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </Pressable>
+          <Pressable style={styles.navRow} onPress={() => router.navigate("/sobre")}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.text} />
+            <Text style={[styles.label, { flex: 1 }]}>{t("Sobre a CBRio")}</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </Pressable>
         </Section>
 
         {/* EXCLUIR CONTA */}

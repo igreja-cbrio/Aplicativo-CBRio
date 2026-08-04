@@ -180,12 +180,36 @@ constants/
 |   ✅   | **Check-in Kids** | Tela `kids.tsx` (atalho no Menu): **pré-check-in** dos filhos. Lê `GET /app/kids/meus-filhos` (crianças de quem o membro é responsável `autorizado_buscar`), o membro marca quem vai e gera código/QR via `POST /app/kids/pre-checkin` (válido 12h, 1 ativo por responsável). QR = `react-native-qrcode-svg` com o código de 6 chars. No totem (sistema), o voluntário escaneia/digita, confere e imprime. **Sem checkout remoto** — entrada/retirada continuam presenciais (decisão de segurança das crianças). **Solicitar vínculo** (`kids-solicitar-vinculo.tsx`): quem não tem filho vinculado pede o vínculo enviando documentos (criança + pai e/ou mãe) — **foto** (`expo-image-picker` câmera/galeria) **ou arquivo PDF** (`expo-document-picker` · ⚠️ módulo NATIVO → só funciona a partir do **build 21**; no build 20 o app cai num aviso "atualize o app"). Upload direto pro bucket **privado** `kids-documentos` (path `{user.id}/...`, helper `uploadDoc` infere ext/contentType) e `POST /app/kids/solicitar-vinculo` manda só os paths; a equipe Kids confere e aprova. Status (em análise/recusada) aparece na própria tela (`GET /app/kids/minhas-solicitacoes`) e via push (`notify-kids-vinculo`). **Foto da criança (opcional · ECA/LGPD):** na tela do filho (`kids-filho.tsx`) o responsável autorizado pode adicionar a foto da criança com **consentimento explícito** (bloco com texto ECA Lei 8.069/90 arts. 17/18 + LGPD Lei 13.709/18 art. 14 + checkbox · versão `eca-lgpd-v1`). Upload pro bucket **privado** `kids-documentos` (`{user.id}/foto-crianca/...`) → `POST /app/kids/filho/:id/foto` (exige `consentimento:true`); a foto só é exibida (signed URL) com consentimento, a responsável + equipe Kids. **Revogável**: `POST /app/kids/filho/:id/foto/remover` apaga a foto e limpa o consentimento. |
 |   ✅   | **Pregações**    | Tela `videos.tsx` (`/videos` · atalho na Home + item "Pregações" no Menu): vídeos recentes + séries do YouTube (módulo Online do sistema) + **Assistir ao vivo**. Lê `GET /api/app/videos` (30 vídeos `online_videos` + 20 séries `online_series` + `canal_live`). Tap no vídeo → `Linking.openURL` `youtube.com/watch?v=ID`; série → playlist; ao vivo → `channel/<id>/live`. `trackEvento` em cada abertura. Fase 5 (Transmissão/Séries). |
 |   ✅   | **Meu discipulado** | Tela `jornada.tsx` (Sua jornada) ganhou o **placar X/5 valores** (bolinhas) + banner **"Seu próximo passo"** (1º valor não vivido → ação). Tudo client-side sobre os dados já carregados. |
-|   ✅   | **Modo Culto**   | Tela `modo-culto.tsx` (`/modo-culto` · "No culto" no Menu + atalho Home): **Assistir ao vivo** (canal YouTube), **decisão de fé** (tipo + presencial/online + recado → `POST /app/culto/decisao` → **fila de revisão da Integração**, NUNCA entra direto na NSM) e **anotações da pregação** (locais no aparelho via AsyncStorage). Lê `GET /app/culto/agora` (culto de hoje + ao vivo + jaRegistrou). |
+|   ✅   | **Modo Culto**   | Tela `modo-culto.tsx` (`/modo-culto`): **Assistir ao vivo** (canal YouTube), **decisão de fé** (tipo + presencial/online + recado → `POST /app/culto/decisao` → **fila de revisão da Integração**, NUNCA entra direto na NSM) e **anotações da pregação** (locais no aparelho via AsyncStorage). **⚠️ Só se chega nela pelo card VERMELHO de "Estamos ao vivo" no topo da Home** (04/08/2026 · pedido do Marcos: saiu do menu e do atalho fixo, porque fora do culto a tela não tem propósito). O card aparece com `ao_vivo` de `GET /app/culto/agora` (`cultoAoVivo()` em `lib/cultos.ts` · **sem cache**, é o dado mais perecível da tela; recarrega ao focar). Backend: `ao_vivo` = existe culto cuja janela [hora−30min, hora+3h] contém o agora, com o dia em **BRT** e valendo o culto **mais recente que começou** — antes o endpoint devolvia a maior hora do dia em UTC (decisão das 08:30 ia pro culto das 19:00, e das 21h em diante o dia já era o seguinte). |
 |   ✅   | **Minha família** | Tela `familia.tsx` (Menu → Minha família): mostra a família (household + parentescos via `GET /app/familia`), **convida um familiar** escolhendo o parentesco (`POST /app/familia/convite` → gera código + link → `Share`), e **aceita convite por código** (`POST /app/familia/aceitar`). Ao aceitar, a pessoa entra na MESMA família do convidador e ganha o vínculo de parentesco — reflete direto na Membresia do sistema (`mem_membros.familia_id` + `mem_vinculos_familiares`). Remover da família = `DELETE /app/familia/vinculo/:outroId` (a pessoa continua no sistema). **Deep link** `cbrio://familia?codigo=XXX` (do link web `cbrio.org/f/a/<codigo>`) pré-preenche o código. Aceite exige login (vincula dois cadastros reais). |
 |   ⬜   | _Próximos_       | A definir, construídos um a um (Fase 6: Generosidade recorrência) |
 
 ## Generosidade — notas de implementação
 
+- **⚠️ Menu enxuto (04/08/2026 · limpeza pedida pelo Marcos):** o menu é o que
+  **NÃO** está na barra de baixo nem na faixa de cima. Ele tem 4 seções — Você
+  (Meu perfil · Minha família · Sua jornada · Batismo) · Participar (Inscrições ·
+  NEXT · Check-in Kids · Inscrições do meu grupo, só pra quem lidera ·
+  Generosidade quando a flag liga) · Conteúdo (Pregações) · Ajustes
+  (Configurações) + Sair. **Saíram, e cada um tem destino:** "Início" (não existe
+  botão de início — a Home é a seta) · "No culto" (card de ao vivo na Home) ·
+  "Avisos" e "Notificações" (o sino, em toda tela — e o **mural virou uma porta
+  dentro de Notificações**, senão ficaria inalcançável sem push · a lista in-app
+  ganhou `case "comunicado"`, que só existia no `notifTap` da push) · "Cartões"
+  (virou **"Cartão de Membro"** no Perfil, com a instrução de uso na linha) ·
+  "Grupos"/"Meu grupo"/"Meus grupos" (**3 entradas viraram 1**: `/meu-grupo`
+  lista os meus, mostra a fila de inscrições de quem lidera e tem "Entrar em
+  outro grupo") · "Fale conosco"/"Sobre a CBRio" (dentro de Configurações).
+  ⚠️ **Atalho na Home é só pra o que NÃO está na barra nem no menu** — saíram
+  Devocional, Meu grupo, Servir, Cuidados e Inscrições; ficaram Sua jornada,
+  NEXT, Batismo, Kids e Generosidade.
+  ⚠️ **"Métodos de pagamento" pedido no ponto 3 NÃO existe e não foi inventado:**
+  o app nunca guarda dado de cartão (checkout hospedado no provedor · escopo PCI
+  fora de nós), então não há cartão pra "salvar ou descadastrar". O que existia
+  em Configurações era só a **preferência de qual método abre na Generosidade** —
+  e ela agora fica **escondida enquanto `FEATURES.generosidade` é false**
+  (configurar uma tela que não existe). Quando as doações voltarem (Benevity), é
+  aí que a conversa sobre cartão salvo faz sentido.
 - **Comprovante anual de doações (IR):** tela `comprovante-doacoes.tsx`
   (link no rodapé da Generosidade). Lê `mem_contribuicoes` do membro logado
   (RLS `membro_id = current_user_membro_id()` já permite), seletor de ano,
