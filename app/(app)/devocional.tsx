@@ -155,7 +155,7 @@ export default function DevocionalScreen() {
   const lidosSemana = diasSemana.filter((d) => d.lido).length;
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
         contentContainerStyle={styles.content}
@@ -163,10 +163,9 @@ export default function DevocionalScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(false); }} tintColor={colors.primary} />
         }
       >
+        {/* Sem seta local (a faixa superior global tem a dela) — o que sobra
+            aqui é o que é DESTA tela: streak e atalho pras anotações. */}
         <View style={styles.header}>
-          <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} hitSlop={8} style={styles.back}>
-            <Ionicons name="chevron-back" size={24} color={colors.text} />
-          </Pressable>
           <Text style={styles.title}>{t("Devocional")}</Text>
           {streak > 0 && (
             <View style={styles.streakPill}>

@@ -69,7 +69,7 @@ export default function MenuScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <View style={styles.avatar}>
@@ -119,7 +119,7 @@ export default function MenuScreen() {
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
-    content: { padding: spacing.lg, paddingBottom: 100, gap: spacing.lg },
+    content: { padding: spacing.lg, paddingBottom: 40, gap: spacing.lg },
     header: {
       flexDirection: "row",
       alignItems: "center",

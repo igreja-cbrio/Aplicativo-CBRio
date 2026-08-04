@@ -3,23 +3,14 @@ import { BRAND_FONT } from "@/lib/fonts";
 import { HeartRefresh } from "@/components/anim/HeartRefresh";
 import { HeartPulseOverlay } from "@/components/anim/HeartPulse";
 import { Skeleton } from "@/components/anim/Skeleton";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { BlurView } from "expo-blur";
-import Animated, {
-  interpolate,
-  useAnimatedScrollHandler,
-  useAnimatedStyle,
-  useSharedValue,
-} from "react-native-reanimated";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenBackground } from "@/components/ui/ScreenBackground";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
-import { useColors, useTheme } from "@/contexts/ThemeContext";
+import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
-import { useNotificacoesNaoLidas } from "@/lib/useNotificacoes";
 import { useT } from "@/lib/i18n";
 import { destaquesAtivos, type Destaque } from "@/lib/destaques";
 import { proximosCultos, type CultoUpcoming } from "@/lib/cultos";
@@ -27,11 +18,11 @@ import { FEATURES } from "@/lib/features";
 import { Carrossel } from "@/components/home/Carrossel";
 import { ProximosCultos } from "@/components/home/ProximosCultos";
 import { AnimatedShortcut } from "@/components/anim/AnimatedShortcut";
-import { AnimatedBell } from "@/components/anim/AnimatedBell";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
-const LOGO_WORDMARK = require("../../../assets/images/cbrio-wordmark.png");
-const HEADER_H = 52; // altura útil do header fixo (sem o inset do notch)
+// ⚠️ O logo, o sino e a foto SAÍRAM daqui (04/08/2026): agora vivem na faixa
+// superior global (components/ui/TopBar.tsx), que aparece igual em todas as
+// telas de barra. Não recriar header local aqui — daria dois cabeçalhos.
 
 function primeiroNome(nomeCompleto?: string, email?: string | null) {
   const nome = nomeCompleto?.trim();
@@ -77,21 +68,9 @@ export default function InicioScreen() {
   const { user } = useAuth();
   const { membro } = useMembro();
   const colors = useColors();
-  const { mode } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const t = useT();
-  const { count: naoLidas } = useNotificacoesNaoLidas();
-  const insets = useSafeAreaInsets();
-
-  // Header fixo: vidro surge conforme o conteúdo passa por baixo.
-  const scrollY = useSharedValue(0);
-  const aoScrollar = useAnimatedScrollHandler((e) => {
-    scrollY.value = e.contentOffset.y;
-  });
-  const estiloVidroHeader = useAnimatedStyle(() => ({
-    opacity: interpolate(scrollY.value, [0, 28], [0, 1], "clamp"),
-  }));
   const [destaques, setDestaques] = useState<Destaque[]>([]);
   const [cultos, setCultos] = useState<CultoUpcoming[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -125,10 +104,8 @@ export default function InicioScreen() {
     <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <ScreenBackground />
       <HeartPulseOverlay visible={refreshing} />
-      <Animated.ScrollView
-        onScroll={aoScrollar}
-        scrollEventThrottle={16}
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + HEADER_H + spacing.sm }]}
+      <ScrollView
+        contentContainerStyle={styles.content}
         refreshControl={<HeartRefresh refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <Text style={styles.hello}>{t("Olá")}, {nome}</Text>
@@ -170,54 +147,7 @@ export default function InicioScreen() {
             </AnimatedShortcut>
           ))}
         </View>
-      </Animated.ScrollView>
-
-      {/* Header fixo: logo + ações sempre à mão; o vidro só aparece
-          quando o conteúdo passa por baixo (padrão iOS). */}
-      <View style={[styles.headerFixo, { paddingTop: insets.top, height: insets.top + HEADER_H }]} pointerEvents="box-none">
-        <Animated.View style={[StyleSheet.absoluteFill, estiloVidroHeader]}>
-          <BlurView intensity={36} tint={mode} style={[StyleSheet.absoluteFill, styles.headerVidro]} />
-        </Animated.View>
-        <View style={styles.brandRow}>
-          <Image
-            source={LOGO_WORDMARK}
-            style={[styles.logo, { tintColor: mode === "light" ? colors.primary : colors.brandPale }]}
-            resizeMode="contain"
-          />
-          <View style={styles.actions}>
-            <AnimatedBell count={naoLidas}>
-              <Pressable
-                onPress={() => router.push("/notificacoes")}
-                style={styles.bellWrap}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel={t("Notificações")}
-              >
-                <Ionicons name="notifications-outline" size={22} color={colors.text} />
-                {naoLidas > 0 && (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeTxt}>
-                      {naoLidas > 9 ? "9+" : naoLidas}
-                    </Text>
-                  </View>
-                )}
-              </Pressable>
-            </AnimatedBell>
-            <Pressable
-              style={styles.avatar}
-              onPress={() => router.navigate("/perfil")}
-              accessibilityRole="button"
-              accessibilityLabel={t("Abrir perfil")}
-            >
-              {membro?.avatarUrl ? (
-                <Image source={{ uri: membro.avatarUrl }} style={styles.avatarImg} />
-              ) : (
-                <CbrioHeart size={22} color={colors.brandPale} />
-              )}
-            </Pressable>
-          </View>
-        </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -225,63 +155,8 @@ export default function InicioScreen() {
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: "transparent" },
-    content: { padding: spacing.lg, paddingBottom: 100, gap: spacing.lg },
-    headerFixo: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 10,
-      justifyContent: "center",
-    },
-    headerVidro: {
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.glassBorder,
-    },
-    brandRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: spacing.md,
-    },
-    logo: { width: 150, height: 42 },
-    actions: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-    bellWrap: {
-      width: 40,
-      height: 40,
-      borderRadius: radius.full,
-      backgroundColor: colors.glass,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    badge: {
-      position: "absolute",
-      top: 2,
-      right: 2,
-      minWidth: 16,
-      height: 16,
-      paddingHorizontal: 4,
-      borderRadius: 8,
-      backgroundColor: colors.danger,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    badgeTxt: { color: "#fff", fontSize: 10, fontWeight: "800" },
+    content: { padding: spacing.lg, paddingBottom: 40, gap: spacing.lg },
     hello: { color: colors.text, fontSize: font.size.xxl, fontFamily: BRAND_FONT, marginTop: spacing.md },
-    avatar: {
-      width: 40,
-      height: 40,
-      borderRadius: radius.full,
-      backgroundColor: colors.glass,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      alignItems: "center",
-      justifyContent: "center",
-      overflow: "hidden",
-    },
-    avatarImg: { width: 40, height: 40, borderRadius: radius.full },
     sectionTitle: {
       color: colors.text,
       fontSize: font.size.lg,

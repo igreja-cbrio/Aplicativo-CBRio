@@ -1,14 +1,17 @@
 import { router, type Href } from "expo-router";
 
-// Rotas que são ABAS nativas (UITabBarController), não telas de stack.
-// Navegar pra elas EMPILHANDO a partir de uma tela de stack (jornada,
-// inscrições, notificações…) crasha o app. O certo é dispensar o stack e
-// selecionar a aba (dismissTo). De dentro de uma aba, canDismiss() é false e
-// caímos no navigate normal (aba→aba funciona).
-const TAB_ROTAS = new Set<string>(["/", "/cuidados", "/voluntariado", "/generosidade", "/menu"]);
-
+/**
+ * Navegação padrão do app.
+ *
+ * ⚠️ Existia aqui um desvio (`dismissTo`) porque Home/Cuidados/Servir/Doar/Menu
+ * eram ABAS NATIVAS (UITabBarController) e empilhar pra elas a partir de uma
+ * tela de stack CRASHAVA o app. Com a barra própria (04/08/2026) tudo é tela de
+ * stack, então `navigate` serve pra tudo — e ele reaproveita a tela quando ela
+ * já está na pilha (não empilha duplicado, e a seta continua fazendo sentido).
+ *
+ * A função fica como ponto único de navegação: se um dia a regra mudar de novo,
+ * muda aqui e não nas ~30 chamadas espalhadas.
+ */
 export function irPara(rota: Href) {
-  const s = typeof rota === "string" ? rota : "";
-  if (TAB_ROTAS.has(s) && router.canDismiss()) router.dismissTo(rota);
-  else router.navigate(rota);
+  router.navigate(rota);
 }
