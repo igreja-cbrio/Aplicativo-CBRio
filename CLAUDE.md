@@ -300,6 +300,15 @@ de inscrição (perde as travas de grupo fechado/pausado). Falha de rede ⇒
 `aberta:false` (fail-closed). `dia_semana`: 0 = domingo (0 é falsy — comparar
 com `!= null`).
 
+**Recusa do líder DEVOLVE pra triagem (2026-08-04 · item 2 da auditoria):** o
+`POST /app/grupos/pedidos/:id/rejeitar` do backend agora grava `devolvido`
+(a equipe de grupos realoca a pessoa) e **não notifica** o inscrito — a pessoa
+não sai da fila da coordenação nem recebe recusa. Os modais de recusa
+(`grupo-membros.tsx` / `grupo-inscricoes.tsx`) explicam isso ao líder. O
+código morto `meusGrupos()` de `lib/grupos.ts` (apontava pro endpoint
+`/grupos/meu`, sem chamador) foi removido — o caminho vivo é
+`listarMeusGruposLider` (`/app/grupos/meus`).
+
 > Os arquivos `supabase/profiles.sql` e a config antiga referem-se ao projeto
 > inicial do app (`otzemqmlprwhtvfxbvkj`), antes da unificação.
 

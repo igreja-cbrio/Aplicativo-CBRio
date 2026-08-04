@@ -1,9 +1,4 @@
-import { apiGet, criarInscricaoApi } from "./api";
-
-/** GET /api/grupos/meu — grupos que participo/lidero + meus pedidos pendentes. */
-export async function meusGrupos() {
-  return apiGet("/grupos/meu");
-}
+import { criarInscricaoApi } from "./api";
 
 /**
  * Pedido para entrar em um grupo. Usa o endpoint genérico de inscrições

@@ -244,7 +244,10 @@ export default function GrupoMembrosScreen() {
                 <Ionicons name="close" size={24} color={colors.text} />
               </Pressable>
             </View>
-            {recusaAlvo && <Text style={[styles.muted, { marginBottom: spacing.sm }]}>{t("Recusar a inscrição de")} {recusaAlvo.nome}?</Text>}
+            {recusaAlvo && <Text style={[styles.muted, { marginBottom: spacing.xs }]}>{t("Recusar a inscrição de")} {recusaAlvo.nome}?</Text>}
+            <Text style={[styles.muted, { marginBottom: spacing.sm }]}>
+              {t("O pedido volta pra equipe de grupos, que cuida do próximo passo com a pessoa. Ela não recebe aviso automático.")}
+            </Text>
             <Text style={styles.sheetLabel}>{t("Motivo (opcional)")}</Text>
             <TextInput
               style={styles.input}
