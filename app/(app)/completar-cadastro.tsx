@@ -9,8 +9,10 @@
 //
 // Dois caminhos, o MESMO destino (um cadastro real, pelo matcher do sistema):
 //   RÁPIDO  · digita o CPF → o servidor acha a pessoa → manda código pro
-//             telefone QUE JÁ ESTÁ NO CADASTRO → confirma. ⚠️ CPF não é senha:
-//             quem prova posse do celular é que é vinculado.
+//             E-MAIL QUE JÁ ESTÁ NO CADASTRO → confirma. ⚠️ CPF não é senha:
+//             quem prova posse daquela caixa é que é vinculado. (Canal é
+//             e-mail porque a Meta recusou template de autenticação pra nossa
+//             conta do WhatsApp Business — 04/08.)
 //   COMPLETO · nome, telefone, nascimento (+CPF opcional) → matcher canônico.
 // ============================================================================
 
@@ -111,9 +113,14 @@ export default function CompletarCadastroScreen() {
       trackEvento("identidade_cpf", { encontrado: r.encontrado, pode: !!r.pode_confirmar });
       if (r.encontrado && r.pode_confirmar) {
         setAchado(r); setPasso("codigo");
-      } else if (r.encontrado && r.motivo === "sem_telefone") {
-        // Achamos a pessoa, mas não há telefone no cadastro pra provar posse.
-        setAviso(t("Achamos seu cadastro, mas ele está sem telefone. Preencha seus dados que a gente completa."));
+      } else if (r.encontrado && (r.motivo === "sem_email" || r.motivo === "sem_telefone")) {
+        // Achamos a pessoa, mas o cadastro não tem contato pra provar posse.
+        setAviso(t("Achamos seu cadastro, mas ele está sem e-mail. Preencha seus dados que a gente completa."));
+        setPasso("form");
+      } else if (r.encontrado && r.motivo === "email_compartilhado") {
+        // E-mail em 2+ cadastros (família) não prova que é você — o formulário
+        // resolve pelo matcher e cai no SEU cadastro.
+        setAviso(t("Esse e-mail é usado por mais de uma pessoa da família, então não dá pra confirmar por ele. Preencha seus dados — leva um minuto."));
         setPasso("form");
       } else if (r.encontrado && r.motivo === "sem_canal") {
         setAviso(t("Não conseguimos enviar o código agora. Preencha seus dados que a equipe confere."));
@@ -196,7 +203,7 @@ export default function CompletarCadastroScreen() {
               <Ionicons name="flash-outline" size={22} color={colors.brandMid} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.opcaoTitulo}>{t("Já sou cadastrado")}</Text>
-                <Text style={styles.opcaoSub}>{t("Digite seu CPF — a gente acha seus dados e confirma pelo seu celular.")}</Text>
+                <Text style={styles.opcaoSub}>{t("Digite seu CPF — a gente acha seus dados e confirma pelo seu e-mail.")}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </Pressable>
@@ -222,7 +229,7 @@ export default function CompletarCadastroScreen() {
               placeholder="000.000.000-00"
             />
             <Text style={styles.nota}>
-              {t("Vamos enviar um código pro celular que já está no seu cadastro — é assim que confirmamos que é você.")}
+              {t("Vamos enviar um código pro e-mail que já está no seu cadastro — é assim que confirmamos que é você.")}
             </Text>
             {!!erro && <Text style={styles.erro}>{erro}</Text>}
             <Button title={t("Continuar")} onPress={buscarPorCpf} disabled={enviando} />
@@ -236,7 +243,8 @@ export default function CompletarCadastroScreen() {
           <View style={styles.bloco}>
             <Text style={styles.confereTxt}>
               {t("Achamos o cadastro de")} <Text style={styles.forte}>{achado?.nome_mascarado}</Text>.{"\n"}
-              {t("Enviamos um código no WhatsApp")} <Text style={styles.forte}>{achado?.telefone_mascarado}</Text>.
+              {t("Enviamos um código pro e-mail")}{" "}
+              <Text style={styles.forte}>{achado?.email_mascarado || achado?.telefone_mascarado}</Text>.
             </Text>
             <Input
               label={t("Código de 6 números")}
@@ -251,7 +259,7 @@ export default function CompletarCadastroScreen() {
               <Text style={styles.link}>{t("Não recebi o código")}</Text>
             </Pressable>
             <Text style={styles.nota}>
-              {t("Esse número não é seu? Fale com a coordenação — a gente atualiza seu cadastro.")}
+              {t("Esse e-mail não é seu? Fale com a coordenação — a gente atualiza seu cadastro.")}
             </Text>
           </View>
         )}
