@@ -401,3 +401,35 @@ splash nativa (`splash.png`) são compostos com `sharp` e referenciados no
 - Sempre que um módulo for adicionado/alterado, atualizar a tabela de Módulos
   e os detalhes correspondentes aqui.
 ```
+
+## ⚠️ App · entrada de PESSOA sob o Contrato de porta (2026-08-04)
+
+Decisão do Marcos: os LÍDERES de grupo são os primeiros a usar o app, e é a
+chance de fechar o cadastro de quem falta — então **entrar no app exige
+cadastro de gente**, com caminho rápido por CPF pra quem já está na base.
+Motivo: o gatilho de `auth.users` (que roda no signup) cria `mem_membros`
+**sem passar pelo matcher e sem exigir campo** — medido em prod: 21 cadastros
+assim, 13 com nome = prefixo do e-mail, 1 duplicata de pessoa real; 26 das 43
+contas do app apontavam pra cadastro sem CPF.
+
+- **`app/(app)/completar-cadastro.tsx`** · 2 caminhos: **rápido** (CPF → código
+  no WhatsApp → confirma) e **completo** (nome, telefone, nascimento; CPF
+  opcional). Backend: `POST /app/identidade/{por-cpf,confirmar,completar}` +
+  `GET /app/identidade/status` (helpers em `lib/api.ts`).
+- **`components/auth/CadastroGate.tsx`** (montado no `(app)/_layout.tsx`):
+  redireciona pra tela quando o servidor RESPONDE que falta algo. ⚠️ Falha de
+  rede/endpoint **não** bloqueia o app (preso na tela sem internet é pior que
+  dado incompleto) e o gate **não** esconde a UI — só navega.
+- ⚠️ **CPF IDENTIFICA, NÃO AUTENTICA** (lei registrada no CLAUDE.md do
+  sistema): o código vai pro telefone JÁ CADASTRADO, nunca pra um número
+  digitado na hora — o cadastro dá acesso a grupo, filhos no Kids e histórico
+  de contribuição. A tela mostra nome/telefone **mascarados** (vêm assim do
+  servidor); não "melhorar" isso exibindo o dado completo.
+- ⚠️ Régua do incompleto: nome de gente + telefone + nascimento. **CPF é
+  recomendado, não obrigatório** — ninguém fica fora do app por não ter o
+  documento em mãos.
+- ⚠️ Sem o template de AUTENTICAÇÃO na Meta (`WHATSAPP_TEMPLATE_APP_CODIGO` no
+  Vercel) o caminho rápido se declara indisponível e a tela cai no formulário.
+- ⚠️ `perfil.tsx` ainda salva por `app_salvar_membro` (RPC antiga que cruza por
+  CPF/telefone/**nome**) — porta velha, fora do contrato. Migrar pro
+  `/app/identidade/completar` num próximo passo.
