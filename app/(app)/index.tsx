@@ -3,17 +3,17 @@ import { BRAND_FONT } from "@/lib/fonts";
 import { HeartRefresh } from "@/components/anim/HeartRefresh";
 import { HeartPulseOverlay } from "@/components/anim/HeartPulse";
 import { Skeleton } from "@/components/anim/Skeleton";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenBackground } from "@/components/ui/ScreenBackground";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { useT } from "@/lib/i18n";
 import { destaquesAtivos, type Destaque } from "@/lib/destaques";
-import { proximosCultos, type CultoUpcoming } from "@/lib/cultos";
+import { proximosCultos, cultoAoVivo, type CultoUpcoming, type CultoAoVivo } from "@/lib/cultos";
 import { FEATURES } from "@/lib/features";
 import { Carrossel } from "@/components/home/Carrossel";
 import { ProximosCultos } from "@/components/home/ProximosCultos";
@@ -35,32 +35,22 @@ function primeiroNome(nomeCompleto?: string, email?: string | null) {
 type Atalho = {
   label: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
-  href:
-    | "/cuidados"
-    | "/voluntariado"
-    | "/generosidade"
-    | "/perfil"
-    | "/inscricoes"
-    | "/batismo"
-    | "/meu-grupo"
-    | "/kids"
-    | "/modo-culto"
-    | "/devocional"
-    | "/jornada"
-    | "/next";
+  href: "/generosidade" | "/batismo" | "/kids" | "/jornada" | "/next";
 };
 
+/**
+ * ⚠️ Atalho aqui é SÓ pra o que não está na barra de baixo nem no menu —
+ * pedido do Marcos (04/08/2026): "os itens que estejam no menu não sejam
+ * atalhos". Saíram Devocional, Meu grupo, Servir, Cuidados e Inscrições
+ * (os 4 primeiros estão na barra, sempre a um toque).
+ * "No culto" também saiu: virou o CARD DE AO VIVO no topo, que só aparece
+ * enquanto o culto está acontecendo.
+ */
 const ATALHOS: Atalho[] = [
-  { label: "No culto", icon: "flame", href: "/modo-culto" },
-  { label: "Devocional", icon: "book", href: "/devocional" },
   { label: "Sua jornada", icon: "trail-sign", href: "/jornada" },
   { label: "NEXT", icon: "sparkles", href: "/next" },
-  { label: "Inscrições", icon: "create", href: "/inscricoes" },
   { label: "Batismo", icon: "water", href: "/batismo" },
-  { label: "Meu grupo", icon: "people-circle", href: "/meu-grupo" },
   { label: "Kids", icon: "happy", href: "/kids" },
-  { label: "Cuidados", icon: "heart", href: "/cuidados" },
-  { label: "Voluntariado", icon: "hand-left", href: "/voluntariado" },
   { label: "Generosidade", icon: "gift", href: "/generosidade" },
 ];
 
@@ -75,20 +65,33 @@ export default function InicioScreen() {
   const [cultos, setCultos] = useState<CultoUpcoming[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [aoVivo, setAoVivo] = useState<CultoAoVivo | null>(null);
 
   const carregar = useCallback(async (forcar = false) => {
-    const [d, c] = await Promise.all([
+    const [d, c, v] = await Promise.all([
       destaquesAtivos(forcar).catch(() => []),
       proximosCultos(7, forcar).catch(() => []),
+      // ⚠️ SEM cache: "está ao vivo agora?" é a pergunta mais perecível da
+      // tela — servir do cache mostraria o card depois do culto acabar.
+      cultoAoVivo().catch(() => null),
     ]);
     setDestaques(d);
     setCultos(c);
+    setAoVivo(v);
   }, []);
 
   useEffect(() => {
     setCarregando(true);
     carregar().finally(() => setCarregando(false));
   }, [carregar]);
+
+  // Voltar pra Home durante o culto tem que mostrar o card (e, quando o culto
+  // acaba, escondê-lo) — sem depender de pull-to-refresh.
+  useFocusEffect(
+    useCallback(() => {
+      cultoAoVivo().then(setAoVivo).catch(() => {});
+    }, [])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -109,6 +112,26 @@ export default function InicioScreen() {
         refreshControl={<HeartRefresh refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <Text style={styles.hello}>{t("Olá")}, {nome}</Text>
+
+        {/* AO VIVO — só durante o culto (ponto 2 do Marcos: o "No culto" saiu
+            do menu e aparece aqui, na hora em que serve pra algo). */}
+        {aoVivo?.ao_vivo && (
+          <Pressable
+            onPress={() => router.navigate("/modo-culto")}
+            style={({ pressed }) => [styles.aoVivo, pressed && { opacity: 0.85 }]}
+            accessibilityRole="button"
+            accessibilityLabel={t("Estamos ao vivo · entrar no culto")}
+          >
+            <View style={styles.aoVivoDot} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.aoVivoTitulo}>{t("Estamos ao vivo")}</Text>
+              <Text style={styles.aoVivoSub} numberOfLines={1}>
+                {aoVivo.culto?.nome || t("Culto da CBRio")}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#fff" />
+          </Pressable>
+        )}
 
         {carregando ? (
           <Skeleton width="100%" height={180} borderRadius={20} />
@@ -156,6 +179,17 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: "transparent" },
     content: { padding: spacing.lg, paddingBottom: 40, gap: spacing.lg },
+    aoVivo: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      backgroundColor: "#E11D48",
+      borderRadius: radius.lg,
+      padding: spacing.md,
+    },
+    aoVivoDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: "#fff" },
+    aoVivoTitulo: { color: "#fff", fontSize: font.size.lg, fontWeight: "800" },
+    aoVivoSub: { color: "rgba(255,255,255,0.9)", fontSize: font.size.sm },
     hello: { color: colors.text, fontSize: font.size.xxl, fontFamily: BRAND_FONT, marginTop: spacing.md },
     sectionTitle: {
       color: colors.text,

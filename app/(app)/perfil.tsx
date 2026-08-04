@@ -276,13 +276,21 @@ export default function PerfilScreen() {
             <Text style={styles.avatarHint}>Toque para trocar a foto</Text>
           </View>
 
+          {/* Cartão de Membro — saiu do menu e passou a viver aqui (pedido do
+              Marcos, 04/08/2026), com a instrução de uso na própria linha:
+              antes era só "Meus cartões" e ninguém sabia pra que servia. */}
           <GlassCard style={styles.cartoesCard}>
             <Pressable
               style={styles.cartoesRow}
               onPress={() => router.navigate("/cartoes")}
             >
               <Ionicons name="card-outline" size={22} color={colors.brandMid} />
-              <Text style={styles.cartoesText}>Meus cartões</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cartoesText}>Cartão de Membro</Text>
+                <Text style={styles.cartoesHint}>
+                  Apresente o QR na entrada dos cultos e eventos. Toque no cartão pra virar.
+                </Text>
+              </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </Pressable>
           </GlassCard>
@@ -394,7 +402,8 @@ const makeStyles = (colors: Palette) =>
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
     },
-    cartoesText: { flex: 1, color: colors.text, fontSize: font.size.md, fontWeight: "600" },
+    cartoesText: { color: colors.text, fontSize: font.size.md, fontWeight: "600" },
+    cartoesHint: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 2, lineHeight: 18 },
     form: { gap: spacing.md },
     lockHint: {
       color: colors.textMuted,

@@ -30,6 +30,7 @@ const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
   devocional: "book",
   aniversario: "gift",
   inscricao_evento: "calendar",
+  comunicado: "megaphone",
 };
 
 // tipo técnico -> categoria amigável (pros filtros)
@@ -44,6 +45,7 @@ const CATEGORIA: Record<string, string> = {
   devocional: "Devocional",
   aniversario: "Outros",
   inscricao_evento: "Inscrições",
+  comunicado: "Avisos",
 };
 
 function iconePorTipo(tipo: string): keyof typeof Ionicons.glyphMap {
@@ -121,6 +123,8 @@ export default function NotificacoesScreen() {
         router.navigate("/batismo"); return;
       case "devocional":
         router.navigate("/devocional"); return;
+      case "comunicado":
+        router.navigate("/mural"); return;
       case "culto": {
         const cultoId = (data as { culto_id?: string }).culto_id;
         if (cultoId) router.navigate({ pathname: "/culto-detalhe", params: { id: cultoId } });
@@ -185,6 +189,22 @@ export default function NotificacoesScreen() {
         )}
       </View>
 
+      <Pressable
+        onPress={() => router.navigate("/mural")}
+        style={({ pressed }) => [styles.mural, pressed && { opacity: 0.7 }]}
+        accessibilityRole="button"
+        accessibilityLabel={t("Avisos da igreja")}
+      >
+        <View style={styles.muralIcone}>
+          <Ionicons name="megaphone-outline" size={20} color={colors.brandMid} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.muralTitulo}>{t("Avisos da igreja")}</Text>
+          <Text style={styles.muralSub}>{t("Comunicados publicados pela CBRio")}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+      </Pressable>
+
       {!loading && itens.length > 0 && chips.length > 1 && (
         <ScrollView
           horizontal
@@ -235,6 +255,10 @@ const makeStyles = (colors: Palette) =>
     back: { width: 24 },
     title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
     acao: { color: colors.primary, fontSize: font.size.sm, fontWeight: "700" },
+    mural: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginHorizontal: spacing.lg, marginBottom: spacing.md, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.glassBorder },
+    muralIcone: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.glass, alignItems: "center", justifyContent: "center" },
+    muralTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
+    muralSub: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 2 },
     chipsBar: { flexGrow: 0, flexShrink: 0 },
     chips: { paddingHorizontal: spacing.lg, gap: 8, paddingBottom: spacing.md, alignItems: "center" },
     chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.full, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },

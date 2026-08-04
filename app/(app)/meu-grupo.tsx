@@ -122,7 +122,8 @@ export default function MeuGrupoScreen() {
           <View style={styles.center}>
             <Ionicons name="people-outline" size={32} color={colors.textMuted} />
             <Text style={styles.vazio}>{t("Você ainda não está em um grupo de conexão.")}</Text>
-            <Button title={t("Encontrar um grupo")} onPress={() => router.navigate("/grupos")} />
+            <Text style={styles.vazioSub}>{t("Os grupos se reúnem durante a semana, nas casas e online.")}</Text>
+            <Button title={t("Quero entrar em um grupo")} onPress={() => router.navigate("/grupos")} />
           </View>
         ) : (
           grupos.map((g) => (
@@ -196,6 +197,22 @@ export default function MeuGrupoScreen() {
             </View>
           ))
         )}
+
+        {/* ⚠️ Esta tela é a ÚNICA porta de Grupos (pedido do Marcos, ponto 6:
+            "3 páginas viram uma"): mostra os meus grupos, a fila de inscrições
+            pra quem lidera e a entrada pra procurar outro grupo. As entradas
+            "Grupos"/"Meu grupo"/"Meus grupos" saíram do menu. */}
+        {grupos !== null && grupos.length > 0 && (
+          <Pressable
+            style={({ pressed }) => [styles.outroGrupo, pressed && { opacity: 0.7 }]}
+            onPress={() => router.navigate("/grupos")}
+            accessibilityRole="button"
+          >
+            <Ionicons name="search-outline" size={20} color={colors.brandMid} />
+            <Text style={styles.outroGrupoTxt}>{t("Entrar em outro grupo")}</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </Pressable>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -218,7 +235,10 @@ const makeStyles = (colors: Palette) =>
     back: { width: 24 },
     title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
     center: { alignItems: "center", paddingVertical: spacing.xl, gap: spacing.md },
-    vazio: { color: colors.textMuted, fontSize: font.size.md, textAlign: "center" },
+    vazio: { color: colors.text, fontSize: font.size.md, textAlign: "center", fontWeight: "600" },
+    vazioSub: { color: colors.textMuted, fontSize: font.size.sm, textAlign: "center", marginTop: -spacing.xs },
+    outroGrupo: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.glassBorder, borderRadius: radius.lg },
+    outroGrupoTxt: { flex: 1, color: colors.text, fontSize: font.size.md, fontWeight: "600" },
     card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.glassBorder, borderRadius: radius.lg, overflow: "hidden" },
     foto: { width: "100%", height: 150, backgroundColor: colors.glass },
     body: { padding: spacing.lg, gap: spacing.sm },

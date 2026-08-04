@@ -42,30 +42,61 @@ export default function MenuScreen() {
     return () => { vivo = false; };
   }, []);
 
-  const options: Option[] = [
-    { label: "Meu perfil", icon: "person-outline", onPress: () => router.navigate("/perfil") },
-    { label: "Minha família", icon: "people-outline", onPress: () => router.navigate("/familia") },
-    { label: "Sua jornada", icon: "trail-sign-outline", onPress: () => router.navigate("/jornada") },
-    { label: "Início", icon: "home-outline", onPress: () => router.navigate("/") },
-    { label: "No culto", icon: "flame-outline", onPress: () => router.navigate("/modo-culto") },
-    { label: "Avisos", icon: "megaphone-outline", onPress: () => router.navigate("/mural") },
-    { label: "Cartões", icon: "card-outline", onPress: () => router.navigate("/cartoes") },
-    { label: "Inscrições", icon: "create-outline", onPress: () => router.navigate("/inscricoes") },
-    { label: "Batismo", icon: "water-outline", onPress: () => router.navigate("/batismo") },
-    { label: "NEXT", icon: "sparkles-outline", onPress: () => router.navigate("/next") },
-    { label: "Grupos", icon: "people-outline", onPress: () => router.navigate("/grupos") },
-    { label: "Meu grupo", icon: "people-circle-outline", onPress: () => router.navigate("/meu-grupo") },
-    ...(gerenciaGrupo ? [{ label: "Meus grupos", icon: "people-circle-outline" as const, onPress: () => router.navigate("/grupo-inscricoes") }] : []),
-    { label: "Cuidados", icon: "heart-outline", onPress: () => router.navigate("/cuidados") },
-    { label: "Voluntariado", icon: "hand-left-outline", onPress: () => router.navigate("/voluntariado") },
-    { label: "Check-in Kids", icon: "happy-outline", onPress: () => router.navigate("/kids") },
-    ...(FEATURES.generosidade ? [{ label: "Generosidade", icon: "gift-outline" as const, onPress: () => router.navigate("/generosidade") }] : []),
-    { label: "Devocionais", icon: "book-outline", onPress: () => router.navigate("/devocional") },
-    { label: "Pregações", icon: "play-circle-outline", onPress: () => router.navigate("/videos") },
-    { label: "Notificações", icon: "notifications-outline", onPress: () => router.push("/notificacoes") },
-    { label: "Configurações", icon: "settings-outline", onPress: () => router.navigate("/configuracoes") },
-    { label: "Fale conosco", icon: "chatbubble-ellipses-outline", onPress: () => router.navigate("/fale-conosco") },
-    { label: "Sobre a CBRio", icon: "information-circle-outline", onPress: () => router.navigate("/sobre") },
+  /**
+   * ⚠️ O menu é o que NÃO está na barra de baixo (Grupos · Servir · Cuidados ·
+   * Devocional) nem na faixa de cima (sino → Notificações/Avisos · foto →
+   * Perfil). Repetir aqui o que está sempre a um toque só faz a lista crescer
+   * — foi o pedido do Marcos ("o app precisa ser sempre simples", 04/08/2026).
+   *
+   * Saíram nesta limpeza, cada um por um motivo dele:
+   *  · "Início"        → não existe botão de início em lugar nenhum; a Home é
+   *                      a seta da faixa.
+   *  · "No culto"      → só aparece na HOME enquanto o culto está ao vivo
+   *                      (fora disso a tela não tem propósito).
+   *  · "Avisos"        → o mural virou porta dentro do sino (Notificações).
+   *  · "Notificações"  → o sino está em toda tela.
+   *  · "Cartões"       → virou "Cartão de Membro", dentro do Perfil.
+   *  · "Grupos"/"Meu grupo"/"Meus grupos" → 3 entradas viraram 1 tela (a de
+   *                      Grupos na barra, que lista os meus e oferece entrar
+   *                      em outro).
+   *  · "Fale conosco"/"Sobre a CBRio" → dentro de Configurações.
+   */
+  const secoes: { titulo: string; itens: Option[] }[] = [
+    {
+      titulo: "Você",
+      itens: [
+        { label: "Meu perfil", icon: "person-outline", onPress: () => router.navigate("/perfil") },
+        { label: "Minha família", icon: "people-outline", onPress: () => router.navigate("/familia") },
+        { label: "Sua jornada", icon: "trail-sign-outline", onPress: () => router.navigate("/jornada") },
+        { label: "Batismo", icon: "water-outline", onPress: () => router.navigate("/batismo") },
+      ],
+    },
+    {
+      titulo: "Participar",
+      itens: [
+        { label: "Inscrições", icon: "create-outline", onPress: () => router.navigate("/inscricoes") },
+        { label: "NEXT", icon: "sparkles-outline", onPress: () => router.navigate("/next") },
+        { label: "Check-in Kids", icon: "happy-outline", onPress: () => router.navigate("/kids") },
+        ...(gerenciaGrupo
+          ? [{ label: "Inscrições do meu grupo", icon: "person-add-outline" as const, onPress: () => router.navigate("/grupo-inscricoes") }]
+          : []),
+        ...(FEATURES.generosidade
+          ? [{ label: "Generosidade", icon: "gift-outline" as const, onPress: () => router.navigate("/generosidade") }]
+          : []),
+      ],
+    },
+    {
+      titulo: "Conteúdo",
+      itens: [
+        { label: "Pregações", icon: "play-circle-outline", onPress: () => router.navigate("/videos") },
+      ],
+    },
+    {
+      titulo: "Ajustes",
+      itens: [
+        { label: "Configurações", icon: "settings-outline", onPress: () => router.navigate("/configuracoes") },
+      ],
+    },
   ];
 
   return (
@@ -85,24 +116,28 @@ export default function MenuScreen() {
           </View>
         </View>
 
-        {/* Opções */}
-        <GlassCard style={styles.list}>
-          {options.map((opt, i) => (
-            <Pressable
-              key={opt.label}
-              onPress={opt.onPress}
-              style={({ pressed }) => [
-                styles.row,
-                i > 0 && styles.rowBorder,
-                pressed && styles.rowPressed,
-              ]}
-            >
-              <Ionicons name={opt.icon} size={22} color={colors.brandMid} />
-              <Text style={styles.rowLabel}>{t(opt.label)}</Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-            </Pressable>
-          ))}
-        </GlassCard>
+        {secoes.map((sec) => (
+          <View key={sec.titulo} style={styles.secao}>
+            <Text style={styles.secaoTitulo}>{t(sec.titulo)}</Text>
+            <GlassCard style={styles.list}>
+              {sec.itens.map((opt, i) => (
+                <Pressable
+                  key={opt.label}
+                  onPress={opt.onPress}
+                  style={({ pressed }) => [
+                    styles.row,
+                    i > 0 && styles.rowBorder,
+                    pressed && styles.rowPressed,
+                  ]}
+                >
+                  <Ionicons name={opt.icon} size={22} color={colors.brandMid} />
+                  <Text style={styles.rowLabel}>{t(opt.label)}</Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                </Pressable>
+              ))}
+            </GlassCard>
+          </View>
+        ))}
 
         <Button title={t("Sair")} variant="ghost" onPress={() => signOut()} />
 
@@ -120,6 +155,8 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
     content: { padding: spacing.lg, paddingBottom: 40, gap: spacing.lg },
+    secao: { gap: spacing.sm },
+    secaoTitulo: { color: colors.textMuted, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5 },
     header: {
       flexDirection: "row",
       alignItems: "center",
