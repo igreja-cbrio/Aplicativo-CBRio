@@ -29,6 +29,12 @@ módulo**. Roda em **Android e iOS**.
   MESMA `version` do app.json e que já contenham `expo-updates` (build iOS
   ≥ 20). Mudança nativa (módulo, plugin, permissão) continua exigindo
   build novo + revisão.
+- **⚠️ Projeto EAS vive na ORGANIZAÇÃO `cbrio`** (transferido em 04/08/2026 da
+  conta pessoal `mtoscano99`; `owner: "cbrio"` no app.json — mesmo projectId,
+  OTAs/builds/credenciais preservados). Membros: mtoscano99 (owner) +
+  infra@cbrio.com.br + matheus@cbrio.com.br (admins) — qualquer um publica.
+  Login do eas-cli é browser-flow: pra trocar de conta, deslogar do SITE
+  expo.dev antes (o CLI reaproveita a sessão do navegador em silêncio).
 - **EAS Submit — Play Store (Android):** configurado no `eas.json` (`submit.production.android`)
   com `serviceAccountKeyPath: ./google-play-service-account.json` (JSON da conta de
   serviço `eas-submit@crm-cbrio.iam.gserviceaccount.com` · projeto Cloud `crm-cbrio` ·
