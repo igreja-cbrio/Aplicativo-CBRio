@@ -59,32 +59,39 @@ export function TopBar({
 
   return (
     <View style={[styles.faixa, { paddingTop: insets.top, height: insets.top + TOPBAR_H }]}>
-      <View style={styles.esq}>
-        {mostrarVoltar && (
-          <Pressable
-            onPress={voltar}
-            hitSlop={10}
-            style={styles.btn}
-            accessibilityRole="button"
-            accessibilityLabel={t("Voltar")}
-          >
-            <Ionicons name="chevron-back" size={22} color={colors.primary} />
-          </Pressable>
-        )}
-      </View>
-
-      <View style={styles.centro}>
-        {mostrarLogo ? (
+      {/* ⚠️ Na HOME o logo fica À ESQUERDA, do tamanho de antes — centralizado e
+          pequeno (como saiu na 1ª versão) ficava esquisito: sem a seta, sobrava
+          um vão vazio à esquerda e a marca parecia encolhida (Marcos, 04/08). */}
+      {mostrarLogo ? (
+        <View style={styles.marca}>
           <Image
             source={LOGO_WORDMARK}
             style={styles.logo}
             resizeMode="contain"
             tintColor={mode === "dark" ? colors.brandPale : colors.primary}
           />
-        ) : (
-          <Text style={styles.titulo} numberOfLines={1}>{titulo || ""}</Text>
-        )}
-      </View>
+        </View>
+      ) : (
+        <>
+          <View style={styles.esq}>
+            {mostrarVoltar && (
+              <Pressable
+                onPress={voltar}
+                hitSlop={10}
+                style={styles.btn}
+                accessibilityRole="button"
+                accessibilityLabel={t("Voltar")}
+              >
+                <Ionicons name="chevron-back" size={22} color={colors.primary} />
+              </Pressable>
+            )}
+          </View>
+
+          <View style={styles.centro}>
+            <Text style={styles.titulo} numberOfLines={1}>{titulo || ""}</Text>
+          </View>
+        </>
+      )}
 
       <View style={styles.dir}>
         <AnimatedBell count={naoLidas}>
@@ -138,13 +145,17 @@ const makeStyles = (colors: Palette) =>
     // conforme o tamanho do nome da tela.
     esq: { width: 76, flexDirection: "row", alignItems: "center" },
     centro: { flex: 1, alignItems: "center", justifyContent: "center" },
+    // Home: a marca ocupa o espaço da seta + do título, alinhada à esquerda.
+    marca: { flex: 1, justifyContent: "center" },
     dir: { width: 76, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: spacing.xs },
     btn: {
       width: 34, height: 34, borderRadius: radius.full,
       alignItems: "center", justifyContent: "center",
       backgroundColor: colors.surfaceAlt,
     },
-    logo: { width: 118, height: 30 },
+    // Mesma proporção do header antigo da Home (150×42) — `contain` mantém a
+    // arte inteira dentro da caixa, então o que manda no tamanho é a altura.
+    logo: { width: 150, height: 38 },
     titulo: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
     badge: {
       position: "absolute", top: -2, right: -2,

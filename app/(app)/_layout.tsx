@@ -1,5 +1,6 @@
-import { Stack, usePathname } from "expo-router";
-import { View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Stack, router, usePathname } from "expo-router";
+import { AppState, View } from "react-native";
 import { MembroProvider } from "@/contexts/MembroContext";
 import { CadastroGate } from "@/components/auth/CadastroGate";
 import { TopBar } from "@/components/ui/TopBar";
@@ -34,6 +35,29 @@ import { useT } from "@/lib/i18n";
  * ============================================================================
  */
 
+/**
+ * Quanto tempo fora faz o app "começar de novo" na Home ao voltar.
+ *
+ * ⚠️ Por que isto existe (Marcos, 04/08/2026: "toda vez que eu abro ele vai
+ * pra tela de notificações, abre sempre na home"): **não era bug de código.**
+ * COLD START já cai na Home sempre — o expo-router força a rota raiz quando o
+ * app não é aberto por deep link (`getInitialURL` → `getRootURL()`), e o
+ * `index` é o primeiro filho do Stack. O que acontecia é o **sistema
+ * RETOMANDO** o app na última tela (comportamento normal do Android/iOS
+ * quando o processo continua vivo) — foi por isso que, no travamento de manhã,
+ * "só apagando os dados" resolvia: apagar força o encerramento e a próxima
+ * abertura vira cold start.
+ * Descartado com dado, não por suposição: a tabela `app_push_tokens` **não tem
+ * NENHUM token Android** e as contas dele não têm nenhuma linha em
+ * `app_notificacoes` — nenhuma notificação chegou naquele aparelho, então o
+ * caminho do tap não podia ter mandado ele pra lá.
+ *
+ * 3 minutos: trocar de app rapidinho (copiar um código, abrir o WhatsApp,
+ * preencher um formulário no navegador) preserva a tela; voltar depois disso é
+ * "abrir o app de novo" e começa na Home. É um número só, fácil de ajustar.
+ */
+const MS_PARA_RECOMECAR = 3 * 60 * 1000;
+
 /** Rota → título do centro da faixa. Home (`/`) mostra o logo. */
 const TELAS_BARRA: Record<string, string> = {
   "/": "",
@@ -53,6 +77,41 @@ export default function AppLayout() {
   // Onboarding é a única tela sem casca: quem está completando o cadastro não
   // deve ter atalho pra sair pelo rodapé.
   const semBarra = pathname.startsWith("/completar-cadastro");
+
+  // Rota atual num ref: o listener de AppState é montado UMA vez e leria um
+  // pathname congelado se dependesse do closure.
+  const rotaRef = useRef(pathname);
+  rotaRef.current = pathname;
+
+  // Voltar depois de um tempo fora = começar na Home (ver MS_PARA_RECOMECAR).
+  useEffect(() => {
+    let saiuEm: number | null = null;
+    const sub = AppState.addEventListener("change", (estado) => {
+      if (estado !== "active") {
+        // `inactive` (iOS) também conta: central de controle, ligação, aba de
+        // notificações do sistema. Se durar pouco, o teto de tempo não deixa
+        // resetar — então marcar aqui é seguro.
+        if (saiuEm == null) saiuEm = Date.now();
+        return;
+      }
+      if (saiuEm == null) return;
+      const fora = Date.now() - saiuEm;
+      saiuEm = null;
+      if (fora < MS_PARA_RECOMECAR) return;
+
+      const rota = rotaRef.current;
+      // Já está na Home, ou está no meio do cadastro (resetar apagaria o que a
+      // pessoa digitou) → não mexe.
+      if (rota === "/" || rota.startsWith("/completar-cadastro")) return;
+      try {
+        router.dismissAll();
+      } catch {
+        /* sem nada empilhado pra dispensar */
+      }
+      router.replace("/");
+    });
+    return () => sub.remove();
+  }, []);
 
   return (
     <MembroProvider>
