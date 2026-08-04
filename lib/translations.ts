@@ -38,6 +38,10 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Aprovar": { en: "Approve", es: "Aprobar" },
   "no grupo": { en: "in the group", es: "en el grupo" },
   "Recusar a inscrição de": { en: "Decline the registration of", es: "Rechazar la inscripción de" },
+  "O pedido volta pra equipe de grupos, que cuida do próximo passo com a pessoa. Ela não recebe aviso automático.": {
+    en: "The request goes back to the groups team, who will handle the next step with the person. They won't get an automatic notice.",
+    es: "La solicitud vuelve al equipo de grupos, que se encarga del siguiente paso con la persona. No recibirá ningún aviso automático.",
+  },
   "Ex.: grupo lotado, pessoa já em outro grupo…": { en: "E.g. group is full, already in another group…", es: "Ej.: grupo lleno, ya está en otro grupo…" },
   "Confirmar recusa": { en: "Confirm decline", es: "Confirmar rechazo" },
   "Não foi possível aprovar.": { en: "Could not approve.", es: "No se pudo aprobar." },
