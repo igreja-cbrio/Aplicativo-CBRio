@@ -553,3 +553,53 @@ export type EventoAberto = {
 export function buscarEventosAbertos(): Promise<{ eventos: EventoAberto[] }> {
   return apiGet<{ eventos: EventoAberto[] }>("/app/eventos");
 }
+
+// ===== Identidade da conta · vincular ao cadastro REAL da pessoa =====
+// Contrato de porta aplicado ao app (04/08/2026): o gatilho de auth.users cria
+// a pessoa sem matcher e sem exigir campo, então entrar por e-mail deixava
+// cadastro fantasma (nome = prefixo do e-mail) e já duplicou gente. Estes são
+// os 2 caminhos certos: rápido por CPF (com prova de posse do celular) ou
+// formulário completo (que passa pelo matcher canônico do sistema).
+export type IdentidadeStatus = {
+  vinculado: boolean;
+  completo: boolean;
+  falta: string[]; // 'nome' | 'telefone' | 'nascimento' | 'cpf' (cpf = recomendado)
+  nome?: string | null;
+};
+
+export function statusIdentidade(): Promise<IdentidadeStatus> {
+  return apiGet<IdentidadeStatus>("/app/identidade/status");
+}
+
+export type IdentidadePorCpf = {
+  encontrado: boolean;
+  pode_confirmar?: boolean;
+  motivo?: "nao_encontrado" | "sem_telefone" | "sem_canal";
+  verificacao_id?: string;
+  nome_mascarado?: string | null;
+  telefone_mascarado?: string | null;
+  expira_em_min?: number;
+  canal?: string;
+};
+
+/** CPF IDENTIFICA (não autentica): o código vai pro telefone JÁ CADASTRADO. */
+export function identidadePorCpf(cpf: string): Promise<IdentidadePorCpf> {
+  return apiPost<IdentidadePorCpf>("/app/identidade/por-cpf", { cpf });
+}
+
+export function confirmarCodigoIdentidade(
+  verificacaoId: string,
+  codigo: string
+): Promise<{ ok: boolean; fantasma_fundido?: boolean }> {
+  return apiPost("/app/identidade/confirmar", { verificacao_id: verificacaoId, codigo });
+}
+
+export function completarCadastroApp(dados: {
+  nome_completo: string;
+  telefone: string;
+  data_nascimento: string;
+  email?: string;
+  cpf?: string;
+}): Promise<{ ok: boolean; criado?: boolean }> {
+  return apiPost("/app/identidade/completar", dados);
+}
