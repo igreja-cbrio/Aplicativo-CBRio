@@ -91,18 +91,30 @@ módulo**. Roda em **Android e iOS**.
 - **Apple Wallet:** `react-native-wallet-pass` expõe `PassKit.addPass(base64)`
   (abre a tela nativa de adicionar passe) e o componente `AddPassButton`
   (`PKAddPassButton` — botão oficial da Apple, HIG).
-- **Navegação autenticada:** tab bar **NATIVA** (`UITabBarController`) via
-  `expo-router/unstable-native-tabs` em `app/(app)/(tabs)/_layout.tsx` —
-  no iOS 26 vem com **Liquid Glass real** e a interação de pressionar e
-  arrastar a lente entre as abas, implementadas pela Apple
-  (`minimizeBehavior="onScrollDown"` encolhe a barra ao rolar). Ícones são
-  SF Symbols; rótulos passam pelo i18n. Abas: Home, Cuidados, Voluntariado,
-  Generosidade, Menu. As DEMAIS telas vivem em `app/(app)/` sob um Stack
-  (push de verdade por cima das abas). ⚠️ História: o Dock custom em JS
-  (glass + gesto próprio) foi aposentado em 12/06 após 3 rodadas de bugs
-  com reconhecedores de gesto (e.x/absoluteX corrompidos, onPressIn
-  cancelado pelo long-press, GlassView aninhada apagando filhos) — NÃO
-  reimplementar tab bar custom; usar a nativa.
+- **⚠️ Navegação autenticada (04/08/2026 · desenho do Marcos):** casca montada
+  em `app/(app)/_layout.tsx` — **faixa superior** (`components/ui/TopBar.tsx`:
+  seta · título/logo · sino com contador · foto) + **barra de baixo**
+  (`components/ui/BottomBar.tsx`: **Grupos · Servir · Cuidados · Devocional ·
+  Menu**). Os 4 primeiros são os **valores da jornada**; a **HOME fica FORA da
+  barra** e **NÃO existe botão "Início" em lugar nenhum** — chega-se nela pela
+  SETA (que é `canGoBack() ? back() : replace("/")`). Decisão dele, ciente do
+  trade-off (eu sugeri Início na barra; ele preferiu "senão fica bagunçado").
+  As telas de barra vivem em `app/(app)/` (o grupo `(tabs)` **deixou de
+  existir** · rotas idênticas, grupo entre parênteses não entra no path).
+  ⚠️ **A tab bar NATIVA (`expo-router/unstable-native-tabs`) SAIU**: no
+  UITabBarController tudo que aparece TEM que ser uma aba, e a Home precisa
+  justamente do contrário (fora da barra, com a barra visível). Custo assumido:
+  perdemos o Liquid Glass nativo do iOS 26 e o `minimizeBehavior`. Ganho: é JS
+  → **sai por OTA**.
+  ⚠️ Isto **NÃO é o "dock custom" aposentado em 12/06** (aquele morreu por
+  GESTOS próprios: pan/long-press/GlassView aninhada) — aqui são 5 `Pressable`
+  simples, **sem gesto nenhum**. Não reintroduzir gestos na barra.
+  ⚠️ A barra é **IRMÃ do Stack, não sobreposta** → tela nunca fica por baixo
+  dela e nenhum `paddingBottom` de tela precisa saber que ela existe.
+  ⚠️ **Tela de barra não aplica a borda de cima** (`edges={["left","right"]}`):
+  o inset do notch é da faixa. Tela de barra também **não tem cabeçalho
+  próprio** (seta/título) — senão ficam dois. As telas de PROFUNDIDADE (perfil,
+  cartões, kids, next…) seguem com o cabeçalho local até a limpeza.
 
 ## Estrutura de pastas
 
@@ -115,12 +127,12 @@ app/
     cadastro.tsx       # nome, e-mail, telefone, senha -> dispara SMS
     verificar-telefone.tsx  # confirmação do código SMS (OTP)
     recuperar-senha.tsx
-  (app)/               # área autenticada — Stack (telas push) sobre as abas
-    _layout.tsx        # Stack + MembroProvider
-    (tabs)/            # tab bar NATIVA (NativeTabs/UITabBarController)
-      _layout.tsx      # 5 triggers com SF Symbols + i18n
-      index.tsx        # Home (header fixo + carrossel + cultos + atalhos)
-      cuidados.tsx / voluntariado.tsx / generosidade.tsx / menu.tsx
+  (app)/               # área autenticada — Stack + casca (faixa + barra)
+    _layout.tsx        # MembroProvider + CadastroGate + TopBar/BottomBar + Stack
+    index.tsx          # Home (carrossel + cultos + atalhos) — SEM header próprio
+    cuidados.tsx / voluntariado.tsx / devocional.tsx / meu-grupo.tsx / menu.tsx
+                       # telas de BARRA (sem cabeçalho local, sem edge de cima)
+    generosidade.tsx   # fora da barra (vai pelo Menu) — mantém header próprio
     perfil.tsx         # editar e-mail/telefone/nascimento + CPF (vincula ao membro) + foto + cartões
     cartoes.tsx        # CARTÃO ÚNICO holográfico (toque vira; brilho holo reage ao giroscópio) + QR (mem_qrcodes.token) + botão oficial "Add to Apple Wallet"
     voluntariado.tsx   # inscrição de voluntariado (+ escalas em breve)

@@ -93,17 +93,11 @@ export default function MeuGrupoScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
+      {/* Sem cabeçalho local: a seta e o título vivem na faixa superior
+          global (components/ui/TopBar.tsx) — esta é uma tela de barra. */}
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
-            <Ionicons name="chevron-back" size={24} color={colors.text} />
-          </Pressable>
-          <Text style={styles.title}>{t("Meu grupo")}</Text>
-          <View style={{ width: 24 }} />
-        </View>
-
         {grupos && grupos.some((g) => g.funcao === "lider") && (
           <Pressable style={styles.pedidosCard} onPress={() => router.navigate("/grupo-inscricoes")} accessibilityRole="button">
             <View style={styles.pedidosIcon}>

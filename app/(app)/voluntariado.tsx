@@ -303,7 +303,7 @@ export default function VoluntariadoScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -601,7 +601,7 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
     flex: { flex: 1 },
-    content: { padding: spacing.lg, paddingBottom: 100, gap: spacing.lg },
+    content: { padding: spacing.lg, paddingBottom: 40, gap: spacing.lg },
     header: { alignItems: "center", gap: spacing.sm, marginTop: spacing.md },
     badge: {
       width: 72,
