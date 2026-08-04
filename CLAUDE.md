@@ -36,6 +36,28 @@ módulo**. Roda em **Android e iOS**.
   MESMA `version` do app.json e que já contenham `expo-updates` (build iOS
   ≥ 20). Mudança nativa (módulo, plugin, permissão) continua exigindo
   build novo + revisão.
+- **⚠️⚠️ PUBLICAR OTA SÓ POR `npm run ota -- "mensagem"`** (`scripts/ota.js`) —
+  ele passa **`--environment production`**, que é o que faz as
+  `EXPO_PUBLIC_*` entrarem no pacote.
+  **O EAS CLI 21 NÃO LÊ `.env` no `eas update`** (medido em 04/08/2026, não
+  suposto): as vars vêm dos **EAS environment variables do servidor**
+  (`eas env:list production` — URL e anon key já cadastradas lá). Sem a flag,
+  `EXPO_PUBLIC_SUPABASE_URL/ANON_KEY` saem VAZIOS, o app cai no fallback
+  `placeholder.supabase.co` (lib/supabase.ts) e o **login com Google quebra**
+  pra todo mundo que baixar o update (o build da loja fica intacto — quem
+  desinstalar/reinstalar volta a funcionar na hora). Diagnóstico: publiquei 2×
+  "com o .env no lugar" e o bundle continuou quebrado; só com a flag o
+  conteúdo mudou (launchAsset key 47bc9a66 → 86b28c44 no manifest de
+  `u.expo.dev/<projectId>`).
+  **Como conferir um OTA depois de publicar:** `curl u.expo.dev/<projectId>`
+  com headers `expo-platform/expo-runtime-version/expo-channel-name/
+  expo-protocol-version` + `accept: multipart/mixed` → o manifest traz o `id`
+  servido e a `key` do launchAsset (a key MUDA quando as vars entram).
+  ⚠️ Baixar o bundle do `assets.eascdn.net` pra inspecionar dá **403**
+  (requer assinatura do cliente) — pra ver o conteúdo, `npx expo export
+  --platform android` local e `grep` no `.hbc` (o export SIM lê o `.env`).
+  ⚠️ `.env` local serve pro dev (`expo start`) e `.env.example` está
+  DESATUALIZADO (aponta pro projeto Supabase inicial `otzemqml…`).
 - **⚠️ Projeto EAS vive na ORGANIZAÇÃO `cbrio`** (transferido em 04/08/2026 da
   conta pessoal `mtoscano99`; `owner: "cbrio"` no app.json — mesmo projectId,
   OTAs/builds/credenciais preservados). Membros: mtoscano99 (owner) +
