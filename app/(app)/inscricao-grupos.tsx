@@ -7,11 +7,20 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { useT } from "@/lib/i18n";
 import { criarInscricao } from "@/lib/inscricoes";
-import { getTemporadaGrupos } from "@/lib/temporadaGrupos";
-import { supabase } from "@/lib/supabase";
+import { getTemporadaGrupos, type GrupoInscricao } from "@/lib/temporadaGrupos";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
-type Grupo = { id: string; nome: string; categoria: string | null };
+const DIAS_SEMANA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+// Linha secundária do cartão: bairro · dia · horário (o que houver).
+function infoGrupo(g: GrupoInscricao): string | null {
+  const partes = [
+    g.bairro,
+    g.dia_semana != null ? DIAS_SEMANA[g.dia_semana] : null, // 0 = domingo (falsy!)
+    g.horario ? g.horario.slice(0, 5) : null,
+  ].filter(Boolean);
+  return partes.length ? partes.join(" · ") : null;
+}
 
 export default function InscricaoGruposScreen() {
   const { user } = useAuth();
@@ -20,7 +29,7 @@ export default function InscricaoGruposScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
 
-  const [grupos, setGrupos] = useState<Grupo[]>([]);
+  const [grupos, setGrupos] = useState<GrupoInscricao[]>([]);
   const [grupoId, setGrupoId] = useState<string | null>(null);
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -30,16 +39,12 @@ export default function InscricaoGruposScreen() {
   const [temporadaAberta, setTemporadaAberta] = useState<boolean | null>(null);
 
   useEffect(() => {
-    getTemporadaGrupos().then((t) => setTemporadaAberta(t.aberta));
-    (async () => {
-      const { data } = await supabase
-        .from("mem_grupos")
-        .select("id, nome, categoria")
-        .eq("ativo", true)
-        .is("deleted_at", null)
-        .order("nome");
-      setGrupos((data as Grupo[]) ?? []);
-    })();
+    // Temporada + grupos vêm JUNTOS do backend (mesma régua do form público):
+    // grupo fechado/pausado ou de temporada encerrada nunca aparece aqui.
+    getTemporadaGrupos().then((t) => {
+      setTemporadaAberta(t.aberta);
+      setGrupos(t.grupos);
+    });
   }, []);
 
   useEffect(() => {
@@ -109,6 +114,7 @@ export default function InscricaoGruposScreen() {
         ) : (
           grupos.map((g) => {
             const active = grupoId === g.id;
+            const info = infoGrupo(g);
             return (
               <Pressable
                 key={g.id}
@@ -119,6 +125,7 @@ export default function InscricaoGruposScreen() {
                   {g.nome}
                 </Text>
                 {!!g.categoria && <Text style={styles.grupoCat}>{g.categoria}</Text>}
+                {!!info && <Text style={styles.grupoCat}>{info}</Text>}
               </Pressable>
             );
           })
