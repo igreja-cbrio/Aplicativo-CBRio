@@ -80,6 +80,10 @@ export default function MeuGrupoScreen() {
 
   useFocusEffect(useCallback(() => { carregar(); }, [carregar]));
 
+  // Papel de GESTÃO no grupo (vem de /app/meu-grupo: 'lider' quando o
+  // mem_grupos.lider_id é o membro logado, mesmo sem linha no roster).
+  const gerencia = (g: Grupo) => g.funcao === "lider" || g.funcao === "co_lider";
+
   function falarComLider(g: Grupo) {
     const tel = (g.lider?.telefone || "").replace(/\D/g, "");
     if (!tel) return;
@@ -147,7 +151,20 @@ export default function MeuGrupoScreen() {
                   </View>
                 ) : null}
 
-                {g.lider?.telefone ? (
+                {/* ⚠️ Quem LIDERA o grupo não recebe "Falar com <ele mesmo>"
+                    (o Marcos criou um grupo pra testar e viu "Falar com
+                    Marcos" · 04/08). Pra líder/co-líder o CTA é gerenciar. */}
+                {gerencia(g) ? (
+                  <>
+                    <Text style={styles.liderInfo}>
+                      {g.funcao === "co_lider" ? t("Você é co-líder deste grupo.") : t("Você lidera este grupo.")}
+                    </Text>
+                    <Button
+                      title={t("Gerenciar grupo")}
+                      onPress={() => router.navigate({ pathname: "/grupo-membros", params: { id: g.id, nome: g.nome } } as any)}
+                    />
+                  </>
+                ) : g.lider?.telefone ? (
                   <Button title={`${t("Falar com")} ${g.lider.nome.split(" ")[0]}`} onPress={() => falarComLider(g)} />
                 ) : g.lider?.nome ? (
                   <Text style={styles.liderInfo}>{t("Líder")}: {g.lider.nome}</Text>
