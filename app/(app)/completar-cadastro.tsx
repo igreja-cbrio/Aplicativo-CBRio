@@ -186,7 +186,14 @@ export default function CompletarCadastroScreen() {
     if (soDigitos(telefone).length < 10) { setErro(t("Informe seu telefone com DDD.")); return; }
     if (!iso) { setErro(t("Informe sua data de nascimento (dd/mm/aaaa).")); return; }
     const cpfDig = soDigitos(cpfForm);
-    if (cpfDig.length !== 11) { setErro(t("Informe seu CPF (11 números).")); return; }
+    // ⚠️ CPF pedido com destaque, mas NÃO bloqueia a entrada — medido em
+    // 05/08/2026: as contas de revisão da Apple (`appstore.staff@cbrio.app` sem
+    // cadastro nenhum, `appstore.review@cbrio.app` sem CPF) travariam nesta tela
+    // e o revisor não tem CPF brasileiro pra digitar. É a rejeição clássica de
+    // "não conseguimos passar da tela de registro" — e o próximo passo é
+    // justamente submeter um build iOS novo. Quem não põe CPF aqui é levado a
+    // completar quando tentar se inscrever (grupo-detalhe já faz isso).
+    if (cpfDig && cpfDig.length !== 11) { setErro(t("O CPF precisa ter 11 números (ou deixe em branco).")); return; }
     if (!sexo) { setErro(t("Selecione masculino ou feminino.")); return; }
     setEnviando(true);
     try {
@@ -195,7 +202,7 @@ export default function CompletarCadastroScreen() {
         telefone: soDigitos(telefone),
         data_nascimento: iso,
         email: user?.email || undefined,
-        cpf: cpfDig,
+        cpf: cpfDig || undefined,
         sexo,
       });
       trackEvento("identidade_completada", { reason: r.criado ? "criado" : "vinculado" });
@@ -241,7 +248,7 @@ export default function CompletarCadastroScreen() {
               <Ionicons name="create-outline" size={22} color={colors.brandMid} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.opcaoTitulo}>{t("É meu primeiro cadastro")}</Text>
-                <Text style={styles.opcaoSub}>{t("Preencher nome, telefone, nascimento, CPF e sexo.")}</Text>
+                <Text style={styles.opcaoSub}>{t("Preencher nome, telefone, nascimento e sexo.")}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </Pressable>
@@ -317,7 +324,7 @@ export default function CompletarCadastroScreen() {
               placeholder="dd/mm/aaaa"
             />
             <Input
-              label={t("CPF")}
+              label={t("CPF (recomendado)")}
               value={cpfForm}
               onChangeText={(v: string) => setCpfForm(mascaraCpf(v))}
               keyboardType="number-pad"
