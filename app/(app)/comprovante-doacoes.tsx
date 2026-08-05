@@ -18,7 +18,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { useMembro } from "@/lib/useMembro";
 import { minhasContribuicoes, type Contribuicao } from "@/lib/contribuicoes";
-import { PIX_KEY_FORMATADA } from "@/constants/pix";
+import { CNPJ_IGREJA } from "@/constants/pix";
 
 const TIPO_LABEL: Record<string, string> = {
   dizimo: "Dízimo",
@@ -66,7 +66,7 @@ function htmlComprovante(
     .rodape { font-size: 10.5px; color: #8aa3ab; margin-top: 32px; }
   </style></head><body>
     <h1>Comunidade Batista do Rio de Janeiro — CBRio</h1>
-    <p class="sub">CNPJ ${PIX_KEY_FORMATADA} · Av. das Américas, 7907 — Barra da Tijuca, Rio de Janeiro/RJ</p>
+    <p class="sub">CNPJ ${CNPJ_IGREJA} · Av. das Américas, 7907 — Barra da Tijuca, Rio de Janeiro/RJ</p>
     <h2>Comprovante anual de doações — ${ano}</h2>
     <p class="sub">Doador(a): <b>${nome || "—"}</b>${cpf ? ` · CPF ${cpf}` : ""}</p>
     <table>

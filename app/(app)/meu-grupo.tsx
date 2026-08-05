@@ -18,6 +18,7 @@ import { useT } from "@/lib/i18n";
 import { apiGet, contarPedidosGrupo } from "@/lib/api";
 import { trackEvento } from "@/lib/telemetria";
 import { abrirRota } from "@/lib/navegacao";
+import { BuscadorGrupos } from "./grupos";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Material = { id: string; nome: string; comentario: string | null; url: string | null };
@@ -59,6 +60,15 @@ export default function MeuGrupoScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
+  /**
+   * ⚠️ TELA ÚNICA de grupos (05/08/2026 · pedido do Marcos: "uma tela deve ter
+   * todas as opções"). Antes, "Grupos" na barra e "grupos" no menu abriam telas
+   * diferentes. Agora as duas caem aqui, e o BUSCADOR é a 2ª aba — não uma tela
+   * concorrente. Quem lidera continua com a fila de inscrições como cartão.
+   * O fluxo de inscrição não muda: tocar num grupo do buscador abre
+   * `/grupo-detalhe`, que é quem tem o "Quero participar".
+   */
+  const [aba, setAba] = useState<"meus" | "encontrar">("meus");
   const [grupos, setGrupos] = useState<Grupo[] | null>(null);
   const [pedidosPend, setPedidosPend] = useState(0);
 
@@ -97,6 +107,36 @@ export default function MeuGrupoScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       {/* Sem cabeçalho local: a seta e o título vivem na faixa superior
           global (components/ui/TopBar.tsx) — esta é uma tela de barra. */}
+      <View style={styles.abas}>
+        {(["meus", "encontrar"] as const).map((k) => {
+          const sel = aba === k;
+          return (
+            <Pressable
+              key={k}
+              onPress={() => setAba(k)}
+              style={[styles.aba, sel && styles.abaSel]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: sel }}
+            >
+              <Ionicons
+                name={k === "meus" ? "people-circle-outline" : "search-outline"}
+                size={16}
+                color={sel ? "#fff" : colors.textMuted}
+              />
+              <Text style={[styles.abaTxt, sel && styles.abaTxtSel]}>
+                {k === "meus" ? t("Meus grupos") : t("Encontrar")}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {/* ⚠️ O buscador entra IRMÃO do ScrollView, nunca dentro: ele tem scroll
+          próprio e um mapa: aninhar os dois trava o gesto e o mapa. Só monta ao
+          abrir a aba (aí o mapa também só carrega quando é usado). */}
+      {aba === "encontrar" ? (
+        <BuscadorGrupos embutido />
+      ) : (
       <ScrollView contentContainerStyle={styles.content}>
         {grupos && grupos.some((g) => g.funcao === "lider") && (
           <Pressable style={styles.pedidosCard} onPress={() => router.navigate("/grupo-inscricoes")} accessibilityRole="button">
@@ -123,7 +163,7 @@ export default function MeuGrupoScreen() {
             <Ionicons name="people-outline" size={32} color={colors.textMuted} />
             <Text style={styles.vazio}>{t("Você ainda não está em um grupo de conexão.")}</Text>
             <Text style={styles.vazioSub}>{t("Os grupos se reúnem durante a semana, nas casas e online.")}</Text>
-            <Button title={t("Quero entrar em um grupo")} onPress={() => router.navigate("/grupos")} />
+            <Button title={t("Quero entrar em um grupo")} onPress={() => setAba("encontrar")} />
           </View>
         ) : (
           grupos.map((g) => (
@@ -205,7 +245,7 @@ export default function MeuGrupoScreen() {
         {grupos !== null && grupos.length > 0 && (
           <Pressable
             style={({ pressed }) => [styles.outroGrupo, pressed && { opacity: 0.7 }]}
-            onPress={() => router.navigate("/grupos")}
+            onPress={() => setAba("encontrar")}
             accessibilityRole="button"
           >
             <Ionicons name="search-outline" size={20} color={colors.brandMid} />
@@ -214,6 +254,7 @@ export default function MeuGrupoScreen() {
           </Pressable>
         )}
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -231,6 +272,11 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
     content: { padding: spacing.lg, paddingBottom: 40, gap: spacing.md },
+    abas: { flexDirection: "row", gap: spacing.xs, marginHorizontal: spacing.lg, marginTop: spacing.md, backgroundColor: colors.surfaceAlt, borderRadius: radius.full, padding: 4 },
+    aba: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 9, borderRadius: radius.full },
+    abaSel: { backgroundColor: colors.primary },
+    abaTxt: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "700" },
+    abaTxtSel: { color: "#fff" },
     header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.xs },
     back: { width: 24 },
     title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },

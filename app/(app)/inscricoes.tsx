@@ -39,7 +39,10 @@ const ITENS: Item[] = [
   { label: "Batismo", desc: "Acompanhe seu batismo na CBRio", icon: "water", href: "/batismo", chave: "batismo" },
   { label: "Grupos", desc: "Participe de um grupo", icon: "people", href: "/grupos", chave: "grupos" },
   { label: "NEXT", desc: "O começo da jornada", icon: "sparkles", href: "/next", chave: "next" },
-  { label: "Voluntariado", desc: "Sirva na CBRio", icon: "hand-left", href: "/voluntariado", chave: "voluntariado" },
+  // ⚠️ "Quero servir" e não "Voluntariado": a barra de baixo já tem "Servir"
+  // (a ÁREA). Aqui é a PORTA de inscrição — rótulos iguais em dois lugares
+  // faziam parecer duas coisas (05/08/2026).
+  { label: "Quero servir", desc: "Sirva na CBRio", icon: "hand-left", href: "/voluntariado", chave: "voluntariado" },
 ];
 
 function StatusBadge({ status, styles, colors, t }: { status: StatusInscricao; styles: ReturnType<typeof makeStyles>; colors: Palette; t: (s: string) => string }) {

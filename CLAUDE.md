@@ -215,27 +215,25 @@ casar). **⚠️ Cold start CONSOME a resposta (04/08/2026):** `getLastNotificat
 
 ## Generosidade — notas de implementação
 
-**⚠️ Duas faces na MESMA rota `/generosidade` (05/08/2026):** com
-`FEATURES.generosidade = false` (hoje · doações fora da App Store até a
-Benevity) a rota mostra **`components/generosidade/GenerosidadePix.tsx`** — só a
-**chave PIX da igreja** (`constants/pix.ts` · trocada de CNPJ pra
-**pix@cbrio.com.br** em 05/08, informada pelo Marcos), texto e botão de copiar.
-Antes ela fazia `<Redirect href="/" />`, o que deixava "Generosidade" sem lugar
-nenhum. Quando a flag ligar, a mesma rota volta a ser o módulo completo — uma
-rota, uma resposta pra "onde eu contribuo?".
-- ⚠️ **SEM QR de propósito:** QR de PIX exige o BR Code completo (`PIX_PAYLOAD`,
-  hoje vazio). QR só com a chave não é lido pelo app do banco — seria um código
-  que não funciona.
-- ⚠️ **RISCO DE LOJA (App Store · 3.2.2(iv)):** "arrecadar fundos dentro do app"
-  é o que tirou o módulo de doações da submissão em out/2026, e mostrar a chave
-  PIX é a mesma família de conteúdo — sair por OTA não torna a regra menos
-  válida. O Marcos pediu ciente disso. O interruptor
-  **`CHAVE_VISIVEL_NO_IOS`** (topo do GenerosidadePix) troca o comportamento no
-  iPhone pra "explica e manda pro site" numa linha, sem mexer em mais nada.
+**⚠️ NAO existe tela de PIX no app — e nao recriar sem forma aprovada
+(05/08/2026):** por algumas horas a rota `/generosidade` mostrou uma tela so com
+a chave PIX da igreja. Foi **RETIRADA no mesmo dia**, por decisao do Marcos, ao
+saber que exibir chave de doacao e exatamente o que a guideline **3.2.2(iv)** da
+App Store proibe — o mesmo motivo que tirou o modulo de doacoes da submissao em
+out/2026, e sair por OTA nao torna a regra menos valida ("nao queremos correr o
+risco disso sair do ar; vamos pensar em uma forma de fazer isso posteriormente").
+A rota voltou a `<Redirect href="/" />` enquanto `FEATURES.generosidade` e false,
+e o item saiu do menu.
+- ⚠️ **`constants/pix.ts` ganhou `CNPJ_IGREJA`**: o comprovante anual de doacoes
+  imprime "CNPJ …" e estava lendo `PIX_KEY_FORMATADA`. Quando a chave virou
+  e-mail, o comprovante passou a dizer **"CNPJ pix@cbrio.com.br"**. Dado fiscal
+  nao empresta constante de outro assunto.
+- `PIX_KEY` guarda a chave atual e **nao e exibida em lugar nenhum** — o unico
+  leitor e o modulo desligado.
 
 - **⚠️ Menu enxuto (04-05/08/2026 · pedido do Marcos):** o menu é o que **NÃO**
   está na barra de baixo nem na faixa de cima. 4 seções — **Você** (Meu perfil ·
-  Minha família · Sua jornada · **Generosidade**) · **Participar** (Inscrições ·
+  Minha família · Sua jornada) · **Participar** (Inscrições ·
   **Meu grupo** · **Batismo** · NEXT) · Conteúdo (Pregações) · Ajustes
   (Configurações) + Sair.
   Arrumação de 05/08: **Batismo desceu** pra Participar (é inscrição, não dado
@@ -294,6 +292,65 @@ rota, uma resposta pra "onde eu contribuo?".
   `/android/`). NUNCA voltar pra `ios/`/`android/` sem âncora — isso já
   excluiu `modules/apple-pay/ios|android` do upload do EAS e os builds 1–9
   saíram sem o módulo nativo do Apple Pay.
+
+## ⚠️ Grupos · UMA tela, e o CPF que travava a inscrição (05/08/2026)
+
+Varredura de telas mortas/ambíguas pedida pelo Marcos. O que virou código:
+
+- **`/meu-grupo` é a tela ÚNICA de grupos**, com 2 abas: **Meus grupos** |
+  **Encontrar**. Barra de baixo e menu caem os dois aqui — antes "Grupos" na
+  barra e "grupos" no menu abriam telas diferentes, que foi a queixa dele.
+- **`BuscadorGrupos`** (lista/mapa/busca/filtros) virou COMPONENTE exportado de
+  `app/(app)/grupos.tsx`, com prop `embutido`. A rota `/grupos` continua
+  existindo como casca fina (`export default`) — é o que mantém vivo o card de
+  Grupos no hub de Inscrições, deep links e a Jornada de quem ainda não tem
+  grupo. Importar de arquivo de ROTA é o padrão que já existia aqui
+  (`grupo-detalhe` e `GruposMapa` importam `diaHorario` dele).
+- ⚠️ O buscador entra **IRMÃO do ScrollView** de `/meu-grupo`, nunca dentro: ele
+  tem scroll próprio e um mapa — aninhar trava o gesto e o mapa. Só monta quando
+  a aba abre (o mapa também só carrega aí).
+- **`/inscricao-grupos` APAGADA** — órfã (nenhuma navegação apontava pra ela) e
+  fazia o mesmo que buscador + `/grupo-detalhe`, pelo mesmo endpoint.
+  `lib/temporadaGrupos.ts` segue vivo (o gate de temporada é do
+  `/grupo-detalhe`, o caminho real).
+
+### 2 de cada 3 contas do app nao conseguiam pedir entrada em grupo
+
+`POST /app/inscricoes` **recusa inscricao sem CPF** (Contrato de porta · desde
+24/07/2026: 400 "CPF e obrigatorio pra se inscrever"). O `pedirEntrarGrupo` nao
+manda CPF — quem salva e o backfill do backend a partir de `mem_membros`. Medido
+em 05/08/2026: **50 das 75 contas do app apontam pra cadastro SEM CPF (67%)**,
+entao a maioria tocava em "Quero participar" e levava um erro seco.
+`/grupo-detalhe` agora checa `membro.cpf` ANTES (estado `sem_cpf`) e oferece
+**"Completar meu cadastro"** -> `/completar-cadastro`.
+⚠️ **O mesmo gate vale pra batismo, next e voluntariado** (mesmo endpoint, mesma
+regra) — essas tres telas ainda mostram so a mensagem do servidor, sem botao.
+⚠️ E o `/completar-cadastro` trata **CPF como opcional**: da pra "completar" o
+cadastro e continuar bloqueado na inscricao. Alinhar as duas reguas e decisao de
+produto pendente.
+
+## Telas mortas e ambiguas · decisoes de 05/08/2026
+
+- **Mortas**: `/inscricao-grupos` apagada (acidental). **`/inscricao-next` FICA**
+  — e redirect proposital pra `/next`, cobrindo deep link antigo.
+  **`/verificar-telefone` FICA** — parada de proposito (SMS/OTP desligado).
+- ⚠️ **Parecem mortas e NAO sao** (nao "limpar"): `/login`, `/cadastro` e
+  `/recuperar-senha` entram por caminho `(auth)/…`; **`/redefinir-senha` entra
+  por DEEP LINK** do e-mail de recuperacao — nenhuma varredura de codigo acha.
+- **"Assistir ao vivo" era 3 portas** pro mesmo link do YouTube (Home,
+  `/modo-culto`, `/videos`). Saiu de `/videos`: o ao vivo e do CULTO; Pregacoes
+  e o acervo.
+- **Anotacoes eram duas coisas com o mesmo nome**: `/anotacoes` mostra as do
+  DEVOCIONAL (servidor · `mem_devocionais`), e `/modo-culto` guarda as da
+  PREGACAO **so no aparelho** (AsyncStorage, por dia). Renomeadas ("Anotacoes do
+  devocional" x "Anotacoes da pregacao") + aviso na tela do culto. ⚠️ Mandar a do
+  culto pro servidor **exige tabela/endpoint novos** — passo combinado pra depois.
+- **Jornada · Conectar** leva pra `/meu-grupo` quem JA tem grupo (antes mandava
+  todo mundo pro buscador — o "proximo passo" de quem ja deu o passo).
+- **Hub de Inscricoes**: o card de voluntariado virou **"Quero servir"** (a barra
+  ja tem "Servir", que e a AREA; aqui e a PORTA de inscricao).
+- **Os 3 "hubs"** (`/inscricoes`, Menu, `/jornada`) **NAO foram unificados** —
+  decisao do Marcos: "nao acho que competem nao".
 
 ## ⚠️ Telemetria (`lib/telemetria.ts`) · o contrato com o backend (05/08/2026)
 

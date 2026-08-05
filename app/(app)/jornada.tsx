@@ -57,7 +57,7 @@ type Passo = {
   titulo: string;
   status: string;
   on: boolean;
-  rota: "/devocional" | "/grupos" | "/voluntariado" | "/batismo" | "/generosidade";
+  rota: "/devocional" | "/grupos" | "/meu-grupo" | "/voluntariado" | "/batismo" | "/generosidade";
   icon: React.ComponentProps<typeof Ionicons>["name"];
 };
 
@@ -110,7 +110,10 @@ export default function JornadaScreen() {
       {
         key: "conectar", valor: "Conectar", titulo: "Grupo de conexão",
         status: dados.emGrupo ? "Em um grupo 💙" : "Encontre um grupo perto de você",
-        on: dados.emGrupo, rota: "/grupos", icon: "people",
+        // ⚠️ Quem JÁ está em grupo vai pro próprio grupo; quem não está vai
+        // pro buscador. Antes ia sempre pro buscador — o "próximo passo" de
+        // quem já deu o passo mandava procurar grupo de novo (05/08/2026).
+        on: dados.emGrupo, rota: dados.emGrupo ? "/meu-grupo" : "/grupos", icon: "people",
       },
       {
         key: "investir", valor: "Investir", titulo: "Devocional",
