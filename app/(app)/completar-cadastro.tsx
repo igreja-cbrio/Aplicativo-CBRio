@@ -13,10 +13,16 @@
 //             quem prova posse daquela caixa é que é vinculado. (Canal é
 //             e-mail porque a Meta recusou template de autenticação pra nossa
 //             conta do WhatsApp Business — 04/08.)
-//   COMPLETO · nome, telefone, nascimento (+CPF opcional) → matcher canônico.
+//   COMPLETO · nome, telefone, nascimento, CPF e sexo → matcher canônico.
+//
+// ⚠️ FICHA FECHADA NA ENTRADA (Marcos · 05/08/2026): CPF e sexo viraram
+// OBRIGATÓRIOS. Sem CPF o `POST /app/inscricoes` recusa qualquer inscrição, e a
+// pessoa entrava "completa" pra ser barrada depois (50 das 75 contas). Com a
+// ficha fechada aqui, as telas de inscrição pedem só campos EXTRA.
+// Os campos que o cadastro JÁ TEM vêm preenchidos — ninguém digita duas vezes.
 // ============================================================================
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
@@ -94,10 +100,27 @@ export default function CompletarCadastroScreen() {
   const [codigo, setCodigo] = useState("");
 
   // formulário completo
+  const { membro } = useMembro();
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [nascimento, setNascimento] = useState("");
-  const [cpfOpcional, setCpfOpcional] = useState("");
+  const [cpfForm, setCpfForm] = useState("");
+  const [sexo, setSexo] = useState<"masculino" | "feminino" | "">("");
+
+  // ⚠️ Prefill: o que a igreja já tem não é perguntado de novo (regra do
+  // Marcos). `membro` vem do MembroContext, que já carregou a ficha.
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current || !membro) return;
+    prefilled.current = true;
+    if (membro.nome && !membro.nome.includes("@")) setNome(membro.nome);
+    if (membro.telefone) setTelefone(mascaraTelefone(membro.telefone));
+    if (membro.cpf) setCpfForm(mascaraCpf(membro.cpf));
+    if (membro.dataNascimento) {
+      const [a, m, d] = String(membro.dataNascimento).slice(0, 10).split("-");
+      if (a && m && d) setNascimento(`${d}/${m}/${a}`);
+    }
+  }, [membro]);
 
   const concluir = useCallback(async () => {
     await reload();
@@ -131,7 +154,7 @@ export default function CompletarCadastroScreen() {
         setPasso("form");
       } else {
         setAviso(t("Não encontramos esse CPF. Preencha seus dados — é rápido."));
-        setCpfOpcional(mascaraCpf(cpf));
+        setCpfForm(mascaraCpf(cpf));
         setPasso("form");
       }
     } catch (e) {
@@ -162,8 +185,9 @@ export default function CompletarCadastroScreen() {
     if (nome.trim().split(/\s+/).length < 2) { setErro(t("Escreva seu nome completo.")); return; }
     if (soDigitos(telefone).length < 10) { setErro(t("Informe seu telefone com DDD.")); return; }
     if (!iso) { setErro(t("Informe sua data de nascimento (dd/mm/aaaa).")); return; }
-    const cpfDig = soDigitos(cpfOpcional);
-    if (cpfDig && cpfDig.length !== 11) { setErro(t("O CPF precisa ter 11 números (ou deixe em branco).")); return; }
+    const cpfDig = soDigitos(cpfForm);
+    if (cpfDig.length !== 11) { setErro(t("Informe seu CPF (11 números).")); return; }
+    if (!sexo) { setErro(t("Selecione masculino ou feminino.")); return; }
     setEnviando(true);
     try {
       const r = await completarCadastroApp({
@@ -171,7 +195,8 @@ export default function CompletarCadastroScreen() {
         telefone: soDigitos(telefone),
         data_nascimento: iso,
         email: user?.email || undefined,
-        cpf: cpfDig || undefined,
+        cpf: cpfDig,
+        sexo,
       });
       trackEvento("identidade_completada", { reason: r.criado ? "criado" : "vinculado" });
       await concluir();
@@ -216,7 +241,7 @@ export default function CompletarCadastroScreen() {
               <Ionicons name="create-outline" size={22} color={colors.brandMid} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.opcaoTitulo}>{t("É meu primeiro cadastro")}</Text>
-                <Text style={styles.opcaoSub}>{t("Preencher nome, telefone e nascimento.")}</Text>
+                <Text style={styles.opcaoSub}>{t("Preencher nome, telefone, nascimento, CPF e sexo.")}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </Pressable>
@@ -292,12 +317,42 @@ export default function CompletarCadastroScreen() {
               placeholder="dd/mm/aaaa"
             />
             <Input
-              label={t("CPF (opcional, ajuda a achar seu cadastro)")}
-              value={cpfOpcional}
-              onChangeText={(v: string) => setCpfOpcional(mascaraCpf(v))}
+              label={t("CPF")}
+              value={cpfForm}
+              onChangeText={(v: string) => setCpfForm(mascaraCpf(v))}
               keyboardType="number-pad"
               placeholder="000.000.000-00"
             />
+            <Text style={styles.nota}>
+              {t("O CPF é o que liga você ao seu cadastro na igreja e o que permite se inscrever em grupos, batismo e NEXT.")}
+            </Text>
+
+            {/* ⚠️ Sexo: só masculino/feminino — é o que o Contrato de Inscrição
+                do sistema aceita (`masculino|feminino`, NUNCA "outro"), e é o
+                que a inscrição de batismo/apresentação precisa ter na ficha
+                pra não perguntar de novo. */}
+            <View style={{ gap: spacing.xs }}>
+              <Text style={styles.campoLabel}>{t("Sexo")}</Text>
+              <View style={styles.sexoRow}>
+                {(["masculino", "feminino"] as const).map((v) => {
+                  const sel = sexo === v;
+                  return (
+                    <Pressable
+                      key={v}
+                      onPress={() => setSexo(v)}
+                      style={[styles.sexoPill, sel && styles.sexoPillSel]}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: sel }}
+                    >
+                      <Text style={[styles.sexoTxt, sel && styles.sexoTxtSel]}>
+                        {v === "masculino" ? t("Masculino") : t("Feminino")}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
             {!!erro && <Text style={styles.erro}>{erro}</Text>}
             <Button title={t("Salvar e entrar")} onPress={salvarForm} disabled={enviando} />
             <Pressable onPress={() => { setPasso("escolha"); setErro(null); }}>
@@ -331,6 +386,12 @@ const makeStyles = (colors: Palette) =>
     },
     opcaoTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
     opcaoSub: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 2 },
+    campoLabel: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "700" },
+    sexoRow: { flexDirection: "row", gap: spacing.sm },
+    sexoPill: { flex: 1, alignItems: "center", paddingVertical: 12, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+    sexoPillSel: { backgroundColor: colors.primary, borderColor: colors.primary },
+    sexoTxt: { color: colors.text, fontSize: font.size.md, fontWeight: "600" },
+    sexoTxtSel: { color: "#fff" },
     nota: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 19 },
     confereTxt: { color: colors.text, fontSize: font.size.md, lineHeight: 22 },
     forte: { fontWeight: "800" },

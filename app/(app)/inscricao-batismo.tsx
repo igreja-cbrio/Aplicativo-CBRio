@@ -9,6 +9,7 @@ import { apiGet } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
+import { SeusDados, fichaCompleta } from "@/components/inscricoes/SeusDados";
 import { useT } from "@/lib/i18n";
 import { criarInscricao } from "@/lib/inscricoes";
 import { dateBRToISO, isValidDateBR, maskDateBR } from "@/lib/validators";
@@ -127,11 +128,22 @@ export default function InscricaoBatismoScreen() {
         </View>
       </View>
 
-      <Input label={t("Nome completo")} value={nome} onChangeText={setNome} autoCapitalize="words" />
-      <Input label={t("Telefone")} value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="+55 21 99999-9999" />
-      <Input label={t("E-mail")} value={email} onChangeText={setEmail} keyboardType="email-address" />
+      {/* ⚠️ Nome/telefone/e-mail NÃO são repedidos quando a ficha já está
+          fechada (regra do Marcos, 05/08/2026: nas inscrições só se preenche
+          campo A MAIS). Os valores continuam indo no payload — só não são
+          digitados de novo. Instalação antiga, com ficha pela metade, ainda vê
+          o formulário: senão não conseguiria se inscrever. */}
+      {fichaCompleta(membro) ? (
+        <SeusDados nome={nome} telefone={telefone} email={email} />
+      ) : (
+        <>
+          <Input label={t("Nome completo")} value={nome} onChangeText={setNome} autoCapitalize="words" />
+          <Input label={t("Telefone")} value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="+55 21 99999-9999" />
+          <Input label={t("E-mail")} value={email} onChangeText={setEmail} keyboardType="email-address" />
+        </>
+      )}
       <Input
-        label={t("Data de nascimento (opcional)")}
+        label={t("Data de nascimento")}
         value={nascimento}
         onChangeText={(v) => setNascimento(maskDateBR(v))}
         placeholder="DD/MM/AAAA"

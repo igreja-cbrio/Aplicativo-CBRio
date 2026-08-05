@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Stack, router, Redirect } from "expo-router";
+import { Stack, router } from "expo-router";
 import { FEATURES } from "@/lib/features";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -31,6 +31,7 @@ import { ApplePayButton, applePayButtonNativo } from "@/modules/apple-pay";
 import { criarCheckoutSession } from "@/lib/stripeCheckout";
 import { getMetodoPagamentoPadrao } from "@/lib/preferenciaPagamento";
 import { CheckoutWebView } from "@/components/generosidade/CheckoutWebView";
+import { GenerosidadeTexto } from "@/components/generosidade/GenerosidadeTexto";
 import { SucessoDoacao } from "@/components/generosidade/SucessoDoacao";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -54,13 +55,13 @@ function formatBRL(centavos: number): string {
 }
 
 export default function GenerosidadeScreen() {
-  // Desativado temporariamente (App Store · aguardando Benevity). Guard
-  // defensivo: se alguém navegar direto, volta pra Home.
-  // ⚠️ Em 05/08/2026 esta rota chegou a mostrar uma tela só com a chave PIX;
-  // foi RETIRADA no mesmo dia por decisão do Marcos, ao saber que exibir chave
-  // de doação é o que a guideline 3.2.2(iv) proíbe ("não queremos correr o
-  // risco disso sair do ar"). Não recriar sem uma forma aprovada.
-  if (!FEATURES.generosidade) return <Redirect href="/" />;
+  // Módulo de DOAÇÃO desligado (App Store · aguardando Benevity) → a rota
+  // mostra a tela do VALOR, sem meio de pagamento.
+  // ⚠️ Em 05/08/2026 ela chegou a mostrar a chave PIX e foi RETIRADA no mesmo
+  // dia: exibir meio de doação no app é o que a guideline 3.2.2(iv) proíbe
+  // ("não queremos correr o risco disso sair do ar"). A tela de texto voltou
+  // por pedido do Marcos — SEM chave, QR, link de pagamento ou valor.
+  if (!FEATURES.generosidade) return <GenerosidadeTexto />;
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
