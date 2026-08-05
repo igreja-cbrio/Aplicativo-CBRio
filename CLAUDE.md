@@ -36,15 +36,18 @@ módulo**. Roda em **Android e iOS**.
   MESMA `version` do app.json (runtime 1.0.0) e que já contenham
   `expo-updates`. Mudança nativa (módulo, plugin, permissão) continua exigindo
   build novo + revisão.
-  ⚠️⚠️ **O BUILD iOS DA LOJA NÃO RECEBE OTA** (medido em 05/08/2026 — a nota
-  antiga aqui dizia "build iOS ≥ 20" e estava ERRADA): o build iOS mais recente
-  no EAS é o **#16, de 11/06** (commit `6387fd9`) e o OTA só foi configurado em
-  **12/06** (commit `f3810c5`) — conferido com
-  `git merge-base --is-ancestor f3810c5 6387fd9` (**não** é ancestral). Ou seja:
-  o binário do iPhone é ANTERIOR ao expo-updates e ignora todo update publicado.
-  **Android recebe** (build #5, de 24/07, commit `6202102`, posterior ao OTA).
-  Enquanto não sair build iOS novo, o que publicamos por OTA existe só no
-  Android.
+  ⚠️⚠️ **NÃO DÁ PRA AFIRMAR PELO EAS QUE O iPHONE RECEBE OTA** (apurado em
+  05/08/2026): o EAS **não tem nenhum build iOS depois de 11/06** (o mais recente
+  lá é o #16, commit `6387fd9`), e o OTA só foi configurado em **12/06** (commit
+  `f3810c5` · `git merge-base --is-ancestor f3810c5 6387fd9` → **não** é
+  ancestral). Se o binário da loja fosse esse, ele ignoraria todo update.
+  **MAS** o contador de buildNumber remoto do EAS estava em **31** (o build novo
+  saiu como **32**), o que indica build feito FORA do EAS (Xcode/Transporter) ou
+  `build:version:set` — então o binário publicado pode ser mais novo e receber
+  OTA. **Só o App Store Connect responde qual build está no ar.** Não repetir
+  nenhuma das duas versões como fato sem olhar lá.
+  **Android recebe, isso sim está conferido** (build #5, de 24/07, commit
+  `6202102`, posterior ao OTA).
   ⚠️ **`eas.json` · perfil production ganhou `"environment": "production"`**
   (05/08/2026): o `env` inline do perfil tem URL e merchant do Apple Pay mas
   **NÃO tem `EXPO_PUBLIC_SUPABASE_ANON_KEY`** — ela vive nas EAS environment
