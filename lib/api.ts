@@ -603,7 +603,7 @@ export function completarCadastroApp(dados: {
   telefone: string;
   data_nascimento: string;
   email?: string;
-  cpf?: string;
+  cpf?: string; // opcional na porta (ver comentário em completar-cadastro.tsx)
   // Obrigatório: o backend exige (identidade/completar · exigirSexo: true).
   sexo: "masculino" | "feminino";
 }): Promise<{ ok: boolean; criado?: boolean }> {
