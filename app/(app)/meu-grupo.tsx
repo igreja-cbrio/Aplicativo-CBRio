@@ -138,24 +138,13 @@ export default function MeuGrupoScreen() {
         <BuscadorGrupos embutido />
       ) : (
       <ScrollView contentContainerStyle={styles.content}>
-        {grupos && grupos.some((g) => g.funcao === "lider") && (
-          <Pressable style={styles.pedidosCard} onPress={() => router.navigate("/grupo-inscricoes")} accessibilityRole="button">
-            <View style={styles.pedidosIcon}>
-              <Ionicons name="person-add-outline" size={20} color={colors.brandMid} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.pedidosTitulo}>{t("Inscrições do grupo")}</Text>
-              <Text style={styles.pedidosSub}>
-                {pedidosPend > 0
-                  ? `${pedidosPend} ${pedidosPend === 1 ? t("inscrição aguardando") : t("inscrições aguardando")}`
-                  : t("Nenhuma inscrição aguardando")}
-              </Text>
-            </View>
-            {pedidosPend > 0 && <View style={styles.pedidosBadge}><Text style={styles.pedidosBadgeTxt}>{pedidosPend}</Text></View>}
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-          </Pressable>
-        )}
-
+        {/* ⚠️ O botão "Inscrições do grupo" SAIU daqui (Marcos · 05/08/2026):
+            "ao apertar gerenciar grupo, ali devem ter TODAS as opções para se
+            fazer em um grupo". Duas portas pra aprovar pedido é o que fazia o
+            líder achar que existiam dois lugares diferentes — a aprovação agora
+            é a aba "Pedidos" dentro de Gerenciar grupo. A rota
+            /grupo-inscricoes continua viva (link antigo e notificação de push
+            apontam pra ela). */}
         {grupos === null ? (
           <View style={styles.center}><ActivityIndicator color={colors.brandMid} /></View>
         ) : grupos.length === 0 ? (

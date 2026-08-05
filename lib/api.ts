@@ -90,6 +90,19 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   return resp.json().catch(() => ({}) as T);
 }
 
+/** PUT — mesmo desenho do apiPatch (o app não tinha; a rota de função de
+ *  participante de grupo é PUT no backend, espelhando a do web). */
+export async function apiPut<T>(path: string, body: unknown): Promise<T> {
+  const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json", ...(await authHeaders()) };
+  const resp = await fetch(`${BASE}${path}`, { method: "PUT", headers, body: JSON.stringify(body) });
+  if (!resp.ok) {
+    const err = new Error(await parseErro(resp)) as Error & { status?: number };
+    err.status = resp.status;
+    throw err;
+  }
+  return resp.json().catch(() => ({}) as T);
+}
+
 export async function apiDelete<T>(path: string): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json", ...(await authHeaders()) };
   const resp = await fetch(`${BASE}${path}`, { method: "DELETE", headers });
@@ -303,6 +316,81 @@ export function recusarPedidoGrupo(id: string, motivo: string): Promise<{ ok: bo
   return apiPost<{ ok: boolean }>(`/app/grupos/pedidos/${encodeURIComponent(id)}/rejeitar`, { motivo });
 }
 
+// ===== Grupos · GERENCIAR (tudo do líder num lugar só · 05/08/2026) =====
+// Pedido do Marcos: "ao apertar gerenciar grupo, ali devem ter TODAS as opções
+// para se fazer em um grupo". Os endpoints ficam em routes/app.js e reusam os
+// escritores canônicos do ERP (RPC de encontro, aprovarPedidoCore).
+
+/** Funções que o APP pode dar. ⚠️ `lider` NÃO entra: quem lidera é
+ *  `mem_grupos.lider_id`, e esse campo decide quem recebe o WhatsApp do grupo
+ *  (lei de 31/07). Trocar liderança é ato da coordenação. */
+export const FUNCOES_QUE_O_APP_DA = ["frequentador", "lider_treinamento", "co_lider"] as const;
+export type FuncaoApp = (typeof FUNCOES_QUE_O_APP_DA)[number];
+
+export function mudarFuncaoMembroGrupo(grupoId: string, rowId: string, funcao: FuncaoApp) {
+  return apiPut<{ ok: boolean; funcao: string }>(
+    `/app/grupos/${grupoId}/membros/${rowId}/funcao`, { funcao }
+  );
+}
+
+export function registrarSaidaGrupo(grupoId: string, rowId: string, motivo?: string) {
+  return apiPost<{ ok: boolean }>(
+    `/app/grupos/${grupoId}/membros/${rowId}/sair`, { motivo: motivo || "" }
+  );
+}
+
+/** ⚠️ Transferir NÃO põe a pessoa no outro grupo: cria um PEDIDO pro líder de lá
+ *  aprovar. A saída do grupo atual é um passo separado (o líder decide). */
+export function transferirMembroGrupo(grupoId: string, rowId: string, destinoGrupoId: string) {
+  return apiPost<{ ok: boolean; destino?: string; ja_no_destino?: boolean; ja_pedido?: boolean }>(
+    `/app/grupos/${grupoId}/membros/${rowId}/transferir`, { destino_grupo_id: destinoGrupoId }
+  );
+}
+
+export type GrupoEncontro = {
+  id: string;
+  data: string;
+  tema: string | null;
+  observacoes: string | null;
+  registrado_por_nome: string | null;
+  presentes: number;
+};
+
+export function getEncontrosGrupo(grupoId: string): Promise<{ encontros: GrupoEncontro[] }> {
+  return apiGet<{ encontros: GrupoEncontro[] }>(`/app/grupos/${grupoId}/encontros`);
+}
+
+/** Registra a frequência do encontro. `presentes` = ids de MEMBRO (não da linha
+ *  do roster) — o servidor confere contra o roster ativo. */
+export function registrarEncontroGrupo(
+  grupoId: string,
+  body: { data?: string; tema?: string; observacoes?: string; presentes: string[] }
+) {
+  return apiPost<{ ok: boolean; encontro_id: string; presentes: number }>(
+    `/app/grupos/${grupoId}/encontros`, body
+  );
+}
+
+/** O líder pede ajuda à coordenação. Chega como notificação + push pra quem
+ *  cuida de Grupos (não abre "ticket" — não existe fila com resolvido ainda). */
+export function pedirAjudaGrupo(grupoId: string, mensagem: string) {
+  return apiPost<{ ok: boolean }>(`/app/grupos/${grupoId}/ajuda`, { mensagem });
+}
+
+export type GrupoMaterial = {
+  id: string;
+  nome: string;
+  tipo: string | null;
+  url: string | null;
+  etiquetas: string[];
+  estudo_semana: boolean;
+  created_at: string;
+};
+
+export function getMateriaisGrupo(grupoId: string): Promise<{ materiais: GrupoMaterial[] }> {
+  return apiGet<{ materiais: GrupoMaterial[] }>(`/app/grupos/${grupoId}/materiais`);
+}
+
 // Grupos que EU gerencio (líder OU supervisor) — com contagens. Faz o app
 // "ver os grupos que gerencio" mesmo sem nenhuma inscrição pendente.
 export type GrupoMeu = {
@@ -323,7 +411,10 @@ export function listarMeusGruposLider(): Promise<{ admin: boolean; grupos: Grupo
 
 // Detalhe do grupo (líder): roster ativo + inscrições pendentes daquele grupo.
 export type GrupoMembro = {
+  /** id da LINHA do roster (`mem_grupo_membros.id`) — é o que as ações usam. */
   id: string;
+  /** id da PESSOA (`mem_membros.id`) — é o que a chamada de frequência manda. */
+  membro_id: string | null;
   nome: string;
   telefone: string | null;
   funcao: string | null;
