@@ -98,6 +98,11 @@ export default function CompletarCadastroScreen() {
   const [telefone, setTelefone] = useState("");
   const [nascimento, setNascimento] = useState("");
   const [cpfOpcional, setCpfOpcional] = useState("");
+  // ⚠️ Sexo OBRIGATÓRIO (Matheus · 05/08: "em todos os formulários"). Canônico
+  // `masculino|feminino`, NUNCA "outro" — a coluna e os KPIs por sexo do sistema
+  // não aceitam outro valor. O backend passou a exigir no /identidade/completar,
+  // então sem este campo a tela não conseguiria mais salvar.
+  const [sexo, setSexo] = useState<"masculino" | "feminino" | null>(null);
 
   const concluir = useCallback(async () => {
     await reload();
@@ -162,6 +167,7 @@ export default function CompletarCadastroScreen() {
     if (nome.trim().split(/\s+/).length < 2) { setErro(t("Escreva seu nome completo.")); return; }
     if (soDigitos(telefone).length < 10) { setErro(t("Informe seu telefone com DDD.")); return; }
     if (!iso) { setErro(t("Informe sua data de nascimento (dd/mm/aaaa).")); return; }
+    if (!sexo) { setErro(t("Selecione o sexo.")); return; }
     const cpfDig = soDigitos(cpfOpcional);
     if (cpfDig && cpfDig.length !== 11) { setErro(t("O CPF precisa ter 11 números (ou deixe em branco).")); return; }
     setEnviando(true);
@@ -170,6 +176,7 @@ export default function CompletarCadastroScreen() {
         nome_completo: nome.trim(),
         telefone: soDigitos(telefone),
         data_nascimento: iso,
+        sexo,
         email: user?.email || undefined,
         cpf: cpfDig || undefined,
       });
@@ -291,6 +298,28 @@ export default function CompletarCadastroScreen() {
               keyboardType="number-pad"
               placeholder="dd/mm/aaaa"
             />
+            <View style={styles.sexoBloco}>
+              <Text style={styles.sexoLabel}>{t("Sexo")}</Text>
+              <View style={styles.sexoRow}>
+                {([
+                  { v: "masculino", label: t("Masculino") },
+                  { v: "feminino", label: t("Feminino") },
+                ] as const).map((opt) => {
+                  const ativo = sexo === opt.v;
+                  return (
+                    <Pressable
+                      key={opt.v}
+                      onPress={() => setSexo(opt.v)}
+                      style={[styles.sexoPill, ativo && styles.sexoPillOn]}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: ativo }}
+                    >
+                      <Text style={[styles.sexoTxt, ativo && styles.sexoTxtOn]}>{opt.label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
             <Input
               label={t("CPF (opcional, ajuda a achar seu cadastro)")}
               value={cpfOpcional}
@@ -318,6 +347,17 @@ export default function CompletarCadastroScreen() {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
+    sexoBloco: { gap: spacing.xs },
+    sexoLabel: { color: colors.text, fontSize: font.size.sm, fontWeight: "600" },
+    sexoRow: { flexDirection: "row", gap: spacing.sm },
+    sexoPill: {
+      flex: 1, paddingVertical: 10, borderRadius: radius.md, borderWidth: 1,
+      borderColor: colors.glassBorder, backgroundColor: colors.glass,
+      alignItems: "center", justifyContent: "center",
+    },
+    sexoPillOn: { backgroundColor: colors.brandMid, borderColor: colors.brandMid },
+    sexoTxt: { color: colors.text, fontSize: font.size.sm, fontWeight: "600" },
+    sexoTxtOn: { color: "#ffffff" },
     safe: { flex: 1, backgroundColor: colors.background },
     content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: 60 },
     hero: { alignItems: "center", gap: spacing.sm, marginTop: spacing.xl },
