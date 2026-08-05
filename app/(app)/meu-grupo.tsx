@@ -88,7 +88,7 @@ export default function MeuGrupoScreen() {
     const tel = (g.lider?.telefone || "").replace(/\D/g, "");
     if (!tel) return;
     const num = tel.startsWith("55") ? tel : `55${tel}`;
-    trackEvento("grupo_falar_lider", { grupo: g.id });
+    trackEvento("grupo_falar_lider", { entity_id: g.id });
     Linking.openURL(`https://wa.me/${num}`);
   }
 
@@ -184,7 +184,7 @@ export default function MeuGrupoScreen() {
                         key={m.id}
                         style={styles.material}
                         disabled={!m.url}
-                        onPress={() => { if (m.url) { trackEvento("grupo_material_aberto", { grupo: g.id }); Linking.openURL(m.url); } }}
+                        onPress={() => { if (m.url) { trackEvento("grupo_material_aberto", { entity_id: g.id }); Linking.openURL(m.url); } }}
                       >
                         <Ionicons name="document-text-outline" size={18} color={colors.brandMid} />
                         <Text style={styles.materialNome} numberOfLines={1}>{m.nome}</Text>

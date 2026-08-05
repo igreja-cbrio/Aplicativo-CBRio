@@ -270,6 +270,43 @@ casar). **⚠️ Cold start CONSOME a resposta (04/08/2026):** `getLastNotificat
   excluiu `modules/apple-pay/ios|android` do upload do EAS e os builds 1–9
   saíram sem o módulo nativo do Apple Pay.
 
+## ⚠️ Telemetria (`lib/telemetria.ts`) · o contrato com o backend (05/08/2026)
+
+O app manda telas/ações/erros em lote pra `POST /api/app/telemetria`, que grava
+em `app_eventos` (visível em `/admin/app-analytics` no sistema).
+
+**Ela ficou 5 dias MORTA em silêncio** (31/07→04/08): o sistema criou
+`app_eventos.event_id NOT NULL` pro dedup e o app não mandava esse campo. A
+pegadinha: o normalizador do backend devolvia `event_id: undefined` e
+**`Object.keys()` inclui chave com `undefined`**, então o supabase-js montava
+`?columns=…,event_id`, o PostgREST inseria NULL e dava `23502` — **lote inteiro
+descartado**. Como o endpoint responde **HTTP 200 `{ok:false}`** de propósito
+(telemetria não pode quebrar o app) e o app ignorava o corpo, ninguém soube.
+Descobri quando fui usar a telemetria pra diagnosticar o próprio app.
+
+- O app agora manda **`event_id`** (uuid por evento · `expo-crypto`),
+  **`occurred_at`** (quando ACONTECEU · o `created_at` é quando chegou),
+  **`session_id`** (uma abertura), **`installation_id`** (aparelho, persistido em
+  `cbrio:installation_id`), **`os_version`**, **`device_model`**,
+  **`manufacturer`** e **`build_number`**.
+- ⚠️ Tudo de `Platform.constants` + `expo-constants` — **sem dependência nativa
+  nova**, senão a mudança não sairia por OTA.
+- ⚠️ **`Constants.deviceName` é PROIBIDO**: no iOS vem "iPhone de \<nome da
+  pessoa\>" (PII). No iOS mandamos o formato (`handset`/`pad`), que responde
+  "celular ou tablet?" sem identificar ninguém.
+- O app **checa o corpo** da resposta (`{ok:false}` = falhou, mesmo com 200) e
+  **retenta o lote 1×** — reenviar é seguro porque o backend deduplica por
+  `event_id`. Fila limitada a 60 eventos (nunca cresce sem limite).
+- ⚠️ **`props` passa por WHITELIST no backend** e chave fora da lista é jogada
+  fora **sem erro**: das 10 chaves que o app mandava, **só `message` passava**.
+  Chaves válidas: `message` · `fatal` · `screen` · `route` · `action` · `reason` ·
+  `status_code` · `endpoint` · `permission` · `notification_type` · `entity_id` ·
+  `label` · `source`. **`entity_id`** = id de COISA (grupo, vídeo, comunicado),
+  **nunca de pessoa; `label`** = rótulo curto de enum NOSSO, **nunca texto que a
+  pessoa digitou**. Chave nova exige mudar a whitelist em
+  `backend/services/systemMobileOps.js` (repo do sistema) — e responder antes:
+  *isso pode identificar alguém?*
+
 ## Performance / carga no Supabase
 
 Otimizações pra aguentar picos (muita gente abrindo no culto). Tudo no app:

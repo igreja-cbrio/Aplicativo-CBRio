@@ -98,7 +98,7 @@ export default function MuralScreen() {
             <Pressable
               key={c.id}
               style={styles.card}
-              onPress={() => trackEvento("comunicado_aberto", { id: c.id })}
+              onPress={() => trackEvento("comunicado_aberto", { entity_id: c.id })}
             >
               {c.foto_url ? <Image source={{ uri: c.foto_url }} style={styles.foto} resizeMode="cover" /> : null}
               <View style={styles.cardBody}>

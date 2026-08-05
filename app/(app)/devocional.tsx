@@ -93,7 +93,7 @@ export default function DevocionalScreen() {
 
   function abrirPense() {
     if (!pense) return;
-    trackEvento("pense_aberto", { id: pense.video_id });
+    trackEvento("pense_aberto", { entity_id: pense.video_id });
     Linking.openURL(`https://www.youtube.com/watch?v=${pense.video_id}`);
   }
 

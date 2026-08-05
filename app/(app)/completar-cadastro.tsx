@@ -110,7 +110,11 @@ export default function CompletarCadastroScreen() {
     setEnviando(true);
     try {
       const r = await identidadePorCpf(soDigitos(cpf));
-      trackEvento("identidade_cpf", { encontrado: r.encontrado, pode: !!r.pode_confirmar });
+      trackEvento("identidade_cpf", {
+        // `reason` está na whitelist do backend; `encontrado`/`pode` não estavam
+        // e iam pro lixo em silêncio.
+        reason: r.encontrado ? (r.pode_confirmar ? "encontrado" : `encontrado_${r.motivo || "sem_canal"}`) : "nao_encontrado",
+      });
       if (r.encontrado && r.pode_confirmar) {
         setAchado(r); setPasso("codigo");
       } else if (r.encontrado && (r.motivo === "sem_email" || r.motivo === "sem_telefone")) {
@@ -169,7 +173,7 @@ export default function CompletarCadastroScreen() {
         email: user?.email || undefined,
         cpf: cpfDig || undefined,
       });
-      trackEvento("identidade_completada", { criado: !!r.criado });
+      trackEvento("identidade_completada", { reason: r.criado ? "criado" : "vinculado" });
       await concluir();
     } catch (e) {
       setErro(e instanceof Error ? e.message : t("Não foi possível salvar agora."));

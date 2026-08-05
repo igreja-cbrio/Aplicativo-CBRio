@@ -74,7 +74,7 @@ export default function FamiliaScreen() {
     setGerando(parentesco);
     try {
       const conv = await criarConviteFamilia(parentesco);
-      trackEvento("familia_convite_gerado", { parentesco });
+      trackEvento("familia_convite_gerado", { label: parentesco });
       setEscolhendo(false);
       await Share.share({ message: conv.mensagem });
     } catch (e: any) {

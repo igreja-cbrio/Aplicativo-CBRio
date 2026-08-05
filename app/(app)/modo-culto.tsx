@@ -96,7 +96,7 @@ export default function ModoCulto() {
     setEnviando(true);
     try {
       await apiPost("/app/culto/decisao", { tipo, ambiente: online ? "online" : "presencial", observacao: obs.trim() });
-      trackEvento("decisao_registrada", { tipo });
+      trackEvento("decisao_registrada", { label: tipo });
       setRegistrou(true);
     } catch (e) {
       // ⚠️ Nunca falhar em silêncio: é uma decisão de fé — o usuário PRECISA
