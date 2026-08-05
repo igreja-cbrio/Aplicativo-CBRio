@@ -46,6 +46,7 @@ export function useVoluntariadoSync(membroId: string | null | undefined) {
         .from("mem_membros")
         .select("voluntario")
         .eq("id", membroId)
+        .is("deleted_at", null)
         .maybeSingle();
 
       if (ativo.current) {

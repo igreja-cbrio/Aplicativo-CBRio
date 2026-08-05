@@ -21,6 +21,7 @@ import { SeusDados, fichaCompleta } from "@/components/inscricoes/SeusDados";
 import { apiGet, apiPost, criarInscricaoApi, getVoluntariadoOpcoes, getSupervisorInfo, type VoluntariadoOpcao } from "@/lib/api";
 import { useRouter } from "expo-router";
 import { useVoluntariadoSync } from "@/lib/useVoluntariadoSync";
+import { estadoVoluntariado, volEncerrado } from "@/lib/volStatus";
 import { type MinhaEscala } from "@/lib/escalas";
 
 type EscalaApi = {
@@ -68,9 +69,17 @@ export default function VoluntariadoScreen() {
   const [volProfileId, setVolProfileId] = useState<string | null>(null);
   const statusIns = me?.inscricao?.status ?? null;
   const semInscricao = me !== null && me.inscricao === null;
+  // ⚠️ Régua ÚNICA em lib/volStatus.ts (a MESMA do hub de Inscrições). O ERP tem
+  // 7 status e esta tela tratava 3 — `nao_responde`/`nao_pode_ou_duplicata`/
+  // `kids` caíam no `else` (formulário) enquanto o hub dizia "Pendente".
+  const estadoVol = estadoVoluntariado(statusIns, me?.voluntario_ativo);
   const inscrito = statusIns === "inscrito";
   const enviadoMinisterio = statusIns === "enviado_ministerio";
-  const integrado = statusIns === "integrado" || me?.voluntario_ativo === true;
+  const integrado = estadoVol === "ativo";
+  // A equipe encerrou a fila desta pessoa: o formulário é reoferecido (o dedup do
+  // backend permite), mas dizendo o que aconteceu — em vez de fingir que ela
+  // nunca se inscreveu.
+  const filaEncerrada = volEncerrado(statusIns);
 
   // ---- Minhas escalas + histórico de check-in (via backend · service_role) ----
   const [escalas, setEscalas] = useState<MinhaEscala[]>([]);
@@ -478,6 +487,22 @@ export default function VoluntariadoScreen() {
             </View>
           ) : (
             <View style={styles.section}>
+              {/* A equipe encerrou a fila desta pessoa (`nao_responde` /
+                  `nao_pode_ou_duplicata` / `desistente`). O formulário volta a
+                  aparecer — o dedup do backend permite —, mas dizendo o que
+                  aconteceu: antes o app mostrava "Pendente" no hub e o
+                  formulário aqui, sem explicar nada. */}
+              {filaEncerrada && (
+                <View style={styles.statusCard}>
+                  <Ionicons name="refresh-outline" size={22} color={colors.brandMid} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.statusTitulo}>{t("Sua inscrição anterior foi encerrada")}</Text>
+                    <Text style={styles.statusTxt}>
+                      {t("Não conseguimos concluir o processo da última vez. Se quiser servir, pode se inscrever de novo abaixo.")}
+                    </Text>
+                  </View>
+                </View>
+              )}
               {/* ⚠️ Só pra ficha INCOMPLETA (instalação antiga): com a ficha
                   fechada o CPF já está no cadastro e o servidor cruza sozinho —
                   pedir de novo era justamente o "campo padrão" que o Marcos não

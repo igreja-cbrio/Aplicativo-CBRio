@@ -84,6 +84,8 @@ export default function PerfilScreen() {
           .from("mem_membros")
           .select("nome, cpf, data_nascimento, telefone, foto_url")
           .eq("id", prof.membro_id)
+          // Cadastro soft-deletado não serve o app (mesma régua do backend).
+          .is("deleted_at", null)
           .maybeSingle();
         if (m) {
           setCpf(m.cpf ? maskCPF(m.cpf) : "");
@@ -208,6 +210,7 @@ export default function PerfilScreen() {
           .from("mem_membros")
           .select("nome, cpf, data_nascimento, telefone, foto_url")
           .eq("id", vId as string)
+          .is("deleted_at", null)
           .maybeSingle();
         if (m) {
           if (m.nome) setName(m.nome);

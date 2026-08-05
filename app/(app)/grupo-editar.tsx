@@ -61,6 +61,10 @@ export default function GrupoEditarScreen() {
       .from("mem_grupos")
       .select("id, nome, categoria, descricao, tema, dia_semana, horario, local, endereco, bairro, foto_url")
       .eq("id", id)
+      // ⚠️ só `deleted_at` (grupo apagado não existe). NÃO filtrar `ativo`: o
+      // líder precisa poder editar grupo pausado — quem trava a INSCRIÇÃO é o
+      // /grupo-detalhe, que é a face pública.
+      .is("deleted_at", null)
       .maybeSingle();
     setGrupo((data as GrupoEdit) ?? null);
     setCarregando(false);

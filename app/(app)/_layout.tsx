@@ -1,13 +1,13 @@
 import { useEffect, useRef } from "react";
 import { Stack, router, usePathname } from "expo-router";
-import { AppState, View } from "react-native";
+import { AppState, BackHandler, Platform, View } from "react-native";
 import { MembroProvider } from "@/contexts/MembroContext";
 import { CadastroGate } from "@/components/auth/CadastroGate";
 import { TopBar } from "@/components/ui/TopBar";
 import { BottomBar } from "@/components/ui/BottomBar";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
-import { registrarRotaAtual } from "@/lib/hierarquia";
+import { ehRaiz, registrarRotaAtual, subirUmNivel } from "@/lib/hierarquia";
 
 /**
  * ============================================================================
@@ -84,10 +84,34 @@ export default function AppLayout() {
   const rotaRef = useRef(pathname);
   rotaRef.current = pathname;
 
-  // A seta de voltar é `cd ..` (lib/hierarquia.ts). As ~25 telas com seta
+  // A seta de voltar é `cd ..` (lib/hierarquia.ts). As ~29 telas com seta
   // própria chamam `subirUmNivel()` sem argumento, então quem sabe onde a
   // pessoa está é este layout — o único lugar que já observa o pathname.
   registrarRotaAtual(pathname);
+
+  // ⚠️ BOTÃO FÍSICO DO ANDROID = MESMA ÁRVORE DA SETA (pedido do Marcos ·
+  // 05/08/2026: "faça o botao fisico ser igual ao da seta"). Sem isto o hardware
+  // back andava no HISTÓRICO enquanto a seta subia um nível — dois
+  // comportamentos pra um gesto que a pessoa entende como "voltar".
+  // ⚠️ Na HOME o handler NÃO intercepta (devolve false): ali o certo é o sistema
+  // minimizar/sair o app. Engolir o back na raiz é como se faz um app que não
+  // fecha — e o Android reclama disso na revisão da Play Store.
+  // ⚠️ Também não intercepta em `/completar-cadastro`: sair de lá por gesto
+  // deixaria a pessoa numa área que o CadastroGate manda de volta na hora
+  // (loop visível). Quem sai de lá é o próprio fluxo, ao concluir.
+  // ⚠️ `Modal` do react-native (usado em 6 telas com `onRequestClose`) trata o
+  // back no próprio diálogo nativo e NÃO chega aqui — modal aberto fecha o
+  // modal, como antes.
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      const rota = rotaRef.current;
+      if (ehRaiz(rota) || rota.startsWith("/completar-cadastro")) return false;
+      subirUmNivel(rota);
+      return true; // consumido: não deixa o histórico agir também
+    });
+    return () => sub.remove();
+  }, []);
 
   // Voltar depois de um tempo fora = começar na Home (ver MS_PARA_RECOMECAR).
   useEffect(() => {

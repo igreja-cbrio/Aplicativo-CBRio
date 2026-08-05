@@ -59,6 +59,7 @@ export async function getBatismoAnterior(membroId: string): Promise<BatismoAnter
     .from("mem_membros")
     .select("batizado_outra_igreja, igreja_batismo_anterior")
     .eq("id", membroId)
+    .is("deleted_at", null)
     .maybeSingle();
   return {
     batizado_outra_igreja: !!(data as { batizado_outra_igreja?: boolean } | null)?.batizado_outra_igreja,
