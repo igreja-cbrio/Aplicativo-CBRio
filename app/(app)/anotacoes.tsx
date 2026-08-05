@@ -40,7 +40,12 @@ export default function AnotacoesScreen() {
         <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>{t("Minhas anotações")}</Text>
+        {/* ⚠️ "do devocional" no título (05/08/2026): estas anotações vêm do
+            SERVIDOR, ligadas ao check-in do devocional (mem_devocionais). As
+            anotações da PREGAÇÃO (tela No culto) são outra coisa e ficam só no
+            aparelho — com os dois chamados de "Minhas anotações", quem escrevia
+            no culto procurava aqui e não achava. */}
+        <Text style={styles.title}>{t("Anotações do devocional")}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -51,7 +56,7 @@ export default function AnotacoesScreen() {
       ) : itens.length === 0 ? (
         <EmptyState
           icon="create-outline"
-          titulo={t("Nenhuma anotação ainda")}
+          titulo={t("Nenhuma anotação do devocional ainda")}
           texto={t("Ao ler o devocional, escreva o que Deus falou com você — guardamos aqui pra você reler.")}
           acao={{ label: t("Ir para o devocional"), onPress: () => router.replace("/devocional") }}
         />

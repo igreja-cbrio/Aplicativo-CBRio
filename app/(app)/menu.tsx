@@ -64,8 +64,9 @@ export default function MenuScreen() {
    *  · **Check-in Kids** saiu daqui e virou um cartão DENTRO de "Minha família"
    *    — quem faz check-in de criança é o responsável, na tela onde ele cuida
    *    da própria família.
-   *  · **Generosidade** entrou em "Você" (chave PIX da igreja + texto),
-   *    fechando os 4 itens do quadro.
+   *  · **Generosidade** entrou e SAIU no mesmo dia: a tela mostrava a chave
+   *    PIX, e exibir chave de doação é o que a App Store proíbe (3.2.2(iv)).
+   *    "Você" fica com 3 itens até termos uma forma aprovada.
    *  · **"Inscrições do meu grupo"** virou **"Meu grupo"** e aponta pra MESMA
    *    tela da barra (`/meu-grupo`) — era isso que fazia "grupos" no menu e
    *    "Grupos" na barra abrirem coisas diferentes. A fila de quem lidera já é
@@ -82,7 +83,10 @@ export default function MenuScreen() {
         { label: "Meu perfil", icon: "person-outline", onPress: () => router.navigate("/perfil") },
         { label: "Minha família", icon: "people-outline", onPress: () => router.navigate("/familia") },
         { label: "Sua jornada", icon: "trail-sign-outline", onPress: () => router.navigate("/jornada") },
-        { label: "Generosidade", icon: "gift-outline", onPress: () => router.navigate("/generosidade") },
+        // ⚠️ SEM "Generosidade" aqui: a tela com a chave PIX foi retirada em
+        // 05/08/2026 (guideline 3.2.2(iv) da App Store · decisão do Marcos de
+        // não arriscar o app sair do ar). Quando existir uma forma aprovada de
+        // contribuir, o item volta pra este quadro.
       ],
     },
     {

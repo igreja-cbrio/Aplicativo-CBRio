@@ -98,7 +98,20 @@ function ChipRow({
   );
 }
 
-export default function GruposScreen() {
+/**
+ * BUSCADOR de grupos (lista/mapa + busca + filtros).
+ *
+ * ⚠️ Vive como COMPONENTE porque é usado em 2 lugares (05/08/2026, unificação
+ * pedida pelo Marcos): como ABA dentro de "Meus grupos" (`embutido`) e como a
+ * tela `/grupos` (o wrapper no fim deste arquivo — mantido pra não quebrar o
+ * card de Grupos no hub de Inscrições, deep links e a Jornada de quem AINDA não
+ * tem grupo).
+ *
+ * `embutido` = sem SafeAreaView/`Stack.Screen`/cabeçalho: quem manda no topo é
+ * a tela que hospeda. O fluxo de INSCRIÇÃO não muda em nada — tocar num grupo
+ * segue abrindo `/grupo-detalhe`, que é quem tem o "Quero participar".
+ */
+export function BuscadorGrupos({ embutido = false }: { embutido?: boolean }) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
@@ -275,10 +288,16 @@ export default function GruposScreen() {
     );
   }
 
+  const Container = embutido ? View : SafeAreaView;
+  const propsContainer = embutido
+    ? { style: styles.safe }
+    : { style: styles.safe, edges: ["top", "left", "right"] as const };
+
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
-      <Stack.Screen options={{ headerShown: false }} />
-      <View style={styles.header}>
+    <Container {...propsContainer}>
+      {!embutido && <Stack.Screen options={{ headerShown: false }} />}
+      <View style={[styles.header, embutido && styles.headerEmbutido]}>
+        {!embutido && (
         <View style={styles.topRow}>
           <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
@@ -291,6 +310,7 @@ export default function GruposScreen() {
           <Text style={styles.title}>{t("Encontrar um grupo")}</Text>
           <View style={{ width: 24 }} />
         </View>
+        )}
 
         <View style={styles.toggle}>
           <Pressable
@@ -421,14 +441,20 @@ export default function GruposScreen() {
           )}
         </ScrollView>
       )}
-    </SafeAreaView>
+    </Container>
   );
+}
+
+/** Rota `/grupos` — o buscador em tela própria. */
+export default function GruposScreen() {
+  return <BuscadorGrupos />;
 }
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
     header: { padding: spacing.lg, paddingBottom: spacing.md, gap: spacing.md },
+    headerEmbutido: { paddingTop: 0 },
     listContent: { paddingHorizontal: spacing.lg, paddingBottom: 40, gap: spacing.md },
     mapWrap: { flex: 1, paddingHorizontal: spacing.lg, paddingBottom: 100 },
     topRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: spacing.sm },

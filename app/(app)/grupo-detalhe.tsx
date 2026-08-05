@@ -39,7 +39,7 @@ type GrupoDetalhe = {
   foto_url: string | null;
 };
 
-type Estado = "carregando" | "participa" | "pendente" | "pode_pedir" | "sem_vinculo" | "fechada";
+type Estado = "carregando" | "participa" | "pendente" | "pode_pedir" | "sem_vinculo" | "fechada" | "sem_cpf";
 
 export default function GrupoDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -94,8 +94,15 @@ export default function GrupoDetalheScreen() {
     }
     // Pode pedir — mas só se a temporada de inscrição estiver aberta.
     const { aberta } = await getTemporadaGrupos();
-    setEstado(aberta ? "pode_pedir" : "fechada");
-  }, [id, membro?.membroId]);
+    if (!aberta) { setEstado("fechada"); return; }
+    // ⚠️ O BACKEND recusa inscrição sem CPF (Contrato de porta · desde
+    // 24/07/2026: `POST /app/inscricoes` devolve 400 "CPF é obrigatório").
+    // Medido em 05/08/2026: **50 das 75 contas do app** apontam pra cadastro
+    // SEM CPF — ou seja, 2 de cada 3 pessoas tocavam em "Quero participar" e
+    // levavam um erro. Agora a tela pede o cadastro ANTES, com caminho pronto.
+    const cpfOk = String(membro?.cpf || "").replace(/\D/g, "").length === 11;
+    setEstado(cpfOk ? "pode_pedir" : "sem_cpf");
+  }, [id, membro?.membroId, membro?.cpf]);
 
   useEffect(() => {
     carregar();
@@ -199,6 +206,16 @@ export default function GrupoDetalheScreen() {
               <View style={{ gap: spacing.sm }}>
                 <Text style={styles.muted}>{t("Vincule seu perfil (CPF) para participar.")}</Text>
                 <Button title={t("Ir para o perfil")} onPress={() => router.navigate("/perfil")} />
+              </View>
+            ) : estado === "sem_cpf" ? (
+              <View style={{ gap: spacing.sm }}>
+                <Text style={styles.muted}>
+                  {t("Pra entrar num grupo a igreja precisa do seu CPF no cadastro. Leva um minuto.")}
+                </Text>
+                <Button
+                  title={t("Completar meu cadastro")}
+                  onPress={() => router.navigate("/completar-cadastro")}
+                />
               </View>
             ) : estado === "fechada" ? (
               <View style={styles.statusOk}>

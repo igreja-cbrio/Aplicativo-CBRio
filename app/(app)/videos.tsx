@@ -54,12 +54,6 @@ export default function VideosScreen() {
     trackEvento("serie_aberta", { entity_id: s.playlist_id });
     Linking.openURL(`https://www.youtube.com/playlist?list=${s.playlist_id}`);
   }
-  function aoVivo() {
-    if (!d?.canal_live) return;
-    trackEvento("assistir_ao_vivo");
-    Linking.openURL(d.canal_live);
-  }
-
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -72,16 +66,10 @@ export default function VideosScreen() {
           <View style={{ width: 24 }} />
         </View>
 
-        {/* Ao vivo */}
-        <Pressable style={styles.aoVivo} onPress={aoVivo} accessibilityRole="button">
-          <View style={styles.aoVivoDot} />
-          <Ionicons name="play-circle" size={24} color="#fff" />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.aoVivoTitulo}>{t("Assistir ao vivo")}</Text>
-            <Text style={styles.aoVivoSub}>{t("Abre o culto ao vivo no YouTube")}</Text>
-          </View>
-          <Ionicons name="open-outline" size={18} color="rgba(255,255,255,0.85)" />
-        </Pressable>
+        {/* ⚠️ SEM "Assistir ao vivo" aqui (05/08/2026): o ao vivo é do CULTO e
+            vive em 2 lugares — o card vermelho da Home (enquanto está no ar) e
+            a tela No culto. Eram TRÊS portas pro mesmo link do YouTube. Esta
+            tela é o ACERVO de pregações. */}
 
         {!d ? (
           <View style={styles.center}><ActivityIndicator color={colors.brandMid} /></View>

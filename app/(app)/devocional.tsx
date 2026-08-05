@@ -177,7 +177,7 @@ export default function DevocionalScreen() {
             hitSlop={8}
             style={styles.anotacoesBtn}
             accessibilityRole="button"
-            accessibilityLabel={t("Minhas anotações")}
+            accessibilityLabel={t("Anotações do devocional")}
           >
             <Ionicons name="bookmark-outline" size={20} color={colors.brandMid} />
           </Pressable>

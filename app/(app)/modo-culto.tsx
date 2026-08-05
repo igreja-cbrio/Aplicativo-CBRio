@@ -186,7 +186,12 @@ export default function ModoCulto() {
               </View>
             )}
 
-            {/* Anotações da pregação */}
+            {/* Anotações da pregação.
+                ⚠️ Ficam SÓ NESTE APARELHO (AsyncStorage, uma por dia) e NÃO
+                aparecem em "Anotações do devocional", que vêm do servidor.
+                Mandar estas pro servidor exige tabela/endpoint novos — passo
+                combinado com o Marcos pra depois (05/08/2026). Até então, o
+                aviso abaixo evita a pessoa achar que está salvo na conta. */}
             <Text style={styles.secao}>{t("Anotações da pregação")}</Text>
             <View style={styles.card}>
               <TextInput
@@ -198,6 +203,9 @@ export default function ModoCulto() {
                 multiline
                 textAlignVertical="top"
               />
+              <Text style={styles.notaAviso}>
+                {t("Fica salvo só neste celular, por dia.")}
+              </Text>
               <Text style={styles.notaHint}>{t("Salvo automaticamente neste aparelho.")}</Text>
             </View>
           </>
@@ -219,6 +227,7 @@ const makeStyles = (colors: Palette) =>
     aoVivoDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: "#fff" },
     aoVivoTitulo: { color: "#fff", fontSize: font.size.lg, fontWeight: "800" },
     aoVivoSub: { color: "rgba(255,255,255,0.9)", fontSize: font.size.sm },
+    notaAviso: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 6 },
     secao: { color: colors.text, fontSize: font.size.md, fontWeight: "800", marginTop: spacing.sm },
     card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.glassBorder, borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm },
     cardSub: { color: colors.textMuted, fontSize: font.size.sm },
