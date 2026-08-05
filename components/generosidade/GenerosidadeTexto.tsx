@@ -11,9 +11,19 @@
 // retirar ao saber do risco: "não queremos correr o risco disso sair do ar;
 // vamos pensar em uma forma de fazer isso posteriormente". Esta tela é sobre o
 // VALOR (ensino), não sobre a transação.
+//
+// ✅ O QUE A MESMA GUIDELINE PERMITE (e é o que o botão abaixo faz): a 3.2.2(iv)
+// diz que app de arrecadação para causa "may only collect funds outside of the
+// app, such as via Safari". Então o caminho é **abrir a página de doação no
+// NAVEGADOR EXTERNO** (`Linking.openURL` → sai do app), nunca uma tela nossa.
+//
+// ⚠️⚠️ NÃO trocar por WebView, `expo-web-browser`/`openBrowserAsync`, iframe ou
+// modal com o site dentro. Navegador embutido é coletar DENTRO do app — é
+// exatamente o que derruba o app da loja. `Linking.openURL` não é preferência de
+// estilo aqui: é a diferença entre permitido e proibido.
 // ============================================================================
 import { useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,6 +31,11 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+
+// Host canônico com `www.` de propósito: o apex `cbrio.org` responde 307 e alguns
+// navegadores embutidos/antigos tropeçam no redirecionamento (mesma razão do
+// `lib/api.ts` e do `lib/eventos.ts`).
+const URL_DOAR = "https://www.cbrio.org/doar";
 
 export function GenerosidadeTexto() {
   const colors = useColors();
@@ -64,15 +79,29 @@ export function GenerosidadeTexto() {
         <GlassCard style={styles.card}>
           <Text style={styles.rotulo}>{t("Como contribuir")}</Text>
           <Text style={styles.p}>
-            {t("Estamos preparando esse caminho dentro do app. Enquanto isso, fale com a secretaria ou com a liderança da sua área — eles te orientam.")}
+            {t("A contribuição é feita na página da igreja, com Pix ou cartão. O botão abaixo abre o navegador do seu celular.")}
           </Text>
           <Pressable
-            onPress={() => router.navigate("/fale-conosco")}
+            onPress={() => {
+              // ⚠️ Navegador EXTERNO, sem WebView (ver o aviso no topo do arquivo).
+              // Falha silenciosa de propósito: se não houver navegador para abrir,
+              // a pessoa segue com o caminho de falar com a igreja logo abaixo.
+              Linking.openURL(URL_DOAR).catch(() => {});
+            }}
             style={({ pressed }) => [styles.btn, pressed && { opacity: 0.85 }]}
             accessibilityRole="button"
+            accessibilityHint={t("Abre a página de contribuição no navegador")}
           >
-            <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" />
-            <Text style={styles.btnTxt}>{t("Falar com a igreja")}</Text>
+            <Ionicons name="open-outline" size={18} color="#fff" />
+            <Text style={styles.btnTxt}>{t("Contribuir no site")}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.navigate("/fale-conosco")}
+            style={({ pressed }) => [styles.btnSec, pressed && { opacity: 0.85 }]}
+            accessibilityRole="button"
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.text} />
+            <Text style={styles.btnSecTxt}>{t("Falar com a igreja")}</Text>
           </Pressable>
         </GlassCard>
       </ScrollView>
@@ -105,4 +134,10 @@ const makeStyles = (colors: Palette) =>
       paddingVertical: 14, marginTop: spacing.xs,
     },
     btnTxt: { color: "#fff", fontSize: font.size.md, fontWeight: "700" },
+    btnSec: {
+      flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+      borderRadius: radius.full, borderWidth: 1, borderColor: colors.border,
+      paddingVertical: 14, marginTop: spacing.xs,
+    },
+    btnSecTxt: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
   });
