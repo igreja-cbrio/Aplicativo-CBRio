@@ -801,4 +801,23 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "começa em": { en: "starts in", es: "comienza en" },
   "AO VIVO agora": { en: "LIVE now", es: "EN VIVO ahora" },
   "Assistir online": { en: "Watch online", es: "Ver en línea" },
+  // Detalhe do evento (05/08/2026) — prazo, vagas, parcelas e ficha incompleta
+  "em até": { en: "in up to", es: "en hasta" },
+  "no cartão": { en: "on card", es: "con tarjeta" },
+  "Gratuito": { en: "Free", es: "Gratuito" },
+  "Inscrições até": { en: "Registration until", es: "Inscripciones hasta" },
+  "Vagas esgotadas": { en: "Sold out", es: "Plazas agotadas" },
+  "Última vaga!": { en: "Last spot!", es: "¡Última plaza!" },
+  "Restam": { en: "Remaining", es: "Quedan" },
+  "vagas": { en: "spots", es: "plazas" },
+  "Tem sorteio de prêmios": { en: "Includes prize draw", es: "Incluye sorteo de premios" },
+  "A igreja ainda não publicou os detalhes deste evento.": {
+    en: "The church hasn't published the details of this event yet.",
+    es: "La iglesia aún no publicó los detalles de este evento.",
+  },
+  "Pra se inscrever, complete seu cadastro.": {
+    en: "To register, complete your profile.",
+    es: "Para inscribirte, completa tu registro.",
+  },
+  "Falta": { en: "Missing", es: "Falta" },
 };

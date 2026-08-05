@@ -31,7 +31,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -89,6 +89,9 @@ export default function CompletarCadastroScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  // Pra onde volto ao concluir (a tela que me mandou pra cá). Sem isso o
+  // cadastro sempre despejava na Home.
+  const { retorno } = useLocalSearchParams<{ retorno?: string }>();
   const t = useT();
   const { reload } = useMembro();
 
@@ -145,8 +148,17 @@ export default function CompletarCadastroScreen() {
 
   const concluir = useCallback(async () => {
     await reload();
+    // ⚠️ `retorno` traz a pessoa de volta pra onde ela ESTAVA (ex.: o evento em
+    // que ela ia se inscrever) em vez de despejá-la na Home — completar o
+    // cadastro é um desvio no meio de uma tarefa, não a tarefa.
+    // Só aceitamos caminho interno começando por "/": `retorno` vem da URL e
+    // um `http://` ali viraria porta de navegação pra fora do app.
+    if (typeof retorno === "string" && retorno.startsWith("/") && !retorno.startsWith("//")) {
+      router.replace(retorno as never);
+      return;
+    }
     router.replace("/");
-  }, [reload, router]);
+  }, [reload, router, retorno]);
 
   async function buscarPorCpf() {
     setErro(null); setAviso(null);
