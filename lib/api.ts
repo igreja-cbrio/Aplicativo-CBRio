@@ -602,9 +602,6 @@ export function completarCadastroApp(dados: {
   nome_completo: string;
   telefone: string;
   data_nascimento: string;
-  // ⚠️ OBRIGATÓRIO desde 05/08: o backend passou a exigir (`exigirSexo: true`)
-  // e a gravar em mem_membros.genero. Canônico, NUNCA "outro".
-  sexo: "masculino" | "feminino";
   email?: string;
   cpf?: string;
   sexo?: "masculino" | "feminino";
