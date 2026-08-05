@@ -35,7 +35,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import QRCode from "react-native-qrcode-svg";
@@ -69,6 +69,16 @@ function fmtValor(centavos?: number | null) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+}
+
+/** Prazo de inscrição (timestamptz do servidor) em dia/mês/ano · hh:mm local. */
+function fmtPrazo(iso?: string | null) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const dia = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const hh = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return `${dia} · ${hh}`;
 }
 
 function fmtData(data?: string | null, hora?: string | null) {
@@ -227,6 +237,7 @@ export default function EventoScreen() {
   const quando = fmtData(ev?.data ?? minha?.evento.data, ev?.hora ?? minha?.evento.hora);
   const local = ev?.local ?? minha?.evento.local;
   const capa = ev?.capa_url ?? minha?.evento.capa_url;
+  const prazo = fmtPrazo(ev?.inscricoes_encerram_em);
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
@@ -252,10 +263,56 @@ export default function EventoScreen() {
           {ev?.pago && fmtValor(ev.valor_centavos) ? (
             <View style={styles.linha}>
               <Ionicons name="pricetag-outline" size={16} color={colors.brandMid} />
-              <Text style={styles.linhaTxt}>{fmtValor(ev.valor_centavos)}</Text>
+              <Text style={styles.linhaTxt}>
+                {fmtValor(ev.valor_centavos)}
+                {ev.parcelas_max && ev.parcelas_max > 1
+                  ? ` · ${t("em até")} ${ev.parcelas_max}x ${t("no cartão")}`
+                  : ""}
+              </Text>
+            </View>
+          ) : ev && !ev.pago ? (
+            <View style={styles.linha}>
+              <Ionicons name="pricetag-outline" size={16} color={colors.brandMid} />
+              <Text style={styles.linhaTxt}>{t("Gratuito")}</Text>
+            </View>
+          ) : null}
+          {/* Prazo e vagas: o que faz a pessoa decidir AGORA. Só aparecem quando
+              o servidor tem o dado — evento sem limite de vagas não mostra linha
+              (dizer "0 vagas" ou "sem prazo" seria inventar informação). */}
+          {prazo ? (
+            <View style={styles.linha}>
+              <Ionicons name="time-outline" size={16} color={colors.brandMid} />
+              <Text style={styles.linhaTxt}>
+                {t("Inscrições até")} {prazo}
+              </Text>
+            </View>
+          ) : null}
+          {ev?.vagas_restantes != null ? (
+            <View style={styles.linha}>
+              <Ionicons name="people-outline" size={16} color={colors.brandMid} />
+              <Text style={styles.linhaTxt}>
+                {ev.vagas_restantes <= 0
+                  ? t("Vagas esgotadas")
+                  : ev.vagas_restantes === 1
+                    ? t("Última vaga!")
+                    : `${t("Restam")} ${ev.vagas_restantes} ${t("vagas")}`}
+              </Text>
+            </View>
+          ) : null}
+          {ev?.tem_sorteio ? (
+            <View style={styles.linha}>
+              <Ionicons name="gift-outline" size={16} color={colors.brandMid} />
+              <Text style={styles.linhaTxt}>{t("Tem sorteio de prêmios")}</Text>
             </View>
           ) : null}
           {ev?.descricao ? <Text style={styles.desc}>{ev.descricao}</Text> : null}
+          {/* Evento sem nada além do nome (cadastro incompleto no sistema) —
+              melhor dizer isso que deixar um card vazio parecendo tela quebrada. */}
+          {ev && !quando && !local && !ev.descricao ? (
+            <Text style={styles.descFraca}>
+              {t("A igreja ainda não publicou os detalhes deste evento.")}
+            </Text>
+          ) : null}
         </GlassCard>
 
         {/* ───────── JÁ INSCRITA · a inscrição dela ───────── */}
@@ -286,7 +343,11 @@ export default function EventoScreen() {
           </GlassCard>
         ) : !membro || !podeInscrever(membro) ? (
           /* Ficha incompleta: o contrato exige CPF/nascimento/sexo e a inscrição
-             seria recusada pelo servidor — melhor levar pro cadastro. */
+             seria recusada pelo servidor — melhor levar pro cadastro.
+             ⚠️ O botão vai pra tela de cadastro DO APP (era `abrirInscricaoEvento`,
+             que abria o formulário no NAVEGADOR — a pessoa saía do app justamente
+             no passo que existe pra ela não sair). `retorno` traz ela de volta
+             pra este evento, então ela completa e se inscreve sem perder o lugar. */
           <GlassCard style={styles.card}>
             <Text style={styles.desc}>
               {t("Pra se inscrever, complete seu cadastro.")}{" "}
@@ -294,8 +355,12 @@ export default function EventoScreen() {
             </Text>
             <Button
               title={t("Completar meu cadastro")}
-              onPress={() => abrirInscricaoEvento(ev!.url)}
-              variant="ghost"
+              onPress={() => {
+                trackEvento("evento_completar_cadastro", { entity_id: ev?.id || minha?.evento.id });
+                router.push(
+                  `/completar-cadastro?retorno=${encodeURIComponent(`/evento?id=${id}`)}`,
+                );
+              }}
             />
           </GlassCard>
         ) : (
@@ -539,6 +604,7 @@ const makeStyles = (c: Palette) =>
     linha: { flexDirection: "row", alignItems: "center", gap: 8 },
     linhaTxt: { color: c.textMuted, fontSize: font.size.md },
     desc: { color: c.textMuted, fontSize: font.size.md, lineHeight: 21 },
+    descFraca: { color: c.textMuted, fontSize: font.size.sm, lineHeight: 19, fontStyle: "italic" },
     selo: { alignSelf: "center" },
     sucessoTitulo: { color: c.text, fontSize: font.size.lg, fontWeight: "800", textAlign: "center" },
     badge: {

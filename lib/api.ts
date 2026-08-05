@@ -561,9 +561,18 @@ export type EventoAberto = {
   local: string | null;
   capa_url: string | null;
   vagas: number | null;
+  /** Prazo pra se inscrever (`insc_eventos.inscricoes_encerram_em`, ISO). */
+  inscricoes_encerram_em: string | null;
+  /** Vagas RESTANTES pela régua canônica do servidor (`fn_insc_vagas`).
+   *  ⚠️ null = evento sem limite de vagas OU o servidor não soube dizer — nos
+   *  dois casos a tela OMITE a linha, nunca mostra "0". */
+  vagas_restantes: number | null;
   tem_sorteio: boolean;
   pago: boolean;
   valor_centavos: number | null;
+  /** Teto de parcelas do evento (null = teto da conta do provedor). A escolha
+   *  das parcelas continua na página hospedada de pagamento. */
+  parcelas_max: number | null;
   campos: CampoEvento[];
   msg_sucesso_titulo: string | null;
   msg_sucesso_texto: string | null;
