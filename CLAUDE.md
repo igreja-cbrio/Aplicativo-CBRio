@@ -55,11 +55,23 @@ módulo**. Roda em **Android e iOS**.
   gente publicar. Ele está **construído (IPA pronto, distribuição STORE), NÃO
   submetido** — `eas submit -p ios --profile production --latest` inicia revisão
   da Apple e é decisão de gente.
-  ⚠️ **ANTES de submeter**: as contas de revisão precisam passar no portão de
-  cadastro (medido em 05/08 — `appstore.staff@cbrio.app` **sem cadastro nenhum**,
-  `appstore.review@cbrio.app` sem CPF/nascimento/sexo). O CPF já não bloqueia,
-  mas **sexo bloqueia** e nenhuma das três tem. Revisor travado na tela de
-  cadastro = rejeição por demo account.
+  ✅ **Contas de revisão PREPARADAS (05/08/2026)** — as três passam no portão,
+  conferido rodando a régua real do `identidade/status`:
+  `apple.review@cbrio.com.br` · `appstore.review@cbrio.app` ·
+  `appstore.staff@cbrio.app` (esta não tinha cadastro nenhum — foi criada pelo
+  matcher canônico, origem `conta_revisao_loja`, e vinculada ao profile).
+  Todas com telefone/nascimento/sexo fictícios e `observacoes` marcando
+  "CONTA DE REVISÃO — não é pessoa".
+  ⚠️⚠️ **NUNCA pôr CPF nessas contas.** Uma delas tinha `39147258004`, que é
+  **DV-VÁLIDO** — ou seja, pode pertencer a alguém real, e como CPF é a chave
+  MAIS FORTE do matcher, essa pessoa seria ligada à conta de revisão no primeiro
+  formulário que preenchesse. O CPF foi anulado (o portão não exige) e o Marcos
+  ofereceu usar o dele/do Matheus — recusei pelo mesmo motivo: inscrição feita
+  pelo revisor cairia no cadastro real deles.
+  ⚠️ As três são `status='visitante'`, então ficam fora do disparo do censo por
+  padrão (que mira `membro_ativo`) — mas entram se alguém marcar o chip de
+  visitantes. Conferido também que elas **não viram par na fila de duplicidades**
+  (`avaliarPossivelDuplicidade` → `incluir:false` nos 3 pares).
   ⚠️ **`eas.json` · perfil production ganhou `"environment": "production"`**
   (05/08/2026): o `env` inline do perfil tem URL e merchant do Apple Pay mas
   **NÃO tem `EXPO_PUBLIC_SUPABASE_ANON_KEY`** — ela vive nas EAS environment
