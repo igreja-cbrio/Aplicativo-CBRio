@@ -9,6 +9,7 @@ import { carregarStatusInscricoes, type InscricoesStatus, type StatusInscricao }
 import { buscarEventosAbertos, type EventoAberto } from "@/lib/api";
 import { abrirInscricaoEvento } from "@/lib/eventos";
 import { useT } from "@/lib/i18n";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { irPara } from "@/lib/nav";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
@@ -31,8 +32,11 @@ type Item = {
   label: string;
   desc: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
-  href: "/batismo" | "/grupos" | "/next" | "/voluntariado";
-  chave: Chave;
+  /** Tela do app. Ausente quando a porta é web (ver `url`). */
+  href?: "/batismo" | "/grupos" | "/next" | "/voluntariado";
+  /** Porta PÚBLICA do sistema, aberta no navegador in-app. */
+  url?: string;
+  chave?: Chave;
 };
 
 const ITENS: Item[] = [
@@ -43,6 +47,19 @@ const ITENS: Item[] = [
   // (a ÁREA). Aqui é a PORTA de inscrição — rótulos iguais em dois lugares
   // faziam parecer duas coisas (05/08/2026).
   { label: "Quero servir", desc: "Sirva na CBRio", icon: "hand-left", href: "/voluntariado", chave: "voluntariado" },
+  // ⚠️ PORTA WEB, de propósito. O sistema tem 7 portas de inscrição e esta
+  // faltava no app — foi o exemplo que o Marcos deu ("a aba de inscrições do
+  // sistema consta com apresentação de bebês"). Abre o formulário público em
+  // vez de reimplementar: a porta exige dado de CRIANÇA e o consentimento de
+  // MENOR (LGPD art. 14 §1º) com snapshot do texto, e uma segunda
+  // implementação seria um segundo caminho de escrita de pessoa — o que o
+  // Contrato de porta existe pra impedir. Mesmo desenho dos "Eventos abertos".
+  {
+    label: "Apresentação de crianças",
+    desc: "Apresente seu filho na igreja",
+    icon: "happy",
+    url: "https://www.cbrio.org/apresentacao-criancas",
+  },
 ];
 
 function StatusBadge({ status, styles, colors, t }: { status: StatusInscricao; styles: ReturnType<typeof makeStyles>; colors: Palette; t: (s: string) => string }) {
@@ -79,7 +96,7 @@ export default function InscricoesScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.topRow}>
-          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
+          <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
           <Text style={styles.title}>{t("Inscrições")}</Text>
@@ -87,12 +104,12 @@ export default function InscricoesScreen() {
         </View>
 
         {ITENS.map((it) => {
-          const st = status?.[it.chave] ?? "nenhum";
+          const st = it.chave ? status?.[it.chave] ?? "nenhum" : "nenhum";
           return (
             <Pressable
-              key={it.href}
+              key={it.href || it.url}
               style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-              onPress={() => irPara(it.href)}
+              onPress={() => (it.href ? irPara(it.href) : it.url && abrirInscricaoEvento(it.url))}
               accessibilityRole="button"
               accessibilityLabel={`${t(it.label)}. ${st === "ativo" ? t("Inscrito") : st === "pendente" ? t("Pendente") : t(it.desc)}`}
             >
@@ -104,7 +121,11 @@ export default function InscricoesScreen() {
                 <Text style={styles.rowDesc}>{t(it.desc)}</Text>
               </View>
               <StatusBadge status={st} styles={styles} colors={colors} t={t} />
-              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              <Ionicons
+                name={it.url ? "open-outline" : "chevron-forward"}
+                size={18}
+                color={colors.textMuted}
+              />
             </Pressable>
           );
         })}

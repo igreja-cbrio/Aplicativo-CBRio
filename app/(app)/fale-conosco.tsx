@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useMembro } from "@/lib/useMembro";
 import { criarInscricao } from "@/lib/inscricoes";
 import { useT } from "@/lib/i18n";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const WHATSAPP = "https://wa.me/5521997567770";
@@ -69,7 +70,7 @@ export default function FaleConoscoScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
+            <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
               <Ionicons name="chevron-back" size={24} color={colors.text} />
             </Pressable>
             <Text style={styles.title}>{t("Fale conosco")}</Text>

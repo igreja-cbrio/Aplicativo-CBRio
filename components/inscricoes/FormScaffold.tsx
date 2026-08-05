@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
@@ -61,7 +62,7 @@ export function FormScaffold({
       >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.topRow}>
-            <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
+            <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
               <Ionicons name="chevron-back" size={24} color={colors.text} />
             </Pressable>
             <Text style={styles.title}>{title}</Text>
@@ -73,7 +74,7 @@ export function FormScaffold({
               <Ionicons name="lock-closed-outline" size={40} color={colors.textMuted} />
               <Text style={styles.okTitle}>{t("Inscrições fechadas")}</Text>
               <Text style={styles.okText}>{bloqueadoTexto}</Text>
-              <Button title={t("Voltar")} variant="ghost" onPress={() => router.back()} />
+              <Button title={t("Voltar")} variant="ghost" onPress={() => subirUmNivel()} />
             </View>
           ) : enviado ? (
             <View style={styles.card}>
@@ -83,7 +84,7 @@ export function FormScaffold({
                 {enviadoTexto ?? t("Recebemos sua inscrição. Em breve falamos com você. 💙")}
               </Text>
               {successExtra}
-              <Button title={t("Voltar")} variant="ghost" onPress={() => router.back()} />
+              <Button title={t("Voltar")} variant="ghost" onPress={() => subirUmNivel()} />
             </View>
           ) : (
             <>

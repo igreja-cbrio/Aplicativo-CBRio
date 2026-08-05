@@ -7,6 +7,7 @@ import { TopBar } from "@/components/ui/TopBar";
 import { BottomBar } from "@/components/ui/BottomBar";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { registrarRotaAtual } from "@/lib/hierarquia";
 
 /**
  * ============================================================================
@@ -82,6 +83,11 @@ export default function AppLayout() {
   // pathname congelado se dependesse do closure.
   const rotaRef = useRef(pathname);
   rotaRef.current = pathname;
+
+  // A seta de voltar é `cd ..` (lib/hierarquia.ts). As ~25 telas com seta
+  // própria chamam `subirUmNivel()` sem argumento, então quem sabe onde a
+  // pessoa está é este layout — o único lugar que já observa o pathname.
+  registrarRotaAtual(pathname);
 
   // Voltar depois de um tempo fora = começar na Home (ver MS_PARA_RECOMECAR).
   useEffect(() => {

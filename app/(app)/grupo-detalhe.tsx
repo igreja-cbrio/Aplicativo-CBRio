@@ -19,6 +19,7 @@ import { pedirEntrarGrupo } from "@/lib/grupos";
 import { getTemporadaGrupos } from "@/lib/temporadaGrupos";
 import { useAdminGrupo } from "@/lib/useAdminGrupo";
 import { useT } from "@/lib/i18n";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { diaHorario } from "./grupos";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { abrirRota } from "@/lib/navegacao";
@@ -63,6 +64,12 @@ export default function GrupoDetalheScreen() {
         "id, nome, categoria, descricao, tema, dia_semana, horario, local, endereco, bairro, lat, lng, foto_url"
       )
       .eq("id", id)
+      // ⚠️ A RLS de `mem_grupos` é `FOR SELECT USING (true)` (catálogo) — ela
+      // NÃO filtra grupo apagado nem desativado. Medido em 05/08/2026: 137
+      // soft-deletados + 38 `ativo=false` vivos, todos abríveis por deep link
+      // ou link antigo, com botão "Quero participar".
+      .is("deleted_at", null)
+      .eq("ativo", true)
       .maybeSingle();
     setGrupo((g as GrupoDetalhe) ?? null);
 
@@ -82,13 +89,23 @@ export default function GrupoDetalheScreen() {
       setEstado("participa");
       return;
     }
+    // ⚠️ O status do pedido é `pendente|aprovado|rejeitado|devolvido|encaminhado`
+    // (CHECK do banco). Até 05/08/2026 este trecho comparava com **"recusado"**,
+    // que NUNCA existiu: quem levou recusa ficava com a tela em "aguardando
+    // aprovação" pra sempre e não conseguia pedir de novo por nenhum grupo.
+    // Medido em prod naquele dia: 20 pedidos vivos rejeitados/devolvidos (14
+    // pessoas · 1 com conta no app). Recusa DEVOLVE pra triagem (lei de 14/07),
+    // então a pessoa pode pedir de novo — é o que a coordenação espera.
+    const EM_ANDAMENTO = ["pendente", "aprovado", "encaminhado"];
     const { data: pedido } = await supabase
       .from("mem_grupo_pedidos")
       .select("id, status")
       .eq("grupo_id", id)
       .eq("membro_id", membro.membroId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
       .limit(1);
-    if (pedido && pedido.length > 0 && pedido[0].status !== "recusado") {
+    if (pedido && pedido.length > 0 && EM_ANDAMENTO.includes(pedido[0].status)) {
       setEstado("pendente");
       return;
     }
@@ -149,7 +166,7 @@ export default function GrupoDetalheScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.topRow}>
-          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
+          <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
           <Text style={styles.title}>{t("Grupo")}</Text>

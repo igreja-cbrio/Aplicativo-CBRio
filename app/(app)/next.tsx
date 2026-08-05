@@ -16,6 +16,7 @@ import * as Location from "expo-location";
 import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { Skeleton } from "@/components/anim/Skeleton";
 import { useNextSync } from "@/lib/useNextSync";
 import { inscreverNext, checkinNext, getNextPapel, type NextEncontro, type NextTurmaResumo } from "@/lib/api";
@@ -155,7 +156,7 @@ export default function NextScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
+          <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
           <Text style={styles.title}>NEXT</Text>

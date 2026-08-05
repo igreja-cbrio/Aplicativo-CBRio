@@ -24,6 +24,7 @@ import { adicionarWalletMembresia } from "@/lib/wallet";
 import { onlyDigits } from "@/lib/validators";
 import { brand, font, radius, spacing, type Palette } from "@/constants/theme";
 import { useT } from "@/lib/i18n";
+import { subirUmNivel } from "@/lib/hierarquia";
 
 const CARD_RADIUS = 22;
 const CARD_WIDTH = Dimensions.get("window").width - spacing.lg * 2;
@@ -115,7 +116,7 @@ export default function CartoesScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.topRow}>
-          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
+          <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
           <Text style={styles.title}>{t("Meu cartão")}</Text>

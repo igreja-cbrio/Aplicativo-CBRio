@@ -139,8 +139,23 @@ módulo**. Roda em **Android e iOS**.
   (`components/ui/BottomBar.tsx`: **Grupos · Servir · Cuidados · Devocional ·
   Menu**). Os 4 primeiros são os **valores da jornada**; a **HOME fica FORA da
   barra** e **NÃO existe botão "Início" em lugar nenhum** — chega-se nela pela
-  SETA (que é `canGoBack() ? back() : replace("/")`). Decisão dele, ciente do
-  trade-off (eu sugeri Início na barra; ele preferiu "senão fica bagunçado").
+  SETA. Decisão dele, ciente do trade-off (eu sugeri Início na barra; ele
+  preferiu "senão fica bagunçado").
+  ⚠️⚠️ **A SETA É `cd ..`, NÃO "um passo atrás" (05/08/2026 · pedido dele com a
+  metáfora exata: "a ideia é como se fosse uma ótica de pastas, e que esse
+  voltar fosse um comando cd .. no terminal").** `router.back()` anda no
+  HISTÓRICO: quem tocava Grupos → Servir → Cuidados → Devocional na barra
+  precisava de 4 toques repassando telas já vistas. O mapa da árvore vive em
+  **`lib/hierarquia.ts`** (`subirUmNivel()` · `router.navigate(pai)`, que VOLTA
+  pro pai quando ele já está na pilha e descarta o que estava em cima) e as **~29
+  telas com seta própria chamam a MESMA função** — regra única, não 29 cópias.
+  ⚠️ A rota atual é registrada pelo `(app)/_layout.tsx` (`registrarRotaAtual`),
+  que já observa o pathname: as telas antigas usam `router.back()` do objeto
+  global, sem `usePathname()` em escopo, e passar a rota exigiria um hook em cada
+  arquivo. ⚠️ Tela NOVA = uma linha no mapa (sem mapa, cai na Home — destino
+  previsível em vez de adivinhação). ⚠️ O botão FÍSICO do Android continua
+  andando no histórico (convenção do sistema); alinhar os dois exigiria
+  interceptar o BackHandler — decisão do Marcos, não minha.
   As telas de barra vivem em `app/(app)/` (o grupo `(tabs)` **deixou de
   existir** · rotas idênticas, grupo entre parênteses não entra no path).
   ⚠️ **A tab bar NATIVA (`expo-router/unstable-native-tabs`) SAIU**: no
@@ -223,6 +238,53 @@ lib/
 constants/
   theme.ts             # cores, espaçamentos, tipografia
 ```
+
+## ⚠️ Varredura app × ERP · o que estava desalinhado (2026-08-05)
+
+Pedido do Marcos ("avalie todos as variáveis e tabelas dentro do nosso sistema
+mobile"). O padrão de TODOS os achados é o mesmo: **o app reproduz a régua do ERP
+em vez de consumi-la**, e quando a régua muda de um lado o outro não sabe.
+**LEI: quem decide o que é "válido" é o BACKEND.** O app lê tabela direto pelo que
+é dado DELE (perfil, devocional, cartão); régua de negócio — o que está aberto,
+quem pode se inscrever, qual status vale — vem de endpoint.
+
+- **NEXT (o caso que ele reportou)** · conserto no BACKEND (PR #2288 do sistema):
+  `/next/me`, `/next/inscrever` e `/next/encontros/:id/checkin` liam
+  `next_eventos`/`next_inscricoes`, a camada aposentada no cutover de turmas
+  (17/06). Medido: 8 eventos 'agendado' com data máxima **21/06** contra **2
+  turmas abertas** com encontros em 09, 16 e 23/08 — daí o "não há encontros do
+  NEXT agendados". O app **não mudou** (o contrato da resposta foi preservado);
+  `lib/api.ts` só ganhou os campos novos `turma_id`/`turma_nome`/`horario`.
+- **`"recusado"` NUNCA EXISTIU** (`grupo-detalhe.tsx`): o CHECK do banco é
+  `pendente|aprovado|rejeitado|devolvido|encaminhado`, e a tela decidia com
+  `status !== "recusado"` → quem levava recusa ficava em "aguardando aprovação"
+  **pra sempre**, em qualquer grupo (20 pedidos vivos · 14 pessoas · 1 com conta
+  no app). Agora a lista de status que vale está explícita e comentada.
+- **Filtros que a RLS NÃO cobre** · `mem_grupos` é `FOR SELECT USING (true)`
+  (catálogo): sem `deleted_at`/`ativo`, **137 grupos apagados + 38 desativados**
+  abriam por deep link com botão "Quero participar". Idem `deleted_at` em
+  `mem_contribuicoes` (comprovante de IR) e `vol_inscricoes` (soft-delete
+  liberado em 28/07) — hoje 0 apagadas nas duas, então é **gatilho armado**, e o
+  filtro é o que impede o dia em que houver.
+- **Dia em UTC** (`lib/cultos.ts`): `toISOString()` sobre o agora dá o dia UTC, e
+  das 21h BRT em diante ele já virou → **o culto de quarta (20h) saía de "próximos
+  cultos" durante o próprio culto**. Toda data de operação da igreja é BRT.
+- **Portas de inscrição: o app tinha 4, o sistema tem 7.** Entrou **Apresentação
+  de crianças** como porta WEB (abre `cbrio.org/apresentacao-criancas` no
+  navegador in-app, como os "Eventos abertos"): a porta exige dado de CRIANÇA e
+  consentimento de MENOR (art. 14 §1º) com snapshot do texto, e reimplementar
+  seria um 2º caminho de escrita de pessoa — o que o Contrato de porta existe pra
+  impedir. Líderes/anfitriões e o totem de bebês seguem fora (são de gestão).
+- ✅ **Alarmes que NÃO se sustentaram** (registro proposital): `app_destaques`
+  parece ignorar `ativo`/janela mas a **RLS filtra** (`supabase/destaques.sql`);
+  e o `sexo` do cadastro **não** é descartado — o backend grava `mem_membros.genero`
+  desde hoje mais cedo. Ia "consertar" o que funciona nos dois casos.
+
+⚠️ **O SCHEMA DO APP VIVE NESTE REPO** (`supabase/*.sql`), não nas migrations do
+ERP: `app_destaques`, `app_notificacoes`, `app_push_tokens`,
+`app_grupos_temporada`, `app_solicitacoes_exclusao`, `handle_new_user_membro`.
+É por isso que a lei do gatilho de `auth.users` no CLAUDE.md do sistema registrou
+"nunca foi commitado" — não estava lá; está aqui.
 
 ## Módulos
 

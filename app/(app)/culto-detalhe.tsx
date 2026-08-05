@@ -20,6 +20,7 @@ import {
   type CultoDetalhe,
 } from "@/lib/cultos";
 import { useT } from "@/lib/i18n";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const END = "Av. das Américas, 7907 — Open Mall (subsolo), Barra da Tijuca, Rio de Janeiro";
@@ -64,7 +65,7 @@ export default function CultoDetalheScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
+          <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
           <Text style={styles.title}>{t("Culto")}</Text>

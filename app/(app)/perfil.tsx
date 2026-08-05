@@ -21,6 +21,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { useMembro } from "@/lib/useMembro";
 import { supabase } from "@/lib/supabase";
 import {
@@ -247,7 +248,7 @@ export default function PerfilScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.topRow}>
-            <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
+            <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
               <Ionicons name="chevron-back" size={24} color={colors.text} />
             </Pressable>
             <Text style={styles.title}>Meu perfil</Text>

@@ -21,6 +21,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useAdminGrupo } from "@/lib/useAdminGrupo";
 import { supabase } from "@/lib/supabase";
 import { useT } from "@/lib/i18n";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type GrupoEdit = {
@@ -166,7 +167,7 @@ export default function GrupoEditarScreen() {
       <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
+          <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
           <Text style={styles.title}>{t("Editar grupo")}</Text>
@@ -195,7 +196,7 @@ export default function GrupoEditarScreen() {
       >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
+            <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
               <Ionicons name="chevron-back" size={24} color={colors.text} />
             </Pressable>
             <Text style={styles.title}>{t("Editar grupo")}</Text>

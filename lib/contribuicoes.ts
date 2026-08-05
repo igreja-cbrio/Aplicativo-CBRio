@@ -22,6 +22,10 @@ export async function minhasContribuicoes(membroId: string, ano: number): Promis
     .from("mem_contribuicoes")
     .select("id, tipo, valor, data, campanha, forma_pagamento")
     .eq("membro_id", membroId)
+    // `mem_contribuicoes` tem soft-delete (whitelist da onda 3) e a RLS não
+    // filtra — sem isto, linha estornada/apagada entraria no comprovante de IR.
+    // Hoje são 0 apagadas em prod; o filtro é o que impede o dia em que houver.
+    .is("deleted_at", null)
     .gte("data", `${ano}-01-01`)
     .lte("data", `${ano}-12-31`)
     .order("data", { ascending: true });
