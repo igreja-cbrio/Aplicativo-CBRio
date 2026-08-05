@@ -38,7 +38,10 @@ async function totalDevocionais(membroId: string): Promise<number> {
       .select("id", { count: "exact", head: true })
       .eq("membro_id", membroId)
       .eq("tipo", "pessoal")
-      .eq("concluida", true);
+      .eq("concluida", true)
+      // `mem_devocionais` é soft-deletable: linha apagada sai do KPI do ERP,
+      // então também não pode contar na jornada do app.
+      .is("deleted_at", null);
     return count ?? 0;
   } catch {
     return 0;
@@ -84,7 +87,7 @@ async function foiBatizado(membroId: string): Promise<boolean> {
     // Batizado em outra igreja (auto-declarado) também vale — não precisa
     // aparecer como próximo passo pra quem já foi batizado.
     const [ant, b] = await Promise.all([
-      supabase.from("mem_membros").select("batizado_outra_igreja").eq("id", membroId).maybeSingle(),
+      supabase.from("mem_membros").select("batizado_outra_igreja").eq("id", membroId).is("deleted_at", null).maybeSingle(),
       meuBatismo(membroId),
     ]);
     if ((ant.data as { batizado_outra_igreja?: boolean } | null)?.batizado_outra_igreja) return true;

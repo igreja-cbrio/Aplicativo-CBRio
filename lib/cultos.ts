@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { cacheSWR } from "./cache";
 import { apiGet } from "./api";
+import { diaBRT, hojeBRT } from "./dataBRT";
 
 export type CultoUpcoming = {
   id: string;
@@ -13,19 +14,13 @@ export type CultoUpcoming = {
 };
 
 async function buscarProximosCultos(diasFrente: number): Promise<CultoUpcoming[]> {
-  // ⚠️ DATA EM BRT, não UTC: `toISOString()` sobre o agora devolve o dia UTC, e
-  // das 21h do Rio em diante ele já virou. O culto da noite (o de quarta é 20h)
-  // saía da lista de "próximos" durante o próprio culto. Mesma régua do
-  // `hojeBRT()` do backend.
-  const hoje = new Date(Date.now() - 3 * 3600 * 1000);
-  const limite = new Date(hoje);
-  limite.setDate(limite.getDate() + diasFrente);
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  // ⚠️ DATA EM BRT, não UTC (ver lib/dataBRT.ts): das 21h do Rio o dia UTC já
+  // virou e o culto da noite (quarta é 20h) saía da lista durante o culto.
   const { data, error } = await supabase
     .from("cultos")
     .select("id, nome, data, hora, vol_service_types(color, has_online_stream, has_kids)")
-    .gte("data", fmt(hoje))
-    .lte("data", fmt(limite))
+    .gte("data", hojeBRT())
+    .lte("data", diaBRT(diasFrente))
     .is("deleted_at", null)
     .order("data", { ascending: true })
     .order("hora", { ascending: true });
@@ -64,7 +59,9 @@ export async function proximosCultos(
   diasFrente = 7,
   forcar = false
 ): Promise<CultoUpcoming[]> {
-  const hojeKey = new Date().toISOString().slice(0, 10);
+  // Mesma régua da query (BRT): chave em UTC virava 3h antes e o cache pedia
+  // uma janela diferente da que a query usa.
+  const hojeKey = hojeBRT();
   return cacheSWR(
     `cultos:${diasFrente}:${hojeKey}`,
     () => buscarProximosCultos(diasFrente),
@@ -137,6 +134,8 @@ export async function getCulto(id: string): Promise<CultoDetalhe | null> {
       "id, nome, data, hora, youtube_video_id, vol_service_types(name, description, has_online_stream, has_kids, color)"
     )
     .eq("id", id)
+    // `cultos` é soft-deletable — culto apagado não abre por link antigo.
+    .is("deleted_at", null)
     .maybeSingle();
   if (!data) return null;
   const raw = data as unknown as {

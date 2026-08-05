@@ -79,6 +79,8 @@ export default function CartoesScreen() {
       .from("mem_membros")
       .select("nome, cpf, status, data_nascimento")
       .eq("id", prof.membro_id)
+      // Cadastro soft-deletado não serve o app (mesma régua do backend).
+      .is("deleted_at", null)
       .maybeSingle();
     if (m) {
       setNome(m.nome ?? null);

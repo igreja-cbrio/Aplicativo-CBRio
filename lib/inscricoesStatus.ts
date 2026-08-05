@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { meuBatismo } from "./batismo";
 import { getVoluntariadoMe, getNextMe } from "./api";
+import { estadoVoluntariado } from "./volStatus";
 
 export type StatusInscricao = "nenhum" | "pendente" | "ativo";
 
@@ -75,8 +76,12 @@ async function statusNext(): Promise<StatusInscricao> {
 async function statusVoluntariado(): Promise<StatusInscricao> {
   try {
     const me = await getVoluntariadoMe();
-    if (!me.inscricao) return "nenhum";
-    return me.inscricao.status === "integrado" ? "ativo" : "pendente";
+    if (!me.inscricao) return me.voluntario_ativo === true ? "ativo" : "nenhum";
+    // ⚠️ Régua ÚNICA (lib/volStatus.ts) — a MESMA que a tela de Servir usa. Antes
+    // aqui era `=== "integrado" ? ativo : pendente`, então quem a equipe encerrou
+    // (`nao_responde`, 69 pessoas) via "Pendente" no hub e o FORMULÁRIO na tela:
+    // duas verdades sobre o mesmo dado.
+    return estadoVoluntariado(me.inscricao.status, me.voluntario_ativo);
   } catch {
     return "nenhum";
   }

@@ -286,6 +286,47 @@ ERP: `app_destaques`, `app_notificacoes`, `app_push_tokens`,
 É por isso que a lei do gatilho de `auth.users` no CLAUDE.md do sistema registrou
 "nunca foi commitado" — não estava lá; está aqui.
 
+### Rodada 2 · fechamento (mesmo dia · "corrigir todos esses achados")
+
+- **BOTÃO FÍSICO DO ANDROID = a mesma árvore da seta** (`BackHandler` em
+  `(app)/_layout.tsx` · pedido dele: "faça o botao fisico ser igual ao da seta").
+  ⚠️ Na **Home** e em **`/completar-cadastro`** ele NÃO intercepta: engolir o back
+  na raiz é como se faz um app que não fecha (a Play Store reclama), e sair do
+  cadastro por gesto cai em loop com o `CadastroGate`. ⚠️ `Modal` do react-native
+  (6 telas, todas com `onRequestClose`) trata o back no próprio diálogo nativo e
+  não chega no handler — modal aberto fecha o modal, como antes.
+- **`lib/volStatus.ts` = régua ÚNICA do voluntariado.** O ERP tem **7** status
+  (`VolInscricoes.tsx` é a fonte) e o app tratava 3. Medido: `integrado` 575 ·
+  `inscrito` 80 · `enviado_ministerio` 68 · **`nao_responde` 69 ·
+  `nao_pode_ou_duplicata` 19 · `kids` 3**. A divergência aparecia na MESMA
+  abertura: o hub dizia "Pendente" (`!== 'integrado'`) e a tela de Servir mostrava
+  o FORMULÁRIO (status fora dos 3 caíam no `else`). Agora: `integrado`/`kids` =
+  ativo · `inscrito`/`enviado_ministerio` = pendente · `nao_responde`/
+  `nao_pode_ou_duplicata`/`desistente` = **nenhum** com aviso "sua inscrição
+  anterior foi encerrada" (o dedup do backend permite re-inscrição). ⚠️ Status
+  novo no ERP entra SÓ nesse arquivo; desconhecido vira "nenhum" (deixa a pessoa
+  agir) e nunca "pendente" (fila que ninguém trata).
+- **+11 leituras ganharam `deleted_at`** (`mem_membros` ×5, `mem_devocionais` ×4,
+  `mem_grupos` ×2, `cultos`) — a RLS não filtra nada disso. ⚠️ No `grupo-editar`
+  entrou só `deleted_at`, **não** `ativo`: o líder precisa poder editar grupo
+  pausado; quem trava a inscrição é a face pública (`/grupo-detalhe`).
+- **`lib/dataBRT.ts`** centraliza o dia da igreja (espelho do `hojeBRT()` do
+  backend): a lista de cultos, a **chave de cache** dela e o filtro de
+  indisponibilidade do voluntariado estavam em UTC. ⚠️ O check-in do devocional
+  segue em hora do APARELHO de propósito — o "hoje" de quem lê é o do lugar onde
+  a pessoa está; BRT é pra AGENDA (culto, escala, encontro).
+- **No servidor** (PR #2290 do sistema): `resolveMembroApp` passou a filtrar
+  soft-delete no caminho do profile (cadastro apagado servia o app inteiro — 3
+  contas do app foram soft-deletadas em 04/08) e `POST /app/inscricoes` com
+  `tipo:'next'` parou de dizer "enviado" sem inscrever ninguém.
+
+**Auditoria automática que PASSOU** (registro pra não refazer): rodei as **38
+consultas literais do app contra o schema de produção** — **0 erros de coluna**.
+Isso importa porque select nomeando coluna inexistente faz o PostgREST recusar a
+query INTEIRA e o app trata como "vazio" (a armadilha do `parcelas_max`).
+Conferido também: `kids_vinculo_solicitacoes` usa
+`pendente|aprovado|rejeitado|cancelado` e o app compara os certos.
+
 ## Módulos
 
 | Status | Módulo           | Descrição                                                        |

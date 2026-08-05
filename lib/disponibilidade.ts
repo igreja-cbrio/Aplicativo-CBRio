@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { hojeBRT } from "./dataBRT";
 
 export type Indisponibilidade = {
   id: string;
@@ -34,7 +35,9 @@ export async function getMeuVolProfileId(
 export async function listarIndisponibilidades(
   volProfileId: string
 ): Promise<Indisponibilidade[]> {
-  const hoje = new Date().toISOString().slice(0, 10);
+  // BRT, não UTC: das 21h do Rio o "hoje" virava amanhã e a janela que termina
+  // HOJE desaparecia da lista antes da hora (ver lib/dataBRT.ts).
+  const hoje = hojeBRT();
   const { data } = await supabase
     .from("vol_availability")
     .select("id, unavailable_from, unavailable_to, reason")

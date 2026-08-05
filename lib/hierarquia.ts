@@ -16,9 +16,11 @@
 //
 // ⚠️ Rota que não estiver no mapa cai na Home. É proposital: preferimos um
 // destino previsível a adivinhar. Tela nova = uma linha aqui.
-// ⚠️ O botão FÍSICO de voltar do Android continua andando no histórico (é a
-// convenção do sistema, e todo app faz assim). Alinhar os dois exigiria
-// interceptar o BackHandler — decisão do Marcos, não minha.
+// ⚠️ O botão FÍSICO do Android segue a MESMA árvore (05/08/2026 · "faça o botao
+// fisico ser igual ao da seta"): o `BackHandler` é interceptado no
+// `(app)/_layout.tsx`. Na Home ele NÃO é interceptado — ali o comportamento do
+// sistema (minimizar/sair) é o certo, e engolir o back na raiz é a receita do
+// app que não fecha.
 // ============================================================================
 import { router, type Href } from "expo-router";
 

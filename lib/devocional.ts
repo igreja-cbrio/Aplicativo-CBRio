@@ -71,6 +71,8 @@ export async function semanaDevocional(membroId: string | null): Promise<{
       .select("data_devocional, devocional_item_id")
       .eq("membro_id", membroId)
       .eq("tipo", "pessoal")
+      // soft-delete: o que saiu do KPI do ERP não conta no app (3 leituras).
+      .is("deleted_at", null)
       .gte("data_devocional", seg)
       .lte("data_devocional", sex);
     checkins = (cks as CheckinDevocional[]) ?? [];
@@ -120,6 +122,7 @@ export async function streakDevocional(membroId: string): Promise<number> {
     .eq("membro_id", membroId)
     .eq("tipo", "pessoal")
     .eq("concluida", true)
+    .is("deleted_at", null)
     .order("data_devocional", { ascending: false })
     .limit(120);
   const dias = new Set(((data as { data_devocional: string }[]) ?? []).map((d) => d.data_devocional));
@@ -163,6 +166,7 @@ export async function listarAnotacoes(membroId: string): Promise<Anotacao[]> {
     .eq("membro_id", membroId)
     .eq("tipo", "pessoal")
     .not("observacoes", "is", null)
+    .is("deleted_at", null)
     .order("data_devocional", { ascending: false })
     .limit(100);
   if (error) throw error;

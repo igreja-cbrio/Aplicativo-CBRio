@@ -46,6 +46,7 @@ export function useAdminGrupo(grupoId: string | null | undefined) {
           .from("mem_grupos")
           .select("lider_id")
           .eq("id", grupoId)
+          .is("deleted_at", null)
           .maybeSingle();
         if (alive) {
           setIsAdmin(!!g && (g as { lider_id?: string }).lider_id === prof.membro_id);
