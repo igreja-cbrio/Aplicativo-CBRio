@@ -206,7 +206,7 @@ que abriu a Activity. Por isso a marca é PERSISTIDA em AsyncStorage
 casar). **⚠️ Cold start CONSOME a resposta (04/08/2026):** `getLastNotificationResponseAsync` no Android devolve a MESMA resposta a cada recriação da Activity (inclusive pós-crash) — sem o `clearLastNotificationResponseAsync()` + dedup por identifier, o app reabria SEMPRE na tela da última push e o usuário ficava preso (caso "preso em Notificações" do Xiaomi; só apagar dados resolvia). O voltar de `notificacoes.tsx` tem fallback `canGoBack() ? back() : replace("/")` pro caso de ela ser a primeira rota. **Push funcionando ponta a ponta** (validado 12/06: triggers SQL de `webhooks_app.sql` aplicados, pg_net ativo, tokens em `app_push_tokens`). **Vínculo Kids (14/06):** trigger `kids_vinculo_notify` (AFTER UPDATE de `kids_vinculo_solicitacoes` p/ status aprovado/rejeitado) → Edge Function `notify-kids-vinculo` avisa o responsável do resultado. **Lembretes agendados** via pg_cron (a cada min) → Edge Function `notify-lembretes` (`supabase/lembretes.sql`): batismo (véspera 18h + dia 8h), NEXT (véspera 18h), culto online (5 min antes, broadcast). Dedup em `app_lembretes_enviados`. |
 |   🚧   | **Cuidados**     | Pedido de oração + aconselhamento (grava em `app_inscricoes`) e **SOS** (CVV 188/192 na hora + alerta push aos pastores via Edge Function `notify-cuidado-sos`). |
 |   ✅   | **Devocional**   | Tela `devocional.tsx` (atalho na Home): devocionais de **seg a sex** dos planos ativos do sistema (lê `devocional_itens`+`devocional_planos` direto, RLS liberada p/ authenticated). Check-in grava em `mem_devocionais` (tipo pessoal, upsert por membro+data — **é a tabela que alimenta os KPIs** do valor Investir). Incentivo: streak de dias úteis (`lib/devocional.ts`), bolhas da semana, haptic + push lembrete 7h30 (seg–sex, só quem não leu — `notify-lembretes`). Conteúdo é criado no SISTEMA (Cuidados → planos, manual ou IA). |
-|   ✅   | **Check-in Kids** | Tela `kids.tsx` (atalho no Menu): **pré-check-in** dos filhos. Lê `GET /app/kids/meus-filhos` (crianças de quem o membro é responsável `autorizado_buscar`), o membro marca quem vai e gera código/QR via `POST /app/kids/pre-checkin` (válido 12h, 1 ativo por responsável). QR = `react-native-qrcode-svg` com o código de 6 chars. No totem (sistema), o voluntário escaneia/digita, confere e imprime. **Sem checkout remoto** — entrada/retirada continuam presenciais (decisão de segurança das crianças). **Solicitar vínculo** (`kids-solicitar-vinculo.tsx`): quem não tem filho vinculado pede o vínculo enviando documentos (criança + pai e/ou mãe) — **foto** (`expo-image-picker` câmera/galeria) **ou arquivo PDF** (`expo-document-picker` · ⚠️ módulo NATIVO → só funciona a partir do **build 21**; no build 20 o app cai num aviso "atualize o app"). Upload direto pro bucket **privado** `kids-documentos` (path `{user.id}/...`, helper `uploadDoc` infere ext/contentType) e `POST /app/kids/solicitar-vinculo` manda só os paths; a equipe Kids confere e aprova. Status (em análise/recusada) aparece na própria tela (`GET /app/kids/minhas-solicitacoes`) e via push (`notify-kids-vinculo`). **Foto da criança (opcional · ECA/LGPD):** na tela do filho (`kids-filho.tsx`) o responsável autorizado pode adicionar a foto da criança com **consentimento explícito** (bloco com texto ECA Lei 8.069/90 arts. 17/18 + LGPD Lei 13.709/18 art. 14 + checkbox · versão `eca-lgpd-v1`). Upload pro bucket **privado** `kids-documentos` (`{user.id}/foto-crianca/...`) → `POST /app/kids/filho/:id/foto` (exige `consentimento:true`); a foto só é exibida (signed URL) com consentimento, a responsável + equipe Kids. **Revogável**: `POST /app/kids/filho/:id/foto/remover` apaga a foto e limpa o consentimento. |
+|   ✅   | **Check-in Kids** | Tela `kids.tsx` (⚠️ desde 05/08/2026 chega-se por **Minha família** — o item solto saiu do menu — e pelo atalho da Home): **pré-check-in** dos filhos. Lê `GET /app/kids/meus-filhos` (crianças de quem o membro é responsável `autorizado_buscar`), o membro marca quem vai e gera código/QR via `POST /app/kids/pre-checkin` (válido 12h, 1 ativo por responsável). QR = `react-native-qrcode-svg` com o código de 6 chars. No totem (sistema), o voluntário escaneia/digita, confere e imprime. **Sem checkout remoto** — entrada/retirada continuam presenciais (decisão de segurança das crianças). **Solicitar vínculo** (`kids-solicitar-vinculo.tsx`): quem não tem filho vinculado pede o vínculo enviando documentos (criança + pai e/ou mãe) — **foto** (`expo-image-picker` câmera/galeria) **ou arquivo PDF** (`expo-document-picker` · ⚠️ módulo NATIVO → só funciona a partir do **build 21**; no build 20 o app cai num aviso "atualize o app"). Upload direto pro bucket **privado** `kids-documentos` (path `{user.id}/...`, helper `uploadDoc` infere ext/contentType) e `POST /app/kids/solicitar-vinculo` manda só os paths; a equipe Kids confere e aprova. Status (em análise/recusada) aparece na própria tela (`GET /app/kids/minhas-solicitacoes`) e via push (`notify-kids-vinculo`). **Foto da criança (opcional · ECA/LGPD):** na tela do filho (`kids-filho.tsx`) o responsável autorizado pode adicionar a foto da criança com **consentimento explícito** (bloco com texto ECA Lei 8.069/90 arts. 17/18 + LGPD Lei 13.709/18 art. 14 + checkbox · versão `eca-lgpd-v1`). Upload pro bucket **privado** `kids-documentos` (`{user.id}/foto-crianca/...`) → `POST /app/kids/filho/:id/foto` (exige `consentimento:true`); a foto só é exibida (signed URL) com consentimento, a responsável + equipe Kids. **Revogável**: `POST /app/kids/filho/:id/foto/remover` apaga a foto e limpa o consentimento. |
 |   ✅   | **Pregações**    | Tela `videos.tsx` (`/videos` · atalho na Home + item "Pregações" no Menu): vídeos recentes + séries do YouTube (módulo Online do sistema) + **Assistir ao vivo**. Lê `GET /api/app/videos` (30 vídeos `online_videos` + 20 séries `online_series` + `canal_live`). Tap no vídeo → `Linking.openURL` `youtube.com/watch?v=ID`; série → playlist; ao vivo → `channel/<id>/live`. `trackEvento` em cada abertura. Fase 5 (Transmissão/Séries). |
 |   ✅   | **Meu discipulado** | Tela `jornada.tsx` (Sua jornada) ganhou o **placar X/5 valores** (bolinhas) + banner **"Seu próximo passo"** (1º valor não vivido → ação). Tudo client-side sobre os dados já carregados. |
 |   ✅   | **Modo Culto**   | Tela `modo-culto.tsx` (`/modo-culto`): **Assistir ao vivo** (canal YouTube), **decisão de fé** (tipo + presencial/online + recado → `POST /app/culto/decisao` → **fila de revisão da Integração**, NUNCA entra direto na NSM) e **anotações da pregação** (locais no aparelho via AsyncStorage). **⚠️ Só se chega nela pelo card VERMELHO de "Estamos ao vivo" no topo da Home** (04/08/2026 · pedido do Marcos: saiu do menu e do atalho fixo, porque fora do culto a tela não tem propósito). O card aparece com `ao_vivo` de `GET /app/culto/agora` (`cultoAoVivo()` em `lib/cultos.ts` · **sem cache**, é o dado mais perecível da tela; recarrega ao focar). Backend: `ao_vivo` = existe culto cuja janela [hora−30min, hora+3h] contém o agora, com o dia em **BRT** e valendo o culto **mais recente que começou** — antes o endpoint devolvia a maior hora do dia em UTC (decisão das 08:30 ia pro culto das 19:00, e das 21h em diante o dia já era o seguinte). |
@@ -215,12 +215,37 @@ casar). **⚠️ Cold start CONSOME a resposta (04/08/2026):** `getLastNotificat
 
 ## Generosidade — notas de implementação
 
-- **⚠️ Menu enxuto (04/08/2026 · limpeza pedida pelo Marcos):** o menu é o que
-  **NÃO** está na barra de baixo nem na faixa de cima. Ele tem 4 seções — Você
-  (Meu perfil · Minha família · Sua jornada · Batismo) · Participar (Inscrições ·
-  NEXT · Check-in Kids · Inscrições do meu grupo, só pra quem lidera ·
-  Generosidade quando a flag liga) · Conteúdo (Pregações) · Ajustes
-  (Configurações) + Sair. **Saíram, e cada um tem destino:** "Início" (não existe
+**⚠️ Duas faces na MESMA rota `/generosidade` (05/08/2026):** com
+`FEATURES.generosidade = false` (hoje · doações fora da App Store até a
+Benevity) a rota mostra **`components/generosidade/GenerosidadePix.tsx`** — só a
+**chave PIX da igreja** (`constants/pix.ts` · trocada de CNPJ pra
+**pix@cbrio.com.br** em 05/08, informada pelo Marcos), texto e botão de copiar.
+Antes ela fazia `<Redirect href="/" />`, o que deixava "Generosidade" sem lugar
+nenhum. Quando a flag ligar, a mesma rota volta a ser o módulo completo — uma
+rota, uma resposta pra "onde eu contribuo?".
+- ⚠️ **SEM QR de propósito:** QR de PIX exige o BR Code completo (`PIX_PAYLOAD`,
+  hoje vazio). QR só com a chave não é lido pelo app do banco — seria um código
+  que não funciona.
+- ⚠️ **RISCO DE LOJA (App Store · 3.2.2(iv)):** "arrecadar fundos dentro do app"
+  é o que tirou o módulo de doações da submissão em out/2026, e mostrar a chave
+  PIX é a mesma família de conteúdo — sair por OTA não torna a regra menos
+  válida. O Marcos pediu ciente disso. O interruptor
+  **`CHAVE_VISIVEL_NO_IOS`** (topo do GenerosidadePix) troca o comportamento no
+  iPhone pra "explica e manda pro site" numa linha, sem mexer em mais nada.
+
+- **⚠️ Menu enxuto (04-05/08/2026 · pedido do Marcos):** o menu é o que **NÃO**
+  está na barra de baixo nem na faixa de cima. 4 seções — **Você** (Meu perfil ·
+  Minha família · Sua jornada · **Generosidade**) · **Participar** (Inscrições ·
+  **Meu grupo** · **Batismo** · NEXT) · Conteúdo (Pregações) · Ajustes
+  (Configurações) + Sair.
+  Arrumação de 05/08: **Batismo desceu** pra Participar (é inscrição, não dado
+  seu) · **Check-in Kids saiu do menu** e virou cartão dentro de **Minha
+  família** (quem faz check-in é o responsável, na tela onde ele cuida da
+  família) · **Generosidade** entrou em Você e fecha os 4 · **"Inscrições do meu
+  grupo" virou "Meu grupo"** apontando pra MESMA tela da barra (`/meu-grupo`) —
+  era isso que fazia "grupos" no menu e "Grupos" na barra abrirem coisas
+  diferentes; a fila de quem lidera já é cartão lá dentro, então o menu não
+  consulta mais `getGrupoPapel()`. **Saíram, e cada um tem destino:** "Início" (não existe
   botão de início — a Home é a seta) · "No culto" (card de ao vivo na Home) ·
   "Avisos" e "Notificações" (o sino, em toda tela — e o **mural virou uma porta
   dentro de Notificações**, senão ficaria inalcançável sem push · a lista in-app

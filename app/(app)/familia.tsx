@@ -163,6 +163,29 @@ export default function FamiliaScreen() {
               </View>
             )}
 
+            {/* Check-in das crianças — mora AQUI (pedido do Marcos, 05/08/2026:
+                "em minha família você pode adicionar membros e fazer o check-in
+                das crianças"). Saiu do menu como item solto: quem faz check-in
+                de criança é o responsável, e é nesta tela que ele cuida da
+                própria família. */}
+            <Pressable
+              onPress={() => router.navigate("/kids")}
+              style={({ pressed }) => [styles.kidsCard, pressed && { opacity: 0.7 }]}
+              accessibilityRole="button"
+              accessibilityLabel={t("Check-in das crianças")}
+            >
+              <View style={styles.kidsIcone}>
+                <Ionicons name="happy-outline" size={22} color={colors.brandMid} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitulo}>{t("Check-in das crianças")}</Text>
+                <Text style={styles.cardSub}>
+                  {t("Prepare a entrada dos seus filhos no Kids e mostre o código na recepção.")}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </Pressable>
+
             {/* Convidar */}
             <View style={styles.card}>
               <Text style={styles.cardTitulo}>{t("Convidar um familiar")}</Text>
@@ -221,6 +244,8 @@ function makeStyles(colors: Palette) {
     center: { alignItems: "center", justifyContent: "center", paddingVertical: 48, gap: spacing.md },
     card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.sm },
     cardTitulo: { fontSize: font.size.md, fontWeight: "700", color: colors.text },
+    kidsCard: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.lg },
+    kidsIcone: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.glass, alignItems: "center", justifyContent: "center" },
     cardSub: { fontSize: font.size.sm, color: colors.textMuted, marginBottom: 4 },
     familiar: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: 6 },
     avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.surfaceAlt, alignItems: "center", justifyContent: "center", overflow: "hidden" },
