@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Stack, router, Redirect } from "expo-router";
+import { Stack, router } from "expo-router";
 import { FEATURES } from "@/lib/features";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -31,6 +31,7 @@ import { ApplePayButton, applePayButtonNativo } from "@/modules/apple-pay";
 import { criarCheckoutSession } from "@/lib/stripeCheckout";
 import { getMetodoPagamentoPadrao } from "@/lib/preferenciaPagamento";
 import { CheckoutWebView } from "@/components/generosidade/CheckoutWebView";
+import { GenerosidadePix } from "@/components/generosidade/GenerosidadePix";
 import { SucessoDoacao } from "@/components/generosidade/SucessoDoacao";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -54,9 +55,11 @@ function formatBRL(centavos: number): string {
 }
 
 export default function GenerosidadeScreen() {
-  // Desativado temporariamente (App Store · aguardando Benevity). Guard
-  // defensivo: se alguém navegar direto, volta pra Home.
-  if (!FEATURES.generosidade) return <Redirect href="/" />;
+  // Módulo de DOAÇÃO desligado (App Store · aguardando Benevity) → a rota
+  // mostra a versão simples: só a chave PIX da igreja e o texto (pedido do
+  // Marcos, 05/08/2026). Antes ela redirecionava pra Home, o que deixava
+  // "Generosidade" sem lugar nenhum no app.
+  if (!FEATURES.generosidade) return <GenerosidadePix />;
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -12,8 +12,6 @@ import { useMembro } from "@/lib/useMembro";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
-import { FEATURES } from "@/lib/features";
-import { getGrupoPapel } from "@/lib/api";
 
 type Option = {
   label: string;
@@ -31,16 +29,9 @@ export default function MenuScreen() {
   const nome =
     membro?.nome || (user?.user_metadata?.nome as string) || t("Membro CBRio");
 
-  // Item "Meus grupos" aparece pra quem gerencia grupo de conexão (líder OU
-  // supervisor).
-  const [gerenciaGrupo, setGerenciaGrupo] = useState(false);
-  useEffect(() => {
-    let vivo = true;
-    getGrupoPapel()
-      .then((p) => { if (vivo) setGerenciaGrupo(!!p?.lider || !!p?.supervisor); })
-      .catch(() => { /* silencioso: não gerencia ou offline */ });
-    return () => { vivo = false; };
-  }, []);
+  // ⚠️ Não há mais consulta de papel de grupo aqui: "Meu grupo" vale pra todo
+  // mundo e a fila de quem lidera é um cartão dentro de /meu-grupo. Antes o
+  // menu chamava getGrupoPapel() só pra decidir se mostrava um item.
 
   /**
    * ⚠️ O menu é o que NÃO está na barra de baixo (Grupos · Servir · Cuidados ·
@@ -61,6 +52,29 @@ export default function MenuScreen() {
    *                      em outro).
    *  · "Fale conosco"/"Sobre a CBRio" → dentro de Configurações.
    */
+  /**
+   * ⚠️ O menu é o que NÃO está na barra de baixo (Grupos · Servir · Cuidados ·
+   * Devocional) nem na faixa de cima (sino → Notificações/Avisos · foto →
+   * Perfil). Repetir aqui o que está sempre a um toque só faz a lista crescer
+   * — pedido do Marcos ("o app precisa ser sempre simples", 04/08/2026).
+   *
+   * Arrumação de 05/08/2026, também dele:
+   *  · **Batismo** desceu de "Você" pra "Participar" (é uma inscrição, não um
+   *    dado seu).
+   *  · **Check-in Kids** saiu daqui e virou um cartão DENTRO de "Minha família"
+   *    — quem faz check-in de criança é o responsável, na tela onde ele cuida
+   *    da própria família.
+   *  · **Generosidade** entrou em "Você" (chave PIX da igreja + texto),
+   *    fechando os 4 itens do quadro.
+   *  · **"Inscrições do meu grupo"** virou **"Meu grupo"** e aponta pra MESMA
+   *    tela da barra (`/meu-grupo`) — era isso que fazia "grupos" no menu e
+   *    "Grupos" na barra abrirem coisas diferentes. A fila de quem lidera já é
+   *    um cartão lá dentro, então não precisa de item próprio.
+   *
+   * Saíram antes (04/08): Início (a Home é a seta), No culto (card de ao vivo
+   * na Home), Avisos e Notificações (o sino), Cartões (virou "Cartão de Membro"
+   * no Perfil), Fale conosco e Sobre (dentro de Configurações).
+   */
   const secoes: { titulo: string; itens: Option[] }[] = [
     {
       titulo: "Você",
@@ -68,21 +82,16 @@ export default function MenuScreen() {
         { label: "Meu perfil", icon: "person-outline", onPress: () => router.navigate("/perfil") },
         { label: "Minha família", icon: "people-outline", onPress: () => router.navigate("/familia") },
         { label: "Sua jornada", icon: "trail-sign-outline", onPress: () => router.navigate("/jornada") },
-        { label: "Batismo", icon: "water-outline", onPress: () => router.navigate("/batismo") },
+        { label: "Generosidade", icon: "gift-outline", onPress: () => router.navigate("/generosidade") },
       ],
     },
     {
       titulo: "Participar",
       itens: [
         { label: "Inscrições", icon: "create-outline", onPress: () => router.navigate("/inscricoes") },
+        { label: "Meu grupo", icon: "people-circle-outline", onPress: () => router.navigate("/meu-grupo") },
+        { label: "Batismo", icon: "water-outline", onPress: () => router.navigate("/batismo") },
         { label: "NEXT", icon: "sparkles-outline", onPress: () => router.navigate("/next") },
-        { label: "Check-in Kids", icon: "happy-outline", onPress: () => router.navigate("/kids") },
-        ...(gerenciaGrupo
-          ? [{ label: "Inscrições do meu grupo", icon: "person-add-outline" as const, onPress: () => router.navigate("/grupo-inscricoes") }]
-          : []),
-        ...(FEATURES.generosidade
-          ? [{ label: "Generosidade", icon: "gift-outline" as const, onPress: () => router.navigate("/generosidade") }]
-          : []),
       ],
     },
     {

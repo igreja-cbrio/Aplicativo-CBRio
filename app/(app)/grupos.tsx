@@ -283,7 +283,12 @@ export default function GruposScreen() {
           <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>{t("Grupos")}</Text>
+          {/* ⚠️ "Encontrar um grupo", não "Grupos": a barra de baixo já tem
+              um "Grupos" (que abre /meu-grupo, titulado "Meus grupos"). Dois
+              títulos iguais em telas diferentes foi exatamente a confusão que
+              o Marcos relatou em 05/08/2026. Esta tela é o BUSCADOR — chega-se
+              nela de dentro de Meus grupos. */}
+          <Text style={styles.title}>{t("Encontrar um grupo")}</Text>
           <View style={{ width: 24 }} />
         </View>
 

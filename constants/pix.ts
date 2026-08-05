@@ -15,10 +15,12 @@
  * preenchido pro doador (sem precisar digitar valor).
  */
 
-// CNPJ da CBRio (chave PIX).
-export const PIX_KEY = "07023068000135";
-export const PIX_KEY_FORMATADA = "07.023.068/0001-35";
-export const PIX_KEY_TIPO = "CNPJ";
+// Chave PIX da CBRio. Trocada de CNPJ pra E-MAIL em 05/08/2026 (informada
+// pelo Marcos). Fonte ÚNICA: tanto a tela simples de Generosidade quanto o
+// módulo completo de doações leem daqui.
+export const PIX_KEY = "pix@cbrio.com.br";
+export const PIX_KEY_FORMATADA = "pix@cbrio.com.br";
+export const PIX_KEY_TIPO = "E-mail";
 // BR Code "copia-e-cola" completo (gere no app do banco da igreja
 // pra carregar valor + dados do recebedor). Deixe vazio se for cópia
 // só da chave.
