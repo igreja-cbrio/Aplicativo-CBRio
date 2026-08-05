@@ -9,6 +9,7 @@ import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { TranslationProvider } from "@/lib/i18n";
 import { SplashPulse } from "@/components/brand/SplashPulse";
 import { BiometriaLock } from "@/components/auth/BiometriaLock";
+import { PortaoAtualizacao } from "@/components/app/PortaoAtualizacao";
 import { Onboarding } from "@/components/onboarding/Onboarding";
 import { biometriaAtiva } from "@/lib/biometria";
 import { onboardingVisto, marcarOnboardingVisto } from "@/lib/onboarding";
@@ -167,9 +168,16 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <TranslationProvider>
           <ThemeProvider>
-            <AuthProvider>
-              <RootNavigator />
-            </AuthProvider>
+            {/* ⚠️ PORTÃO DE ATUALIZAÇÃO acima de TUDO (inclusive do login):
+                decisão do Marcos — "se não atualizar não usa". Fica fora do
+                AuthProvider de propósito: não depende de sessão, e assim a pessoa
+                não consegue nem logar com bundle velho. Só bloqueia quando o
+                update JÁ está baixado (ver o arquivo do componente). */}
+            <PortaoAtualizacao>
+              <AuthProvider>
+                <RootNavigator />
+              </AuthProvider>
+            </PortaoAtualizacao>
           </ThemeProvider>
         </TranslationProvider>
       </SafeAreaProvider>

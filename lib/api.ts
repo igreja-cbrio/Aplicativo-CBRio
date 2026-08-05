@@ -803,6 +803,16 @@ export type IdentidadeStatus = {
    * cadastro → build recusado). Ausente = trata como true.
    */
   exige_cpf?: boolean;
+  /**
+   * ⚠️ `false` = ESTA conta do app ainda não confirmou a ficha, então o
+   * formulário **não** pré-preenche CPF/nascimento/telefone do cadastro que o
+   * vínculo encontrou. Decisão do Marcos (05/08): "mesmo que o sistema ache que
+   * alguém é igual, não deve liberar acesso; depois de preencher todos os dados
+   * aí sim pode se ter 100% de certeza" — o gatilho de auth liga por e-mail +
+   * nome, e dado herdado de um import não é prova de identidade.
+   * Ausente/erro = tratar como `false` (na dúvida, a pessoa digita).
+   */
+  pode_preencher_com_vinculo?: boolean;
   nome?: string | null;
 };
 

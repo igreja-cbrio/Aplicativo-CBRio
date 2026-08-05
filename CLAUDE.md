@@ -443,11 +443,30 @@ Pedro Paiva (líder de marketing, iOS) baixar o app pra dar opinião:
   avisa**. O Pedro abriu uma vez e viu **a versão de ontem** — e concluiu, com
   razão, que o app estava daquele jeito. Medido no mesmo instante: 1 iPhone no
   bundle novo e 2 no antigo.
-  ⇒ **Régua pra teste de usuário: mandar fechar e reabrir o app antes de pedir
-  opinião**, senão a pessoa avalia o bundle velho. **Follow-up proposto ao Marcos
-  (não implementado):** banner "atualização pronta — toque para aplicar" usando
-  `Updates.useUpdates().isUpdatePending` + `reloadAsync()`. Resolve a classe do
-  problema, mas mexe no ciclo de updates e não entra de carona num redesenho.
+### ✅ PORTÃO DE ATUALIZAÇÃO OBRIGATÓRIO (`components/app/PortaoAtualizacao.tsx`)
+
+Decisão dele ao ver o caso do Pedro: *"coloca essa questão de aviso, mas não de
+opção de recusar, não queremos pessoas usando código antigo, isso quebra o
+sistema, se não atualizar não usa"*. Montado **acima de tudo** no
+`app/_layout.tsx` — **fora do `AuthProvider`**, então nem dá pra logar com bundle
+velho.
+
+- ⚠️⚠️ **Só bloqueia com `isUpdatePending`** (o bundle JÁ está no aparelho e
+  aplicar é instantâneo). Bloquear em `isUpdateAvailable` (existe no servidor,
+  ainda não baixou) trancaria fora quem está com internet ruim — e o app funciona
+  offline hoje. É a diferença entre "obrigatório" e "inutilizável".
+- ⚠️ **Cobra no cold start e na volta do background**, não no instante em que o
+  download termina: `isUpdatePending` vira true em background e interromperia a
+  pessoa **no meio do `/completar-cadastro`** (que também é obrigatório),
+  apagando o que ela digitou. Não é escape — não existe botão "depois" e não se
+  atravessa um ciclo de background com bundle velho.
+- ⚠️ Se `reloadAsync` falhar, o botão vira **"Tentar de novo"** (mesma ação). Sem
+  saída lateral, mas sem beco sem saída.
+- ⚠️ **No-op quando `Updates.isEnabled` é false** (dev/Expo Go) — lá `reloadAsync`
+  nem existe.
+- ⚠️ **O portão só começa a valer do PRÓXIMO update em diante**: quem está no
+  bundle de hoje recebe este código primeiro; a tela aparece na atualização
+  seguinte.
 
 ### ⚠️ Login com Google pessoal × conta institucional (caso Pedro · 05/08)
 
@@ -468,6 +487,45 @@ Ele relatou que **"não pediu complemento de cadastro"**. Duas causas somadas, e
 
 ⇒ Quando o bundle novo aplicar no aparelho dele, a tela de completar cadastro
 **vai** aparecer (falta CPF, nascimento e sexo no cadastro ligado).
+
+### ⚠️⚠️ DADO HERDADO NÃO LIBERA O APP (decisão dele · 05/08 · migration `20260805150000`)
+
+Ele foi direto ao ponto: *"qual CPF de Pedro Paiva que cadastrou no app? Data de
+nascimento, Sexo? Só tem email e nome. Se ele pode preencher o cadastro, pra que
+fundir automaticamente entende? O caso do app, mesmo que o sistema ache que
+alguém é igual, NÃO deve liberar acesso; depois de preencher todos os dados aí sim
+pode se ter 100% de certeza"*.
+
+O furo: `/identidade/status` calculava o que "falta" **a partir do cadastro que o
+vínculo encontrou**. Como o gatilho liga por e-mail + nome, quem caía num cadastro
+já completo **entrava sem nunca ter provado nada**, herdando CPF/nascimento/sexo
+de um import. **Medido antes de ligar: das 89 contas com cadastro vinculado, 9
+passavam — TODAS as 9 por herança** (confirmações reais pelo app: **0**). Dois
+casos não-staff eram gente que logou com Gmail e caiu num cadastro do
+`grupos_import_2026`.
+
+- **`profiles.app_ficha_confirmada_em`** é a marca. `completo` agora exige ficha
+  fechada **E** confirmação por ESTA conta. ⚠️ Fica em `profiles` (a CONTA), não em
+  `mem_membros`: duas contas ligadas ao mesmo cadastro herdariam a confirmação uma
+  da outra — o mesmo furo por outro caminho.
+- **O formulário não pré-preenche dado herdado**: enquanto o servidor não disser
+  `pode_preencher_com_vinculo`, vem **só o nome** (que veio do provedor do login) e
+  a pessoa digita telefone, nascimento, CPF e sexo. Pré-preencher seria fazê-la
+  "confirmar" o que não forneceu. Depois de confirmar, o prefill volta (aí é ela
+  editando a própria ficha). Erro de rede ⇒ **não pré-preenche** (na dúvida, digita).
+- ⚠️ **FAIL OPEN quando a coluna não existe** (deploy em 2 etapas): pedir coluna
+  inexistente faz o PostgREST recusar a query inteira, e tratar isso como "não
+  confirmou" prenderia todo mundo na tela — **inclusive depois de preencher**,
+  porque a gravação da marca falharia igual (loop sem saída). Sem a migration vale
+  o comportamento antigo; com ela, o portão liga. Os dois lados degradam juntos.
+- ⚠️ **O gatilho de `auth.users` NÃO foi alterado**: ele continua ligando por CPF
+  (forte) e por e-mail+nome. Mudá-lo pra não ligar criaria duplicata em todo login
+  e inundaria a fila. O que mudou é que **o vínculo deixou de ser prova de
+  acesso** — e o par duplicado continua indo pra fila humana em /entradas, agora
+  com CPF de verdade pra decidir, que é o que ele pediu.
+- ⚠️ **Efeito conhecido e correto**: as 9 contas (incluindo Marcos, Natasha e
+  Arthur) vão ver a tela de cadastro **uma vez**. É a régua dele aplicada a todo
+  mundo, não regressão.
 
 ## ⚠️ GERENCIAR GRUPO · 4 abas + editar (2026-08-05)
 
