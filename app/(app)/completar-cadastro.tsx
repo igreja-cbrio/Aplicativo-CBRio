@@ -40,10 +40,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
-import {
-  identidadePorCpf, confirmarCodigoIdentidade, completarCadastroApp,
-  type IdentidadePorCpf,
-} from "@/lib/api";
+import { completarCadastroApp, confirmarCodigoIdentidade, identidadePorCpf, statusIdentidade, type IdentidadePorCpf } from "@/lib/api";
 import { trackEvento } from "@/lib/telemetria";
 
 const soDigitos = (s: string) => s.replace(/\D/g, "");
@@ -112,6 +109,9 @@ export default function CompletarCadastroScreen() {
   const [nascimento, setNascimento] = useState("");
   const [cpfForm, setCpfForm] = useState("");
   const [sexo, setSexo] = useState<"masculino" | "feminino" | "">("");
+  // O servidor diz se o CPF é obrigatório (default: SIM — fail-closed, senão uma
+  // falha de rede viraria porta aberta pra entrar sem cadastro).
+  const [exigeCpf, setExigeCpf] = useState(true);
 
   // ⚠️ Prefill: o que a igreja já tem não é perguntado de novo (regra do
   // Marcos). `membro` vem do MembroContext, que já carregou a ficha.
@@ -127,6 +127,21 @@ export default function CompletarCadastroScreen() {
       if (a && m && d) setNascimento(`${d}/${m}/${a}`);
     }
   }, [membro]);
+
+  // ⚠️ Quem decide se o CPF é obrigatório é o SERVIDOR (`exige_cpf`). Falha de
+  // rede mantém o default TRUE (fail-closed): sem isso, ficar offline viraria
+  // porta pra entrar sem cadastro — o oposto do que o gate existe pra fazer.
+  useEffect(() => {
+    let vivo = true;
+    statusIdentidade()
+      .then((s) => {
+        if (vivo && s.exige_cpf === false) setExigeCpf(false);
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, []);
 
   const concluir = useCallback(async () => {
     await reload();
@@ -192,14 +207,21 @@ export default function CompletarCadastroScreen() {
     if (soDigitos(telefone).length < 10) { setErro(t("Informe seu telefone com DDD.")); return; }
     if (!iso) { setErro(t("Informe sua data de nascimento (dd/mm/aaaa).")); return; }
     const cpfDig = soDigitos(cpfForm);
-    // ⚠️ CPF pedido com destaque, mas NÃO bloqueia a entrada — medido em
-    // 05/08/2026: as contas de revisão da Apple (`appstore.staff@cbrio.app` sem
-    // cadastro nenhum, `appstore.review@cbrio.app` sem CPF) travariam nesta tela
-    // e o revisor não tem CPF brasileiro pra digitar. É a rejeição clássica de
-    // "não conseguimos passar da tela de registro" — e o próximo passo é
-    // justamente submeter um build iOS novo. Quem não põe CPF aqui é levado a
-    // completar quando tentar se inscrever (grupo-detalhe já faz isso).
-    if (cpfDig && cpfDig.length !== 11) { setErro(t("O CPF precisa ter 11 números (ou deixe em branco).")); return; }
+    // ⚠️⚠️ CPF OBRIGATÓRIO (decisão do Marcos · 05/08/2026): "todas as pessoas
+    // que entrarem no sistema devem completar o cadastro antes; após completar
+    // elas acessam normalmente". Sem CPF a pessoa entrava e era barrada na
+    // primeira inscrição (o `POST /app/inscricoes` recusa) — 50 das 75 contas.
+    // ⚠️ Quem manda é o SERVIDOR: `exige_cpf` vem do `/identidade/status` e é
+    // false SÓ pra conta de revisão de loja (o revisor não tem CPF brasileiro e
+    // travaria aqui → build recusado). O app não decide isso sozinho.
+    if (exigeCpf && cpfDig.length !== 11) {
+      setErro(t("Informe seu CPF (11 números) para continuar."));
+      return;
+    }
+    if (!exigeCpf && cpfDig && cpfDig.length !== 11) {
+      setErro(t("O CPF precisa ter 11 números (ou deixe em branco)."));
+      return;
+    }
     if (!sexo) { setErro(t("Selecione masculino ou feminino.")); return; }
     setEnviando(true);
     try {
@@ -330,7 +352,7 @@ export default function CompletarCadastroScreen() {
               placeholder="dd/mm/aaaa"
             />
             <Input
-              label={t("CPF (recomendado)")}
+              label={exigeCpf ? t("CPF *") : t("CPF (recomendado)")}
               value={cpfForm}
               onChangeText={(v: string) => setCpfForm(mascaraCpf(v))}
               keyboardType="number-pad"
