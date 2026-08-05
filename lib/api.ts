@@ -675,7 +675,15 @@ export function inscreverEmEvento(
 export type IdentidadeStatus = {
   vinculado: boolean;
   completo: boolean;
-  falta: string[]; // 'nome' | 'telefone' | 'nascimento' | 'cpf' (cpf = recomendado)
+  falta: string[]; // 'nome' | 'telefone' | 'nascimento' | 'cpf' | 'sexo'
+  /**
+   * ⚠️ O SERVIDOR decide se o CPF é obrigatório — o app nunca decide sozinho
+   * (mesma lei do resto: quem define o que é válido é o backend). Desde
+   * 05/08/2026 o gate está LIGADO pra todo mundo; só conta de REVISÃO DE LOJA
+   * é isenta (o revisor da Apple não tem CPF brasileiro e travaria na tela de
+   * cadastro → build recusado). Ausente = trata como true.
+   */
+  exige_cpf?: boolean;
   nome?: string | null;
 };
 
