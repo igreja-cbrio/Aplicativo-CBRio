@@ -39,6 +39,8 @@ type AuthContextValue = {
       cpf: string;
       dataNascimento: string; // ISO AAAA-MM-DD
       telefone: string; // E.164, ex.: +5521999999999
+      // ⚠️ Canônico `masculino|feminino`, NUNCA "outro" (lei do contrato).
+      sexo?: "masculino" | "feminino" | null;
       frequentaArea?: "ami" | "bridge" | null; // ministério auto-declarado
     }
   ) => Promise<{ needsEmailConfirmation: boolean }>;
@@ -139,6 +141,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               cpf: profile.cpf,
               data_nascimento: profile.dataNascimento,
               telefone: profile.telefone,
+              // `genero` é o nome da coluna em mem_membros — é a chave que o
+              // trigger handle_new_user lê (patchado em 05/08 pra gravá-la).
+              genero: profile.sexo ?? null,
               frequenta_area: profile.frequentaArea ?? null,
               origem: "app", // distingue cadastro nativo de logins web/magic-link
             },

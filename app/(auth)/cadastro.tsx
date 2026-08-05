@@ -42,6 +42,9 @@ export default function CadastroScreen() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // ⚠️ Sexo OBRIGATÓRIO (Matheus · 05/08: "em todos os formulários"). Canônico
+  // `masculino|feminino`, NUNCA "outro" — lei do Contrato de Inscrição.
+  const [sexo, setSexo] = useState<"masculino" | "feminino" | null>(null);
   const [frequentaArea, setFrequentaArea] = useState<"ami" | "bridge" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -50,6 +53,10 @@ export default function CadastroScreen() {
     setError(null);
     if (!nome || !cpf || !nascimento || !phone || !email || !password) {
       setError(t("Preencha todos os campos."));
+      return;
+    }
+    if (!sexo) {
+      setError(t("Selecione o sexo."));
       return;
     }
     if (!isValidCPF(cpf)) {
@@ -71,6 +78,7 @@ export default function CadastroScreen() {
         cpf: onlyDigits(cpf),
         dataNascimento: dateBRToISO(nascimento)!,
         telefone: `+${country.dial}${onlyDigits(phone)}`,
+        sexo,
         frequentaArea,
       });
       if (needsEmailConfirmation) {
@@ -150,6 +158,29 @@ export default function CadastroScreen() {
                 placeholder={t("Mínimo 6 caracteres")}
                 secure
               />
+
+              <View style={styles.areaBlock}>
+                <Text style={styles.areaLabel}>{t("Sexo")}</Text>
+                <View style={styles.areaRow}>
+                  {([
+                    { v: "masculino", label: t("Masculino") },
+                    { v: "feminino", label: t("Feminino") },
+                  ] as const).map((opt) => {
+                    const ativo = sexo === opt.v;
+                    return (
+                      <Pressable
+                        key={opt.v}
+                        onPress={() => setSexo(opt.v)}
+                        style={[styles.areaPill, ativo && styles.areaPillOn]}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: ativo }}
+                      >
+                        <Text style={[styles.areaPillTxt, ativo && styles.areaPillTxtOn]}>{opt.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
 
               <View style={styles.areaBlock}>
                 <Text style={styles.areaLabel}>{t("Você frequenta o AMI ou o Bridge?")}</Text>
