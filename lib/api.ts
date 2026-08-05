@@ -607,6 +607,7 @@ export function completarCadastroApp(dados: {
   sexo: "masculino" | "feminino";
   email?: string;
   cpf?: string;
+  sexo?: "masculino" | "feminino";
 }): Promise<{ ok: boolean; criado?: boolean }> {
   return apiPost("/app/identidade/completar", dados);
 }
