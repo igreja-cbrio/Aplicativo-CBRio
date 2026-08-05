@@ -327,6 +327,61 @@ query INTEIRA e o app trata como "vazio" (a armadilha do `parcelas_max`).
 Conferido também: `kids_vinculo_solicitacoes` usa
 `pendente|aprovado|rejeitado|cancelado` e o app compara os certos.
 
+## ⚠️ EVENTOS no app · inscrição por dentro, sem link externo (2026-08-05)
+
+Pedido do Marcos: *"ao clicar em inscrições, aparecem todos os eventos da igreja,
+com um seletor de todos os eventos e eventos inscritos; nessa aba, ao clicar deve
+aparecer minha inscrição naquele evento — e eu quero que os outros eventos tenham
+inscrições PELO APP também, sem link externo como é o caso do celebra."*
+
+- **Seletor `Todos | Meus eventos`** na aba Inscrições (`inscricoes.tsx`) — NÃO é
+  aba nova, é recorte da mesma lista. "Meus" vem de `GET /app/eventos/minhas`
+  (tabela `inscricoes`), que é o que traz o estado REAL da pessoa.
+- **Tela `/evento?id=`** (`evento.tsx`) faz os dois papéis: **já inscrita** → a
+  inscrição dela (estado, número da sorte, **QR do comprovante**, "Pagar agora"
+  quando pendente, respostas); **não inscrita** → o **formulário dentro do app**.
+- ⚠️⚠️ **O FORMULÁRIO NÃO REPETE A RÉGUA DO SERVIDOR.** O
+  `POST /app/eventos/:id/inscrever` executa a MESMA função da porta pública
+  (`inscreverEspinha`) — contrato de campos, benefício por CPF, vaga atômica,
+  consentimento e cobrança idênticos. Aqui só **pré-preenchemos** (a ficha do
+  cadastro, via `SeusDados`), pedimos os campos **EXTRA** do form-builder e
+  exibimos o erro que o servidor devolver.
+- ⚠️ **PAGAMENTO continua na página hospedada** (`/pagamento/<token>`): é onde
+  vivem Pix/boleto/cartão e o escopo PCI — dado de cartão nunca entra no app.
+- ⚠️ **Evento com campo `imagem` cai no form público** (o app não sobe arquivo pro
+  pipeline daquele formulário): melhor mandar pro caminho que funciona do que
+  mostrar um campo que não envia. Caso real: "Patrocinadores - Celebra 2026".
+- ⚠️ **Ficha incompleta não tenta inscrever**: o contrato exige CPF, nascimento e
+  sexo; sem isso o servidor recusaria. A tela leva pro cadastro.
+- ⚠️ `MembroBasico` ganhou **`genero`** — `validarCamposPadrao` exige sexo
+  (`exigirSexo` é true por padrão), e sem esse campo o app pediria de novo algo
+  que a ficha já tem (ou levaria 400 do servidor).
+- ⚠️ A resposta do servidor tem **`pagamento` BOOLEAN**, não objeto: o link do
+  pagamento se monta do `public_token` (`urlPagamentoDaResposta` em `lib/api.ts`).
+  Eu havia tipado como objeto e a tela nunca acharia o link.
+
+## ⚠️ O que o WEB muda aparece no app (e quando) · 2026-08-05
+
+**É o MESMO banco** (projeto Supabase `hhntwfawfnxvuobhdfkb` nos dois) — não existe
+sincronização. O que separa "mudou no web" de "apareceu no app" é: **(1) quando a
+tela recarrega · (2) se a régua bate nos dois lados · (3) se o app tem onde
+mostrar**.
+
+- **Recarregar ao FOCAR passou de 16 pra 22 telas** — entraram batismo,
+  grupo-detalhe (a aprovação do pedido acontece no web!), buscador de grupos
+  (grupo criado/desativado lá), devocional, culto-detalhe e escala do supervisor.
+  ⚠️ **Formulário NÃO recarrega ao focar** (perfil, grupo-editar,
+  completar-cadastro): refetch em cima do que a pessoa está digitando é pior que
+  dado velho.
+- **Realtime existe em UMA tabela**: `vol_inscricoes` (`useVoluntariadoSync`) —
+  aceitar um voluntário no web aparece em segundos.
+- **Cache**: só destaques da Home e próximos cultos (SWR 10 min). Dado da pessoa
+  fica em contexto por sessão e revalida ao voltar do background se passou de 5 min.
+- **`useAdminGrupo` parou de decidir por `profiles.role`** (esquema APOSENTADO) —
+  agora pergunta ao servidor (`GET /app/grupos/papel`, que calcula pela matriz +
+  boost de área). Quem tem grupos ≥ 3 pela matriz editava no web e **não** no app.
+  Falha de rede é **fail-closed** (não concede permissão).
+
 ## Módulos
 
 | Status | Módulo           | Descrição                                                        |

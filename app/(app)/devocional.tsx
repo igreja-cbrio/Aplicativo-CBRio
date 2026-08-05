@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
@@ -80,9 +81,15 @@ export default function DevocionalScreen() {
     [membro?.membroId]
   );
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  // ⚠️ RECARREGA AO FOCAR (05/08/2026): o web e o app leem o MESMO banco, mas
+  // só refletia o que o web mudou se a tela fosse remontada. Aprovar um pedido,
+  // criar um grupo, marcar um batismo como realizado — tudo isso muda por lá e
+  // a pessoa volta pra esta tela esperando ver.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   // Último "Pense" do Pr. Pedrão (YouTube @CanalPense) — atalho de vídeo.
   useEffect(() => {

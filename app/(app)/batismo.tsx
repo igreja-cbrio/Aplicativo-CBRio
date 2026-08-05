@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as FileSystem from "expo-file-system/legacy";
@@ -92,9 +93,15 @@ export default function BatismoScreen() {
     setIgrejaTxt(ant.igreja_batismo_anterior ?? "");
   }, [membro?.membroId]);
 
-  useEffect(() => {
-    carregar();
-  }, [carregar]);
+  // ⚠️ RECARREGA AO FOCAR (05/08/2026): o web e o app leem o MESMO banco, mas
+  // só refletia o que o web mudou se a tela fosse remontada. Aprovar um pedido,
+  // criar um grupo, marcar um batismo como realizado — tudo isso muda por lá e
+  // a pessoa volta pra esta tela esperando ver.
+  useFocusEffect(
+    useCallback(() => {
+      carregar();
+    }, [carregar])
+  );
 
   async function onCheckin() {
     if (!batismo) return;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
@@ -40,13 +41,19 @@ export default function CultoDetalheScreen() {
   const [culto, setCulto] = useState<CultoDetalhe | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!id) return;
-    setLoading(true);
-    getCulto(id)
-      .then(setCulto)
-      .finally(() => setLoading(false));
-  }, [id]);
+  // ⚠️ RECARREGA AO FOCAR (05/08/2026): o web e o app leem o MESMO banco, mas
+  // só refletia o que o web mudou se a tela fosse remontada. Aprovar um pedido,
+  // criar um grupo, marcar um batismo como realizado — tudo isso muda por lá e
+  // a pessoa volta pra esta tela esperando ver.
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) return;
+      setLoading(true);
+      getCulto(id)
+        .then(setCulto)
+        .finally(() => setLoading(false));
+    }, [id])
+  );
 
   function abrirMaps() {
     Linking.openURL(`http://maps.apple.com/?q=${encodeURIComponent(END)}`);

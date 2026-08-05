@@ -6,7 +6,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { carregarStatusInscricoes, type InscricoesStatus, type StatusInscricao } from "@/lib/inscricoesStatus";
-import { buscarEventosAbertos, type EventoAberto } from "@/lib/api";
+import {
+  buscarEventosAbertos,
+  minhasInscricoesEventos,
+  type EventoAberto,
+  type MinhaInscricaoEvento,
+} from "@/lib/api";
 import { abrirInscricaoEvento } from "@/lib/eventos";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
@@ -83,11 +88,20 @@ export default function InscricoesScreen() {
   const { membro } = useMembro();
   const [status, setStatus] = useState<InscricoesStatus | null>(null);
   const [eventos, setEventos] = useState<EventoAberto[] | null>(null);
+  // ⚠️ Seletor "Todos | Meus eventos" (pedido do Marcos · 05/08/2026): NÃO é aba
+  // nova — é recorte da MESMA lista. "Meus" abre a inscrição da pessoa naquele
+  // evento (tela /evento), que é onde o estado dela (confirmada/pagamento/QR)
+  // finalmente aparece no app.
+  const [minhas, setMinhas] = useState<MinhaInscricaoEvento[] | null>(null);
+  const [verMeus, setVerMeus] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       carregarStatusInscricoes(membro?.membroId ?? null).then(setStatus).catch(() => {});
       buscarEventosAbertos().then((r) => setEventos(r.eventos || [])).catch(() => setEventos([]));
+      minhasInscricoesEventos()
+        .then((r) => setMinhas(r.inscricoes || []))
+        .catch(() => setMinhas([]));
     }, [membro?.membroId])
   );
 
@@ -131,19 +145,84 @@ export default function InscricoesScreen() {
         })}
 
         {/* Eventos publicados no sistema (espinha /inscricoes) */}
-        {eventos && eventos.length > 0 && (
+        {((eventos && eventos.length > 0) || (minhas && minhas.length > 0)) && (
           <>
-            <Text style={styles.secao}>{t("Eventos abertos")}</Text>
-            {eventos.map((ev) => {
+            <Text style={styles.secao}>{t("Eventos da igreja")}</Text>
+            <View style={styles.segRow}>
+              {[
+                { k: false, label: t("Todos") },
+                { k: true, label: t("Meus eventos") },
+              ].map((op) => {
+                const sel = verMeus === op.k;
+                const n = op.k ? (minhas?.length ?? 0) : (eventos?.length ?? 0);
+                return (
+                  <Pressable
+                    key={String(op.k)}
+                    onPress={() => setVerMeus(op.k)}
+                    style={[styles.segBtn, sel && styles.segBtnAtivo]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: sel }}
+                  >
+                    <Text style={[styles.segTxt, sel && styles.segTxtAtivo]}>
+                      {op.label}{n ? ` (${n})` : ""}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {verMeus && (minhas?.length ?? 0) === 0 ? (
+              <View style={styles.vazioCard}>
+                <Ionicons name="ticket-outline" size={26} color={colors.textMuted} />
+                <Text style={styles.vazioTxt}>
+                  {t("Você ainda não se inscreveu em nenhum evento.")}
+                </Text>
+              </View>
+            ) : null}
+            {/* ⚠️ A lista é a MESMA em "Todos" e "Meus eventos" — só o recorte
+                muda. Em "Meus", a fonte é `minhas` (a tabela `inscricoes`), que é
+                o que traz o estado real (confirmada/pagamento/sorteio) e não
+                existia no app até 05/08/2026. */}
+            {(verMeus
+              ? (minhas ?? []).map((i) => ({
+                  id: i.evento.id,
+                  nome: i.evento.nome,
+                  data: i.evento.data,
+                  hora: i.evento.hora,
+                  local: i.evento.local,
+                  capa_url: i.evento.capa_url,
+                  pago: i.evento.pago,
+                  valor_centavos: i.valor_cobrado_centavos ?? null,
+                  tem_sorteio: i.evento.tem_sorteio,
+                  statusInsc: i.status,
+                  pagamentoPendente: i.status === "recebida" && i.pagamento?.status !== "pago",
+                }))
+              : (eventos ?? []).map((e) => ({
+                  id: e.id,
+                  nome: e.nome,
+                  data: e.data,
+                  hora: e.hora,
+                  local: e.local,
+                  capa_url: e.capa_url,
+                  pago: e.pago,
+                  valor_centavos: e.valor_centavos,
+                  tem_sorteio: e.tem_sorteio,
+                  statusInsc: e.inscrito ? "inscrita" : null,
+                  pagamentoPendente: false,
+                }))
+            ).map((ev) => {
               const quando = formatarDataEvento(ev.data, ev.hora);
               const valor = ev.pago ? formatarValor(ev.valor_centavos) : null;
               return (
                 <Pressable
                   key={ev.id}
                   style={({ pressed }) => [styles.eventoCard, pressed && styles.pressed]}
-                  onPress={() => abrirInscricaoEvento(ev.url)}
+                  onPress={() =>
+                    router.navigate({ pathname: "/evento", params: { id: ev.id } } as never)
+                  }
                   accessibilityRole="button"
-                  accessibilityLabel={`${ev.nome}. ${t("Toque para se inscrever")}`}
+                  accessibilityLabel={`${ev.nome}. ${
+                    ev.statusInsc ? t("Ver minha inscrição") : t("Toque para se inscrever")
+                  }`}
                 >
                   {ev.capa_url ? (
                     <Image source={{ uri: ev.capa_url }} style={styles.eventoCapa} resizeMode="cover" />
@@ -176,6 +255,19 @@ export default function InscricoesScreen() {
                       )}
                       {ev.tem_sorteio ? (
                         <View style={styles.tagSorteio}><Text style={styles.tagSorteioTxt}>{t("Sorteio")}</Text></View>
+                      ) : null}
+                      {ev.pagamentoPendente ? (
+                        <View style={styles.tagPendente}>
+                          <Text style={styles.tagPendenteTxt}>{t("Pagamento pendente")}</Text>
+                        </View>
+                      ) : ev.statusInsc === "cancelada" ? (
+                        <View style={styles.tagPendente}>
+                          <Text style={styles.tagPendenteTxt}>{t("Cancelada")}</Text>
+                        </View>
+                      ) : ev.statusInsc ? (
+                        <View style={styles.tagInscrito}>
+                          <Text style={styles.tagInscritoTxt}>{t("Inscrito")}</Text>
+                        </View>
                       ) : null}
                     </View>
                   </View>
@@ -218,6 +310,17 @@ const makeStyles = (colors: Palette) =>
     tagPagoTxt: { color: "#3FA66B", fontSize: 11, fontWeight: "800" },
     tagGratis: { backgroundColor: colors.glass, borderRadius: radius.full, paddingHorizontal: 9, paddingVertical: 3 },
     tagGratisTxt: { color: colors.textMuted, fontSize: 11, fontWeight: "700" },
+    vazioCard: { alignItems: "center", gap: 8, paddingVertical: spacing.lg, backgroundColor: colors.surfaceAlt, borderRadius: radius.lg },
+    vazioTxt: { color: colors.textMuted, fontSize: font.size.sm, textAlign: "center", paddingHorizontal: spacing.lg },
+    segRow: { flexDirection: "row", gap: 8, marginBottom: 4 },
+    segBtn: { flex: 1, alignItems: "center", paddingVertical: 9, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceAlt },
+    segBtnAtivo: { backgroundColor: colors.primary, borderColor: colors.primary },
+    segTxt: { color: colors.textMuted, fontSize: 13, fontWeight: "700" },
+    segTxtAtivo: { color: "#fff" },
+    tagInscrito: { backgroundColor: "rgba(63,166,107,0.16)", borderRadius: radius.full, paddingHorizontal: 8, paddingVertical: 3 },
+    tagInscritoTxt: { color: "#3FA66B", fontSize: 11, fontWeight: "800" },
+    tagPendente: { backgroundColor: "rgba(245,158,11,0.16)", borderRadius: radius.full, paddingHorizontal: 8, paddingVertical: 3 },
+    tagPendenteTxt: { color: "#F59E0B", fontSize: 11, fontWeight: "800" },
     tagSorteio: { backgroundColor: "rgba(112,168,176,0.18)", borderRadius: radius.full, paddingHorizontal: 9, paddingVertical: 3 },
     tagSorteioTxt: { color: colors.brandMid, fontSize: 11, fontWeight: "700" },
   });

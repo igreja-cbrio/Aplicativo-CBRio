@@ -540,6 +540,15 @@ export function removerDaFamilia(outroId: string): Promise<MinhaFamilia & { ok: 
 }
 
 // ===== Inscrições · eventos publicados (espinha /inscricoes do sistema) =====
+/** Campo EXTRA do form-builder do evento (os padrão vêm do cadastro). */
+export type CampoEvento = {
+  key: string;
+  label: string;
+  tipo?: string;          // texto|textarea|email|numero|data|select|escolha|multi|rede_social|imagem
+  obrigatorio?: boolean;
+  opcoes?: string[];
+};
+
 export type EventoAberto = {
   id: string;
   nome: string;
@@ -555,11 +564,106 @@ export type EventoAberto = {
   tem_sorteio: boolean;
   pago: boolean;
   valor_centavos: number | null;
+  campos: CampoEvento[];
+  msg_sucesso_titulo: string | null;
+  msg_sucesso_texto: string | null;
+  /** Já tenho inscrição viva neste evento (alimenta o seletor "Meus eventos"). */
+  inscrito: boolean;
+  /** Form público — fallback quando o app não sabe renderizar (campo `imagem`). */
   url: string;
 };
 
-export function buscarEventosAbertos(): Promise<{ eventos: EventoAberto[] }> {
-  return apiGet<{ eventos: EventoAberto[] }>("/app/eventos");
+export type TextosInscricao = { termos_lgpd: string; aviso_optin: string };
+
+export function buscarEventosAbertos(): Promise<{
+  eventos: EventoAberto[];
+  textos?: TextosInscricao;
+}> {
+  return apiGet<{ eventos: EventoAberto[]; textos?: TextosInscricao }>("/app/eventos");
+}
+
+// ===== Minhas inscrições em eventos (espinha /inscricoes) =====
+// ⚠️ Estado da inscrição da pessoa vive na tabela `inscricoes` do sistema, que o
+// app NÃO lia — então confirmar/cancelar/dar bolsa/marcar pago no web não tinha
+// onde aparecer (medido em 05/08/2026). Estes 2 endpoints fecham isso.
+export type MinhaInscricaoEvento = {
+  id: string;
+  status: string;              // confirmada | recebida | cancelada | ...
+  criado_em: string;
+  numero_sorte: number | null;
+  bolsa_tipo: string | null;   // integral | parcial
+  valor_cobrado_centavos: number | null;
+  respostas: Record<string, unknown>;
+  comprovante_url: string;     // /i/c/<token> — o MESMO QR que a portaria lê
+  pagamento: {
+    status: string | null;
+    metodo: string | null;
+    valor_centavos: number | null;
+    pago_em: string | null;
+    expira_em: string | null;
+    url: string | null;        // página hospedada (Pix/boleto/cartão)
+  } | null;
+  evento: {
+    id: string;
+    nome: string;
+    slug: string;
+    data: string | null;
+    hora: string | null;
+    local: string | null;
+    capa_url: string | null;
+    tem_sorteio: boolean;
+    pago: boolean;
+    checkin_ativo: boolean;
+  };
+};
+
+export function minhasInscricoesEventos(): Promise<{ inscricoes: MinhaInscricaoEvento[] }> {
+  return apiGet<{ inscricoes: MinhaInscricaoEvento[] }>("/app/eventos/minhas");
+}
+
+/**
+ * Resposta REAL de `inscreverEspinha` (conferida no servidor em 05/08/2026 —
+ * `respostaCobranca` + os dois `res.status(201)`):
+ *   gratuito → { ok, numero_sorte, tem_sorteio, comprovante_token, beneficio }
+ *   pago     → { ok, pagamento: TRUE (boolean!), status, public_token,
+ *                checkout_url, valor_centavos, expira_em, tem_sorteio }
+ *   já inscrito → o mesmo + ja_inscrito: true
+ * ⚠️ `pagamento` é BOOLEAN, não objeto — o link se monta do `public_token`
+ * (página hospedada, que deixa escolher Pix/boleto/cartão). Eu tinha escrito
+ * como objeto e a tela nunca acharia o link.
+ */
+export type InscricaoEventoResp = {
+  ok?: boolean;
+  ja_inscrito?: boolean;
+  numero_sorte?: number | null;
+  tem_sorteio?: boolean;
+  comprovante_token?: string | null;
+  /** 'integral' = gratuidade autorizada pela liderança · 'parcial' = desconto. */
+  beneficio?: string | null;
+  pagamento?: boolean;
+  status?: string | null;
+  public_token?: string | null;
+  checkout_url?: string | null;
+  valor_centavos?: number | null;
+  expira_em?: string | null;
+};
+
+/** Página hospedada de pagamento (Pix/boleto/cartão) da resposta acima. */
+export function urlPagamentoDaResposta(r: InscricaoEventoResp): string | null {
+  if (r.public_token) return `https://www.cbrio.org/pagamento/${r.public_token}`;
+  return r.checkout_url || null;
+}
+
+/**
+ * Inscreve no evento POR DENTRO do app. O corpo é o MESMO do formulário público
+ * e o servidor roda a MESMA função (`inscreverEspinha`) — contrato, vaga atômica,
+ * consentimento e cobrança idênticos. O app só pré-preenche e renderiza.
+ */
+export function inscreverEmEvento(
+  eventoId: string,
+  body: Record<string, unknown>
+): Promise<InscricaoEventoResp> {
+  return apiPost<InscricaoEventoResp>(`/app/eventos/${eventoId}/inscrever`, body);
 }
 
 // ===== Identidade da conta · vincular ao cadastro REAL da pessoa =====
