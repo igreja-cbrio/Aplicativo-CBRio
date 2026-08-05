@@ -9,6 +9,51 @@
 App de membros da igreja **CBRio**. Está sendo **reconstruído do zero, módulo a
 módulo**. Roda em **Android e iOS**.
 
+## ⚠️⚠️ PORTÃO DO REPO · CI das réguas + gate no OTA (05/08/2026)
+
+Até hoje este repo **não tinha portão nenhum**: nem teste, nem CI. O que segurava
+regressão era `tsc --noEmit` rodado à mão. Numa varredura só (05/08) apareceram
+**nove** divergências entre a régua do app e a do ERP — e **nenhuma quebra o
+TypeScript**, porque são erros de SEMÂNTICA (status que não existe no banco, dia
+em UTC, filtro de soft-delete ausente, 7 status tratados como 3).
+
+**Comandos:**
+- `npm run verificar` → `typecheck` + `test`. **É o portão.**
+- `npm test` → vitest nas réguas (`test/reguas.test.ts` · 27 casos).
+- `npm run test:mutantes` → quebra cada régua de propósito e exige que o teste
+  FALHE (6/6 hoje). **Guarda que não pega a regressão é decoração.**
+
+**Onde o portão está pregado:**
+1. **CI** (`.github/workflows/ci.yml`) em todo push/PR: typecheck → réguas →
+   mutation guards.
+2. **`npm run ota` NÃO PUBLICA se o portão falhar** — testado: com a régua do BRT
+   quebrada, o script aborta e nada vai pro ar. OTA chega em quem tem o app
+   instalado **sem revisão no caminho**, então o portão tem que ser aqui. Escape
+   consciente: `CBRIO_OTA_SEM_PORTAO=1` (aparece no log).
+
+**As réguas testadas — e por que cada uma existe** (cada teste cita o estrago
+medido em produção):
+- `lib/volStatus.ts` — os **7** status de `vol_inscricoes` do ERP (o app tratava
+  3; 88 pessoas com fila encerrada apareciam como "Pendente").
+- `lib/hierarquia.ts` — a árvore do `cd ..`, com **invariante**: todo pai é a Home
+  ou existe no mapa (senão a seta leva a lugar nenhum).
+- `lib/dataBRT.ts` — o dia da igreja em BRT (21h no Rio ainda é hoje).
+- `lib/ficha.ts` — o que o Contrato de Inscrição exige (CPF barrava 50 das 75
+  contas na hora de pedir grupo).
+- `lib/inscricaoPayload.ts` — o corpo da inscrição: **faltar campo aqui não quebra
+  o TypeScript, quebra a inscrição da pessoa com 400**.
+
+⚠️ **REGRA: régua nova vive em `lib/` (código PURO), nunca dentro de `.tsx`.** Foi
+por isso que `fichaCompleta` saiu do `SeusDados.tsx` e o payload saiu do
+`evento.tsx` — arquivo que importa react-native não roda no CI. O componente
+re-exporta pra não quebrar quem importava.
+⚠️ **Teste tem que ser DETERMINÍSTICO**: sem rede, sem banco, sem o relógio da
+máquina (`vi.setSystemTime`) — a lição do `faixaEtaria.test.ts` do ERP, que
+passava ou falhava conforme a hora do dia.
+⚠️ **O que este portão NÃO cobre: a TELA.** Ele garante que a regra não muda sem
+alguém perceber; não garante que o botão renderiza. Isso exige rodar o app num
+aparelho, e continua sendo passo humano antes de release.
+
 ## Stack
 
 - **Expo SDK 54** + **Expo Router** (rotas tipadas)

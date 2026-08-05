@@ -1,0 +1,57 @@
+# ============================================================================
+# CI do app de membros (05/08/2026)
+#
+# Por que existe: até hoje este repo **não tinha portão nenhum** — nem teste, nem
+# CI. O que segurava regressão era `tsc --noEmit` rodado à mão e leitura de
+# código. Numa varredura só (05/08) apareceram NOVE divergências entre a régua do
+# app e a do ERP; nenhuma delas quebra o TypeScript, porque são erros de
+# SEMÂNTICA (status que não existe no banco, dia em UTC, filtro de soft-delete
+# ausente, 7 status tratados como 3).
+#
+# ⚠️ O que este CI garante: as RÉGUAS puras (`lib/*`) não mudam sem alguém
+# perceber. O que ele NÃO garante: que a tela funciona — isso exige rodar o app
+# num aparelho, e continua sendo passo humano antes de release.
+#
+# ⚠️ Teste aqui tem que ser DETERMINÍSTICO (sem rede, sem banco, sem o relógio da
+# máquina) — a lição do `faixaEtaria.test.ts` do ERP, que passava ou falhava
+# conforme a HORA em que rodava.
+# ============================================================================
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: typecheck + réguas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # `--legacy-peer-deps` não: se o conflito de peer aparecer, é pra ver.
+      - name: instalar dependências
+        run: npm ci
+
+      - name: typecheck
+        run: npm run typecheck
+
+      - name: réguas (vitest)
+        run: npm run test
+
+      # As guardas de mutação: quebra a régua de propósito e exige que o teste
+      # FALHE. Guarda que não pega a regressão é decoração — este passo é o que
+      # prova que os testes acima têm dente.
+      - name: mutation guards
+        run: npm run test:mutantes
