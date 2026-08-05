@@ -48,6 +48,18 @@ módulo**. Roda em **Android e iOS**.
   nenhuma das duas versões como fato sem olhar lá.
   **Android recebe, isso sim está conferido** (build #5, de 24/07, commit
   `6202102`, posterior ao OTA).
+  ✅ **Build iOS #32 (05/08/2026 · commit `7eabfb5`) fecha essa dúvida pra
+  frente**: `eas build:view` mostra **Channel `production` · Runtime 1.0.0**, e o
+  `eas channel:view production` confirma o canal apontando pro branch
+  `production` nas DUAS plataformas. Ou seja: esse binário recebe todo OTA que a
+  gente publicar. Ele está **construído (IPA pronto, distribuição STORE), NÃO
+  submetido** — `eas submit -p ios --profile production --latest` inicia revisão
+  da Apple e é decisão de gente.
+  ⚠️ **ANTES de submeter**: as contas de revisão precisam passar no portão de
+  cadastro (medido em 05/08 — `appstore.staff@cbrio.app` **sem cadastro nenhum**,
+  `appstore.review@cbrio.app` sem CPF/nascimento/sexo). O CPF já não bloqueia,
+  mas **sexo bloqueia** e nenhuma das três tem. Revisor travado na tela de
+  cadastro = rejeição por demo account.
   ⚠️ **`eas.json` · perfil production ganhou `"environment": "production"`**
   (05/08/2026): o `env` inline do perfil tem URL e merchant do Apple Pay mas
   **NÃO tem `EXPO_PUBLIC_SUPABASE_ANON_KEY`** — ela vive nas EAS environment
