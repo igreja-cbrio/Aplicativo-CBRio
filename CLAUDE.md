@@ -33,9 +33,24 @@ módulo**. Roda em **Android e iOS**.
   `preview`/`production` no `eas.json`; `runtimeVersion.policy = appVersion`).
   Mudança **só de JS** vai ao ar sem revisão da Apple:
   `eas update --channel production --message "..."`. Só chega a builds com a
-  MESMA `version` do app.json e que já contenham `expo-updates` (build iOS
-  ≥ 20). Mudança nativa (módulo, plugin, permissão) continua exigindo
+  MESMA `version` do app.json (runtime 1.0.0) e que já contenham
+  `expo-updates`. Mudança nativa (módulo, plugin, permissão) continua exigindo
   build novo + revisão.
+  ⚠️⚠️ **O BUILD iOS DA LOJA NÃO RECEBE OTA** (medido em 05/08/2026 — a nota
+  antiga aqui dizia "build iOS ≥ 20" e estava ERRADA): o build iOS mais recente
+  no EAS é o **#16, de 11/06** (commit `6387fd9`) e o OTA só foi configurado em
+  **12/06** (commit `f3810c5`) — conferido com
+  `git merge-base --is-ancestor f3810c5 6387fd9` (**não** é ancestral). Ou seja:
+  o binário do iPhone é ANTERIOR ao expo-updates e ignora todo update publicado.
+  **Android recebe** (build #5, de 24/07, commit `6202102`, posterior ao OTA).
+  Enquanto não sair build iOS novo, o que publicamos por OTA existe só no
+  Android.
+  ⚠️ **`eas.json` · perfil production ganhou `"environment": "production"`**
+  (05/08/2026): o `env` inline do perfil tem URL e merchant do Apple Pay mas
+  **NÃO tem `EXPO_PUBLIC_SUPABASE_ANON_KEY`** — ela vive nas EAS environment
+  variables do servidor. Sem amarrar o perfil ao environment, o build podia sair
+  com a chave vazia e cair no `placeholder.supabase.co`: o mesmo estrago do OTA
+  sem `--environment`, só que gravado no binário da loja, onde OTA não conserta.
 - **⚠️⚠️ PUBLICAR OTA SÓ POR `npm run ota -- "mensagem"`** (`scripts/ota.js`) —
   ele passa **`--environment production`**, que é o que faz as
   `EXPO_PUBLIC_*` entrarem no pacote.
