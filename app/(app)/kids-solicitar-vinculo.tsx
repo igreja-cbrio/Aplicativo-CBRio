@@ -21,6 +21,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { useColors } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/lib/i18n";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { apiPost } from "@/lib/api";
 import { maskDateBR, isValidDateBR, dateBRToISO } from "@/lib/validators";
 import { supabase } from "@/lib/supabase";
@@ -201,7 +202,7 @@ export default function KidsSolicitarVinculoScreen() {
       Alert.alert(
         t("Solicitação enviada 💙"),
         t("A equipe Kids vai conferir e liberar o vínculo. Você acompanha o resultado na tela de Check-in Kids."),
-        [{ text: "OK", onPress: () => router.back() }]
+        [{ text: "OK", onPress: () => subirUmNivel() }]
       );
     } catch (e) {
       Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível enviar."));
@@ -216,7 +217,7 @@ export default function KidsSolicitarVinculoScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
+            <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
               <Ionicons name="chevron-back" size={24} color={colors.text} />
             </Pressable>
             <Text style={styles.title}>{t("Solicitar vínculo")}</Text>

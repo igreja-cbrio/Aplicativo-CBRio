@@ -2,10 +2,10 @@
 // FAIXA SUPERIOR · o eixo da navegação (Marcos · 04/08/2026)
 //
 // Esquerda: SETA. Ela é a única porta pra Home — por decisão do Marcos NÃO
-// existe botão "Início" em lugar nenhum. Comportamento: volta um passo; quando
-// não há passo anterior (tela de barra, ou app aberto direto ali por push),
-// vai pra Home. É o mesmo padrão `canGoBack() ? back() : replace("/")` que 10
-// telas já usavam soltas — aqui virou regra única.
+// existe botão "Início" em lugar nenhum. Comportamento (05/08/2026): sobe UM
+// NÍVEL na árvore (`cd ..` · mapa em lib/hierarquia.ts), NÃO um passo no
+// histórico — da tela de barra é 1 toque até a Home. As ~29 telas com seta
+// própria usam a mesma função.
 //
 // Direita: SINO com contador de não lidas + FOTO do membro. Ficam no mesmo
 // lugar em toda tela, pra notificação e perfil estarem sempre a um toque
@@ -17,12 +17,13 @@
 import { useMemo } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { useNotificacoesNaoLidas } from "@/lib/useNotificacoes";
 import { useT } from "@/lib/i18n";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { AnimatedBell } from "@/components/anim/AnimatedBell";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -47,15 +48,16 @@ export function TopBar({
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const pathname = usePathname();
   const t = useT();
   const { membro } = useMembro();
   const { count: naoLidas } = useNotificacoesNaoLidas();
 
-  // A seta é "um passo atrás"; sem histórico, é a porta da Home.
-  const voltar = () => {
-    if (router.canGoBack()) router.back();
-    else router.replace("/");
-  };
+  // ⚠️ A seta é `cd ..`, NÃO "um passo atrás" (Marcos · 05/08/2026): tocando
+  // Grupos → Servir → Cuidados → Devocional na barra, o histórico exigia 4
+  // toques repassando telas já vistas. Subindo na árvore, da tela de barra a
+  // Home é UM toque. Mapa em lib/hierarquia.ts.
+  const voltar = () => subirUmNivel(pathname);
 
   return (
     <View style={[styles.faixa, { paddingTop: insets.top, height: insets.top + TOPBAR_H }]}>

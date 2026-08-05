@@ -32,6 +32,10 @@ export function useVoluntariadoSync(membroId: string | null | undefined) {
         .from("vol_inscricoes")
         .select("id, status, area, ministerios_interesse, integrado_em")
         .eq("membro_id", membroId)
+        // Soft-delete de `vol_inscricoes` foi criado em 28/07 (M6a) e LIBERADO
+        // em M6b — inscrição apagada pela equipe não pode continuar valendo
+        // como ativa no app (e bloqueando nova inscrição).
+        .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();

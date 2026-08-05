@@ -10,6 +10,7 @@ import * as Haptics from "expo-haptics";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, runOnJS } from "react-native-reanimated";
 import { useColors } from "@/contexts/ThemeContext";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { Linking } from "react-native";
 import {
@@ -270,7 +271,7 @@ export default function EscalaSupervisorScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Voltar">
+        <Pressable onPress={() => subirUmNivel()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Voltar">
           <Ionicons name="chevron-back" size={26} color={colors.text} />
         </Pressable>
         <Text style={styles.title}>Montar escala</Text>

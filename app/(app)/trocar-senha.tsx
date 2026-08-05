@@ -17,6 +17,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { font, spacing, type Palette } from "@/constants/theme";
@@ -62,7 +63,7 @@ export default function TrocarSenha() {
       }
       await updatePassword(senha);
       Alert.alert(t("Senha alterada ✅"), t("Pronto! Sua senha foi atualizada."));
-      router.back();
+      subirUmNivel();
     } catch (e) {
       Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível trocar a senha."));
     }
@@ -74,7 +75,7 @@ export default function TrocarSenha() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
+            <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
               <Ionicons name="chevron-back" size={24} color={colors.text} />
             </Pressable>
             <Text style={styles.title}>{t("Trocar senha")}</Text>

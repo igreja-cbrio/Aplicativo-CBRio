@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors, useTheme } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const LOGO = require("../../assets/images/cbrio-wordmark.png");
@@ -37,7 +38,7 @@ export default function SobreScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
+          <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
           <Text style={styles.title}>{t("Sobre a CBRio")}</Text>

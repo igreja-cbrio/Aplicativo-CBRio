@@ -344,13 +344,21 @@ export function getGrupoRoster(id: string): Promise<GrupoRoster> {
 }
 
 // ===== /app/next (NEXT) =====
+// ⚠️ `id` é um `next_encontros.id` (MODELO VIVO do Next: turma → encontro →
+// matrícula → presença). Até 05/08/2026 o backend devolvia `next_eventos.id`, a
+// camada aposentada no cutover de turmas — e como os 8 eventos 'agendado' têm
+// data máxima 21/06, a lista vinha VAZIA com 2 turmas abertas no sistema. Ver a
+// varredura app × ERP no topo deste CLAUDE.md.
 export type NextEncontro = {
   id: string;
   data: string;             // ISO date
-  titulo: string;
-  inscrito: boolean;
+  titulo: string;           // tema do encontro; sem tema, o nome da turma
+  inscrito: boolean;        // tem matrícula na turma do encontro
   check_in_at: string | null;
   pode_checkin_hoje: boolean;
+  turma_id?: string;
+  turma_nome?: string | null;
+  horario?: string | null;
 };
 
 export type NextMe = {

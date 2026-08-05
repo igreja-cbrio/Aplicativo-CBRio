@@ -15,6 +15,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useNotificacoes, type AppNotificacao } from "@/lib/useNotificacoes";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useT } from "@/lib/i18n";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { irPara } from "@/lib/nav";
 import { abrirInscricaoEvento } from "@/lib/eventos";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -171,7 +172,7 @@ export default function NotificacoesScreen() {
           // Fallback pra Home quando esta é a PRIMEIRA rota (app aberto
           // direto aqui por uma push): back() sem histórico não faz nada e o
           // usuário ficava preso (Xiaomi · 04/08).
-          onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
+          onPress={() => subirUmNivel()}
           hitSlop={8}
           style={styles.back}
           accessibilityRole="button"

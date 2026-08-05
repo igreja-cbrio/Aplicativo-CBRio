@@ -15,10 +15,16 @@
 //             conta do WhatsApp Business — 04/08.)
 //   COMPLETO · nome, telefone, nascimento, CPF e sexo → matcher canônico.
 //
-// ⚠️ FICHA FECHADA NA ENTRADA (Marcos · 05/08/2026): CPF e sexo viraram
-// OBRIGATÓRIOS. Sem CPF o `POST /app/inscricoes` recusa qualquer inscrição, e a
-// pessoa entrava "completa" pra ser barrada depois (50 das 75 contas). Com a
-// ficha fechada aqui, as telas de inscrição pedem só campos EXTRA.
+// ⚠️ FICHA FECHADA NA ENTRADA (Marcos · 05/08/2026) — com UMA exceção medida no
+// mesmo dia: **SEXO é obrigatório; CPF é pedido com destaque mas NÃO bloqueia**.
+// Sem CPF o `POST /app/inscricoes` recusa qualquer inscrição (50 das 75 contas
+// entravam "completas" pra serem barradas depois), então o certo seria exigir —
+// mas as contas de revisão da Apple travariam nesta tela e o revisor não tem CPF
+// brasileiro pra digitar, que é a rejeição clássica de "não passamos do
+// registro". Quem não põe CPF aqui é levado a completar quando tenta se
+// inscrever (`grupo-detalhe` já faz isso). Ligar o gate junto do `exigirCpf` do
+// backend, depois da aprovação do build iOS. A validação real está no submit —
+// se este comentário divergir dela, a validação é que manda.
 // Os campos que o cadastro JÁ TEM vêm preenchidos — ninguém digita duas vezes.
 // ============================================================================
 

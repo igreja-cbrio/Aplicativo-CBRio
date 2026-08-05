@@ -9,6 +9,7 @@ import { listarAnotacoes, type Anotacao } from "@/lib/devocional";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useT } from "@/lib/i18n";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 export default function AnotacoesScreen() {
@@ -37,7 +38,7 @@ export default function AnotacoesScreen() {
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
+        <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
         {/* ⚠️ "do devocional" no título (05/08/2026): estas anotações vêm do

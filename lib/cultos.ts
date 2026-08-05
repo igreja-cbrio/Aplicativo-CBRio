@@ -13,7 +13,11 @@ export type CultoUpcoming = {
 };
 
 async function buscarProximosCultos(diasFrente: number): Promise<CultoUpcoming[]> {
-  const hoje = new Date();
+  // ⚠️ DATA EM BRT, não UTC: `toISOString()` sobre o agora devolve o dia UTC, e
+  // das 21h do Rio em diante ele já virou. O culto da noite (o de quarta é 20h)
+  // saía da lista de "próximos" durante o próprio culto. Mesma régua do
+  // `hojeBRT()` do backend.
+  const hoje = new Date(Date.now() - 3 * 3600 * 1000);
   const limite = new Date(hoje);
   limite.setDate(limite.getDate() + diasFrente);
   const fmt = (d: Date) => d.toISOString().slice(0, 10);

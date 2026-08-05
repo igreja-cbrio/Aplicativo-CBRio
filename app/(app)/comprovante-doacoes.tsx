@@ -16,6 +16,7 @@ import * as Sharing from "expo-sharing";
 
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { useMembro } from "@/lib/useMembro";
 import { minhasContribuicoes, type Contribuicao } from "@/lib/contribuicoes";
 import { CNPJ_IGREJA } from "@/constants/pix";
@@ -140,7 +141,7 @@ export default function ComprovanteDoacoes() {
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
+          <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
           <Text style={styles.title}>{t("Comprovante de doações")}</Text>

@@ -18,6 +18,7 @@ import { supabase } from "@/lib/supabase";
 import { buscarGruposPublico, type GrupoPublico } from "@/lib/api";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useT } from "@/lib/i18n";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 // Mesma fonte de dados do formulário público do site (traz líder, código,
@@ -299,7 +300,7 @@ export function BuscadorGrupos({ embutido = false }: { embutido?: boolean }) {
       <View style={[styles.header, embutido && styles.headerEmbutido]}>
         {!embutido && (
         <View style={styles.topRow}>
-          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.back}>
+          <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
           {/* ⚠️ "Encontrar um grupo", não "Grupos": a barra de baixo já tem

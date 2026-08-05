@@ -12,6 +12,7 @@ import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-rou
 import * as Haptics from "expo-haptics";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import {
   getGrupoRoster, aprovarPedidoGrupo, recusarPedidoGrupo,
@@ -125,7 +126,7 @@ export default function GrupoMembrosScreen() {
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
-        <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
+        <Pressable onPress={() => subirUmNivel()} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
           <Ionicons name="chevron-back" size={26} color={colors.text} />
         </Pressable>
         <Text style={styles.title} numberOfLines={1}>{nome}</Text>
