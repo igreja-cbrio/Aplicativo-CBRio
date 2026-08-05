@@ -321,10 +321,23 @@ export function recusarPedidoGrupo(id: string, motivo: string): Promise<{ ok: bo
 // para se fazer em um grupo". Os endpoints ficam em routes/app.js e reusam os
 // escritores canônicos do ERP (RPC de encontro, aprovarPedidoCore).
 
-/** Funções que o APP pode dar. ⚠️ `lider` NÃO entra: quem lidera é
- *  `mem_grupos.lider_id`, e esse campo decide quem recebe o WhatsApp do grupo
- *  (lei de 31/07). Trocar liderança é ato da coordenação. */
-export const FUNCOES_QUE_O_APP_DA = ["frequentador", "lider_treinamento", "co_lider"] as const;
+/**
+ * Funções que o APP pode dar. ⚠️⚠️ DUAS COISAS DIFERENTES (corrigido 05/08 por
+ * esclarecimento do Marcos — eu tinha confundido as duas):
+ *
+ *  · `funcao='lider'` no roster é **CADASTRO**: registra que a pessoa lidera
+ *    junto. Pode haver vários, e nenhum recebe mensagem por isso.
+ *  · `mem_grupos.lider_id` é a **LÍDER PRINCIPAL**: é ela que recebe o WhatsApp
+ *    do grupo (lei de 31/07, um destinatário só) e **não pode se remover**.
+ *
+ * Palavras dele: "só o líder principal recebe mensagem e ele não pode remover a
+ * si mesmo, os outros seria apenas para sabermos no cadastro, mas não receberia
+ * mensagem nenhum". Por isso `lider` ENTRA aqui, e quem segue protegido é a
+ * PESSOA que é `lider_id` (o servidor recusa mudar função/saída dela).
+ * ⚠️ `supervisor` e `coordenador` seguem fora: são papéis da hierarquia de
+ * supervisão, não do roster do grupo.
+ */
+export const FUNCOES_QUE_O_APP_DA = ["frequentador", "lider_treinamento", "co_lider", "lider"] as const;
 export type FuncaoApp = (typeof FUNCOES_QUE_O_APP_DA)[number];
 
 export function mudarFuncaoMembroGrupo(grupoId: string, rowId: string, funcao: FuncaoApp) {
@@ -426,6 +439,12 @@ export type GrupoRoster = {
     id: string; nome: string; dia_semana: number | null; horario: string | null;
     local: string | null; endereco: string | null; bairro: string | null;
     descricao: string | null; categoria: string | null; aceitando_inscricoes: boolean | null;
+    /**
+     * ⚠️ A LÍDER PRINCIPAL. `funcao='lider'` no roster é só CADASTRO (pode ter
+     * vários, nenhum recebe mensagem por isso); quem recebe o WhatsApp do grupo
+     * é ESTA pessoa, e é ela que não pode mudar de função nem sair pelo app.
+     */
+    lider_id: string | null;
   };
   membros: GrupoMembro[];
   pendentes: GrupoPedido[];

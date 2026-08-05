@@ -273,6 +273,11 @@ export default function GrupoMembrosScreen() {
   }
 
   const grupo = data?.grupo;
+  // ⚠️ A líder PRINCIPAL é `mem_grupos.lider_id`, NÃO quem tem `funcao='lider'`
+  // no roster: função é cadastro (vários podem ter, e nenhum recebe mensagem por
+  // isso). Só a principal recebe o WhatsApp do grupo e por isso é a única
+  // protegida aqui — antes a tela escondia as ações de todos os líderes.
+  const liderPrincipalId = grupo?.lider_id || null;
   const membros = data?.membros || [];
   const pendentes = data?.pendentes || [];
   const nome = grupo?.nome || params.nome || t("Grupo");
@@ -405,16 +410,18 @@ export default function GrupoMembrosScreen() {
                     const wa = waLink(m.telefone);
                     const fLabel = m.funcao ? (FUNCAO[m.funcao] || null) : null;
                     const destaque = !!m.funcao && DESTAQUE.has(m.funcao);
-                    const ehLider = m.funcao === "lider";
+                    const ehPrincipal = !!m.membro_id && !!liderPrincipalId && m.membro_id === liderPrincipalId;
                     return (
                       <View key={m.id} style={[styles.card, styles.membroCard]}>
                         <View style={styles.avatarSm}><Text style={styles.avatarSmTxt}>{iniciais(m.nome)}</Text></View>
                         <View style={{ flex: 1 }}>
                           <View style={styles.nomeRow}>
                             <Text style={styles.nome} numberOfLines={1}>{m.nome}</Text>
-                            {fLabel && destaque && (
+                            {ehPrincipal ? (
+                              <View style={styles.papelBadge}><Text style={styles.papelTxt}>{t("Líder principal")}</Text></View>
+                            ) : fLabel && destaque ? (
                               <View style={styles.papelBadge}><Text style={styles.papelTxt}>{t(fLabel)}</Text></View>
-                            )}
+                            ) : null}
                           </View>
                           <Text style={styles.pequeno}>
                             {[fLabel && !destaque ? t(fLabel) : null,
@@ -427,10 +434,11 @@ export default function GrupoMembrosScreen() {
                             <Ionicons name="logo-whatsapp" size={22} color="#25D366" />
                           </Pressable>
                         ) : null}
-                        {/* ⚠️ Quem lidera o grupo não tem menu de ações: mudar
-                            função/saída dele mexeria em quem recebe o WhatsApp
-                            do grupo, e isso é da coordenação. */}
-                        {!ehLider && (
+                        {/* ⚠️ Só a LÍDER PRINCIPAL não tem menu de ações: mudar a
+                            função ou registrar a saída dela mexeria em quem
+                            recebe o WhatsApp do grupo, e isso é da coordenação.
+                            Os outros líderes (cadastro) têm as ações normais. */}
+                        {!ehPrincipal && (
                           <Pressable onPress={() => setAcaoAlvo(m)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`${t("Opções de")} ${m.nome}`}>
                             {processandoId === m.id
                               ? <ActivityIndicator size="small" color={colors.primary} />
@@ -565,6 +573,11 @@ export default function GrupoMembrosScreen() {
               { v: "frequentador" as FuncaoApp, l: "Frequentador", i: "person-outline" as const },
               { v: "lider_treinamento" as FuncaoApp, l: "Líder em treinamento", i: "school-outline" as const },
               { v: "co_lider" as FuncaoApp, l: "Co-líder", i: "people-circle-outline" as const },
+              // ⚠️ "Líder" aqui é CADASTRO (podem ser vários) — quem recebe as
+              // mensagens do grupo é só a líder PRINCIPAL (`mem_grupos.lider_id`),
+              // e ela nem aparece com este menu. Marcar alguém como líder aqui
+              // NÃO faz o WhatsApp do grupo passar a ir pra essa pessoa.
+              { v: "lider" as FuncaoApp, l: "Líder (cadastro)", i: "star-outline" as const },
             ]).map((op) => {
               const atual = acaoAlvo?.funcao === op.v || (op.v === "co_lider" && acaoAlvo?.funcao === "colider");
               return (
@@ -575,11 +588,10 @@ export default function GrupoMembrosScreen() {
                 </Pressable>
               );
             })}
-            {/* ⚠️ "Líder" não está na lista de propósito: quem lidera o grupo é
-                `mem_grupos.lider_id`, o campo que decide quem recebe o WhatsApp
-                do grupo. Trocar isso é com a coordenação. */}
+            {/* ⚠️ A distinção que o Marcos pediu (05/08): marcar líder aqui é
+                CADASTRO — a mensagem do grupo continua indo só pra principal. */}
             <Text style={styles.pequeno}>
-              {t("Para trocar quem lidera o grupo, fale com a coordenação — é o líder que recebe os avisos do grupo no WhatsApp.")}
+              {t("Marcar como líder aqui é só pro cadastro do grupo — as mensagens do grupo no WhatsApp continuam indo só pra líder principal. Trocar quem é a principal é com a coordenação.")}
             </Text>
 
             <View style={{ height: 1, backgroundColor: colors.border, marginVertical: spacing.sm }} />
