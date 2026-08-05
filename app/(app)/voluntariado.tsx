@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/Input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
+import { SeusDados, fichaCompleta } from "@/components/inscricoes/SeusDados";
 import { apiGet, apiPost, criarInscricaoApi, getVoluntariadoOpcoes, getSupervisorInfo, type VoluntariadoOpcao } from "@/lib/api";
 import { useRouter } from "expo-router";
 import { useVoluntariadoSync } from "@/lib/useVoluntariadoSync";
@@ -477,7 +478,11 @@ export default function VoluntariadoScreen() {
             </View>
           ) : (
             <View style={styles.section}>
-              {/* Já serve? Cruza o CPF com o cadastro de voluntário existente */}
+              {/* ⚠️ Só pra ficha INCOMPLETA (instalação antiga): com a ficha
+                  fechada o CPF já está no cadastro e o servidor cruza sozinho —
+                  pedir de novo era justamente o "campo padrão" que o Marcos não
+                  quer ver em inscrição (05/08/2026). */}
+              {!fichaCompleta(membro) && (
               <View style={styles.cpfCard}>
                 <Text style={styles.cpfTitulo}>{t("Você já serve na CBRio?")}</Text>
                 <Text style={styles.cpfTxt}>
@@ -498,13 +503,22 @@ export default function VoluntariadoScreen() {
                 />
                 <Text style={styles.cpfOu}>{t("Ainda não serve? Preencha abaixo pra se inscrever.")}</Text>
               </View>
+              )}
 
               <Text style={styles.subtitle}>
-                {t("Sirva com a gente na CBRio. Escolha as áreas e preencha seus dados.")}
+                {fichaCompleta(membro)
+                  ? t("Sirva com a gente na CBRio. Escolha as áreas onde quer servir.")
+                  : t("Sirva com a gente na CBRio. Escolha as áreas e preencha seus dados.")}
               </Text>
-              <Input label={t("Nome completo")} value={nome} onChangeText={setNome} autoCapitalize="words" />
-              <Input label={t("Telefone")} value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="+55 21 99999-9999" />
-              <Input label={t("E-mail")} value={email} onChangeText={setEmail} keyboardType="email-address" />
+              {fichaCompleta(membro) ? (
+                <SeusDados nome={nome} telefone={telefone} email={email} />
+              ) : (
+                <>
+                  <Input label={t("Nome completo")} value={nome} onChangeText={setNome} autoCapitalize="words" />
+                  <Input label={t("Telefone")} value={telefone} onChangeText={setTelefone} keyboardType="phone-pad" placeholder="+55 21 99999-9999" />
+                  <Input label={t("E-mail")} value={email} onChangeText={setEmail} keyboardType="email-address" />
+                </>
+              )}
 
               <Text style={styles.fieldLabel}>
                 {t("Onde você quer servir? (até")} {MAX_AREAS})
