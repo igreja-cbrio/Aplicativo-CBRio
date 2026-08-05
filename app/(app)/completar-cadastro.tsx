@@ -116,20 +116,28 @@ export default function CompletarCadastroScreen() {
   // falha de rede viraria porta aberta pra entrar sem cadastro).
   const [exigeCpf, setExigeCpf] = useState(true);
 
-  // ⚠️ Prefill: o que a igreja já tem não é perguntado de novo (regra do
-  // Marcos). `membro` vem do MembroContext, que já carregou a ficha.
+  // ⚠️⚠️ PRÉ-PREENCHER DADO HERDADO É "CONFIRMAR" O QUE A PESSOA NÃO FORNECEU
+  // (Marcos · 05/08): "qual CPF de Pedro Paiva que cadastrou no app? Data de
+  // nascimento, Sexo? Só tem email e nome". O gatilho de auth liga por e-mail +
+  // nome, então o cadastro encontrado pode ter CPF/nascimento de um import — ou
+  // de outra pessoa. Enquanto o servidor não disser que ESTA conta já confirmou
+  // (`pode_preencher_com_vinculo`), o formulário traz **só o nome** (que veio do
+  // provedor do login) e a pessoa digita o resto. Depois de confirmar, o prefill
+  // volta a valer: aí é ela editando a própria ficha.
+  const [podeUsarVinculo, setPodeUsarVinculo] = useState<boolean | null>(null);
   const prefilled = useRef(false);
   useEffect(() => {
-    if (prefilled.current || !membro) return;
+    if (prefilled.current || !membro || podeUsarVinculo === null) return;
     prefilled.current = true;
     if (membro.nome && !membro.nome.includes("@")) setNome(membro.nome);
+    if (!podeUsarVinculo) return; // 1ª confirmação: só o nome
     if (membro.telefone) setTelefone(mascaraTelefone(membro.telefone));
     if (membro.cpf) setCpfForm(mascaraCpf(membro.cpf));
     if (membro.dataNascimento) {
       const [a, m, d] = String(membro.dataNascimento).slice(0, 10).split("-");
       if (a && m && d) setNascimento(`${d}/${m}/${a}`);
     }
-  }, [membro]);
+  }, [membro, podeUsarVinculo]);
 
   // ⚠️ Quem decide se o CPF é obrigatório é o SERVIDOR (`exige_cpf`). Falha de
   // rede mantém o default TRUE (fail-closed): sem isso, ficar offline viraria
@@ -138,9 +146,14 @@ export default function CompletarCadastroScreen() {
     let vivo = true;
     statusIdentidade()
       .then((s) => {
-        if (vivo && s.exige_cpf === false) setExigeCpf(false);
+        if (!vivo) return;
+        if (s.exige_cpf === false) setExigeCpf(false);
+        // ⚠️ Default FALSE (não pré-preenche) quando o servidor não responde: na
+        // dúvida, a pessoa digita. O contrário faria uma falha de rede virar
+        // caminho pra confirmar dado herdado — o oposto do que o gate quer.
+        setPodeUsarVinculo(s.pode_preencher_com_vinculo === true);
       })
-      .catch(() => {});
+      .catch(() => { if (vivo) setPodeUsarVinculo(false); });
     return () => {
       vivo = false;
     };
