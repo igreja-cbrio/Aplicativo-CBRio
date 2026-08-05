@@ -427,6 +427,34 @@ mostrar**.
   boost de área). Quem tem grupos ≥ 3 pela matriz editava no web e **não** no app.
   Falha de rede é **fail-closed** (não concede permissão).
 
+## ⚠️ GERENCIAR GRUPO · 4 abas + editar (2026-08-05)
+
+Pedido do Marcos: *"ao apertar gerenciar grupo, ali devem ter TODAS as opções
+para se fazer em um grupo"*. `grupo-membros.tsx` virou a tela de gerenciamento:
+**Membros · Frequência · Pedidos · Estudos** + **Editar** no cabeçalho (abre
+`/grupo-editar`, que já existia — é a única ação que troca de tela, e por isso
+NÃO é aba: viraria promessa de que o formulário está aqui dentro).
+
+- **O botão "Inscrições do grupo" SAIU do `/meu-grupo`** — duas portas pra
+  aprovar pedido era o que fazia parecer que existiam dois lugares. A rota
+  `/grupo-inscricoes` **continua viva** (link antigo e push apontam pra ela).
+- **Membros**: menu de ações por pessoa → função (frequentador · em treinamento ·
+  co-líder), transferir, registrar saída.
+  ⚠️ **`líder` NÃO está na lista** e quem é `lider_id` **não tem menu**: esse
+  campo decide quem recebe o WhatsApp do grupo (lei de 31/07). A tela diz isso.
+- **Frequência**: chamada começa com **todos marcados** (o líder desmarca quem
+  faltou — muito menos toque) + tema + **comentário do líder** + histórico. Usa a
+  RPC canônica no servidor. E o **"Preciso de ajuda"** manda pra coordenação
+  (notificação + push · não é ticket com "resolvido", e a tela não promete isso).
+- **Transferência** é PEDIDO no grupo de destino, não mudança direta; só oferece
+  grupos que o próprio líder gerencia; a saída é passo separado.
+- **Estudos**: materiais do grupo + os gerais, com selo de "Estudo da semana".
+- ⚠️ Cada aba puxa o SEU dado só quando abre (4 fontes; carregar tudo no mount
+  deixaria o líder esperando pelo que não vai olhar).
+- ⚠️ `GrupoMembro` ganhou **`membro_id`** (id da PESSOA) além do `id` (id da
+  LINHA do roster): a chamada de frequência manda ids de pessoa pra RPC, e as
+  ações usam o id da linha. Confundir os dois quebra as duas coisas.
+
 ## Módulos
 
 | Status | Módulo           | Descrição                                                        |
