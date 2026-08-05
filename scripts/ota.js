@@ -62,6 +62,25 @@ if (fs.existsSync(envPath)) {
   }
 }
 
+// ⚠️ PORTÃO ANTES DE PUBLICAR (05/08/2026): `typecheck` + as réguas (vitest).
+// OTA vai direto pra quem tem o app instalado — não existe revisão no caminho,
+// então o portão TEM que ser aqui. Foi um dia de 12 OTAs sem nenhum teste que
+// motivou isto. Pular só com CBRIO_OTA_SEM_PORTAO=1, e isso é para hotfix
+// consciente (o motivo aparece no log).
+if (process.env.CBRIO_OTA_SEM_PORTAO === '1') {
+  console.warn('⚠️  portão IGNORADO por CBRIO_OTA_SEM_PORTAO=1 — publicando sem typecheck/testes');
+} else {
+  console.log('→ portão: npm run verificar (typecheck + réguas)');
+  const gate = spawnSync('npm run verificar', { cwd: raiz, stdio: 'inherit', shell: true });
+  if (gate.status !== 0) {
+    console.error('');
+    console.error('❌ o portão falhou — NADA foi publicado.');
+    console.error('   Conserte, ou use CBRIO_OTA_SEM_PORTAO=1 se for hotfix consciente.');
+    console.error('');
+    process.exit(1);
+  }
+}
+
 console.log('→ eas update --channel production --environment production');
 // ⚠️ shell: true — sem isso o spawn do `npx` FALHA EM SILÊNCIO no Windows
 // (Git Bash): o script imprimia a linha acima e saía sem publicar nada.

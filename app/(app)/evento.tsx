@@ -42,7 +42,9 @@ import QRCode from "react-native-qrcode-svg";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { SeusDados, fichaCompleta } from "@/components/inscricoes/SeusDados";
+import { SeusDados } from "@/components/inscricoes/SeusDados";
+import { faltaNaFicha, podeInscrever } from "@/lib/ficha";
+import { extrasFaltando, montarPayloadInscricao } from "@/lib/inscricaoPayload";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { useT } from "@/lib/i18n";
@@ -146,27 +148,19 @@ export default function EventoScreen() {
       return;
     }
     // Obrigatórios EXTRA conferidos aqui só pra evitar ida-e-volta; o servidor
-    // valida de novo (e é ele que manda).
-    const faltando = (evento.campos || []).find(
-      (c) => c.obrigatorio && !String(extras[c.key] ?? "").trim()
-    );
+    // valida de novo (e é ele que manda). Régua em lib/inscricaoPayload.ts.
+    const faltando = extrasFaltando(evento.campos, extras);
     if (faltando) {
-      setErro(`${t("Preencha")}: ${faltando.label}`);
+      setErro(`${t("Preencha")}: ${faltando}`);
       return;
     }
     setEnviando(true);
     try {
-      const r = await inscreverEmEvento(evento.id, {
-        nome_completo: membro.nome,
-        telefone: membro.telefone,
-        cpf: membro.cpf,
-        email: membro.email,
-        data_nascimento: membro.dataNascimento,
-        sexo: membro.genero,
-        dados: extras,
-        aceita_termos: true,
-        whatsapp_optin: optin,
-      });
+      // ⚠️ O corpo vem de `montarPayloadInscricao` (lib/, testado no CI): é a
+      // lista que o Contrato de Inscrição exige. Montar inline aqui foi como o
+      // `sexo` quase ficou de fora — e faltar campo não quebra o TypeScript,
+      // quebra a inscrição da pessoa com 400.
+      const r = await inscreverEmEvento(evento.id, montarPayloadInscricao(membro, extras, optin));
       trackEvento("evento_inscricao", { entity_id: evento.id, reason: r.ja_inscrito ? "ja_inscrito" : "novo" });
       // `pagamento` é BOOLEAN na resposta do servidor; o link vem do
       // `public_token` (página hospedada). Isenção integral NÃO tem pagamento.
@@ -290,12 +284,13 @@ export default function EventoScreen() {
             </Text>
             <Button title={t("Abrir inscrição")} onPress={() => abrirInscricaoEvento(ev!.url)} />
           </GlassCard>
-        ) : !membro || !fichaCompleta(membro) || !membro.cpf ? (
+        ) : !membro || !podeInscrever(membro) ? (
           /* Ficha incompleta: o contrato exige CPF/nascimento/sexo e a inscrição
              seria recusada pelo servidor — melhor levar pro cadastro. */
           <GlassCard style={styles.card}>
             <Text style={styles.desc}>
-              {t("Pra se inscrever, complete seu cadastro (nome, telefone, CPF, nascimento e sexo).")}
+              {t("Pra se inscrever, complete seu cadastro.")}{" "}
+              {t("Falta")}: {faltaNaFicha(membro).join(" · ")}.
             </Text>
             <Button
               title={t("Completar meu cadastro")}

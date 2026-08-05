@@ -21,10 +21,11 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
-/** A ficha padrão está fechada? (o que as inscrições não devem reperguntar) */
-export function fichaCompleta(m?: { nome?: string | null; telefone?: string | null; email?: string | null } | null) {
-  return !!(m?.nome && m.nome.trim().includes(" ") && m?.telefone && m?.email);
-}
+// ⚠️ A RÉGUA MUDOU DE CASA (05/08/2026): `fichaCompleta` mora em `lib/ficha.ts`
+// pra poder ser TESTADA (arquivo .tsx importa react-native e não roda no CI).
+// Continua exportada daqui pra não quebrar quem já importava — a implementação
+// é uma só, travada por `test/reguas.test.ts`.
+export { fichaCompleta } from "@/lib/ficha";
 
 export function SeusDados({
   nome,
