@@ -439,15 +439,32 @@ NÃO é aba: viraria promessa de que o formulário está aqui dentro).
   aprovar pedido era o que fazia parecer que existiam dois lugares. A rota
   `/grupo-inscricoes` **continua viva** (link antigo e push apontam pra ela).
 - **Membros**: menu de ações por pessoa → função (frequentador · em treinamento ·
-  co-líder), transferir, registrar saída.
-  ⚠️ **`líder` NÃO está na lista** e quem é `lider_id` **não tem menu**: esse
-  campo decide quem recebe o WhatsApp do grupo (lei de 31/07). A tela diz isso.
+  co-líder · **líder (cadastro)**), transferir, registrar saída.
+  ⚠️⚠️ **São DUAS coisas** (corrigido 05/08 por esclarecimento dele — eu tinha
+  confundido): `funcao='lider'` é **CADASTRO** (podem ser vários, e nenhum recebe
+  mensagem por isso) · **`mem_grupos.lider_id` é a LÍDER PRINCIPAL**, a única que
+  recebe o WhatsApp do grupo e a única **sem menu de ações** (badge "Líder
+  principal"). Palavras dele: *"só o líder principal recebe mensagem e ele não
+  pode remover a si mesmo, os outros seria apenas para sabermos no cadastro"*.
+  Marcar líder aqui **NÃO** faz a mensagem do grupo passar a ir pra essa pessoa —
+  a tela diz isso no próprio menu.
+  ⚠️ O roster passou a trazer **`grupo.lider_id`**: sem ele a tela comparava
+  `funcao === "lider"` e escondia o menu de **todos** os líderes.
+  ⚠️ Em 30 dos 97 grupos ativos a principal está **fora do roster** (medido
+  05/08) — nesses ela não aparece na aba Membros, e o servidor segue protegendo.
 - **Frequência**: chamada começa com **todos marcados** (o líder desmarca quem
   faltou — muito menos toque) + tema + **comentário do líder** + histórico. Usa a
   RPC canônica no servidor. E o **"Preciso de ajuda"** manda pra coordenação
   (notificação + push · não é ticket com "resolvido", e a tela não promete isso).
 - **Transferência** é PEDIDO no grupo de destino, não mudança direta; só oferece
   grupos que o próprio líder gerencia; a saída é passo separado.
+  ⚠️ **No web ela NÃO virou fila nova**: o pedido cai na **Caixa de entrada** que
+  a triagem já usa, e o `/grupos` ganhou só um histórico **recolhido** de
+  "Entradas e saídas" (leitura pura, nenhuma ação) — formato que o Marcos pediu
+  em 05/08: *"uma tela pequena, com pouco destaque, sem muita interação"*.
+  ⚠️ **A frequência do app já aparece no web** ("Encontros recentes" no detalhe do
+  grupo, com data, presentes, tema e o **comentário do líder**) porque o app grava
+  pela RPC canônica — não foi preciso construir tela de relatório lá.
 - **Estudos**: materiais do grupo + os gerais, com selo de "Estudo da semana".
 - ⚠️ Cada aba puxa o SEU dado só quando abre (4 fontes; carregar tudo no mount
   deixaria o líder esperando pelo que não vai olhar).
