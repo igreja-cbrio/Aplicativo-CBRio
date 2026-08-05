@@ -47,11 +47,11 @@ export default function VideosScreen() {
   useFocusEffect(useCallback(() => { carregar(); }, [carregar]));
 
   function abrirVideo(v: Video) {
-    trackEvento("video_aberto", { id: v.video_id });
+    trackEvento("video_aberto", { entity_id: v.video_id });
     Linking.openURL(`https://www.youtube.com/watch?v=${v.video_id}`);
   }
   function abrirSerie(s: Serie) {
-    trackEvento("serie_aberta", { id: s.playlist_id });
+    trackEvento("serie_aberta", { entity_id: s.playlist_id });
     Linking.openURL(`https://www.youtube.com/playlist?list=${s.playlist_id}`);
   }
   function aoVivo() {
