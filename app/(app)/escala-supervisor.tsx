@@ -6,6 +6,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import * as Haptics from "expo-haptics";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, runOnJS } from "react-native-reanimated";
@@ -143,7 +144,9 @@ export default function EscalaSupervisorScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { carregarServicos(true); }, [carregarServicos]);
+  // ⚠️ Recarrega ao FOCAR: escala é montada/alterada no web (Voluntariado), e a
+  // pessoa volta pra esta tela esperando a versão de lá.
+  useFocusEffect(useCallback(() => { carregarServicos(true); }, [carregarServicos]));
 
   const carregarEscala = useCallback(async (serviceId: string) => {
     setCarregandoEscala(true);

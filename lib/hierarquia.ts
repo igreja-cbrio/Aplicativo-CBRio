@@ -43,6 +43,7 @@ import { router, type Href } from "expo-router";
  *   │   ├── /jornada
  *   │   ├── /generosidade → /comprovante-doacoes
  *   │   ├── /inscricoes → /batismo → /inscricao-batismo
+ *   │   │              └→ /evento (detalhe + inscrição no app)
  *   │   │              └→ /next → /next-turma
  *   │   ├── /videos
  *   │   └── /configuracoes → /trocar-senha, /fale-conosco, /sobre
@@ -83,6 +84,7 @@ const PAI: Record<string, string> = {
   "/generosidade": "/menu",
   "/comprovante-doacoes": "/generosidade",
   "/inscricoes": "/menu",
+  "/evento": "/inscricoes",
   "/batismo": "/inscricoes",
   "/inscricao-batismo": "/batismo",
   "/next": "/inscricoes",

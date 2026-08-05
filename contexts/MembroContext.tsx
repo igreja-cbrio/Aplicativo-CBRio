@@ -17,6 +17,11 @@ export type MembroBasico = {
   email: string;
   telefone: string;
   dataNascimento: string | null; // ISO
+  /** `mem_membros.genero` = 'masculino'|'feminino' (canônico do ERP, não M/F).
+   *  ⚠️ O Contrato de Inscrição exige SEXO (`exigirSexo` é true por padrão em
+   *  `validarCamposPadrao`), então sem isto a inscrição pelo app seria recusada —
+   *  ou o app pediria de novo um campo que a ficha já tem. */
+  genero: string | null;
   voluntario: boolean;
   avatarUrl: string | null;
 };
@@ -65,6 +70,7 @@ export function MembroProvider({ children }: { children: React.ReactNode }) {
       email: prof?.email ?? user.email ?? "",
       telefone: prof?.telefone ?? "",
       dataNascimento: null,
+      genero: null,
       voluntario: false,
       avatarUrl: prof?.avatar_url ?? null,
     };
@@ -72,8 +78,11 @@ export function MembroProvider({ children }: { children: React.ReactNode }) {
     if (prof?.membro_id) {
       const { data: m } = await supabase
         .from("mem_membros")
-        .select("nome, cpf, email, telefone, data_nascimento, voluntario, foto_url")
+        .select("nome, cpf, email, telefone, data_nascimento, genero, voluntario, foto_url")
         .eq("id", prof.membro_id)
+        // Cadastro soft-deletado não serve o app (mesma régua do backend em
+        // `resolveMembroApp` desde 05/08/2026).
+        .is("deleted_at", null)
         .maybeSingle();
       if (m) {
         base = {
@@ -83,6 +92,7 @@ export function MembroProvider({ children }: { children: React.ReactNode }) {
           email: m.email ?? base.email,
           telefone: m.telefone ?? base.telefone,
           dataNascimento: m.data_nascimento ?? null,
+          genero: m.genero ?? null,
           voluntario: !!m.voluntario,
           avatarUrl: base.avatarUrl ?? m.foto_url ?? null,
         };

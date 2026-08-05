@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
@@ -121,9 +122,15 @@ export default function GrupoDetalheScreen() {
     setEstado(cpfOk ? "pode_pedir" : "sem_cpf");
   }, [id, membro?.membroId, membro?.cpf]);
 
-  useEffect(() => {
-    carregar();
-  }, [carregar]);
+  // ⚠️ RECARREGA AO FOCAR (05/08/2026): o web e o app leem o MESMO banco, mas
+  // só refletia o que o web mudou se a tela fosse remontada. Aprovar um pedido,
+  // criar um grupo, marcar um batismo como realizado — tudo isso muda por lá e
+  // a pessoa volta pra esta tela esperando ver.
+  useFocusEffect(
+    useCallback(() => {
+      carregar();
+    }, [carregar])
+  );
 
   async function participar() {
     setErro(null);
