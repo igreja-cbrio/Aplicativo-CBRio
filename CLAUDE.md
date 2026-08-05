@@ -427,6 +427,48 @@ mostrar**.
   boost de área). Quem tem grupos ≥ 3 pela matriz editava no web e **não** no app.
   Falha de rede é **fail-closed** (não concede permissão).
 
+## ⚠️⚠️ OTA · o iPhone RECEBE (provado 05/08) · e o ciclo de 2 aberturas engana quem testa
+
+Duas coisas que este arquivo afirmava com dúvida, agora medidas — o gatilho foi o
+Pedro Paiva (líder de marketing, iOS) baixar o app pra dar opinião:
+
+- ✅ **iOS recebe OTA.** Evidência: `app_eventos` tem evento de **iPhone (iOS 27,
+  `device_model: "phone"`) com os campos novos** (`session_id`/`installation_id`/
+  `occurred_at`, que só existem no bundle de 05/08) a partir das **15:10**. Some
+  a dúvida do bloco "NÃO DÁ PRA AFIRMAR PELO EAS…" acima: **dá, e a resposta é
+  sim** — o binário da loja está com `expo-updates` no canal `production`,
+  runtime 1.0.0. (A pista do EAS enganava porque os builds recentes saíram FORA
+  dele.)
+- ⚠️ **Mas o ciclo é de 2 aberturas** (a 1ª baixa, a 2ª aplica) e **nada na tela
+  avisa**. O Pedro abriu uma vez e viu **a versão de ontem** — e concluiu, com
+  razão, que o app estava daquele jeito. Medido no mesmo instante: 1 iPhone no
+  bundle novo e 2 no antigo.
+  ⇒ **Régua pra teste de usuário: mandar fechar e reabrir o app antes de pedir
+  opinião**, senão a pessoa avalia o bundle velho. **Follow-up proposto ao Marcos
+  (não implementado):** banner "atualização pronta — toque para aplicar" usando
+  `Updates.useUpdates().isUpdatePending` + `reloadAsync()`. Resolve a classe do
+  problema, mas mexe no ciclo de updates e não entra de carona num redesenho.
+
+### ⚠️ Login com Google pessoal × conta institucional (caso Pedro · 05/08)
+
+Ele relatou que **"não pediu complemento de cadastro"**. Duas causas somadas, e a
+2ª só apareceu porque medi em vez de supor:
+
+1. **Bundle antigo** → o `CadastroGate` (que saiu hoje) não existe nele. O
+   servidor respondia `completo=false`; não havia quem perguntasse.
+2. **Ele entrou com o Google PESSOAL** (`…04@gmail.com`), não com
+   `pedro.paiva@cbrio.org`. E o gatilho de `auth.users` **fez o certo**: o
+   matcher canônico achou por e-mail + nome compatível o cadastro que já existia
+   dele (importado do Next em 13/05, status `visitante`, com telefone) e
+   **ligou — não criou duplicata**. É validação real da lei do gatilho.
+3. ⚠️ Sobra o par **"Pedro Martins Paiva" (Gmail) × "Pedro Paiva" (institucional,
+   `membro_ativo`, sem CPF)**, que **já aparece na fila de Possíveis duplicidades**
+   (`incluir: true`, prioridade média). Resolver é 1 clique em /entradas — não é
+   furo, é a fila funcionando.
+
+⇒ Quando o bundle novo aplicar no aparelho dele, a tela de completar cadastro
+**vai** aparecer (falta CPF, nascimento e sexo no cadastro ligado).
+
 ## ⚠️ GERENCIAR GRUPO · 4 abas + editar (2026-08-05)
 
 Pedido do Marcos: *"ao apertar gerenciar grupo, ali devem ter TODAS as opções
@@ -466,8 +508,46 @@ NÃO é aba: viraria promessa de que o formulário está aqui dentro).
   grupo, com data, presentes, tema e o **comentário do líder**) porque o app grava
   pela RPC canônica — não foi preciso construir tela de relatório lá.
 - **Estudos**: materiais do grupo + os gerais, com selo de "Estudo da semana".
-- ⚠️ Cada aba puxa o SEU dado só quando abre (4 fontes; carregar tudo no mount
-  deixaria o líder esperando pelo que não vai olhar).
+- ⚠️ **Só `materiais` é lazy.** Os ENCONTROS saíram do lazy na v2: o herói precisa
+  deles pra saber se faltou registrar, e carregar ao abrir a aba faria ele afirmar
+  "próximo encontro" num grupo atrasado. Enquanto `encontros === null` o herói
+  **não afirma atraso** — dizer a coisa errada com confiança é pior que esperar
+  300 ms.
+
+### ⚠️ HIERARQUIA VISUAL · a v2 da tela (05/08 · aprovada pelo Marcos)
+
+Ele viu a v1 e apontou: *"tem muitas informações em uma página e a pessoa que abre
+não vê um destaque nenhum muito claro, então ela pode acabar ficando confusa"*.
+Estava certo, e o defeito era meu: **dois protagonistas** (nome do grupo em 25/800
+e os três números em 25/800) mais **teal em quatro papéis** (botão + pílula da aba
++ 5 avatares) = nada significava "aqui". O conserto **não foi aumentar o herói,
+foi rebaixar os concorrentes**. Três zonas:
+
+| zona | o que é | como se distingue |
+|---|---|---|
+| 1 · AÇÃO | o próximo encontro | **único** elemento em 27/800 · **único** bloco com moldura · **único** teal cheio |
+| 2 · APOIO | os números | UMA linha de 13,5 px (`12 membros · 85% de presença` + pastilha âmbar de pedidos) |
+| 3 · DETALHE | abas + lista | abas com **sublinhado** de 2 px (não pílula cheia) · avatar NEUTRO · **26 dp** de respiro acima |
+
+- ⚠️ **O nome do grupo aparece UMA vez**, na barra (16/700), com dia e local na 2ª
+  linha. Repetir em 25/800 no corpo criava o 2º protagonista — e "que grupo é
+  esse" é *confirmação*, não informação: a pessoa acabou de tocar nele.
+- ⚠️ **A ação do herói MUDA com o estado** — grupo sem ninguém: o botão é
+  **convidar** (não há quem marcar presença); já registrou: o botão fica **ghost**,
+  porque quando nada é preciso, nada grita.
+- ⚠️ **`lib/proximoEncontro.ts` decide qual estado é** (atrasado · registrado ·
+  próximo · sem dia). Régua PURA no portão, com **mutante próprio** pra armadilha
+  do `dia_semana = 0` (domingo é falsy: `!diaSemana` jogaria todo grupo de domingo
+  em "sem dia").
+- ⚠️ **`warning` entrou no `constants/theme.ts`** (`#E0A24E` escuro · `#A86A12`
+  claro). A paleta tinha só `danger`/`success`, então "espera por você" era pintado
+  de vermelho (assusta) ou de teal (não chama). Usar **só** pra o que precisa de
+  ação de gente.
+- ⚠️ **Convidar compartilha `/inscricao-grupos`** (link geral), porque a página
+  pública **não aceita parâmetro de grupo** — só `?temporada=`. A mensagem cita o
+  nome pra pessoa achar na lista; inventar um `?grupo=` daria link morto.
+- ⚠️ O portão (37 testes · 7/7 mutantes) garante a REGRA, **não a tela**: nada da
+  v2 foi executado em aparelho — isso segue sendo o passo humano.
 - ⚠️ `GrupoMembro` ganhou **`membro_id`** (id da PESSOA) além do `id` (id da
   LINHA do roster): a chamada de frequência manda ids de pessoa pra RPC, e as
   ações usam o id da linha. Confundir os dois quebra as duas coisas.
