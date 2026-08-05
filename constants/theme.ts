@@ -29,6 +29,13 @@ export type Palette = {
   border: string;
   danger: string;
   success: string;
+  /**
+   * ⚠️ ATENÇÃO — "isso espera por você", sem gritar "erro" (05/08/2026).
+   * A paleta tinha só danger e success, então pedido pendente e encontro
+   * atrasado eram pintados de vermelho (assusta) ou de teal (não chama).
+   * Usar SÓ pra o que precisa de ação de gente; vermelho fica pra destruir.
+   */
+  warning: string;
 };
 
 export const darkColors: Palette = {
@@ -48,6 +55,7 @@ export const darkColors: Palette = {
   border: "#1F3D47",
   danger: "#E5757A",
   success: "#5BB98C",
+  warning: "#E0A24E",
 };
 
 export const lightColors: Palette = {
@@ -67,6 +75,7 @@ export const lightColors: Palette = {
   border: "#DCE6E9",
   danger: "#C0473C",
   success: "#2E8B57",
+  warning: "#A86A12",
 };
 
 export const palettes = { light: lightColors, dark: darkColors } as const;

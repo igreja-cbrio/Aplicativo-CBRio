@@ -58,6 +58,16 @@ const MUTANTES = [
     de: '    sexo: membro.genero || "",',
     para: "    sexo: undefined,",
   },
+  {
+    // ⚠️ A armadilha do falsy: `dia_semana = 0` é DOMINGO. Trocar `== null` por
+    // `!diaSemana` (que parece uma simplificação inocente) joga TODO grupo de
+    // domingo em "sem dia definido" — e o herói da tela desaparece pra eles.
+    // Mesma classe do bug que derivou 58 campos errados no ERP em 29/07.
+    nome: "proximoEncontro: tratar domingo (0) como 'sem dia' (falsy)",
+    arq: "lib/proximoEncontro.ts",
+    de: "  if (diaSemana == null || diaSemana < 0 || diaSemana > 6) return { tipo: \"sem_dia\" };",
+    para: "  if (!diaSemana || diaSemana > 6) return { tipo: \"sem_dia\" };",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

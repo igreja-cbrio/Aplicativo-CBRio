@@ -15,6 +15,10 @@ import { rotaPai, ehRaiz, subirUmNivel } from "@/lib/hierarquia";
 import { hojeBRT, diaBRT } from "@/lib/dataBRT";
 import { fichaCompleta, faltaNaFicha, podeInscrever } from "@/lib/ficha";
 import { montarPayloadInscricao, extrasFaltando } from "@/lib/inscricaoPayload";
+import {
+  estadoDoEncontro, ultimaOcorrencia, proximaOcorrencia,
+  dataLonga, quandoCurto, distanciaEmTexto,
+} from "@/lib/proximoEncontro";
 import { navegacoes } from "./stubs/expo-router";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -272,5 +276,122 @@ describe("inscricaoPayload · o corpo da inscrição", () => {
     expect(extrasFaltando(campos, {})).toBe("Ministério");
     expect(extrasFaltando(campos, { a: "Louvor" })).toBeNull();
     expect(extrasFaltando(null, {})).toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// proximoEncontro · quem é o HERÓI da tela de grupo
+//
+// O redesenho de 05/08 tem UM protagonista, e é esta régua que decide qual dos
+// quatro estados ele carrega. Errar aqui não quebra o TypeScript: o líder
+// simplesmente vê a mensagem errada — "faltou registrar" num grupo em dia, ou
+// nada quando faltou de verdade.
+//
+// ⚠️ Datas de referência (conferidas): 2026-08-05 é TERÇA · 2026-08-09 é DOMINGO.
+// ═══════════════════════════════════════════════════════════════════════════
+describe("proximoEncontro · o estado do herói", () => {
+  // ⚠️ Datas CONFERIDAS (a 1ª versão destes testes assumiu que 05/08 era terça e
+  // 8 deles falharam — a régua estava certa, o calendário na minha cabeça não):
+  //   2026-08-05 QUARTA · 08-08 sábado · 08-09 DOMINGO · 08-12 quarta
+  //   2026-08-29 sábado · 08-31 segunda
+  const QUARTA = 3;
+  const DOMINGO = 0;
+
+  it("hoje é o dia do grupo e não registrou: é PRÓXIMO (hoje), não atrasado", () => {
+    // O dia ainda está acontecendo — cobrar registro às 9h da manhã seria cobrar
+    // antes de o encontro existir.
+    const e = estadoDoEncontro({ diaSemana: QUARTA, encontros: [], hoje: "2026-08-05" });
+    expect(e.tipo).toBe("proximo");
+    if (e.tipo === "proximo") {
+      expect(e.dias).toBe(0);
+      expect(e.data).toBe("2026-08-05");
+    }
+  });
+
+  it("passou a quarta sem registro: ATRASADO com o nº de dias", () => {
+    const e = estadoDoEncontro({ diaSemana: QUARTA, encontros: [], hoje: "2026-08-08" });
+    expect(e.tipo).toBe("atrasado");
+    if (e.tipo === "atrasado") {
+      expect(e.data).toBe("2026-08-05");
+      expect(e.dias).toBe(3);
+    }
+  });
+
+  it("registrou a última ocorrência: REGISTRADO, com os presentes e a próxima", () => {
+    const e = estadoDoEncontro({
+      diaSemana: QUARTA,
+      encontros: [{ data: "2026-08-05", presentes: 10 }],
+      hoje: "2026-08-06",
+    });
+    expect(e.tipo).toBe("registrado");
+    if (e.tipo === "registrado") {
+      expect(e.presentes).toBe(10);
+      expect(e.proxima).toBe("2026-08-12");
+    }
+  });
+
+  it("a confirmação não fica pra sempre: passados os dias, volta a PRÓXIMO", () => {
+    const e = estadoDoEncontro({
+      diaSemana: QUARTA,
+      encontros: [{ data: "2026-08-05", presentes: 10 }],
+      hoje: "2026-08-09", // 4 dias depois
+    });
+    expect(e.tipo).toBe("proximo");
+    if (e.tipo === "proximo") expect(e.data).toBe("2026-08-12");
+  });
+
+  it("registrou a quarta na QUINTA (tolerância de 1 dia) e não vira atrasado", () => {
+    // Caso real do líder: o encontro é quarta, ele lança na quinta e digita a
+    // data de quinta. Sem a folga, apareceria "atrasado" tendo registrado — e o
+    // líder registraria de novo.
+    const e = estadoDoEncontro({
+      diaSemana: QUARTA,
+      encontros: [{ data: "2026-08-06", presentes: 9 }],
+      hoje: "2026-08-07",
+    });
+    expect(e.tipo).toBe("registrado");
+  });
+
+  // ⚠️ MUTATION GUARD: trocar `== null` por `!diaSemana` joga TODO grupo de
+  // domingo em "sem dia definido" — 0 é falsy em JS. Mesma armadilha que já
+  // derivou 58 campos errados no ERP (29/07).
+  it("⚠️ DOMINGO (dia_semana = 0) NÃO é 'sem dia' — 0 é falsy em JS", () => {
+    const e = estadoDoEncontro({ diaSemana: DOMINGO, encontros: [], hoje: "2026-08-09" });
+    expect(e.tipo).not.toBe("sem_dia");
+    expect(e.tipo).toBe("proximo");
+    if (e.tipo === "proximo") expect(e.data).toBe("2026-08-09"); // o próprio domingo
+    // e de outro dia da semana, o domingo passado sem registro é atraso normal
+    const f = estadoDoEncontro({ diaSemana: DOMINGO, encontros: [], hoje: "2026-08-05" });
+    expect(f.tipo).toBe("atrasado");
+    if (f.tipo === "atrasado") expect(f.data).toBe("2026-08-02");
+  });
+
+  it("sem dia definido (grupo diário) devolve sem_dia, e não inventa data", () => {
+    expect(estadoDoEncontro({ diaSemana: null, encontros: [], hoje: "2026-08-05" }).tipo).toBe("sem_dia");
+    expect(estadoDoEncontro({ diaSemana: 9, encontros: [], hoje: "2026-08-05" }).tipo).toBe("sem_dia");
+  });
+
+  it("ocorrências: a última inclui hoje; a próxima NUNCA é hoje", () => {
+    expect(ultimaOcorrencia("2026-08-05", QUARTA)).toBe("2026-08-05");
+    expect(proximaOcorrencia("2026-08-05", QUARTA)).toBe("2026-08-12");
+    expect(ultimaOcorrencia("2026-08-08", QUARTA)).toBe("2026-08-05");
+  });
+
+  it("atravessa a virada do mês sem quebrar", () => {
+    const e = estadoDoEncontro({ diaSemana: 6, encontros: [], hoje: "2026-08-31" });
+    expect(e.tipo).toBe("atrasado"); // o sábado 29/08
+    if (e.tipo === "atrasado") expect(e.data).toBe("2026-08-29");
+    expect(proximaOcorrencia("2026-08-31", 6)).toBe("2026-09-05");
+  });
+
+  it("texto do herói: data longa, quando curto e distância", () => {
+    expect(dataLonga("2026-08-12")).toBe("Quarta, 12 de agosto");
+    expect(quandoCurto(QUARTA, "20:00:00")).toBe("Quarta, 20h");
+    expect(quandoCurto(QUARTA, "20:30:00")).toBe("Quarta, 20:30");
+    expect(quandoCurto(null, null)).toBe("");
+    expect(distanciaEmTexto(0)).toBe("é hoje");
+    expect(distanciaEmTexto(1)).toBe("é amanhã");
+    expect(distanciaEmTexto(4)).toBe("faltam 4 dias");
+    expect(distanciaEmTexto(-3)).toBe("há 3 dias");
   });
 });
