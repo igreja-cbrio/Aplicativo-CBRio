@@ -6,7 +6,8 @@
 // Cobre:
 //  1. Culto com transmissão online — push pra TODOS 5 min antes da hora
 //  2. Batismo — véspera às 18h + no dia às 8h (batismo_inscricoes)
-//  3. NEXT — véspera do encontro às 18h (next_eventos + next_inscricoes)
+//  3. NEXT — véspera do encontro às 18h (next_turmas + next_encontros +
+//     next_matriculas · o modelo VIVO desde o cutover de 17/06)
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { makeAdmin, notificar } from "../_shared/notify.ts";
@@ -114,38 +115,83 @@ async function lembretesBatismo(sb: SupabaseClient, hoje: string, minutosAgora: 
   }
 }
 
+// ⚠️⚠️ O LEMBRETE DO NEXT LÊ O MODELO VIVO: turma → encontro → matrícula
+// (corrigido em 06/08/2026 por auditoria · era a camada APOSENTADA no cutover
+// de turmas de 17/06).
+//
+// O estrago era ATIVO e silencioso: esta função consultava `next_eventos` +
+// `next_inscricoes`, cuja data MÁXIMA é 21/06/2026 — a query devolvia zero
+// linhas e NENHUM lembrete de véspera saiu desde 13/06 (única chave
+// `next-vespera:*` em `app_lembretes_enviados`). O cron estava vivo esse tempo
+// todo (as chaves `aniversario:*` são de hoje), então nada acusou. Quando isso
+// foi medido havia 2 turmas ABERTAS com 46 matrículas e encontros em 09, 16 e
+// 23/08 — 46 pessoas que não seriam avisadas.
+//
+// O conserto de #2288 cobriu as ROTAS do backend (`/next/me`, `/next/inscrever`,
+// check-in) e não esta função, que vive no repo do app. Este bloco é espelho da
+// régua de `nextTurmasAbertas()` + `/next/me` (backend/routes/app.js).
+//
+// ⚠️ NÃO reintroduzir leitura de `next_eventos`/`next_inscricoes` aqui:
+// `next_inscricoes` não é porta de inscrição (é presença por encontro do modelo
+// antigo) e a porta `next_legado` da view unificada morreu na migration
+// 20260730120000.
 async function lembreteNext(sb: SupabaseClient, hoje: string, minutosAgora: number) {
   // Véspera às 18h (janela 18:00–18:09)
   if (minutosAgora < 18 * 60 || minutosAgora > 18 * 60 + 9) return;
   const amanha = dataMaisDias(hoje, 1);
-  const { data: eventos } = await sb
-    .from("next_eventos")
-    .select("id, titulo")
+
+  // Turmas com inscrição aberta (é onde vivem os encontros ativos).
+  const { data: turmas } = await sb
+    .from("next_turmas")
+    .select("id, nome")
+    .eq("status", "aberta")
+    .is("deleted_at", null);
+  if (!turmas?.length) return;
+
+  // O "quando" vive no ENCONTRO, não na turma.
+  const { data: encontros } = await sb
+    .from("next_encontros")
+    .select("id, turma_id, numero, tema")
     .eq("data", amanha)
-    .neq("status", "cancelado");
-  for (const ev of eventos ?? []) {
-    const { data: inscritos } = await sb
-      .from("next_inscricoes")
-      .select("membro_id")
-      .eq("evento_id", ev.id)
+    .in("turma_id", turmas.map((t) => t.id as string));
+  if (!encontros?.length) return;
+
+  const nomeTurma = new Map(turmas.map((t) => [t.id as string, t.nome as string | null]));
+
+  for (const enc of encontros) {
+    const { data: mats } = await sb
+      .from("next_matriculas")
+      .select("membro_id, status")
+      .eq("turma_id", enc.turma_id as string)
+      .is("deleted_at", null)
       .not("membro_id", "is", null);
+
     const membroIds: string[] = [];
-    for (const i of inscritos ?? []) {
-      if (await deduplicar(sb, `next-vespera:${ev.id}:${i.membro_id}`)) {
-        membroIds.push(i.membro_id as string);
+    for (const m of mats ?? []) {
+      // ⚠️ Quem desistiu/cancelou NÃO recebe "amanhã tem NEXT" — filtro em JS
+      // de propósito: status novo no ERP entra nesta lista explicitamente, e
+      // status desconhecido continua RECEBENDO (é matrícula viva até que se
+      // prove o contrário; silenciar por engano é pior que avisar demais).
+      if (["desistente", "cancelado"].includes(String(m.status))) continue;
+      // Dedup por ENCONTRO (o id mudou de camada, então não colide com as
+      // chaves antigas `next-vespera:<evento_id>:*`).
+      if (await deduplicar(sb, `next-vespera:${enc.id}:${m.membro_id}`)) {
+        membroIds.push(m.membro_id as string);
       }
     }
     if (!membroIds.length) continue;
+
+    const titulo = (enc.tema as string | null) || nomeTurma.get(enc.turma_id as string) || null;
     await notificar(
       { membroIds },
       {
         tipo: "next",
         titulo: "Amanhã tem NEXT! 💙",
-        body: `Seu encontro${ev.titulo ? ` "${ev.titulo}"` : ""} é amanhã. Te esperamos lá!`,
-        data: { evento_id: ev.id },
+        body: `Seu encontro${titulo ? ` "${titulo}"` : ""} é amanhã. Te esperamos lá!`,
+        data: { encontro_id: enc.id, turma_id: enc.turma_id },
       }
     );
-    console.log(`[lembretes] next ${ev.id} -> ${membroIds.length} membros`);
+    console.log(`[lembretes] next encontro ${enc.id} -> ${membroIds.length} membros`);
   }
 }
 

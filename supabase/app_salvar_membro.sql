@@ -1,14 +1,32 @@
 -- ============================================================
--- SISTEMA_INTEGRADO_CBRIO — função p/ o app vincular/criar/atualizar o membro
--- do próprio usuário logado (SECURITY DEFINER: contorna o RLS com segurança,
--- mexendo APENAS no membro do auth.uid() que chama).
+-- app_salvar_membro — salva a ficha do membro JÁ VINCULADO à conta que chama.
 --
--- Regras:
---  1. Se o profile já tem membro_id, usa ele.
---  2. Senão, tenta achar um mem_membros por CPF, telefone OU nome (normalizados).
---  3. Senão, cria um novo membro (status 'visitante', origem 'app').
---  4. Atualiza os dados informados e vincula profiles.membro_id (+ is_membro_only).
--- Retorna o membro_id vinculado.
+-- ⚠️⚠️ NÃO É MAIS A FONTE. A definição canônica vive numa migration do ERP:
+--   SISTEMA_INTEGRADO_CBRIO/supabase/migrations/
+--     20260806140000_app_salvar_membro_sem_vinculo_por_nome.sql
+-- Este arquivo é uma CÓPIA de leitura, mantida em sincronia só pra quem procura
+-- o schema do app aqui não achar a versão velha. **Aplicar sempre pela
+-- migration** — foi um arquivo desatualizado neste repo que fez o gatilho de
+-- `auth.users` ficar 2 meses fora do git (lei de 04/08 no CLAUDE.md do ERP).
+--
+-- ─── O QUE MUDOU EM 06/08/2026 (auditoria · achado CRÍTICO) ────────────────
+-- A versão anterior, quando o profile ainda NÃO tinha `membro_id`, procurava um
+-- `mem_membros` por CPF **ou telefone ou NOME EXATO** e vinculava a conta ao
+-- primeiro que achasse, SEM prova de posse. Qualquer conta logada digitava o
+-- nome de um homônimo e passava a ver o grupo, o comprovante de contribuições e
+-- os FILHOS NO KIDS daquela pessoa (é `profiles.membro_id` que alimenta
+-- `current_user_membro_id()` nas policies de Kids e contribuições).
+-- Também gravava CPF sem validar o dígito verificador e marcava
+-- `is_membro_only = true` em qualquer chamador — inclusive staff.
+--
+-- ⚠️ LEI: **CPF IDENTIFICA, NÃO AUTENTICA.** Vincular conta a cadastro é ato de
+-- identidade e passa SÓ por `POST /app/identidade/*` (CPF acha o cadastro → o
+-- código vai pro contato QUE JÁ ESTÁ NO CADASTRO → quem prova posse é
+-- vinculado). Não reintroduzir ramo de busca aqui.
+--
+-- ⚠️ A função continua existindo (e com a mesma assinatura) porque
+-- `app/(app)/perfil.tsx` ainda a chama. Quando a tela passar a salvar por
+-- `PUT /app/membro/perfil`, esta função pode ser DROPADA.
 -- ============================================================
 create or replace function public.app_salvar_membro(
   p_cpf text,
@@ -23,7 +41,7 @@ set search_path to 'public'
 as $function$
 declare
   v_uid uuid := auth.uid();
-  v_id uuid;
+  v_id  uuid;
   v_cpf text := nullif(regexp_replace(coalesce(p_cpf, ''), '\D', '', 'g'), '');
   v_tel text := nullif(regexp_replace(coalesce(p_telefone, ''), '\D', '', 'g'), '');
 begin
@@ -31,51 +49,31 @@ begin
     raise exception 'não autenticado';
   end if;
 
-  -- 1) já vinculado?
+  -- Só o cadastro JÁ vinculado a esta conta. Sem busca, sem criação.
   select membro_id into v_id from public.profiles where id = v_uid;
 
-  -- 2) tenta achar por CPF / telefone / nome (normalizados)
+  -- ⚠️⚠️ NÃO REINTRODUZIR RAMO DE BUSCA AQUI (nem por CPF).
   if v_id is null then
-    select id into v_id
-    from public.mem_membros
-    where deleted_at is null
-      and (
-        (v_cpf is not null and regexp_replace(coalesce(cpf, ''), '\D', '', 'g') = v_cpf)
-        or (v_tel is not null and right(regexp_replace(coalesce(telefone, ''), '\D', '', 'g'), 11) = right(v_tel, 11))
-        or (p_nome is not null and lower(btrim(nome)) = lower(btrim(p_nome)))
-      )
-    order by
-      (v_cpf is not null and regexp_replace(coalesce(cpf, ''), '\D', '', 'g') = v_cpf) desc,
-      (v_tel is not null) desc
-    limit 1;
+    return null;
   end if;
 
-  -- 3) senão, cria
-  if v_id is null then
-    insert into public.mem_membros
-      (id, nome, cpf, email, telefone, data_nascimento,
-       status, active, quer_servir, origem_cadastro, created_at, updated_at)
-    values (
-      gen_random_uuid(),
-      coalesce(nullif(btrim(p_nome), ''), 'Membro'),
-      v_cpf, p_email, p_telefone, p_nascimento,
-      'visitante', true, false, 'app', now(), now()
-    )
-    returning id into v_id;
-  else
-    -- 4) atualiza apenas o que veio preenchido
-    update public.mem_membros set
-      telefone = coalesce(p_telefone, telefone),
-      data_nascimento = coalesce(p_nascimento, data_nascimento),
-      cpf = coalesce(v_cpf, cpf),
-      nome = coalesce(nullif(btrim(p_nome), ''), nome),
-      updated_at = now()
-    where id = v_id;
-  end if;
+  update public.mem_membros set
+    telefone        = coalesce(nullif(btrim(p_telefone), ''), telefone),
+    nome            = coalesce(nullif(btrim(p_nome), ''), nome),
+    data_nascimento = coalesce(p_nascimento, data_nascimento),
+    -- CPF só PREENCHE campo vazio, e só com DV válido (política do gatilho de
+    -- auth e do censo). Sobrescrever CPF existente é decisão humana.
+    cpf = case
+            when coalesce(btrim(cpf), '') <> '' then cpf
+            when v_cpf is not null and public.fn_cpf_dv_valido(v_cpf) then v_cpf
+            else cpf
+          end,
+    updated_at = now()
+  where id = v_id
+    and deleted_at is null;
 
-  update public.profiles
-    set membro_id = v_id, is_membro_only = true
-  where id = v_uid;
+  -- ⚠️ NÃO toca em `profiles` (a versão antiga marcava is_membro_only = true
+  -- pra qualquer chamador, inclusive staff).
 
   return v_id;
 end;

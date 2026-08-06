@@ -527,6 +527,77 @@ casos não-staff eram gente que logou com Gmail e caiu num cadastro do
   Arthur) vão ver a tela de cadastro **uma vez**. É a régua dele aplicada a todo
   mundo, não regressão.
 
+## ⚠️⚠️ AUDITORIA DO APP · ONDA 0 (2026-08-06) · o que mudou NESTE repo
+
+Auditoria de 4 dimensões pedida pelo Marcos (versão · integração · código ·
+escalabilidade pra 4.000 downloads): 21 agentes, 85 achados brutos, **12
+confirmados sob contestação adversarial**. Relatório em
+`~/Downloads/auditoria-app-cbrio.html`. O plano ficou em **6 ondas por VEÍCULO de
+entrega** (servidor chega na hora · OTA depende de 2 aberturas · loja depende da
+Apple). A Onda 0 é quase toda no ERP (PR #2321 lá); aqui entraram 2 coisas.
+
+### 1 · O lembrete do NEXT estava MORTO desde 13/06 (`notify-lembretes`)
+
+`lembreteNext()` consultava `next_eventos` + `next_inscricoes` — a camada
+**aposentada** no cutover de turmas de 17/06, cuja data MÁXIMA é 21/06. A query
+devolvia zero linhas e **nenhum lembrete de véspera saiu desde 13/06** (única
+chave `next-vespera:*` em `app_lembretes_enviados`), com o cron **vivo** esse
+tempo todo — as chaves `aniversario:*` são de hoje. Quando foi medido havia **2
+turmas abertas com 46 matrículas** e encontros em 09, 16 e 23/08.
+
+⚠️ **Por que passou:** o conserto de 05/08 (#2288) cobriu as ROTAS do backend
+(`/next/me`, `/next/inscrever`, check-in) e não esta função, que vive **neste
+repo**. É a mesma classe do gatilho de `auth.users`: código de produção fora do
+repositório onde alguém ia procurar.
+
+Reescrito como espelho de `nextTurmasAbertas()` + `/next/me` do backend: turma
+`aberta` → `next_encontros` de amanhã → `next_matriculas` da turma. Dedup por
+**encontro** (`next-vespera:<encontro_id>:<membro_id>` — id de outra camada, não
+colide com as chaves antigas). Quem está `desistente`/`cancelado` não recebe
+(filtro em JS de propósito: status desconhecido continua RECEBENDO, porque
+silenciar por engano é pior que avisar demais).
+
+⚠️⚠️ **ISTO NÃO SAI POR OTA NEM POR MERGE.** Edge Function precisa de
+`supabase functions deploy notify-lembretes`. E o CLI desta máquina está logado
+numa conta que **não tem o projeto da CBRio** (`supabase projects list` mostra só
+Granum e SNP) — deploy exige `supabase login` com a conta certa + `supabase link
+--project-ref hhntwfawfnxvuobhdfkb`. **Prazo real: 08/08**, que é a véspera do
+encontro de 09/08.
+
+### 2 · `supabase/app_salvar_membro.sql` era uma ARMADILHA
+
+Achado **CRÍTICO** da auditoria: a função procurava `mem_membros` por **CPF ou
+telefone ou `lower(btrim(nome))` EXATO** e vinculava a conta ao primeiro que
+achasse, **sem prova de posse** — e é `profiles.membro_id` que alimenta
+`current_user_membro_id()` nas policies de Kids e de contribuições. Quem digitasse
+o nome de um homônimo em `perfil.tsx` passava a ver grupo, comprovante de
+contribuições e **filhos no Kids** daquela pessoa.
+
+O conserto é a migration `20260806140000` **no repo do ERP** (a função escreve em
+`mem_membros`, então a definição canônica vive lá). Este arquivo virou **cópia de
+leitura sincronizada**, com o ponteiro pra migration no cabeçalho — arquivo
+desatualizado aqui é exatamente o mecanismo que deixou o gatilho de `auth.users`
+2 meses fora do git.
+
+⚠️ **A função foi ESTREITADA, não dropada, e a ordem importa:** `perfil.tsx:184`
+ainda a chama, e dropar antes do OTA deixaria a tela de perfil sem salvar. Ela
+perdeu os ramos de BUSCA e de CRIAÇÃO; sem `membro_id` devolve `null` (o app já
+trata: `if (vId) setMembroId(...)`) e os campos de `profiles` seguem salvando,
+porque isso o cliente faz ANTES da RPC. **Trocar `perfil.tsx` pra
+`PUT /app/membro/perfil` é da onda seguinte (por OTA) — e só depois disso a
+função pode ser dropada.**
+
+### O que a auditoria achou aqui e ficou pra Onda 2 (por OTA, numa publicação só)
+
+`perfil.tsx` → endpoint do backend · `lib/disponibilidade.ts` → os 3 endpoints
+que já existem (a tabela `vol_availability` só aceita service_role desde 15/06:
+**a feature nunca gravou nada**, a tabela está vazia) · `grupo-editar` → endpoint
+novo (hoje o save do supervisor não grava em 79 dos 100 grupos, e diz "Grupo
+atualizado") · **Error Boundary raiz** (não existe nenhum: todo throw de render
+fecha o app) · falha de rede parar de virar tela vazia enganosa ·
+`completar-cadastro` usar `lib/validators` · `build_number` na telemetria (chega
+nulo em 100% dos eventos) · i18n de perfil e escala-supervisor.
+
 ## ⚠️ GERENCIAR GRUPO · 4 abas + editar (2026-08-05)
 
 Pedido do Marcos: *"ao apertar gerenciar grupo, ali devem ter TODAS as opções
