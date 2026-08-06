@@ -42,6 +42,7 @@ import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { completarCadastroApp, confirmarCodigoIdentidade, identidadePorCpf, statusIdentidade, type IdentidadePorCpf } from "@/lib/api";
 import { trackEvento } from "@/lib/telemetria";
+import { revalidarCadastro } from "@/components/auth/CadastroGate";
 
 const soDigitos = (s: string) => s.replace(/\D/g, "");
 
@@ -161,6 +162,10 @@ export default function CompletarCadastroScreen() {
 
   const concluir = useCallback(async () => {
     await reload();
+    // ⚠️ Avisa o PORTÃO que a ficha fechou. Sem isto ele mantém o "incompleto"
+    // que leu na montagem e devolve a pessoa pra cá assim que ela navega —
+    // o beco sem saída em que o Marcos caiu em 06/08. Antes do router.replace.
+    await revalidarCadastro();
     // ⚠️ `retorno` traz a pessoa de volta pra onde ela ESTAVA (ex.: o evento em
     // que ela ia se inscrever) em vez de despejá-la na Home — completar o
     // cadastro é um desvio no meio de uma tarefa, não a tarefa.
