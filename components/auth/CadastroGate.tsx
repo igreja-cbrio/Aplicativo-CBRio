@@ -60,11 +60,33 @@ export function CadastroGate({ children }: { children: React.ReactNode }) {
     if (!user?.id) { setChecado(false); setIncompleto(false); redirecionou.current = false; }
   }, [user?.id]);
 
-  // Enquanto a ficha não fecha, toda rota volta pra tela de cadastro.
+  // Enquanto a ficha não fecha, toda rota volta pra tela de cadastro —
+  // mas RECONFERINDO com o servidor antes de rebater.
+  //
+  // ⚠️⚠️ INCIDENTE 05/08/2026 (não regredir): `incompleto` é estado LOCAL e
+  // nada o limpava. Quem terminava o cadastro (pelo CPF ou pelo formulário)
+  // era mandado pra "/" pelo `concluir()`, este efeito disparava com
+  // `incompleto` ainda `true` e devolvia a pessoa pra cá — para sempre, até
+  // fechar e reabrir o app. O Matheus tentou 2×, a Joana Botafogo 3× em dois
+  // minutos, os dois com o vínculo JÁ criado e a ficha completa no banco.
+  //
+  // Rebater sem perguntar era o erro: o estado que decide o bloqueio é do
+  // SERVIDOR e muda por ação da pessoa na tela anterior. Agora cada tentativa
+  // de sair re-consulta; só volta se o servidor CONFIRMAR que ainda falta.
+  // Continua fail-closed (erro de rede mantém o bloqueio de quem já sabemos
+  // estar incompleto) e o GET extra só acontece com a ficha aberta.
   useEffect(() => {
     if (!incompleto) return;
     if (pathname.startsWith("/completar-cadastro")) return;
-    router.replace("/completar-cadastro");
+    let vivo = true;
+    statusIdentidade()
+      .then((s) => {
+        if (!vivo) return;
+        if (s.completo) { setIncompleto(false); return; }  // acabou de completar
+        router.replace("/completar-cadastro");
+      })
+      .catch(() => { if (vivo) router.replace("/completar-cadastro"); });
+    return () => { vivo = false; };
   }, [incompleto, pathname, router]);
 
   // Não esconde a UI enquanto a checagem roda (é 1 GET) — o bloqueio é por
