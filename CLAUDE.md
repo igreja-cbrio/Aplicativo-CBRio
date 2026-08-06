@@ -1032,6 +1032,27 @@ contas do app apontavam pra cadastro sem CPF.
   redireciona pra tela quando o servidor RESPONDE que falta algo. ⚠️ Falha de
   rede/endpoint **não** bloqueia o app (preso na tela sem internet é pior que
   dado incompleto) e o gate **não** esconde a UI — só navega.
+- ⚠️⚠️ **O gate RECONFERE com o servidor antes de rebater (05/08/2026 · não
+  regredir).** `incompleto` é estado LOCAL e **nada o limpava**: quem terminava
+  o cadastro era mandado pra `/` pelo `concluir()`, o efeito disparava com
+  `incompleto` ainda `true` e devolvia a pessoa pra tela — **pra sempre**, até
+  fechar e reabrir o app. Medido: o Matheus tentou 2×, a Joana Botafogo **3× em
+  dois minutos**, os dois com `profiles.membro_id` preenchido e a ficha completa
+  no banco. Agora cada tentativa de sair chama `statusIdentidade()` e só volta se
+  o servidor CONFIRMAR que ainda falta; segue **fail-closed** (erro de rede
+  mantém o bloqueio de quem já sabemos estar incompleto) e o GET extra só
+  acontece com a ficha aberta.
+  ⚠️⚠️ **Eram DUAS causas independentes.** A outra é do SERVIDOR: `res.json` do
+  Express gera **ETag** e não manda `Cache-Control`, o cache HTTP do RN
+  (NSURLSession/OkHttp) revalidava com `If-None-Match`, o Express respondia
+  **304 sem corpo** e a camada nativa entregava ao JS a resposta ANTIGA, com
+  `completo: false` — **124 de 251** respostas de `/api/app/*` em 6h eram 304.
+  Corrigido em `backend/routes/app.js` (PR #2313 do SISTEMA). **Sem as duas, o
+  loop volta.**
+  ⚠️ Descartado de propósito: `cache: "no-store"` no `apiGet`. O `fetch` do
+  React Native é o polyfill `whatwg-fetch` sobre `XMLHttpRequest` e **ignora a
+  opção `cache`** — seria decoração que se lê como proteção. Quem resolve é o
+  servidor não emitir validador.
 - ⚠️ **CPF IDENTIFICA, NÃO AUTENTICA** (lei registrada no CLAUDE.md do
   sistema): o código vai pro telefone JÁ CADASTRADO, nunca pra um número
   digitado na hora — o cadastro dá acesso a grupo, filhos no Kids e histórico
