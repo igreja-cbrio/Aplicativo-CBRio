@@ -402,10 +402,22 @@ export default function GrupoVisitaScreen() {
                 </Pressable>
               </View>
 
+              {/* ⚠️ Roster VAZIO tem que ser dito. No teste de 07/08 o grupo
+                  "teste 2" não tinha ninguém e o bloco aparecia como
+                  "Quem esteve presente — 0/0" com uma lista em branco, que se
+                  lê como tela quebrada. A visita é registrada do mesmo jeito —
+                  ela é do supervisor, não depende de haver roster. */}
               <Text style={styles.campoLabel}>
-                {t("Quem esteve presente")} — {presentes.length}/{membrosAtivos.length}
+                {t("Quem esteve presente")}
+                {membrosAtivos.length > 0 ? ` — ${presentes.length}/${membrosAtivos.length}` : ""}
               </Text>
-              <Text style={styles.dica}>{t("Todos começam marcados. Desmarque quem faltou.")}</Text>
+              {membrosAtivos.length === 0 ? (
+                <Text style={styles.dica}>
+                  {t("Este grupo ainda não tem ninguém cadastrado no roster, então não há chamada a fazer. Sua visita é registrada normalmente.")}
+                </Text>
+              ) : (
+                <Text style={styles.dica}>{t("Todos começam marcados. Desmarque quem faltou.")}</Text>
+              )}
               {membrosAtivos.map((m) => {
                 const marcado = !!m.membro_id && !ausentes.has(m.membro_id);
                 return (
