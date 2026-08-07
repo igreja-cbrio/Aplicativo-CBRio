@@ -490,6 +490,27 @@ export function getEncontrosGrupo(grupoId: string): Promise<{ encontros: GrupoEn
   return apiGet<{ encontros: GrupoEncontro[] }>(`/app/grupos/${grupoId}/encontros`);
 }
 
+/**
+ * O encontro ABERTO: quem esteve presente, com NOME.
+ *
+ * ⚠️ Sob demanda (ao tocar no card), não na lista: seriam 24 encontros × N
+ * pessoas a cada abertura de tela.
+ * ⚠️ `presentes` só tem quem ESTEVE — a RPC não cria linha pra ausente, então
+ * a tela não pode listar faltosos sem inventá-los a partir do roster de HOJE.
+ */
+// ⚠️ `Omit` porque na LISTA `presentes` é a CONTAGEM e aqui é a lista de gente —
+// mesmo nome, tipos diferentes. Estender direto não compila, e é bom que não:
+// são duas respostas distintas do servidor.
+export type GrupoEncontroDetalhe = Omit<GrupoEncontro, "presentes"> & {
+  presentes: { membro_id: string | null; nome: string }[];
+};
+
+export function getEncontroDetalhe(grupoId: string, encontroId: string) {
+  return apiGet<{ encontro: GrupoEncontroDetalhe }>(
+    `/app/grupos/${encodeURIComponent(grupoId)}/encontros/${encodeURIComponent(encontroId)}`
+  );
+}
+
 /** Registra a frequência do encontro. `presentes` = ids de MEMBRO (não da linha
  *  do roster) — o servidor confere contra o roster ativo. */
 export function registrarEncontroGrupo(
