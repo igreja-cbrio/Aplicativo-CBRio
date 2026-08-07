@@ -822,6 +822,94 @@ entraria **sem ficha**, que é o oposto do que o portão existe pra fazer.
 ⚠️ Não afrouxa nada: quem não completar cai na decisão normal quando a bandeira
 baixa, e quem diz se a ficha fechou continua sendo o servidor.
 
+## ⚠️⚠️ TELA DO SUPERVISOR · `/grupo-visita` (2026-08-07 · PRs #2339/#2340 + app)
+
+Pedido do Marcos: *"podemos deixar uma tela apenas para Registrar Frequência e
+comentários sobre aquele grupo… o supervisor não precisa ver estudos, pedidos de
+aprovação. No máximo Pessoas, Frequência e comentários"* + *"a plataforma entende
+que quando supervisor preenche a frequência é porque fez uma visita e conta
+isso"*. Eu levantei o risco de o indicador passar a medir "digitou" em vez de
+"foi lá" e ele **aprovou o interruptor "estive presente no encontro"**, ligado
+por padrão.
+
+### ⚠️⚠️ O interruptor só funciona porque DESLIGADO NÃO GRAVA LINHA
+
+Levantamento de 07/08 derrubou a premissa: o KPI real é a função SQL
+**`_kpi_agregar_dado`** (ramo `lideres_acompanhados`), que conta
+`DISTINCT lider_id` das visitas do período e **NÃO filtra `status`** — 'agendada'
+e 'cancelada' contam igual a 'realizada'. O coletor JS
+`kpiAutoCollector.js:432` que parecia a fonte é **código morto** (nenhum
+indicador tem `fonte_auto` apontando pra ele).
+
+⇒ Gravar a visita com outro status faria o interruptor virar **puro enfeite**.
+Por isso `presente:false` **não grava visita nenhuma** (a frequência vai pro
+líder normalmente). É o que lhe dá efeito real, sem depender de migration.
+⚠️ Consequência assumida: com o interruptor desligado o comentário não tem onde
+morar (não existe estado "acompanhei à distância" no CHECK), então a TELA esconde
+o campo. Se um dia for preciso, o caminho é `grupo_supervisao_observacoes`
+(tabela irmã, existe, vazia) + decisão do Marcos.
+
+### As decisões que sustentam a tela
+
+- **Rota própria** (`/grupo-visita`), não aba condicional: a escrita é OUTRA
+  (frequência **+** visita, dois endpoints) e `grupo-membros.tsx` tem 1.070
+  linhas e 5 modais. As 3 linhas de amarração entraram (`lib/hierarquia.ts`,
+  `BottomBar.tsx` e o array do invariante em `test/reguas.test.ts`).
+- **Precedência: LIDERAR GANHA.** Medido: **7 dos 87 grupos ativos têm
+  `supervisor_id == lider_id`** — sem isso esses líderes cairiam na tela enxuta e
+  perderiam Pedidos, Estudos e Editar do próprio grupo. Quem decide o papel é o
+  **servidor** (`papel` em `/app/grupos/meus`, `meu_papel` no roster); o app não
+  cruza ids. Papel ausente → tela COMPLETA (o comportamento de sempre).
+- ⚠️⚠️ **ESCONDER ABA NÃO TIRA PODER.** O servidor autoriza líder E supervisor
+  nos mesmos ~8 endpoints de gerenciar grupo — foi assim que a Onda 1b deu ao
+  supervisor o save que ele não tinha. `lib/papelGrupo.ts` é régua de
+  NAVEGAÇÃO, não trava de segurança.
+- ⚠️⚠️ **O COMENTÁRIO NÃO É PRIVADO** — a premissa "apenas para o supervisor" não
+  se sustenta: `grupo_supervisao_visitas` tem SELECT `USING(true)` pra qualquer
+  autenticado e a observação já aparece na aba Visitas do /grupos. A tela **diz a
+  verdade** ("fica no registro de supervisão — a coordenação lê") em vez de
+  prometer sigilo que o schema não garante.
+- **`23505` do encontro virou 409**: `mem_grupo_encontros` tem UNIQUE
+  `(grupo_id, data)` e a RPC faz INSERT puro. Com esta tela, líder e supervisor
+  registrando o MESMO dia deixa de ser exceção. ⚠️ A mensagem é **neutra** — o
+  409 não diz quem registrou (pode ser encontro soft-deletado ainda ocupando a
+  data, porque a UNIQUE não é parcial).
+- **O encontro do supervisor vai marcado `(supervisor)`** no
+  `registrado_por_nome`: o card "Grupos sem relatório de encontro" do /grupos
+  conta QUALQUER encontro e afirma que o relato veio do líder.
+
+### ⚠️ O que a revisão adversarial (18 agentes) pegou depois de eu implementar
+
+- **QUEBRAVA no iPhone**: copiei o esqueleto de "tela de barra"
+  (`edges={["left","right"]}`) numa tela de PROFUNDIDADE — título e subtítulo
+  renderizavam **por baixo do notch**, e não havia seta de voltar. As 5 telas
+  irmãs de grupo usam `["top","left","right"]` + `chevron-back`.
+- **`"Sua última visita"` mostrava visita de OUTRA pessoa**: o GET não recortava
+  por pessoa e o `POST /api/grupos/:id/visitas` do web deixa a coordenação
+  registrar em qualquer grupo. O supervisor seria **dispensado de visitar** por
+  uma visita que não fez. Corte por `responsavel_id`/`registrado_por`, **não** por
+  `supervisor_id` (que, quando quem registra não tem `membro_id`, cai no
+  supervisor DO GRUPO).
+- **Visita duplicada**: a tabela não tem UNIQUE nenhuma e o retry é caminho real
+  → idempotência por (grupo, pessoa, dia) no servidor.
+- **Falha só na VISITA dizia "não conseguimos salvar"** com a frequência já
+  gravada — a pessoa repetiria tudo e levaria 409. Agora a mensagem diz o que
+  JÁ foi gravado.
+- **Falha de rede virava "Ainda não registrada"** no herói (o `.catch(() => [])`
+  colapsava "não carregou" com "não existe") e o erro convivia com o spinner.
+- Aba Pessoas mostrava o **enum cru** (`co_lider`, `lider_treinamento`).
+- Badge de pendentes aparecia pra supervisor, cuja tela **não tem** aba Pedidos.
+
+### ⏳ Reportado e NÃO consertado (é decisão, não código)
+
+- `_kpi_agregar_dado` não filtra `status` nem `deleted_at`/`ativo` no ramo
+  `lideres_acompanhados` — bug pré-existente; nada aqui depende dele.
+- Os 4 KPIs (SED-04/AMI-09/BRG-08/ONL-10) são `delta_pct` com
+  `meta_valor_absoluto=90` ⇒ a view cobra **7,5%**. Mesma doença já corrigida em
+  22/07 pra outros KPIs: o 2º mês de uso pintaria 4 áreas de verde com 2 visitas.
+- **Só 2 dos 14 supervisores têm conta no app** ⇒ a feature alcança **9 dos 87
+  grupos** hoje.
+
 ### ⏳ O que este teste NÃO cobre
 
 O portão (55 testes · 14/14 mutantes) garante a REGRA, **não a tela**. Nada da

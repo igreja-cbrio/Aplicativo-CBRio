@@ -131,6 +131,26 @@ const MUTANTES = [
     para: "  return valorDigitado.replace(/\\D/g, \"\");",
   },
   {
+    // ⚠️⚠️ ESTE E O MUTANTE QUE DA SENTIDO AO INTERRUPTOR "estive presente".
+    // O KPI real (`_kpi_agregar_dado`, ramo lideres_acompanhados) conta a visita
+    // SEM olhar `status` — entao gravar linha quando a pessoa NAO esteve
+    // presente faz o indicador voltar a medir "digitou" em vez de "foi la",
+    // que e exatamente o que o Marcos aprovou evitar.
+    nome: "visita: gravar visita mesmo sem ter estado presente",
+    arq: "lib/visitaSupervisao.ts",
+    de: "  if (!presente) return { gravar: false };",
+    para: "  // mutante",
+  },
+  {
+    // ⚠️ 7 dos 87 grupos ativos tem `supervisor_id == lider_id`. Se supervisor
+    // ganhasse a precedencia, esses lideres cairiam na tela enxuta e perderiam
+    // Pedidos, Estudos e Editar do PROPRIO grupo.
+    nome: "papel: mandar quem NAO e supervisor pra tela enxuta",
+    arq: "lib/papelGrupo.ts",
+    de: '  return papel === "supervisor" ? ROTA_VISITA : ROTA_GESTAO;',
+    para: '  return papel === "lider" ? ROTA_GESTAO : ROTA_VISITA;',
+  },
+  {
     // ⚠️ FAIL-CLOSED. Sem o teto, um crash no meio do cadastro deixa a bandeira
     // ligada pra sempre: o portao NUNCA decide e a pessoa entra no app SEM
     // ficha — exatamente o que o portao existe pra impedir.

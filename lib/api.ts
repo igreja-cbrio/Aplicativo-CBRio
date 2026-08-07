@@ -534,6 +534,8 @@ export type GrupoMeu = {
   aceitando_inscricoes: boolean | null;
   membros_ativos: number;
   pendentes: number;
+  /** Papel decidido pelo SERVIDOR — ver `lib/papelGrupo.ts`. */
+  papel?: string | null;
 };
 export function listarMeusGruposLider(): Promise<{ admin: boolean; grupos: GrupoMeu[] }> {
   return apiGet<{ admin: boolean; grupos: GrupoMeu[] }>("/app/grupos/meus");
@@ -565,9 +567,43 @@ export type GrupoRoster = {
   };
   membros: GrupoMembro[];
   pendentes: GrupoPedido[];
+  /**
+   * ⚠️ Papel DESTA pessoa NESTE grupo, decidido pelo servidor (07/08/2026):
+   * `lider` | `supervisor` | `admin` | `nenhum`. É o que faz a tela de destino
+   * RE-CONFERIR em vez de confiar no que veio na navegação (deep link).
+   * Ausente em servidor antigo → `lib/papelGrupo.ts` cai na tela completa.
+   */
+  meu_papel?: string | null;
 };
 export function getGrupoRoster(id: string): Promise<GrupoRoster> {
   return apiGet<GrupoRoster>(`/app/grupos/${encodeURIComponent(id)}/membros`);
+}
+
+// ── Visita de supervisão (07/08/2026) ───────────────────────────────────────
+// ⚠️ Endpoint SEPARADO do encontro de propósito: a frequência é do GRUPO (vai
+// pro líder) e a visita é do SUPERVISOR. Quando o interruptor "estive presente"
+// está desligado, a tela chama SÓ a frequência — é isso que faz o interruptor
+// ter efeito no indicador (ver `lib/visitaSupervisao.ts`).
+export type VisitaSupervisao = {
+  id: string;
+  data_visita: string;
+  observacao: string | null;
+  status: string;
+};
+
+export function registrarVisitaGrupo(
+  grupoId: string,
+  body: { data_visita: string; observacao: string | null }
+) {
+  return apiPost<{ ok: boolean; visita: VisitaSupervisao }>(
+    `/app/grupos/${encodeURIComponent(grupoId)}/visitas`, body
+  );
+}
+
+export function listarVisitasGrupo(grupoId: string) {
+  return apiGet<{ visitas: VisitaSupervisao[] }>(
+    `/app/grupos/${encodeURIComponent(grupoId)}/visitas`
+  );
 }
 
 // ===== /app/next (NEXT) =====
