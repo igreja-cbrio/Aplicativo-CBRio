@@ -24,12 +24,62 @@
 import { AppState, Platform } from "react-native";
 import Constants from "expo-constants";
 import * as Crypto from "expo-crypto";
+import * as Updates from "expo-updates";
+import { requireOptionalNativeModule } from "expo-modules-core";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
 
 const BASE = "https://www.cbrio.org/api";
+// ⚠️ `expoConfig.version` é a versão do BUNDLE (a que veio no OTA), não a do
+// binário — por isso ela é "1.0.0" em 13.231 de 13.231 eventos e nunca
+// distinguiu ninguém.
 const APP_VERSION = Constants.expoConfig?.version ?? "?";
-const BUILD = Constants.nativeBuildVersion ? String(Constants.nativeBuildVersion) : null;
+
+/**
+ * ⚠️⚠️ `Constants.nativeBuildVersion` FOI REMOVIDO do expo-constants na v16 (o
+ * projeto está na 18) — por isso `build_number` chega **nulo em 100%** dos
+ * eventos, e o `& Record<string, any>` do tipo escondia isso do TypeScript.
+ *
+ * A fonte certa é `expo-application`, que **já está no binário** (dependência
+ * transitiva de `expo-notifications`/`expo-auth-session`, autolinkada) — então
+ * NÃO é preciso build novo, ao contrário do que o CLAUDE.md registrava.
+ *
+ * ⚠️ Lido por `requireOptionalNativeModule`, NUNCA por `import`: se algum dia o
+ * módulo sair da árvore, o pior caso vira `build_number: null` (degrada em
+ * silêncio) em vez de **crash de boot** no próximo OTA.
+ */
+const BUILD = (() => {
+  try {
+    const m = requireOptionalNativeModule<{ nativeBuildVersion?: string | number }>("ExpoApplication");
+    return m?.nativeBuildVersion != null ? String(m.nativeBuildVersion) : null;
+  } catch {
+    return null;
+  }
+})();
+
+/**
+ * Identidade do BINÁRIO e do BUNDLE — é o que torna possível responder "quem
+ * ainda está em código velho?" sem adivinhar por campo ausente (truque que se
+ * gasta a cada release e enviesa pro otimista: quanto mais velho o cliente,
+ * menos ele aparece).
+ *
+ * ⚠️ `runtimeVersion` vem do plist/meta-data compilado no build ⇒ identifica o
+ * BINÁRIO. `isEmbeddedLaunch` responde "esta sessão roda o bundle embutido?",
+ * que é exatamente a 1ª abertura de toda instalação nova — o caso em que o app
+ * roda código de semanas atrás sem ninguém saber.
+ */
+const BUNDLE = (() => {
+  try {
+    return {
+      runtime_version: texto(Updates.runtimeVersion),
+      update_id: texto(Updates.updateId),
+      canal: texto(Updates.channel),
+      is_embedded: typeof Updates.isEmbeddedLaunch === "boolean" ? Updates.isEmbeddedLaunch : null,
+    };
+  } catch {
+    return { runtime_version: null, update_id: null, canal: null, is_embedded: null };
+  }
+})();
 const CHAVE_INSTALACAO = "cbrio:installation_id";
 
 /** Uma abertura do app = uma sessão (só na memória, de propósito). */
@@ -129,6 +179,7 @@ async function enviar(eventos: Evento[]) {
           session_id: SESSION_ID,
           installation_id,
           ...APARELHO,
+          ...BUNDLE,
         })),
       }),
     });

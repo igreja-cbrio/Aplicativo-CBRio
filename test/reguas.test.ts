@@ -27,6 +27,7 @@ import {
 import { rotaDoGrupo, ehSupervisao } from "@/lib/papelGrupo";
 import { montarRegistroVisita } from "@/lib/visitaSupervisao";
 import { folgaDoTeclado } from "@/lib/teclado";
+import { compararVersoes, abaixoDoPiso } from "@/lib/versaoApp";
 import {
   iniciarCadastroNativo, terminarCadastroNativo, lerCadastroNativo,
   assinarCadastroNativo,
@@ -441,6 +442,47 @@ describe("nascimentoBRParaISO", () => {
     expect(nascimentoBRParaISO("1990-05-17", HOJE)).toBeNull();
     expect(nascimentoBRParaISO("17/5/1990", HOJE)).toBeNull();
     expect(nascimentoBRParaISO("", HOJE)).toBeNull();
+  });
+});
+
+// ── Versão mínima · o piso da LOJA (Onda 3 · 07/08) ────────────────────────
+// `runtimeVersion.policy = "appVersion"`: no dia em que a version subir, todo
+// binário antigo para de receber OTA — medido ao vivo no manifesto
+// (`1.0.0` → 200 com bundle · `1.0.1` → HTTP 204). O app CONGELA e o portão de
+// OTA fica cego (só age com `isUpdatePending`). Daí em diante só a loja alcança
+// o aparelho, e é este piso que avisa.
+describe("versaoApp", () => {
+  // ⚠️ MUTATION GUARD: comparar como TEXTO diria que "1.0.10" < "1.0.9" e o
+  // piso bloquearia justamente quem está atualizado.
+  it("compara por POSIÇÃO, não como texto", () => {
+    expect(compararVersoes("1.0.10", "1.0.9")).toBe(1);
+    expect(compararVersoes("1.0.9", "1.0.10")).toBe(-1);
+    expect(compararVersoes("2.0.0", "10.0.0")).toBe(-1);
+  });
+
+  // ⚠️ O App Store Connect mostra a versão viva como "1.0" enquanto o app.json
+  // diz "1.0.0" — medido em 07/08. Se isso contasse como diferente, o piso
+  // bloquearia a base inteira.
+  it('"1.0" e "1.0.0" são a MESMA versão', () => {
+    expect(compararVersoes("1.0", "1.0.0")).toBe(0);
+    expect(abaixoDoPiso("1.0", "1.0.0")).toBe(false);
+  });
+
+  it("abaixo do piso é abaixo; igual ou acima, não", () => {
+    expect(abaixoDoPiso("1.0.0", "1.1.0")).toBe(true);
+    expect(abaixoDoPiso("1.1.0", "1.1.0")).toBe(false);
+    expect(abaixoDoPiso("1.2.0", "1.1.0")).toBe(false);
+  });
+
+  // ⚠️⚠️ MUTATION GUARD — o mais importante daqui. Trancar alguém fora do app
+  // por causa de um dado que não deu pra ler é o pior desfecho possível.
+  it("FAIL-OPEN: dado faltando ou ilegível NUNCA bloqueia", () => {
+    expect(abaixoDoPiso(null, "1.1.0")).toBe(false);
+    expect(abaixoDoPiso("1.0.0", null)).toBe(false);
+    expect(abaixoDoPiso(undefined, undefined)).toBe(false);
+    expect(abaixoDoPiso("", "1.1.0")).toBe(false);
+    expect(abaixoDoPiso("versao-estranha", "1.1.0")).toBe(false);
+    expect(abaixoDoPiso("1.0.0", "sei-la")).toBe(false);
   });
 });
 
