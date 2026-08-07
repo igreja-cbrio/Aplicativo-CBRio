@@ -79,6 +79,15 @@ export function attachNotifTapListener(): () => void {
         // Pedido de entrada no grupo → tela do líder aprovar/recusar.
         router.navigate("/grupo-inscricoes");
         return;
+      // ⚠️ Tipos criados em 07/08 com a tela do supervisor. Sem `case`, eles
+      // caíam no default e o toque NÃO NAVEGAVA — o aviso chegava e não levava
+      // a lugar nenhum. Destino é a lista de grupos (quem recebe é a
+      // coordenação, que gerencia vários; mandar pro grupo exigiria o papel
+      // dela naquele grupo, que a push não carrega).
+      case "grupo_encontro_registrado":
+      case "grupo_visita_registrada":
+        router.navigate("/meu-grupo");
+        return;
       case "batismo":
         router.navigate("/batismo");
         return;
