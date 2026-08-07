@@ -3,7 +3,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Linking,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -160,9 +159,11 @@ export default function CuidadosScreen() {
     <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior="padding"
       >
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <View style={styles.badge}>
               <Ionicons name="heart" size={28} color={colors.brandPale} />

@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Linking,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -322,7 +321,10 @@ export default function GrupoVisitaScreen() {
         })}
       </View>
 
-      <ScrollView contentContainerStyle={styles.conteudo}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+        contentContainerStyle={styles.conteudo}>
         {erro ? (
           <View style={styles.avisoBox}>
             <Text style={styles.avisoTxt}>{erro}</Text>
@@ -429,7 +431,7 @@ export default function GrupoVisitaScreen() {
 
       {/* ── Registro: chamada + comentário + o interruptor ─────────────────── */}
       <Modal visible={aberto} transparent animationType="fade" onRequestClose={() => setAberto(false)} statusBarTranslucent>
-        <KeyboardAvoidingView style={styles.modalFundo} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <KeyboardAvoidingView style={styles.modalFundo} behavior="padding">
           <View style={styles.modalCartao}>
             <View style={styles.modalTopo}>
               <Text style={styles.titulo}>{t("Registrar encontro")}</Text>
@@ -438,7 +440,9 @@ export default function GrupoVisitaScreen() {
               </Pressable>
             </View>
 
-            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.sm }}>
+            <ScrollView
+              automaticallyAdjustKeyboardInsets
+              keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: spacing.sm }}>
               <View style={{ gap: spacing.xs }}>
                 <Text style={styles.campoLabel}>{t("Data do encontro")}</Text>
                 <Pressable
@@ -569,7 +573,10 @@ export default function GrupoVisitaScreen() {
                   </Pressable>
                 </View>
 
-                <ScrollView contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.sm }}>
+                <ScrollView
+                  keyboardShouldPersistTaps="handled"
+                  automaticallyAdjustKeyboardInsets
+                  contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.sm }}>
                   <View style={{ gap: spacing.xs }}>
                     <Text style={styles.secaoTitulo}>
                       {t("Presença")} — {detalhe.presentes.length}

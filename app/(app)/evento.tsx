@@ -26,6 +26,7 @@
 // ============================================================================
 import { useCallback, useMemo, useState } from "react";
 import {
+  KeyboardAvoidingView,
   ActivityIndicator,
   Image,
   Pressable,
@@ -272,7 +273,14 @@ export default function EventoScreen() {
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
       {cabecalho}
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      {/* ⚠️ Sem KeyboardAvoidingView esta tela ficava SEM proteção nenhuma —
+          nem no iPhone (varredura de 07/08). `behavior="padding"` nas duas
+          plataformas: o cálculo do RN é auto-corretivo (quando a janela já
+          encolheu sozinha, o padding dá 0 e nada é somado duas vezes). */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <ScrollView
+        automaticallyAdjustKeyboardInsets
+        contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {capa ? <Image source={{ uri: capa }} style={styles.capa} resizeMode="cover" /> : null}
 
         <GlassCard style={styles.card}>
@@ -447,6 +455,7 @@ export default function EventoScreen() {
           </>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

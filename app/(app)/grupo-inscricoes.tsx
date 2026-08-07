@@ -173,8 +173,10 @@ export default function GrupoInscricoesScreen() {
         </View>
       ) : (
         <ScrollView
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
           contentContainerStyle={{ padding: spacing.lg, paddingBottom: 40, gap: spacing.md }}
-          refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.primary} />}
+          refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.primary}/>}
         >
           {grupos.length > 0 && (
             <View style={{ gap: spacing.sm }}>
@@ -284,7 +286,7 @@ export default function GrupoInscricoesScreen() {
 
       {/* Modal de recusa · motivo (molde escala-supervisor) */}
       <Modal visible={!!recusaAlvo} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setRecusaAlvo(null)}>
-        <KeyboardAvoidingView style={styles.modalWrap} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <KeyboardAvoidingView style={styles.modalWrap} behavior="padding">
           <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{t("Recusar inscrição")}</Text>

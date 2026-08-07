@@ -319,6 +319,8 @@ export default function EscalaSupervisorScreen() {
             <View ref={scrollWrapRef} style={{ flex: 1 }}>
             <ScrollView
               contentContainerStyle={{ padding: spacing.md, paddingBottom: 100, gap: 8 }}
+              keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets
               onScroll={e => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
               scrollEventThrottle={16}
               scrollEnabled={!dragItem}
@@ -425,7 +427,9 @@ export default function EscalaSupervisorScreen() {
             {carregandoDetalhe || !detalhe ? (
               <View style={{ paddingVertical: 30 }}><ActivityIndicator color={colors.primary} /></View>
             ) : (
-              <ScrollView keyboardShouldPersistTaps="handled">
+              <ScrollView
+                automaticallyAdjustKeyboardInsets
+                keyboardShouldPersistTaps="handled">
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: spacing.md }}>
                   <View style={[styles.avatar, { height: 48, width: 48, borderRadius: 24, backgroundColor: colors.primary + "22" }]}>
                     <Text style={[styles.avatarTxt, { color: colors.primary, fontSize: font.size.md }]}>{iniciais(detalhe.full_name)}</Text>
@@ -468,7 +472,7 @@ export default function EscalaSupervisorScreen() {
 
       {/* Modal de adicionar */}
       <Modal visible={addOpen} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setAddOpen(false)}>
-        <KeyboardAvoidingView style={styles.modalWrap} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <KeyboardAvoidingView style={styles.modalWrap} behavior="padding">
           <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>Adicionar voluntário</Text>
@@ -501,7 +505,9 @@ export default function EscalaSupervisorScreen() {
               {buscando && <ActivityIndicator color={colors.primary} />}
             </View>
 
-            <ScrollView style={{ maxHeight: 300 }} keyboardShouldPersistTaps="handled">
+            <ScrollView
+              automaticallyAdjustKeyboardInsets
+              style={{ maxHeight: 300 }} keyboardShouldPersistTaps="handled">
               {busca.trim().length < 2 ? (
                 <Text style={[styles.muted, { padding: spacing.md, textAlign: "center" }]}>Digite ao menos 2 letras do nome.</Text>
               ) : buscaErro ? (

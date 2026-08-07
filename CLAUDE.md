@@ -631,6 +631,91 @@ pessoa digitava, enviava, e só o SERVIDOR recusava, com 400 seco.
 - **i18n de `perfil.tsx` e `escala-supervisor.tsx`**: ficou de fora pra a
   publicação não misturar conserto de dado com varredura de tradução.
 
+## ⚠️⚠️ LEI · `behavior` do KeyboardAvoidingView NUNCA é `undefined` (2026-08-07)
+
+Relato do Marcos: *"na aba de comentário opcional da visita, ao clicar, o teclado
+está tapando a visualização — verifica TODOS os campos de preenchimento do app"*.
+A varredura (4 agentes, 31 arquivos com campo) achou **um defeito só, copiado em
+20 lugares**:
+
+```tsx
+behavior={Platform.OS === "ios" ? "padding" : undefined}   // ❌
+```
+
+⚠️⚠️ **No Android isso não é "um comportamento mais fraco" — é NADA.** Sem
+`behavior`, o `KeyboardAvoidingView` renderiza um `<View style={{flex:1}}>` puro
+(`KeyboardAvoidingView.js`, o `default` do switch não aplica padding nem height).
+Toda a proteção do Android dependia do **resize automático da janela**, que:
+
+- **não alcança a janela de um `<Modal>`** (é um `Dialog` próprio) — pior ainda
+  com `statusBarTranslucent`, que liga `FLAG_LAYOUT_NO_LIMITS` e desliga o resize;
+- e não se pode contar com ele nas telas normais.
+
+⇒ **A regra: `behavior="padding"` nas DUAS plataformas.** É seguro e
+**auto-corretivo**: o RN calcula `frame.y + frame.height - keyboardScreenY`, então
+quando a janela JÁ encolheu sozinha o resultado dá ~0 e nada é somado duas vezes.
+Dentro de um Modal o KAV é a raiz da janela (`frame.y = 0`), então a conta bate
+exata.
+
+### Os 7 modais que cobriam o campo 100% das vezes no Android
+
+Todos com a mesma combinação (`statusBarTranslucent` + `behavior: undefined`), e
+todos de LÍDER/SUPERVISOR — o público que está sendo ativado agora, e o campo
+coberto era sempre o **comentário/motivo**, o texto que a coordenação lê depois:
+
+`grupo-visita` (registrar encontro · o relatado) · `grupo-membros` (frequência,
+registrar saída, preciso de ajuda) · `grupo-inscricoes` (recusar) ·
+`escala-supervisor` (adicionar voluntário — com `autoFocus`, o teclado abre JUNTO
+com a sheet) · `Disponibilidade` (bloquear datas).
+
+⚠️ **Ironia registrada**: o formulário de indisponibilidade virou modal em 07/08
+*exatamente* porque "o teclado sobe e cobre" — e o remédio que apliquei (KAV do
+modal) só valia no iOS.
+
+### O que mais entrou na varredura
+
+- **`automaticallyAdjustKeyboardInsets` + `keyboardShouldPersistTaps="handled"`
+  em todos os `ScrollView` de tela com campo** (42 props em 25 arquivos). O
+  primeiro é iOS-only (no-op no Android) e faz o que o `padding` NÃO faz: **rola
+  até o campo focado**. O segundo evita que o 1º toque no botão de enviar seja
+  comido pelo fechamento do teclado. ⚠️ Já havia precedente no repo
+  (`generosidade.tsx`) — não é padrão novo, é o padrão espalhado.
+- **`completar-cadastro.tsx` e `evento.tsx` não tinham KAV NENHUM** — quebravam
+  no iPhone também. O primeiro é a porta **obrigatória** que todo mundo atravessa.
+- ⚠️⚠️ **`components/ui/Input.tsx` fixava `height: 52` + `alignItems: "center"`,
+  então TODO campo `multiline` do app era uma linha só, com o texto centralizado
+  na caixa** — comentário da visita, motivo da saída, pedido de oração, "mande uma
+  mensagem", observação do batismo, textarea do form-builder de eventos. É a mesma
+  queixa ("não dá pra ver o que estou digitando") por uma causa que **não é o
+  teclado**. Agora `minHeight: 96` + `textAlignVertical: "top"`.
+- **A `BottomBar` some enquanto o teclado está aberto (só no Android).** Ela é
+  IRMÃ do Stack, então com o teclado aberto continuava colada acima dele comendo
+  `58 + insets.bottom` da altura que já encolheu — ~80 dp em ~20 telas, roubados
+  justamente quando o espaço é mais escasso. ⚠️ **Só no Android**: no iOS a barra
+  fica ABAIXO do teclado, então escondê-la não devolveria espaço e ainda faria a
+  barra piscar a cada foco.
+
+### ⚠️ Armadilha de FERRAMENTA (erro meu, registrado)
+
+Tentei inserir as props com regex `<ScrollView([^>]*?)>` e **quebrei dois
+arquivos**: `[^>]*?` casa o `>` do `<RefreshControl … />` **aninhado dentro do
+próprio prop `refreshControl={}`** e corta a tag no lugar errado. Refeito com um
+scanner que conta `{}` e respeita aspas (`scratchpad/props_teclado.py`).
+**Régua: tag JSX com prop que contém outro elemento não se casa com regex.**
+
+### ⏳ O que a varredura deixou EM ABERTO
+
+- **`keyboardVerticalOffset` não existe em nenhum lugar do repo.** Em tela NÃO
+  modal o KAV fica sob a faixa superior, e o `frame.y` do `onLayout` é relativo ao
+  pai — a conta **sub-compensa** o offset do topo (~50 dp numa tela de
+  profundidade, ~100 numa tela de barra). É por isso que no iOS o campo "quase"
+  aparece. Acertar isso exige medir no aparelho, tela a tela — não chutei.
+- **Edge-to-edge**: o `app.json` não declara `android.edgeToEdgeEnabled` e no SDK
+  54 o default é TRUE, o que faria o `adjustResize` parar de redimensionar a
+  janela mesmo fora de modal. Um agente levantou isso como a explicação mais
+  provável; **não foi medido em aparelho** e não é premissa de nada aqui — o
+  conserto vale nos dois cenários.
+
 ## ⚠️⚠️ ONDA 2b · os 4 defeitos que o TESTE EM APARELHO achou (2026-08-07)
 
 O Marcos testou a Onda 2 no celular e reportou 5 pontos (o 1 e o 5 estavam

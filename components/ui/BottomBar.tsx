@@ -16,8 +16,8 @@
 // nenhum (sem pan, sem long-press, sem GlassView aninhada) — só Pressable.
 // Não reintroduzir gestos aqui.
 // ============================================================================
-import { useMemo } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Keyboard, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { usePathname, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -57,6 +57,23 @@ export function BottomBar() {
   const router = useRouter();
   const pathname = usePathname();
   const t = useT();
+
+  // ⚠️⚠️ A BARRA SOME COM O TECLADO ABERTO (07/08/2026). Ela é IRMÃ do Stack,
+  // não sobreposta — então no Android, com o teclado aberto, ela continua
+  // colada acima dele comendo `58 + insets.bottom` da altura que já encolheu.
+  // Em ~20 telas isso é ~80 dp roubados exatamente quando o espaço é mais
+  // escasso, e o campo que a pessoa está digitando é o primeiro a sair de vista.
+  // ⚠️ Só no Android: no iOS a barra fica ABAIXO do teclado (a janela não
+  // encolhe), então escondê-la lá não devolveria espaço nenhum e ainda faria a
+  // barra piscar a cada foco de campo.
+  const [tecladoAberto, setTecladoAberto] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const abrir = Keyboard.addListener("keyboardDidShow", () => setTecladoAberto(true));
+    const fechar = Keyboard.addListener("keyboardDidHide", () => setTecladoAberto(false));
+    return () => { abrir.remove(); fechar.remove(); };
+  }, []);
+  if (tecladoAberto) return null;
 
   return (
     <View style={[styles.barra, { paddingBottom: Math.max(insets.bottom, 6) }]}>

@@ -69,12 +69,12 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior="padding"
       >
         <ScrollView
-          contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
-        >
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={styles.scroll}>
           <View style={styles.card}>
             {/* Header com a logo do coração CBRio */}
             <View style={styles.logoCircle}>

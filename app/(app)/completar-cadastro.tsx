@@ -29,7 +29,7 @@
 // ============================================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -273,7 +273,13 @@ export default function CompletarCadastroScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <Stack.Screen options={{ headerShown: false, gestureEnabled: false }} />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      {/* ⚠️ Esta é a porta OBRIGATÓRIA do app e estava sem KeyboardAvoidingView
+          nenhum — nem no iPhone (varredura de 07/08). `padding` nas duas
+          plataformas: o cálculo do RN é auto-corretivo. */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <ScrollView
+        automaticallyAdjustKeyboardInsets
+        contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.hero}>
           <Ionicons name="person-circle-outline" size={44} color={colors.brandMid} />
           <Text style={styles.titulo}>{t("Vamos confirmar quem você é")}</Text>
@@ -430,6 +436,7 @@ export default function CompletarCadastroScreen() {
           <Text style={styles.sairTxt}>{t("Sair da conta")}</Text>
         </Pressable>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

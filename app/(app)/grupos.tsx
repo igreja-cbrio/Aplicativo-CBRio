@@ -409,9 +409,10 @@ export function BuscadorGrupos({ embutido = false }: { embutido?: boolean }) {
         </View>
       ) : (
         <ScrollView
+          automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.listContent}
           keyboardShouldPersistTaps="handled"
-          refreshControl={<RefreshControl refreshing={loading} onRefresh={carregar} tintColor={colors.primary} />}
+          refreshControl={<RefreshControl refreshing={loading} onRefresh={carregar} tintColor={colors.primary}/>}
         >
           {meusGrupos.length > 0 && (
             <View style={{ gap: spacing.sm }}>

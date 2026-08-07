@@ -422,8 +422,10 @@ export default function GrupoMembrosScreen() {
         <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
       ) : (
         <ScrollView
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.scroll}
-          refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.primary} />}
+          refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.primary}/>}
         >
           {erro && !grupo ? (
             <View style={[styles.center, { paddingTop: spacing.xl }]}>
@@ -792,7 +794,7 @@ export default function GrupoMembrosScreen() {
 
       {/* ═══ Saída ═══ */}
       <Modal visible={!!saidaAlvo} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setSaidaAlvo(null)}>
-        <KeyboardAvoidingView style={styles.modalWrap} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <KeyboardAvoidingView style={styles.modalWrap} behavior="padding">
           <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{t("Registrar saída")}</Text>
@@ -852,7 +854,7 @@ export default function GrupoMembrosScreen() {
 
       {/* ═══ Chamada (frequência) ═══ */}
       <Modal visible={chamadaAberta} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setChamadaAberta(false)}>
-        <KeyboardAvoidingView style={styles.modalWrap} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <KeyboardAvoidingView style={styles.modalWrap} behavior="padding">
           <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom, maxHeight: "88%" }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{t("Frequência de hoje")}</Text>
@@ -860,7 +862,10 @@ export default function GrupoMembrosScreen() {
                 <Ionicons name="close" size={24} color={colors.text} />
               </Pressable>
             </View>
-            <ScrollView style={{ maxHeight: 320 }}>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets
+              style={{ maxHeight: 320 }}>
               {/* Todos começam MARCADOS — o líder desmarca quem faltou (bem menos
                   toque do que marcar 12 pessoas). */}
               {membros.map((m) => {
@@ -905,7 +910,7 @@ export default function GrupoMembrosScreen() {
 
       {/* ═══ Pedir ajuda ═══ */}
       <Modal visible={ajudaAberta} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setAjudaAberta(false)}>
-        <KeyboardAvoidingView style={styles.modalWrap} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <KeyboardAvoidingView style={styles.modalWrap} behavior="padding">
           <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{t("Preciso de ajuda")}</Text>

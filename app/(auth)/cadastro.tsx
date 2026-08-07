@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -148,12 +147,12 @@ export default function CadastroScreen() {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior="padding"
       >
         <ScrollView
-          contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
-        >
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={styles.scroll}>
           <View style={styles.card}>
             <View style={styles.logoCircle}>
               <CbrioHeart size={40} color={colors.brandPale} />
