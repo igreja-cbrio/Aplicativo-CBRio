@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Linking,
   Modal,
   Pressable,
@@ -31,6 +30,7 @@ import { ehSupervisao } from "@/lib/papelGrupo";
 import { hojeBRT } from "@/lib/dataBRT";
 import { trackEvento } from "@/lib/telemetria";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 /**
  * ⚠️⚠️ TELA DO SUPERVISOR (07/08/2026 · pedido do Marcos).
@@ -431,7 +431,7 @@ export default function GrupoVisitaScreen() {
 
       {/* ── Registro: chamada + comentário + o interruptor ─────────────────── */}
       <Modal visible={aberto} transparent animationType="fade" onRequestClose={() => setAberto(false)} statusBarTranslucent>
-        <KeyboardAvoidingView style={styles.modalFundo} behavior="padding">
+        <TecladoSeguro style={styles.modalFundo}>
           <View style={styles.modalCartao}>
             <View style={styles.modalTopo}>
               <Text style={styles.titulo}>{t("Registrar encontro")}</Text>
@@ -539,7 +539,7 @@ export default function GrupoVisitaScreen() {
               <Button title={t("Salvar")} onPress={salvar} loading={salvando} />
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </TecladoSeguro>
       </Modal>
 
       {/* ── Encontro ABERTO: presença + os DOIS comentários num lugar só ────

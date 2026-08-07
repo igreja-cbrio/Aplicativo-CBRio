@@ -131,6 +131,15 @@ const MUTANTES = [
     para: "  return valorDigitado.replace(/\\D/g, \"\");",
   },
   {
+    // ⚠️ Padding NEGATIVO no RN puxa o conteudo pra FORA da tela: trocaria
+    // "campo coberto pelo teclado" por "campo cortado". O `max(0, ...)` e o
+    // que torna a regua auto-corretiva no Android que ainda redimensiona.
+    nome: "teclado: folga negativa quando o container esta acima do teclado",
+    arq: "lib/teclado.ts",
+    de: "  const bruta = Math.max(0, fundoDoContainer - topoDoTeclado);",
+    para: "  const bruta = fundoDoContainer - topoDoTeclado;",
+  },
+  {
     // ⚠️⚠️ ESTE E O MUTANTE QUE DA SENTIDO AO INTERRUPTOR "estive presente".
     // O KPI real (`_kpi_agregar_dado`, ramo lideres_acompanhados) conta a visita
     // SEM olhar `status` — entao gravar linha quando a pessoa NAO esteve

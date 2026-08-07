@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   Alert,
-  KeyboardAvoidingView,
   Linking,
   Pressable,
   ScrollView,
@@ -21,6 +20,7 @@ import { criarInscricao } from "@/lib/inscricoes";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 const WHATSAPP = "https://wa.me/5521997567770";
 const INSTAGRAM = "https://instagram.com/igrejacbrio";
@@ -66,7 +66,7 @@ export default function FaleConoscoScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <TecladoSeguro style={{ flex: 1 }}>
         <ScrollView
           automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -104,7 +104,7 @@ export default function FaleConoscoScreen() {
             <Button title={t("Enviar")} onPress={enviar} loading={enviando} />
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </TecladoSeguro>
     </SafeAreaView>
   );
 }

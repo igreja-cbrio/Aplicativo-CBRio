@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   Alert,
-  KeyboardAvoidingView,
   Linking,
   Pressable,
   ScrollView,
@@ -21,6 +20,7 @@ import { meusPedidosCuidado, type PedidoCuidado } from "@/lib/meusPedidos";
 import { useT } from "@/lib/i18n";
 import { useFocusEffect } from "expo-router";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 const TIPO_LABEL: Record<PedidoCuidado["tipo"], string> = {
   oracao: "Pedido de oração",
@@ -157,10 +157,7 @@ export default function CuidadosScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["left", "right"]}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior="padding"
-      >
+      <TecladoSeguro        style={styles.flex}>
         <ScrollView
           automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -266,7 +263,7 @@ export default function CuidadosScreen() {
             </View>
           )}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </TecladoSeguro>
     </SafeAreaView>
   );
 }

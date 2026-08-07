@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   Alert,
-  KeyboardAvoidingView,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,6 +19,7 @@ import { subirUmNivel } from "@/lib/hierarquia";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { font, spacing, type Palette } from "@/constants/theme";
+import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 export default function TrocarSenha() {
   const colors = useColors();
@@ -71,7 +71,7 @@ export default function TrocarSenha() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+      <TecladoSeguro  style={{ flex: 1 }}>
         <ScrollView
           automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -117,7 +117,7 @@ export default function TrocarSenha() {
             style={{ marginTop: spacing.md }}
           />
         </ScrollView>
-      </KeyboardAvoidingView>
+      </TecladoSeguro>
     </SafeAreaView>
   );
 }

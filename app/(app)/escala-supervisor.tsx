@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable,
+  ActivityIndicator, Alert, Modal, Platform, Pressable,
   RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,6 +19,7 @@ import {
   getVoluntarioDetalhe,
   type EscalaServico, type EscalaItem, type PoolVoluntario, type VoluntarioDetalhe,
 } from "@/lib/api";
+import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 function waLink(tel: string | null): string | null {
   if (!tel) return null;
@@ -472,7 +473,7 @@ export default function EscalaSupervisorScreen() {
 
       {/* Modal de adicionar */}
       <Modal visible={addOpen} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setAddOpen(false)}>
-        <KeyboardAvoidingView style={styles.modalWrap} behavior="padding">
+        <TecladoSeguro style={styles.modalWrap}>
           <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>Adicionar voluntário</Text>
@@ -532,7 +533,7 @@ export default function EscalaSupervisorScreen() {
               })}
             </ScrollView>
           </View>
-        </KeyboardAvoidingView>
+        </TecladoSeguro>
       </Modal>
     </SafeAreaView>
   );

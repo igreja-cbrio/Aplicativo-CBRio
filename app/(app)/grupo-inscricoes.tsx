@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
-  ActivityIndicator, Alert, KeyboardAvoidingView, Linking, Modal, Platform,
+  ActivityIndicator, Alert, Linking, Modal, Platform,
   Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,6 +16,7 @@ import {
   listarMeusGruposLider,
   type GrupoPedido, type GrupoMeu,
 } from "@/lib/api";
+import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 const DIAS_SEMANA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 function quandoGrupo(dia: number | null, horario: string | null): string {
@@ -286,7 +287,7 @@ export default function GrupoInscricoesScreen() {
 
       {/* Modal de recusa · motivo (molde escala-supervisor) */}
       <Modal visible={!!recusaAlvo} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setRecusaAlvo(null)}>
-        <KeyboardAvoidingView style={styles.modalWrap} behavior="padding">
+        <TecladoSeguro style={styles.modalWrap}>
           <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{t("Recusar inscrição")}</Text>
@@ -322,7 +323,7 @@ export default function GrupoInscricoesScreen() {
               )}
             </Pressable>
           </View>
-        </KeyboardAvoidingView>
+        </TecladoSeguro>
       </Modal>
     </SafeAreaView>
   );
