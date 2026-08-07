@@ -22,6 +22,13 @@ import {
 import { navegacoes } from "./stubs/expo-router";
 import { topicoVoluntariado, canaisObsoletos } from "@/lib/canalRealtime";
 import {
+  mascararTelefoneBR, digitosTelefone, exibirTelefone, limiteDigitos,
+} from "@/lib/telefone";
+import {
+  iniciarCadastroNativo, terminarCadastroNativo, lerCadastroNativo,
+  assinarCadastroNativo,
+} from "@/lib/cadastroEmAndamento";
+import {
   nascimentoBRParaISO,
   isDataCalendarioBR,
   isValidDateBR,
@@ -431,6 +438,74 @@ describe("nascimentoBRParaISO", () => {
     expect(nascimentoBRParaISO("1990-05-17", HOJE)).toBeNull();
     expect(nascimentoBRParaISO("17/5/1990", HOJE)).toBeNull();
     expect(nascimentoBRParaISO("", HOJE)).toBeNull();
+  });
+});
+
+// ── Telefone · o campo não tinha limite nem DDD visível ─────────────────────
+// Relato do Marcos (07/08): "o telefone não tem limite de dígitos, podemos
+// colocar um limite e incluir os dois primeiros em parênteses para deixar claro
+// que precisa colocar DDD". Não é só estética: o Contrato de porta exige 10-11
+// dígitos e o servidor recusa fora disso — a pessoa só descobria no fim.
+describe("telefone", () => {
+  it("mascara celular e fixo, com o DDD em parênteses", () => {
+    expect(mascararTelefoneBR("21999998888")).toBe("(21) 99999-8888");
+    expect(mascararTelefoneBR("2133334444")).toBe("(21) 3333-4444");
+  });
+
+  it("abre o parêntese já no 1º dígito (é o que comunica 'aqui é o DDD')", () => {
+    expect(mascararTelefoneBR("")).toBe("");
+    expect(mascararTelefoneBR("2")).toBe("(2");
+    expect(mascararTelefoneBR("21")).toBe("(21");
+    expect(mascararTelefoneBR("219")).toBe("(21) 9");
+  });
+
+  // ⚠️ MUTATION GUARD: sem o corte, o campo aceita 20 dígitos e quem recusa é o
+  // servidor, lá no fim do cadastro, sem a pessoa saber por quê.
+  it("TRUNCA no limite do país", () => {
+    expect(mascararTelefoneBR("219999988889999")).toBe("(21) 99999-8888");
+    expect(digitosTelefone("21 99999-8888 000", "55")).toBe("21999998888");
+    expect(digitosTelefone("(21) 99999-8888", "55")).toBe("21999998888");
+  });
+
+  it("fora do Brasil não inventa formato, só limita", () => {
+    expect(limiteDigitos("55")).toBe(11);
+    expect(limiteDigitos("1")).toBe(15);
+    expect(exibirTelefone("12025550143", "1")).toBe("12025550143");
+  });
+});
+
+// ── Portão × cadastro nativo · a corrida que rebatia quem acabou de entrar ───
+// 2º teste do Marcos: o carimbo `app_ficha_confirmada_em` FOI gravado
+// (15:20:15.606, `matched_by: cpf`), mas a telemetria mostra a tela de cadastro
+// abrindo às 15:20:19 — o portão perguntou o status em paralelo com o
+// `completarCadastroApp` e leu `completo: false` de antes do carimbo.
+describe("cadastroEmAndamento", () => {
+  afterEach(() => {
+    terminarCadastroNativo();
+    vi.useRealTimers();
+  });
+
+  it("liga e desliga, avisando quem escuta", () => {
+    const vistos: boolean[] = [];
+    const parar = assinarCadastroNativo(() => vistos.push(lerCadastroNativo()));
+    expect(lerCadastroNativo()).toBe(false);
+    iniciarCadastroNativo();
+    expect(lerCadastroNativo()).toBe(true);
+    terminarCadastroNativo();
+    expect(lerCadastroNativo()).toBe(false);
+    parar();
+    expect(vistos).toEqual([true, false]);
+  });
+
+  // ⚠️ MUTATION GUARD: sem o teto, um crash no meio do cadastro deixaria a
+  // bandeira ligada pra sempre e o portão NUNCA decidiria — ou seja, alguém
+  // entraria no app sem ficha. Tirar o `setTimeout` deixa isto vermelho.
+  it("FAIL-CLOSED: baixa sozinha se o cadastro morrer no meio", () => {
+    vi.useFakeTimers();
+    iniciarCadastroNativo();
+    expect(lerCadastroNativo()).toBe(true);
+    vi.advanceTimersByTime(31_000);
+    expect(lerCadastroNativo()).toBe(false);
   });
 });
 

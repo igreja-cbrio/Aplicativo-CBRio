@@ -10,7 +10,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COUNTRIES, flagEmoji, type Country } from "@/constants/countries";
-import { onlyDigits } from "@/lib/validators";
+import {
+  digitosTelefone,
+  exibirTelefone,
+  MAX_DIGITOS_INTERNACIONAL,
+} from "@/lib/telefone";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -53,13 +57,21 @@ export function PhoneInput({
           <Text style={styles.dial}>+{country.dial}</Text>
           <Text style={styles.caret}>▾</Text>
         </Pressable>
+        {/*
+          ⚠️ O `value` é a MÁSCARA e o estado do pai continua sendo só DÍGITOS
+          (07/08/2026). Guardar a máscara quebraria quem concatena `+55` +
+          número na hora de gravar. `maxLength` é do texto EXIBIDO (com
+          parênteses e hífen), por isso 15 no BR pra caber `(21) 99999-8888` —
+          quem corta os dígitos de verdade é `digitosTelefone`.
+        */}
         <TextInput
           style={styles.input}
-          value={number}
-          onChangeText={(v) => onChangeNumber(onlyDigits(v))}
-          placeholder={t("DDD + número")}
+          value={exibirTelefone(number, country.dial)}
+          onChangeText={(v) => onChangeNumber(digitosTelefone(v, country.dial))}
+          placeholder={country.dial === "55" ? "(21) 99999-8888" : t("DDD + número")}
           placeholderTextColor={colors.textMuted}
           keyboardType="phone-pad"
+          maxLength={country.dial === "55" ? 15 : MAX_DIGITOS_INTERNACIONAL}
         />
       </View>
 

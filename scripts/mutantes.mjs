@@ -121,6 +121,24 @@ const MUTANTES = [
     de: "    const semPrefixo = t.startsWith(\"realtime:\") ? t.slice(\"realtime:\".length) : t;",
     para: "    const semPrefixo = t;",
   },
+  {
+    // ⚠️ Sem o corte no limite, o campo volta a aceitar telefone de qualquer
+    // tamanho e quem recusa e o SERVIDOR, no fim do cadastro, sem a pessoa
+    // saber por que. Foi o relato do Marcos em 07/08.
+    nome: "telefone: aceitar telefone de qualquer tamanho (tirar o limite)",
+    arq: "lib/telefone.ts",
+    de: "  return valorDigitado.replace(/\\D/g, \"\").slice(0, limiteDigitos(dial));",
+    para: "  return valorDigitado.replace(/\\D/g, \"\");",
+  },
+  {
+    // ⚠️ FAIL-CLOSED. Sem o teto, um crash no meio do cadastro deixa a bandeira
+    // ligada pra sempre: o portao NUNCA decide e a pessoa entra no app SEM
+    // ficha — exatamente o que o portao existe pra impedir.
+    nome: "cadastro em andamento: bandeira sem teto (portao nunca decide)",
+    arq: "lib/cadastroEmAndamento.ts",
+    de: "  }, TETO_MS);",
+    para: "  }, 100000000);",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a
