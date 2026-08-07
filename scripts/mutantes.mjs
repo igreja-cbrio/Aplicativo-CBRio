@@ -131,6 +131,24 @@ const MUTANTES = [
     para: "  return valorDigitado.replace(/\\D/g, \"\");",
   },
   {
+    // ⚠️⚠️ FAIL-OPEN do piso de versao. Sem esta guarda, versao local ilegivel
+    // (ou piso ausente) passaria a BLOQUEAR — trancar gente fora do app por
+    // causa de um dado que nao deu pra ler e o pior desfecho possivel, e o
+    // oposto do que o portao existe pra fazer.
+    nome: "versao: bloquear quando o dado esta faltando (tirar o fail-open)",
+    arq: "lib/versaoApp.ts",
+    de: "  if (!versaoAtual || !piso) return false;",
+    para: "  if (!versaoAtual || !piso) return true;",
+  },
+  {
+    // ⚠️ Comparar versao como TEXTO diz que "1.0.10" < "1.0.9" — o piso passaria
+    // a bloquear justamente quem esta atualizado.
+    nome: "versao: comparar como texto em vez de por posicao",
+    arq: "lib/versaoApp.ts",
+    de: "    if (x < y) return -1;",
+    para: "    if (String(x) < String(y)) return -1;",
+  },
+  {
     // ⚠️ Padding NEGATIVO no RN puxa o conteudo pra FORA da tela: trocaria
     // "campo coberto pelo teclado" por "campo cortado". O `max(0, ...)` e o
     // que torna a regua auto-corretiva no Android que ainda redimensiona.

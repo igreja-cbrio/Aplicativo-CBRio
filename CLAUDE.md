@@ -631,6 +631,110 @@ pessoa digitava, enviava, e só o SERVIDOR recusava, com 400 seco.
 - **i18n de `perfil.tsx` e `escala-supervisor.tsx`**: ficou de fora pra a
   publicação não misturar conserto de dado com varredura de tradução.
 
+## ⚠️⚠️ ONDA 3 · versão mínima, e o que a medição derrubou (2026-08-07)
+
+### 🔴 O BUILD iOS #32 NUNCA CHEGOU NA LOJA — e o CLAUDE.md dizia que sim
+
+Medido com `eas submit:status -p ios` (lê o App Store Connect pela API key do
+EAS):
+
+```
+App Store   Live: 1.0 (33) — ready for distribution
+TestFlight  1.0.0 (33) … uploaded 1 month ago   ← o mais recente
+```
+
+⚠️ **O build 32 não aparece em lugar nenhum do ASC.** As TRÊS submissões de
+05/08 (`eas submit:list`) estão todas como `finished` — e `finished` no EAS
+Submit significa *"o upload foi aceito"*, **não** que a Apple processou. A
+submissão anterior (build 31) errou com `SUBMISSION_SERVICE_IOS_OLD_APP_VERSION`
+("you've already submitted this version").
+
+**Causa provável, e é aritmética**: o contador remoto do EAS está em **32** e o
+ASC já tem o **33** (build feito FORA do EAS, em 22/06 — os builds iOS #17 a #33
+não existem no EAS). Apple descarta binário cujo build number não é maior que um
+já existente pra mesma versão. ⇒ **antes do próximo build iOS é preciso subir o
+contador do EAS acima de 33** (`eas build:version:set`), senão o próximo sai como
+33 e colide de novo.
+
+⚠️ Consequência prática: **o que as pessoas têm no iPhone é o binário de 22/06** —
+e ele recebe OTA (já provado por telemetria), então o app está atualizado. Mas
+tudo que dependia de "o #32 está no TestFlight" era falso.
+
+### ⚠️⚠️ A ARMADILHA DO `runtimeVersion`, provada ao vivo
+
+`app.json` tem `runtimeVersion.policy = "appVersion"` e `version: "1.0.0"`. GET
+no manifesto de `u.expo.dev`:
+
+| `expo-runtime-version` | resposta |
+|---|---|
+| `1.0.0` | **200** + bundle |
+| `1.0.1` | **204** — nada |
+| `1.0`   | **204** — nada |
+
+⇒ **No dia em que a `version` subir, todo binário 1.0.0 para de receber OTA.** O
+app não quebra: **CONGELA** no último bundle. E o `PortaoAtualizacao` fica
+**cego**, porque ele só age com `isUpdatePending` — que nunca mais vai existir
+naquele aparelho. A partir daí o único canal é a LOJA.
+
+⚠️ O casamento é **igualdade exata de string** (não semver):
+`LauncherSelectionPolicyFilterAware` faz `runtimeVersion == it.runtimeVersion`.
+⚠️ A `version` **nunca mudou** desde o commit inicial — a armadilha está armada,
+não disparada. **Ordem obrigatória**: o aviso de versão mínima precisa chegar por
+OTA a todo mundo ANTES de qualquer bump.
+
+### O que foi construído
+
+- **`GET /api/app/versao`** (público, fail-open) + tabela `app_config`
+  (singleton, no padrão de `batismo_config`/`vol_config`). ⚠️ **Tabela, não env**:
+  env do Vercel só propaga com redeploy e não tem trilha nem reversão em 1
+  clique — e este é o interruptor capaz de trancar a base inteira.
+  ⚠️ `bloqueia` **nasce false**: hoje nenhum binário no campo manda a versão.
+- **`lib/versaoApp.ts`** (régua pura, no portão, 2 mutantes): compara por
+  POSIÇÃO (texto diria que `1.0.10 < 1.0.9`) e **fail-open** em qualquer dado
+  ilegível. ⚠️ `"1.0"` e `"1.0.0"` são a MESMA versão — o ASC mostra `1.0` e o
+  app.json diz `1.0.0`; tratar como diferente bloquearia todo mundo.
+- **Tela de "atualize pela loja"** no `PortaoAtualizacao`, ANTES do portão de
+  OTA: quem está abaixo do piso não recebe OTA nenhum, então oferecer "atualizar
+  agora" seria mandar a pessoa pra um beco sem saída.
+- **Telemetria passa a identificar o BINÁRIO**: `runtime_version` (do plist),
+  `update_id`, `canal`, `is_embedded`. ⚠️ `app_version` é a versão do BUNDLE e é
+  `1.0.0` em **13.231 de 13.231** eventos — nunca distinguiu ninguém; a única
+  forma até hoje era deduzir por campo AUSENTE, truque que se gasta a cada
+  release e enviesa pro otimista (quanto mais velho o cliente, menos aparece).
+
+### ⚠️ `build_number` NÃO precisava de build (o CLAUDE.md estava errado)
+
+A seção da Onda 2 dizia que ficaria pra Onda 3 porque `expo-application` é
+módulo nativo. **Ele já está no binário**: é dependência transitiva de
+`expo-notifications` e `expo-auth-session` (7.0.8, autolinkado), ambas anteriores
+aos builds vivos. A causa real do `build_number` nulo em 100% é outra:
+**`Constants.nativeBuildVersion` foi REMOVIDO do expo-constants na v16** (o
+projeto está na 18) e o `& Record<string, any>` do tipo escondia isso do
+TypeScript. ⚠️ Lido com `requireOptionalNativeModule`, **nunca com `import`**: se
+o módulo sair da árvore, o pior caso vira `build_number: null` em vez de **crash
+de boot** no próximo OTA.
+
+### 🐛 O portão de atualização tinha um bug que anulava a própria proteção
+
+`momentoDeCobrar` virava `true` e **nunca voltava a `false`** — então a promessa
+do comentário (*"não interromper no meio do `/completar-cadastro`"*) **não
+existia**: um download que terminasse durante o uso mostrava o portão na hora e
+apagava o que a pessoa tinha digitado. A régua certa não é *quando* cobrar, e sim
+**de onde veio o update**: baixado NESTA sessão de tela acesa ⇒ espera o próximo
+ciclo; já estava no aparelho na abertura (ou na volta do background) ⇒ cobra.
+
+### ⏳ Onda 3 · o que depende de GENTE
+
+1. **Aplicar a migration `20260807180000`** e só então mergear o PR do ERP —
+   sem as colunas, o normalizador manda campo que a tabela não tem e o PostgREST
+   recusa o INSERT **inteiro** (a lição do `event_id`, que matou a telemetria
+   por 5 dias).
+2. **Conferir no App Store Connect** por que o 32 não entrou, e subir o contador
+   do EAS acima de 33 antes do próximo build iOS.
+3. **NÃO subir a `version`** até a telemetria mostrar a frota se identificando.
+4. ⚠️ **`app_push_tokens`: 30 tokens, TODOS iOS, ZERO Android** — não existe
+   canal de push pro Android hoje, que é a maioria da frota (598 de 690 eventos).
+
 ## ⚠️⚠️ LEI · `behavior` do KeyboardAvoidingView NUNCA é `undefined` (2026-08-07)
 
 Relato do Marcos: *"na aba de comentário opcional da visita, ao clicar, o teclado

@@ -39,6 +39,24 @@ async function authHeaders(): Promise<Record<string, string>> {
   return { Authorization: `Bearer ${token}` };
 }
 
+// ── Versão mínima do app (Onda 3 · 07/08/2026) ──────────────────────────────
+// ⚠️ Rota PÚBLICA (`auth:false`) de propósito: um app abaixo do piso pode nem
+// ter conseguido logar (o login é Supabase Auth, fora do Express) — exigir
+// sessão faria o aviso não alcançar quem mais precisa dele.
+// ⚠️ FAIL-OPEN no chamador: qualquer falha aqui NÃO pode bloquear ninguém.
+export type VersaoMinima = {
+  bloqueia: boolean;
+  minima_ios: string | null;
+  minima_android: string | null;
+  mensagem: string | null;
+  url_loja_ios: string | null;
+  url_loja_android: string | null;
+};
+
+export function versaoMinimaApp(): Promise<VersaoMinima> {
+  return apiGet<VersaoMinima>("/app/versao", { auth: false });
+}
+
 async function parseErro(resp: Response): Promise<string> {
   try {
     const j = await resp.json();
