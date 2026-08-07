@@ -946,4 +946,20 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Trocar a capa do grupo": { en: "Change the group cover photo", es: "Cambiar la portada del grupo" },
   "Escolher a capa do grupo": { en: "Choose the group cover photo", es: "Elegir la portada del grupo" },
   "A capa aparece na lista de grupos do app e do site.": { en: "The cover photo appears in the group list on the app and the website.", es: "La portada aparece en la lista de grupos de la app y del sitio." },
+
+  // ───────────────── Inscrições · hub e detalhe do grupo (07/08/2026) ─────────────────
+  "Eventos da igreja": { en: "Church events", es: "Eventos de la iglesia" },
+  "Todos": { en: "All", es: "Todos" },
+  "Meus eventos": { en: "My events", es: "Mis eventos" },
+  "Você ainda não se inscreveu em nenhum evento.": { en: "You have not registered for any event yet.", es: "Todavía no te inscribiste en ningún evento." },
+  "Ver minha inscrição": { en: "View my registration", es: "Ver mi inscripción" },
+  "Toque para se inscrever": { en: "Tap to register", es: "Toca para inscribirte" },
+  "Sorteio": { en: "Draw", es: "Sorteo" },
+  "Pagamento pendente": { en: "Payment pending", es: "Pago pendiente" },
+  "Cancelada": { en: "Cancelled", es: "Cancelada" },
+  "Pra entrar num grupo a igreja precisa do seu CPF no cadastro. Leva um minuto.": { en: "To join a group the church needs your CPF on file. It takes a minute.", es: "Para entrar en un grupo la iglesia necesita tu CPF en el registro. Toma un minuto." },
+  "Completar meu cadastro": { en: "Complete my profile", es: "Completar mi registro" },
+  // ⚠️ Onda 4: esta frase existe porque a tela dizia "inscrições fechadas"
+  // quando o que houve foi timeout. "Não sei" não pode virar "não".
+  "Não foi possível verificar as inscrições. Toque pra tentar de novo.": { en: "We could not check registrations. Tap to try again.", es: "No pudimos verificar las inscripciones. Toca para intentar de nuevo." },
 };

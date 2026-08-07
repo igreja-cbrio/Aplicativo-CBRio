@@ -18,6 +18,7 @@ import { montarPayloadInscricao, extrasFaltando } from "@/lib/inscricaoPayload";
 import { tipoDaCapa, arquivoDaCapa, capaCabe, MAX_CAPA_BYTES } from "@/lib/capaGrupo";
 import { motivoDaFalhaPush, mensagemDoErro } from "@/lib/motivoPush";
 import { lotesDePush, tokenMorreu, MAX_POR_REQUEST } from "@/lib/pushLotes";
+import { motivoDaFalha, podeVirarConteudo, ler } from "@/lib/falhaDeLeitura";
 import {
   estadoDoEncontro, ultimaOcorrencia, proximaOcorrencia,
   dataLonga, quandoCurto, distanciaEmTexto,
@@ -974,5 +975,50 @@ describe("tokenMorreu · só apaga o que é realmente permanente", () => {
   it("apaga o token de app desinstalado", () => {
     expect(tokenMorreu("DeviceNotRegistered")).toBe(true);
     expect(tokenMorreu("  DeviceNotRegistered  ")).toBe(true);
+  });
+});
+
+// ── "Não sei" ≠ "Não" (07/08/2026 · Onda 4) ────────────────────────────────
+// O defeito: catches espalhados devolviam o valor VAZIO como se fosse resposta
+// do servidor. Erro de rede virava AFIRMAÇÃO FALSA — "inscrições fechadas",
+// "você não está inscrito em nada", o líder sem o botão de gerenciar. Cada um
+// foi escrito como "fail-closed, mais seguro", e é mesmo — para PERMISSÃO.
+// Nenhum deles é permissão: são LEITURAS DE ESTADO, onde fail-closed não
+// protege nada, só mente.
+describe("motivoDaFalha · separa o que não deu pra perguntar", () => {
+  const comStatus = (s: number) => Object.assign(new Error("x"), { status: s });
+
+  it("⚠️ MUTATION GUARD · erro SEM status é conexão, não resposta", () => {
+    // É o caso mais comum no celular (sem sinal, DNS, timeout do fetch) e o
+    // mais importante de não confundir com "o servidor disse não".
+    expect(motivoDaFalha(new Error("Network request failed"))).toBe("conexao");
+    expect(motivoDaFalha(new Error("timeout"))).toBe("conexao");
+    expect(motivoDaFalha(null)).toBe("conexao");
+    expect(motivoDaFalha(undefined)).toBe("conexao");
+    expect(motivoDaFalha({})).toBe("conexao");
+    expect(motivoDaFalha(Object.assign(new Error("x"), { status: "429" }))).toBe("conexao");
+  });
+
+  it("separa cota, sessão e servidor", () => {
+    expect(motivoDaFalha(comStatus(429))).toBe("limite");
+    expect(motivoDaFalha(comStatus(401))).toBe("sessao");
+    expect(motivoDaFalha(comStatus(403))).toBe("sessao");
+    expect(motivoDaFalha(comStatus(500))).toBe("servidor");
+    expect(motivoDaFalha(comStatus(502))).toBe("servidor");
+    expect(motivoDaFalha(comStatus(400))).toBe("servidor");
+  });
+
+  it("⚠️ MUTATION GUARD · NENHUMA falha pode virar conteúdo", () => {
+    // A regra inteira numa linha. Se algum dia isto devolver true pra qualquer
+    // motivo, volta a mentira que a Onda 4 tirou do app.
+    for (const m of ["conexao", "limite", "sessao", "servidor"] as const) {
+      expect(podeVirarConteudo(m)).toBe(false);
+    }
+  });
+
+  it("ler() nunca lança e embrulha os dois lados", async () => {
+    await expect(ler(Promise.resolve(42))).resolves.toEqual({ ok: true, valor: 42 });
+    await expect(ler(Promise.reject(comStatus(429)))).resolves.toEqual({ ok: false, motivo: "limite" });
+    await expect(ler(Promise.reject(new Error("off")))).resolves.toEqual({ ok: false, motivo: "conexao" });
   });
 });

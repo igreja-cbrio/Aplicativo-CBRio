@@ -25,6 +25,12 @@ export type TemporadaGrupos = {
   aberta: boolean;
   titulo: string | null;
   grupos: GrupoInscricao[];
+  /**
+   * ⚠️ A consulta FALHOU (rede, timeout, 429) — `aberta: false` aqui NÃO
+   * significa "temporada fechada", significa "não consegui perguntar". A tela
+   * tem que dizer "não carregou · tentar de novo", nunca "inscrições fechadas".
+   */
+  falhou?: boolean;
 };
 
 export async function getTemporadaGrupos(): Promise<TemporadaGrupos> {
@@ -38,7 +44,11 @@ export async function getTemporadaGrupos(): Promise<TemporadaGrupos> {
       grupos: Array.isArray(data?.grupos) ? data.grupos : [],
     };
   } catch {
-    // Em caso de falha, assume FECHADA (mais seguro que liberar indevidamente).
-    return { aberta: false, titulo: null, grupos: [] };
+    // ⚠️⚠️ ANTES devolvia `{ aberta: false }` "por segurança" — e a tela dizia
+    // **"inscrições fechadas"** por causa de um timeout. Fail-closed protege
+    // PERMISSÃO; isto é LEITURA DE ESTADO, e aqui ele não protege nada: só faz
+    // a pessoa desistir de se inscrever numa temporada que está aberta.
+    // `falhou: true` deixa a tela dizer "não carregou · tentar de novo".
+    return { aberta: false, titulo: null, grupos: [], falhou: true };
   }
 }

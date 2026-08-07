@@ -41,7 +41,8 @@ type GrupoDetalhe = {
   foto_url: string | null;
 };
 
-type Estado = "carregando" | "participa" | "pendente" | "pode_pedir" | "sem_vinculo" | "fechada" | "sem_cpf";
+// ⚠️ `"erro"` separado de `"fechada"`: um timeout NÃO é temporada fechada.
+type Estado = "carregando" | "participa" | "pendente" | "pode_pedir" | "sem_vinculo" | "fechada" | "sem_cpf" | "erro";
 
 export default function GrupoDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -111,8 +112,13 @@ export default function GrupoDetalheScreen() {
       return;
     }
     // Pode pedir — mas só se a temporada de inscrição estiver aberta.
-    const { aberta } = await getTemporadaGrupos();
-    if (!aberta) { setEstado("fechada"); return; }
+    // ⚠️⚠️ `falhou` separa "temporada fechada" de "não consegui perguntar"
+    // (07/08/2026 · Onda 4). Antes, um timeout ou 429 devolvia `aberta: false` e
+    // a tela AFIRMAVA "inscrições fechadas" — a pessoa desistia de entrar num
+    // grupo que estava aberto, e nada indicava que era erro.
+    const temporada = await getTemporadaGrupos();
+    if (temporada.falhou) { setEstado("erro"); return; }
+    if (!temporada.aberta) { setEstado("fechada"); return; }
     // ⚠️ O BACKEND recusa inscrição sem CPF (Contrato de porta · desde
     // 24/07/2026: `POST /app/inscricoes` devolve 400 "CPF é obrigatório").
     // Medido em 05/08/2026: **50 das 75 contas do app** apontam pra cadastro
@@ -248,6 +254,13 @@ export default function GrupoDetalheScreen() {
                   {t("As inscrições de grupos estão fechadas. Avisaremos quando a temporada abrir.")}
                 </Text>
               </View>
+            ) : estado === "erro" ? (
+              <Pressable style={styles.statusOk} onPress={carregar} accessibilityRole="button">
+                <Ionicons name="cloud-offline-outline" size={20} color={colors.textMuted} />
+                <Text style={styles.statusOkTxt}>
+                  {t("Não foi possível verificar as inscrições. Toque pra tentar de novo.")}
+                </Text>
+              </Pressable>
             ) : (
               <Button title={t("Quero participar")} onPress={participar} loading={enviando || estado === "carregando"} />
             )}
