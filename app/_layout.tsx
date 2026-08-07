@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AppState } from "react-native";
 import { Stack, useRouter, useSegments, usePathname } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -96,9 +97,20 @@ function RootNavigator() {
   }, [authed, loading, segments]);
 
   // Registra o dispositivo para push quando há sessão real.
+  //
+  // ⚠️ E TENTA DE NOVO na volta do background (07/08/2026): a dependência é só
+  // o id da sessão, então uma falha de rede no boot ficava PERMANENTE — o
+  // registro não era tentado outra vez até a pessoa deslogar e logar. Como o
+  // `upsert` é por `token` (`onConflict`), repetir não cria linha duplicada.
+  const uid = session?.user?.id;
   useEffect(() => {
-    if (session?.user?.id) registerForPush(session.user.id);
-  }, [session?.user?.id]);
+    if (!uid) return;
+    registerForPush(uid);
+    const sub = AppState.addEventListener("change", (s) => {
+      if (s === "active") registerForPush(uid);
+    });
+    return () => sub.remove();
+  }, [uid]);
 
   // Listener de tap em notificações -> roteia pra tela certa.
   useEffect(() => {

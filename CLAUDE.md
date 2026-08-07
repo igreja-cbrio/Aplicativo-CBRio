@@ -1056,6 +1056,101 @@ entraria **sem ficha**, que é o oposto do que o portão existe pra fazer.
 ⚠️ Não afrouxa nada: quem não completar cai na decisão normal quando a bandeira
 baixa, e quem diz se a ficha fechou continua sendo o servidor.
 
+## ⚠️⚠️ FECHO DAS ONDAS 2 e 3 · três achados que derrubaram premissas (2026-08-07)
+
+### 1 · Push no Android: zero token, e NÃO se conserta por OTA nem por merge
+
+`app_push_tokens` tem **30 linhas, todas iOS**. Zero Android, desde sempre — e
+7 das 8 contas que já abriram o app num Android nunca tiveram token nenhum.
+
+⚠️ **A causa está nos ARQUIVOS**: o projeto **nunca teve**
+`android.googleServicesFile` no `app.json` nem `google-services.json` no repo —
+`git log --all --diff-filter=A` e `git log --all -S googleServicesFile` voltam
+**vazios**. Sem a chave, o `@expo/config-plugins` não aplica o plugin do
+Firebase, o AAB sai sem ele, `FirebaseMessaging.getInstance()` lança
+`IllegalStateException` e `getExpoPushTokenAsync` falha **na primeira linha**,
+antes do projectId e antes de falar com o servidor da Expo.
+
+⚠️⚠️ **O que escondeu isso por dois meses foi um `console.log`.** O `catch` de
+`registerForPush` não emitia telemetria — a falha não existia em painel nenhum.
+Agora emite `push_sem_token` com `reason` classificado por `lib/motivoPush.ts`
+(`credencial_fcm` · `permissao` · `simulador` · `rede` · `sem_project_id` ·
+`outro`). ⚠️ A ordem da classificação importa e tem mutante: **credencial é
+conferida ANTES de permissão**, porque a mensagem do Firebase interpola
+`e.message` e pode conter "permission" — trocar as duas faria o achado se
+disfarçar de "as pessoas recusaram", que é a conclusão errada mais fácil de
+tirar de "zero token" e levaria ao conserto errado.
+
+⚠️ **O que NÃO está quebrado**: o aviso in-app. `_shared/notify.ts` grava a linha
+em `app_notificacoes` **antes** de olhar tokens — o sino funciona no Android; o
+que falta é a INTERRUPÇÃO. Medido: 71 notificações in-app já existem pras 8
+contas Android.
+
+⚠️ **PREMISSA MINHA QUE ESTAVA ERRADA**: eu disse "Android é a maioria da frota
+(598 de 690 eventos)". Os 598 vêm de **3 aparelhos**, 454 deles de um Xiaomi só
+(o de teste). No acumulado é **iOS 12.285 × Android 946**. Contar EVENTO não
+dimensiona frota.
+
+**Conserto de verdade (precisa de gente):** criar projeto Firebase pra
+`br.com.cbrio.app` → baixar `google-services.json` → `"googleServicesFile":
+"./google-services.json"` no bloco `android` → `eas credentials -p android`
+(chave FCM V1) → **build Android novo**. ⚠️ Com `version` ainda `"1.0.0"`, senão
+dispara a armadilha do `runtimeVersion` e congela o OTA da frota inteira.
+⚠️ Subir SÓ a chave FCM no painel da Expo **não muda nada** — o aparelho nem
+chega a falar com o servidor da Expo.
+
+### 2 · A capa do grupo tinha o MESMO save silencioso da Onda 1b
+
+Ver a seção 3b do CLAUDE.md do ERP. Resumo do lado do app: `escolherCapa()`
+parou de tocar `supabase.storage` e de fazer UPDATE em `mem_grupos` — agora sai
+por `POST /api/app/grupos/:id/foto` (e `DELETE` pra tirar).
+- `lib/capaGrupo.ts` decide o formato: **o MIME manda, a URI é o plano B**. A
+  tela antiga fazia `asset.uri.split(".").pop()` e no Android montava
+  `image/media` como Content-Type — a URI é `content://…` e não tem extensão.
+- ⚠️ Recusa em vez de CHUTAR `image/jpeg` (mutante): mentir o Content-Type
+  guardaria um HEIC com nome de JPEG, que nenhum navegador abre — a capa
+  apareceria quebrada no catálogo público e ninguém saberia por quê.
+- ⚠️ `capaCabe` é **fail-open** quando `fileSize` vem indefinido (o `ImagePicker`
+  nem sempre preenche): quem recusa de verdade é o multer, com 400 e mensagem.
+- `lib/api.ts` ganhou `apiUpload` — o primeiro multipart do app. ⚠️ **NÃO setar
+  `Content-Type` à mão**: o RN precisa gerar o boundary sozinho, e fixar o
+  header faz o multer não achar campo nenhum enquanto o arquivo sobe inteiro.
+
+### 3 · i18n: o problema NÃO era string solta — era o dicionário
+
+⚠️⚠️ **A premissa "faltam t() em 2 telas" estava errada nos dois sentidos.**
+`npm run i18n` (novo, no gate) mediu 90 telas:
+- **405 chaves estavam dentro de `t("…")` e SEM entrada em `translations.ts`.**
+  O `translate()` cai no português (`?? pt`), então isso **nunca quebra a tela**
+  — some em silêncio. O app *parecia* traduzido (64 arquivos importam `useT`) e
+  mostrava PT pra quem escolheu inglês.
+- Strings realmente soltas: **36**, não ~394. Duas delas em `perfil.tsx` são
+  `"CPF"` e `"DD/MM/AAAA"`, que **não devem** ser traduzidas.
+
+Fechado nesta leva: `perfil.tsx` e `escala-supervisor.tsx` (que **nunca**
+importaram `useT`) + as chaves novas de `grupo-visita`/`grupo-editar` — **112
+entradas** em en/es. Restam **293**, o grosso em `completar-cadastro.tsx`.
+
+⚠️⚠️ **`"Sem equipe"` em `escala-supervisor.tsx` NÃO É RÓTULO — É SENTINELA DE
+DADO.** Ela era chave do agrupamento, comparação do drag&drop e **payload pro
+servidor** (`team_name: team === "Sem equipe" ? undefined : team`). Envolver em
+`t()` faria, em inglês, o `adicionarNaEscala` **GRAVAR uma equipe chamada "No
+team" no banco** e o arraste mover pra lugar nenhum — sem erro de TypeScript,
+sem falhar o portão, visível só pra quem trocou de idioma. Virou a constante
+`SEM_EQUIPE`; a tradução entra **só na renderização**, por `rotuloEquipe()`.
+- ⚠️ Mesma família: `"confirmed"`/`"declined"` são **enum do banco** e ficam
+  crus (traduzir a comparação faria o resumo contar 0 confirmados). Só o rótulo
+  derivado traduz.
+- ⚠️ `fmtData` é **função de módulo** e `useT()` é hook: ela recebe o tradutor
+  **por parâmetro**. Mover a formatação pra dentro do `.tsx` violaria a lei da
+  casa (régua vive fora da tela).
+
+**O portão é um TETO QUE SÓ DESCE, não um zero.** Motivo: `grupo-visita.tsx`
+nasceu em 07/08 com strings sem tradução num arquivo que **já importava
+`useT`** — a torneira estava aberta, e varrer telas uma a uma é enxugar gelo
+enquanto código novo entra em PT duro (`npm run verificar` cobre RÉGUA e não vê
+tela nenhuma). Quem pagar um pedaço baixa o número em `scripts/i18n-cobertura.mjs`.
+
 ## ⚠️⚠️ TELA DO SUPERVISOR · `/grupo-visita` (2026-08-07 · PRs #2339/#2340 + app)
 
 Pedido do Marcos: *"podemos deixar uma tela apenas para Registrar Frequência e

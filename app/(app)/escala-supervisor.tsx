@@ -20,6 +20,7 @@ import {
   type EscalaServico, type EscalaItem, type PoolVoluntario, type VoluntarioDetalhe,
 } from "@/lib/api";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
+import { useT } from "@/lib/i18n";
 
 function waLink(tel: string | null): string | null {
   if (!tel) return null;
@@ -29,14 +30,28 @@ function waLink(tel: string | null): string | null {
   return `https://wa.me/${d}`;
 }
 
+// ⚠️⚠️ NÃO É RÓTULO — É SENTINELA DE DADO (07/08/2026).
+// `"Sem equipe"` é a CHAVE do agrupamento (`e.team_name || SEM_EQUIPE`), a
+// COMPARAÇÃO do drag&drop (`alvo === atualTeam`) e o PAYLOAD que vai pro
+// servidor (`team_name: team === SEM_EQUIPE ? undefined : team`). Envolver isto
+// em `t()` faria, em inglês, o agrupamento comparar "No team" com "Sem equipe"
+// (o arraste moveria pra lugar nenhum) e o `adicionarNaEscala` GRAVARIA uma
+// equipe chamada "No team" no banco. É corrupção de dado nascida de um
+// "conserto" de tradução — por isso a constante existe, e a tradução só entra
+// na RENDERIZAÇÃO (`rotuloEquipe`).
+const SEM_EQUIPE = "Sem equipe";
+
 const DIA_MS = 86400000;
-function fmtData(iso: string | null): string {
+// ⚠️ Recebe o tradutor por PARÂMETRO: `useT()` é hook e não pode ser chamado
+// aqui dentro. A alternativa (mover a formatação pra dentro do componente)
+// violaria a lei da casa — régua vive fora do .tsx, não dentro dele.
+function fmtData(iso: string | null, t: (s: string) => string): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso;
   // scheduled_at vem em UTC · converte pra horário de Brasília (UTC-3, sem DST).
   const brt = new Date(d.getTime() - 3 * 3600 * 1000);
-  const dias = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+  const dias = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"].map(t);
   const dd = String(brt.getUTCDate()).padStart(2, "0");
   const mm = String(brt.getUTCMonth() + 1).padStart(2, "0");
   const hh = String(brt.getUTCHours()).padStart(2, "0");
@@ -46,7 +61,7 @@ function fmtData(iso: string | null): string {
   const diaAlvo = Date.UTC(brt.getUTCFullYear(), brt.getUTCMonth(), brt.getUTCDate());
   const diaHoje = Date.UTC(hojeBrt.getUTCFullYear(), hojeBrt.getUTCMonth(), hojeBrt.getUTCDate());
   const delta = Math.round((diaAlvo - diaHoje) / DIA_MS);
-  const rel = delta === 0 ? "Hoje" : delta === 1 ? "Amanhã" : `${dias[brt.getUTCDay()]} ${dd}/${mm}`;
+  const rel = delta === 0 ? t("Hoje") : delta === 1 ? t("Amanhã") : `${dias[brt.getUTCDay()]} ${dd}/${mm}`;
   return `${rel} ${hh}:${mi}`;
 }
 function iniciais(nome: string): string {
@@ -60,6 +75,7 @@ export default function EscalaSupervisorScreen() {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const t = useT();
 
   const [servicos, setServicos] = useState<EscalaServico[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -124,12 +140,12 @@ export default function EscalaSupervisorScreen() {
     dragItemRef.current = null; hoverRef.current = null;
     setDragItem(null); setHoverTeam(null);
     if (!item || !alvo) return;
-    const atualTeam = item.team_name || "Sem equipe";
+    const atualTeam = item.team_name || SEM_EQUIPE;
     if (alvo === atualTeam) return;
-    setEscala(prev => prev.map(e => e.id === item.id ? { ...e, team_name: alvo === "Sem equipe" ? null : alvo } : e));
+    setEscala(prev => prev.map(e => e.id === item.id ? { ...e, team_name: alvo === SEM_EQUIPE ? null : alvo } : e));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    try { await moverNaEscala(item.id, alvo === "Sem equipe" ? null : alvo); }
-    catch (e: any) { Alert.alert("Erro", e?.message || "Erro ao mover"); if (servicoSel) carregarEscala(servicoSel.id); }
+    try { await moverNaEscala(item.id, alvo === SEM_EQUIPE ? null : alvo); }
+    catch (e: any) { Alert.alert(t("Erro"), e?.message || t("Erro ao mover")); if (servicoSel) carregarEscala(servicoSel.id); }
   }
 
   const carregarServicos = useCallback(async (autoSel = false) => {
@@ -140,7 +156,7 @@ export default function EscalaSupervisorScreen() {
       setErro(null);
       if (autoSel && lista.length && !servicoSel) selecionar(lista[0]); // culto mais próximo
     } catch (e: any) {
-      setErro(e?.message || "Erro ao carregar cultos");
+      setErro(e?.message || t("Erro ao carregar cultos"));
     } finally { setCarregando(false); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -152,7 +168,7 @@ export default function EscalaSupervisorScreen() {
   const carregarEscala = useCallback(async (serviceId: string) => {
     setCarregandoEscala(true);
     try { setEscala(await getEscala(serviceId)); }
-    catch (e: any) { Alert.alert("Erro", e?.message || "Erro ao carregar a escala"); }
+    catch (e: any) { Alert.alert(t("Erro"), e?.message || t("Erro ao carregar a escala")); }
     finally { setCarregandoEscala(false); }
   }, []);
 
@@ -173,7 +189,7 @@ export default function EscalaSupervisorScreen() {
   const grupos = useMemo(() => {
     const m = new Map<string, EscalaItem[]>();
     for (const e of escala) {
-      const k = e.team_name || "Sem equipe";
+      const k = e.team_name || SEM_EQUIPE;
       const arr = m.get(k) || [];
       arr.push(e); m.set(k, arr);
     }
@@ -183,7 +199,7 @@ export default function EscalaSupervisorScreen() {
     return arr;
   }, [escala]);
 
-  const equipes = useMemo(() => grupos.map(([t]) => t).filter(t => t !== "Sem equipe"), [grupos]);
+  const equipes = useMemo(() => grupos.map(([t]) => t).filter(t => t !== SEM_EQUIPE), [grupos]);
   const resumo = useMemo(() => ({
     total: escala.length,
     conf: escala.filter(e => e.confirmation_status === "confirmed").length,
@@ -194,9 +210,12 @@ export default function EscalaSupervisorScreen() {
   const teamAtual = novaEquipe.trim() || addTeam;
   const jaNaEquipe = useMemo(() => {
     const set = new Set<string>();
-    for (const e of escala) if ((e.team_name || "Sem equipe") === teamAtual && e.volunteer_id) set.add(e.volunteer_id);
+    for (const e of escala) if ((e.team_name || SEM_EQUIPE) === teamAtual && e.volunteer_id) set.add(e.volunteer_id);
     return set;
   }, [escala, teamAtual]);
+
+  /** ⚠️ A ÚNICA porta que traduz a sentinela — e só pra MOSTRAR. */
+  const rotuloEquipe = (team: string) => (team === SEM_EQUIPE ? t("Sem equipe") : team);
 
   function toggle(team: string) {
     setRecolhidos(prev => { const n = new Set(prev); n.has(team) ? n.delete(team) : n.add(team); return n; });
@@ -223,7 +242,7 @@ export default function EscalaSupervisorScreen() {
   }
 
   function abrirAdd(team?: string) {
-    setAddTeam(team || "Sem equipe");
+    setAddTeam(team || SEM_EQUIPE);
     setNovaEquipe(""); setPosicao(""); setBusca(""); setResultados([]); setBuscaErro(false);
     setAddOpen(true);
   }
@@ -235,7 +254,7 @@ export default function EscalaSupervisorScreen() {
     try {
       const novo = await adicionarNaEscala({
         service_id: servicoSel.id, volunteer_id: vol.id,
-        team_name: team === "Sem equipe" ? undefined : team,
+        team_name: team === SEM_EQUIPE ? undefined : team,
         position_name: posicao.trim() || undefined,
       });
       // Otimista: usa a resposta, sem refetch bloqueante.
@@ -243,42 +262,44 @@ export default function EscalaSupervisorScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setBusca(""); setResultados([]);
     } catch (e: any) {
-      Alert.alert("Erro", e?.message || "Erro ao escalar");
+      Alert.alert(t("Erro"), e?.message || t("Erro ao escalar"));
     } finally { setSalvandoId(null); }
   }
 
   async function abrirDetalhe(volId: string | null) {
-    if (!volId) { Alert.alert("Ficha indisponível", "Esse voluntário ainda não tem cadastro vinculado no sistema."); return; }
+    if (!volId) { Alert.alert(t("Ficha indisponível"), t("Esse voluntário ainda não tem cadastro vinculado no sistema.")); return; }
     setDetalheOpen(true); setDetalhe(null); setCarregandoDetalhe(true);
     try { setDetalhe(await getVoluntarioDetalhe(volId)); }
-    catch (e: any) { Alert.alert("Erro", e?.message || "Erro ao carregar a ficha"); setDetalheOpen(false); }
+    catch (e: any) { Alert.alert(t("Erro"), e?.message || t("Erro ao carregar a ficha")); setDetalheOpen(false); }
     finally { setCarregandoDetalhe(false); }
   }
 
   function remover(item: EscalaItem) {
-    Alert.alert("Remover da escala", `Tirar ${item.volunteer_name} da escala?`, [
-      { text: "Cancelar", style: "cancel" },
-      { text: "Remover", style: "destructive", onPress: async () => {
+    Alert.alert(t("Remover da escala"), `${t("Tirar")} ${item.volunteer_name} ${t("da escala?")}`, [
+      { text: t("Cancelar"), style: "cancel" },
+      { text: t("Remover"), style: "destructive", onPress: async () => {
         setRemovendoId(item.id);
         try { await removerDaEscala(item.id); setEscala(prev => prev.filter(e => e.id !== item.id)); }
-        catch (e: any) { Alert.alert("Erro", e?.message || "Erro ao remover"); }
+        catch (e: any) { Alert.alert(t("Erro"), e?.message || t("Erro ao remover")); }
         finally { setRemovendoId(null); }
       } },
     ]);
   }
 
   const statusInfo = (s: string | null) =>
-    s === "confirmed" ? { cor: (colors as any).success || "#22c55e", label: "confirmado" }
-    : s === "declined" ? { cor: (colors as any).danger || "#ef4444", label: "recusou" }
-    : { cor: colors.textMuted, label: "pendente" };
+    // ⚠️ `"confirmed"`/`"declined"` são ENUM DO BANCO e ficam CRUS. Traduzir a
+    // comparação faria o resumo contar 0 confirmados. Só o rótulo é traduzível.
+    s === "confirmed" ? { cor: (colors as any).success || "#22c55e", label: t("confirmado") }
+    : s === "declined" ? { cor: (colors as any).danger || "#ef4444", label: t("recusou") }
+    : { cor: colors.textMuted, label: t("pendente") };
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.header}>
-        <Pressable onPress={() => subirUmNivel()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Voltar">
+        <Pressable onPress={() => subirUmNivel()} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
           <Ionicons name="chevron-back" size={26} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>Montar escala</Text>
+        <Text style={styles.title}>{t("Montar escala")}</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -289,7 +310,7 @@ export default function EscalaSupervisorScreen() {
           <Text style={[styles.muted, { marginBottom: 12 }]}>{erro}</Text>
           <Pressable style={styles.retry} onPress={() => { setCarregando(true); carregarServicos(true); }} accessibilityRole="button">
             <Ionicons name="refresh" size={16} color={colors.primary} />
-            <Text style={[styles.pequeno, { color: colors.primary }]}>Tentar de novo</Text>
+            <Text style={[styles.pequeno, { color: colors.primary }]}>{t("Tentar de novo")}</Text>
           </Pressable>
         </View>
       ) : (
@@ -297,15 +318,15 @@ export default function EscalaSupervisorScreen() {
           {/* Seletor de culto · chips horizontais (compacto) */}
           <View style={styles.cultoBar}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.md, gap: 8 }}>
-              {servicos.length === 0 && <Text style={styles.muted}>Nenhum culto próximo.</Text>}
+              {servicos.length === 0 && <Text style={styles.muted}>{t("Nenhum culto próximo.")}</Text>}
               {servicos.map(s => {
                 const ativo = servicoSel?.id === s.id;
                 return (
                   <Pressable key={s.id} onPress={() => selecionar(s)} accessibilityRole="button"
-                    accessibilityLabel={`${s.service_type_name || "Culto"}, ${fmtData(s.scheduled_at)}, ${s.escalados || 0} escalados`}
+                    accessibilityLabel={`${s.service_type_name || t("Culto")}, ${fmtData(s.scheduled_at, t)}, ${s.escalados || 0} ${t("escalados")}`}
                     style={[styles.cultoChip, ativo && { borderColor: colors.primary, backgroundColor: colors.primary }]}>
-                    <Text style={[styles.cultoChipNome, ativo && { color: "#fff" }]} numberOfLines={1}>{s.service_type_name || "Culto"}</Text>
-                    <Text style={[styles.cultoChipData, ativo && { color: "#fff" }]}>{fmtData(s.scheduled_at)} · {s.escalados || 0} esc.</Text>
+                    <Text style={[styles.cultoChipNome, ativo && { color: "#fff" }]} numberOfLines={1}>{s.service_type_name || t("Culto")}</Text>
+                    <Text style={[styles.cultoChipData, ativo && { color: "#fff" }]}>{fmtData(s.scheduled_at, t)} · {s.escalados || 0} {t("esc.")}</Text>
                   </Pressable>
                 );
               })}
@@ -313,7 +334,7 @@ export default function EscalaSupervisorScreen() {
           </View>
 
           {!servicoSel ? (
-            <View style={styles.center}><Text style={styles.muted}>Escolha um culto acima pra montar a escala.</Text></View>
+            <View style={styles.center}><Text style={styles.muted}>{t("Escolha um culto acima pra montar a escala.")}</Text></View>
           ) : carregandoEscala && !refrescando ? (
             <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
           ) : (
@@ -330,30 +351,30 @@ export default function EscalaSupervisorScreen() {
               {/* Resumo de confirmações */}
               {escala.length > 0 && (
                 <View style={styles.resumo}>
-                  <Text style={styles.resumoTxt}>{resumo.total} escalados</Text>
-                  <Text style={[styles.resumoTxt, { color: statusInfo("confirmed").cor }]}>{resumo.conf} confirmados</Text>
-                  {resumo.rec > 0 && <Text style={[styles.resumoTxt, { color: statusInfo("declined").cor }]}>{resumo.rec} recusaram</Text>}
+                  <Text style={styles.resumoTxt}>{resumo.total} {t("escalados")}</Text>
+                  <Text style={[styles.resumoTxt, { color: statusInfo("confirmed").cor }]}>{resumo.conf} {t("confirmados")}</Text>
+                  {resumo.rec > 0 && <Text style={[styles.resumoTxt, { color: statusInfo("declined").cor }]}>{resumo.rec} {t("recusaram")}</Text>}
                 </View>
               )}
               {escala.length > 0 && (
                 <Text style={[styles.pequeno, { color: colors.textMuted, paddingHorizontal: 2 }]}>
-                  Segure um nome e arraste pra mudar de equipe.
+                  {t("Segure um nome e arraste pra mudar de equipe.")}
                 </Text>
               )}
 
               {grupos.length === 0 ? (
-                <Text style={styles.muted}>Ninguém escalado ainda. Toque em “Adicionar” pra começar.</Text>
+                <Text style={styles.muted}>{t("Ninguém escalado ainda. Toque em “Adicionar” pra começar.")}</Text>
               ) : grupos.map(([team, lista]) => {
                 const aberto = !recolhidos.has(team);
                 const conf = lista.filter(x => x.confirmation_status === "confirmed").length;
-                const alvoDrop = !!dragItem && hoverTeam === team && (dragItem.team_name || "Sem equipe") !== team;
+                const alvoDrop = !!dragItem && hoverTeam === team && (dragItem.team_name || SEM_EQUIPE) !== team;
                 return (
                   <View key={team}
                     onLayout={e => { teamLayoutRef.current[team] = { y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height }; }}
                     style={[styles.teamCard, alvoDrop && { borderColor: colors.primary, borderWidth: 2, backgroundColor: colors.primary + "12" }]}>
-                    <Pressable style={styles.teamHead} onPress={() => toggle(team)} accessibilityRole="button" accessibilityLabel={`Equipe ${team}, ${aberto ? "recolher" : "expandir"}`}>
+                    <Pressable style={styles.teamHead} onPress={() => toggle(team)} accessibilityRole="button" accessibilityLabel={`${t("Equipe")} ${rotuloEquipe(team)}, ${aberto ? t("recolher") : t("expandir")}`}>
                       <Ionicons name={aberto ? "chevron-down" : "chevron-forward"} size={18} color={colors.textMuted} />
-                      <Text style={styles.teamNome} numberOfLines={1}>{team}</Text>
+                      <Text style={styles.teamNome} numberOfLines={1}>{rotuloEquipe(team)}</Text>
                       <View style={styles.badge}><Text style={styles.badgeTxt}>{conf}/{lista.length}</Text></View>
                     </Pressable>
                     {aberto && (
@@ -368,7 +389,7 @@ export default function EscalaSupervisorScreen() {
                             <GestureDetector key={item.id} gesture={pan}>
                               <View style={[styles.pessoa, dragItem?.id === item.id && { opacity: 0.35 }]}>
                                 <Ionicons name="reorder-three" size={18} color={colors.textMuted} />
-                                <Pressable style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10 }} onPress={() => abrirDetalhe(item.volunteer_id)} accessibilityRole="button" accessibilityLabel={`Ver ficha de ${item.volunteer_name}`}>
+                                <Pressable style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10 }} onPress={() => abrirDetalhe(item.volunteer_id)} accessibilityRole="button" accessibilityLabel={`${t("Ver ficha de")} ${item.volunteer_name}`}>
                                   <View style={[styles.avatar, { backgroundColor: si.cor + "22" }]}>
                                     <Text style={[styles.avatarTxt, { color: si.cor }]}>{iniciais(item.volunteer_name)}</Text>
                                   </View>
@@ -378,7 +399,7 @@ export default function EscalaSupervisorScreen() {
                                   </View>
                                 </Pressable>
                                 {removendoId === item.id ? <ActivityIndicator color={colors.textMuted} />
-                                  : <Pressable onPress={() => remover(item)} hitSlop={14} accessibilityRole="button" accessibilityLabel={`Remover ${item.volunteer_name} da escala`}>
+                                  : <Pressable onPress={() => remover(item)} hitSlop={14} accessibilityRole="button" accessibilityLabel={`${t("Remover")} ${item.volunteer_name} ${t("da escala")}`}>
                                       <Ionicons name="close-circle" size={22} color={colors.textMuted} />
                                     </Pressable>}
                               </View>
@@ -387,7 +408,7 @@ export default function EscalaSupervisorScreen() {
                         })}
                         <Pressable onPress={() => abrirAdd(team)} style={styles.addInline} accessibilityRole="button">
                           <Ionicons name="add" size={16} color={colors.primary} />
-                          <Text style={[styles.pequeno, { color: colors.primary }]}>Adicionar a {team}</Text>
+                          <Text style={[styles.pequeno, { color: colors.primary }]}>{t("Adicionar a")} {rotuloEquipe(team)}</Text>
                         </Pressable>
                       </View>
                     )}
@@ -409,9 +430,9 @@ export default function EscalaSupervisorScreen() {
           )}
 
           {servicoSel && !carregandoEscala && (
-            <Pressable style={styles.fab} onPress={() => abrirAdd()} accessibilityRole="button" accessibilityLabel="Adicionar voluntário">
+            <Pressable style={styles.fab} onPress={() => abrirAdd()} accessibilityRole="button" accessibilityLabel={t("Adicionar voluntário")}>
               <Ionicons name="person-add" size={20} color="#fff" />
-              <Text style={styles.fabTxt}>Adicionar</Text>
+              <Text style={styles.fabTxt}>{t("Adicionar")}</Text>
             </Pressable>
           )}
         </>
@@ -422,8 +443,8 @@ export default function EscalaSupervisorScreen() {
         <View style={styles.modalWrap}>
           <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom, maxHeight: "85%" }]}>
             <View style={styles.sheetHead}>
-              <Text style={styles.sheetTitle}>Ficha do voluntário</Text>
-              <Pressable onPress={() => setDetalheOpen(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Fechar"><Ionicons name="close" size={24} color={colors.text} /></Pressable>
+              <Text style={styles.sheetTitle}>{t("Ficha do voluntário")}</Text>
+              <Pressable onPress={() => setDetalheOpen(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}><Ionicons name="close" size={24} color={colors.text} /></Pressable>
             </View>
             {carregandoDetalhe || !detalhe ? (
               <View style={{ paddingVertical: 30 }}><ActivityIndicator color={colors.primary} /></View>
@@ -444,25 +465,25 @@ export default function EscalaSupervisorScreen() {
                 {waLink(detalhe.telefone) ? (
                   <Pressable style={styles.waBtn} onPress={() => Linking.openURL(waLink(detalhe.telefone)!)} accessibilityRole="button">
                     <Ionicons name="logo-whatsapp" size={18} color="#fff" />
-                    <Text style={styles.waTxt}>WhatsApp · {detalhe.telefone}</Text>
+                    <Text style={styles.waTxt}>{t("WhatsApp")} · {detalhe.telefone}</Text>
                   </Pressable>
                 ) : (
-                  <Text style={[styles.muted, { marginBottom: spacing.sm }]}>Sem telefone cadastrado.</Text>
+                  <Text style={[styles.muted, { marginBottom: spacing.sm }]}>{t("Sem telefone cadastrado.")}</Text>
                 )}
 
-                <Text style={[styles.section, { fontSize: font.size.sm }]}>Escalas ({detalhe.total_escalas})</Text>
-                {detalhe.escalas.length === 0 ? <Text style={styles.muted}>Nenhuma escala.</Text> : detalhe.escalas.map((e, i) => (
+                <Text style={[styles.section, { fontSize: font.size.sm }]}>{t("Escalas")} ({detalhe.total_escalas})</Text>
+                {detalhe.escalas.length === 0 ? <Text style={styles.muted}>{t("Nenhuma escala.")}</Text> : detalhe.escalas.map((e, i) => (
                   <View key={i} style={styles.histRow}>
-                    <Text style={styles.histCulto} numberOfLines={1}>{e.culto || "Culto"}{e.equipe ? ` · ${e.equipe}` : ""}</Text>
-                    <Text style={styles.histData}>{fmtData(e.data)}</Text>
+                    <Text style={styles.histCulto} numberOfLines={1}>{e.culto || t("Culto")}{e.equipe ? ` · ${e.equipe}` : ""}</Text>
+                    <Text style={styles.histData}>{fmtData(e.data, t)}</Text>
                   </View>
                 ))}
 
-                <Text style={[styles.section, { fontSize: font.size.sm, marginTop: spacing.md }]}>Check-ins ({detalhe.total_checkins})</Text>
-                {detalhe.checkins.length === 0 ? <Text style={styles.muted}>Nenhum check-in registrado.</Text> : detalhe.checkins.map((c, i) => (
+                <Text style={[styles.section, { fontSize: font.size.sm, marginTop: spacing.md }]}>{t("Check-ins")} ({detalhe.total_checkins})</Text>
+                {detalhe.checkins.length === 0 ? <Text style={styles.muted}>{t("Nenhum check-in registrado.")}</Text> : detalhe.checkins.map((c, i) => (
                   <View key={i} style={styles.histRow}>
-                    <Text style={styles.histCulto} numberOfLines={1}>{c.culto || "Culto"}</Text>
-                    <Text style={styles.histData}>{fmtData(c.data)}</Text>
+                    <Text style={styles.histCulto} numberOfLines={1}>{c.culto || t("Culto")}</Text>
+                    <Text style={styles.histData}>{fmtData(c.data, t)}</Text>
                   </View>
                 ))}
               </ScrollView>
@@ -476,32 +497,32 @@ export default function EscalaSupervisorScreen() {
         <TecladoSeguro style={styles.modalWrap}>
           <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom }]}>
             <View style={styles.sheetHead}>
-              <Text style={styles.sheetTitle}>Adicionar voluntário</Text>
-              <Pressable onPress={() => setAddOpen(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Fechar"><Ionicons name="close" size={24} color={colors.text} /></Pressable>
+              <Text style={styles.sheetTitle}>{t("Adicionar voluntário")}</Text>
+              <Pressable onPress={() => setAddOpen(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}><Ionicons name="close" size={24} color={colors.text} /></Pressable>
             </View>
 
-            <Text style={styles.sheetLabel}>Equipe</Text>
+            <Text style={styles.sheetLabel}>{t("Equipe")}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
-              {[...equipes, "Sem equipe"].map(t => {
-                const ativo = !novaEquipe.trim() && addTeam === t;
+              {[...equipes, SEM_EQUIPE].map(equipe => {
+                const ativo = !novaEquipe.trim() && addTeam === equipe;
                 return (
-                  <Pressable key={t} onPress={() => { setAddTeam(t); setNovaEquipe(""); }}
+                  <Pressable key={equipe} onPress={() => { setAddTeam(equipe); setNovaEquipe(""); }}
                     style={[styles.teamPick, ativo && { borderColor: colors.primary, backgroundColor: colors.primary + "18" }]}>
-                    <Text style={[styles.pequeno, { color: ativo ? colors.primary : colors.text }]}>{t}</Text>
+                    <Text style={[styles.pequeno, { color: ativo ? colors.primary : colors.text }]}>{rotuloEquipe(equipe)}</Text>
                   </Pressable>
                 );
               })}
             </ScrollView>
             <View style={{ flexDirection: "row", gap: 8, marginTop: 6 }}>
-              <TextInput style={[styles.input, { flex: 1 }]} placeholder="…ou nova equipe" placeholderTextColor={colors.textMuted}
+              <TextInput style={[styles.input, { flex: 1 }]} placeholder={t("…ou nova equipe")} placeholderTextColor={colors.textMuted}
                 value={novaEquipe} onChangeText={setNovaEquipe} />
-              <TextInput style={[styles.input, { flex: 1 }]} placeholder="Função (opcional)" placeholderTextColor={colors.textMuted}
+              <TextInput style={[styles.input, { flex: 1 }]} placeholder={t("Função (opcional)")} placeholderTextColor={colors.textMuted}
                 value={posicao} onChangeText={setPosicao} />
             </View>
 
             <View style={styles.searchBox}>
               <Ionicons name="search" size={18} color={colors.textMuted} />
-              <TextInput style={styles.searchInput} placeholder="Buscar voluntário pelo nome…" placeholderTextColor={colors.textMuted}
+              <TextInput style={styles.searchInput} placeholder={t("Buscar voluntário pelo nome…")} placeholderTextColor={colors.textMuted}
                 value={busca} onChangeText={onBusca} autoFocus autoCorrect={false} />
               {buscando && <ActivityIndicator color={colors.primary} />}
             </View>
@@ -510,23 +531,23 @@ export default function EscalaSupervisorScreen() {
               automaticallyAdjustKeyboardInsets
               style={{ maxHeight: 300 }} keyboardShouldPersistTaps="handled">
               {busca.trim().length < 2 ? (
-                <Text style={[styles.muted, { padding: spacing.md, textAlign: "center" }]}>Digite ao menos 2 letras do nome.</Text>
+                <Text style={[styles.muted, { padding: spacing.md, textAlign: "center" }]}>{t("Digite ao menos 2 letras do nome.")}</Text>
               ) : buscaErro ? (
                 <Pressable style={{ padding: spacing.md, alignItems: "center" }} onPress={() => onBusca(busca)}>
-                  <Text style={[styles.muted, { textAlign: "center" }]}>Falha ao buscar. Toque pra tentar de novo.</Text>
+                  <Text style={[styles.muted, { textAlign: "center" }]}>{t("Falha ao buscar. Toque pra tentar de novo.")}</Text>
                 </Pressable>
               ) : (!buscando && resultados.length === 0) ? (
-                <Text style={[styles.muted, { padding: spacing.md, textAlign: "center" }]}>Nenhum voluntário encontrado.</Text>
+                <Text style={[styles.muted, { padding: spacing.md, textAlign: "center" }]}>{t("Nenhum voluntário encontrado.")}</Text>
               ) : resultados.map(v => {
                 const escalado = v.id ? jaNaEquipe.has(v.id) : false;
                 return (
-                  <Pressable key={v.id} style={styles.resultado} disabled={!!salvandoId || escalado} onPress={() => adicionar(v)} accessibilityRole="button" accessibilityLabel={`Adicionar ${v.full_name}`}>
+                  <Pressable key={v.id} style={styles.resultado} disabled={!!salvandoId || escalado} onPress={() => adicionar(v)} accessibilityRole="button" accessibilityLabel={`${t("Adicionar")} ${v.full_name}`}>
                     <View style={[styles.avatar, { backgroundColor: colors.primary + "22" }]}>
                       <Text style={[styles.avatarTxt, { color: colors.primary }]}>{iniciais(v.full_name)}</Text>
                     </View>
                     <Text style={[styles.pessoaNome, { flex: 1 }]} numberOfLines={1}>{v.full_name}</Text>
                     {salvandoId === v.id ? <ActivityIndicator color={colors.primary} />
-                      : escalado ? <Text style={[styles.pequeno, { color: colors.textMuted }]}>nesta equipe</Text>
+                      : escalado ? <Text style={[styles.pequeno, { color: colors.textMuted }]}>{t("nesta equipe")}</Text>
                       : <Ionicons name="add-circle" size={24} color={colors.primary} />}
                   </Pressable>
                 );

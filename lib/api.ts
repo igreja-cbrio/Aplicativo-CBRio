@@ -128,6 +128,38 @@ export async function apiPut<T>(path: string, body: unknown): Promise<T> {
   return resp.json().catch(() => ({}) as T);
 }
 
+/**
+ * POST multipart de UM arquivo (o app não tinha nenhum — todo upload até aqui
+ * ia direto pro Storage, que é justamente o caminho que a capa do grupo não
+ * consegue usar).
+ *
+ * ⚠️⚠️ NÃO SETAR `Content-Type` À MÃO. O React Native precisa gerar o
+ * `multipart/form-data; boundary=…` sozinho; fixar o header sem o boundary faz
+ * o multer não achar campo nenhum e o servidor responder "Nenhuma imagem foi
+ * enviada" com o arquivo tendo subido inteiro. Por isso este helper monta os
+ * headers do zero em vez de reusar os do `apiPost`.
+ *
+ * ⚠️ O `arquivo` é o formato de arquivo do RN (`{ uri, name, type }`), não um
+ * `Blob`: no Android a URI é `content://…` e ler os bytes pra montar Blob
+ * duplicaria a imagem na memória sem necessidade.
+ */
+export async function apiUpload<T>(
+  path: string,
+  campo: string,
+  arquivo: { uri: string; name: string; type: string },
+): Promise<T> {
+  const headers: Record<string, string> = { Accept: "application/json", ...(await authHeaders()) };
+  const form = new FormData();
+  form.append(campo, arquivo as unknown as Blob);
+  const resp = await fetch(`${BASE}${path}`, { method: "POST", headers, body: form });
+  if (!resp.ok) {
+    const err = new Error(await parseErro(resp)) as Error & { status?: number };
+    err.status = resp.status;
+    throw err;
+  }
+  return resp.json().catch(() => ({}) as T);
+}
+
 export async function apiDelete<T>(path: string): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json", ...(await authHeaders()) };
   const resp = await fetch(`${BASE}${path}`, { method: "DELETE", headers });
@@ -436,6 +468,35 @@ export async function editarGrupo(
     campos,
   );
   return r.grupo;
+}
+
+/**
+ * Capa do grupo · SAI PELO BACKEND (07/08/2026 · fecho da Onda 2).
+ *
+ * ⚠️ O caminho antigo (`supabase.storage.upload` + UPDATE direto em
+ * `mem_grupos`) nunca gravou NADA: 0 de 278 linhas com `foto_url` e 0 objetos
+ * no bucket. Eram dois defeitos empilhados — a policy do bucket exigindo
+ * `is_admin_or_diretor()`, e o UPDATE sem `.select()` que dizia "Capa
+ * atualizada." com 0 linhas afetadas. Ver `backend/routes/app.js`.
+ *
+ * ⚠️ Quem manda na `foto_url` final é o SERVIDOR (ele decide o caminho e a
+ * extensão) — a tela aplica o que voltar, nunca o que ela mesma montou.
+ */
+export async function enviarCapaGrupo(
+  grupoId: string,
+  arquivo: { uri: string; name: string; type: string },
+): Promise<string | null> {
+  const r = await apiUpload<{ ok: boolean; foto_url: string | null }>(
+    `/app/grupos/${encodeURIComponent(grupoId)}/foto`,
+    "foto",
+    arquivo,
+  );
+  return r?.foto_url ?? null;
+}
+
+/** Tira a capa do grupo (o app só sabia SUBSTITUIR — foto errada não tinha desfazer). */
+export async function removerCapaGrupo(grupoId: string): Promise<void> {
+  await apiDelete<{ ok: boolean }>(`/app/grupos/${encodeURIComponent(grupoId)}/foto`);
 }
 
 export async function contarPedidosGrupo(): Promise<number> {
