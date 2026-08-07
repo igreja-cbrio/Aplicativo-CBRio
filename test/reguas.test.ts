@@ -20,7 +20,13 @@ import {
   dataLonga, quandoCurto, distanciaEmTexto,
 } from "@/lib/proximoEncontro";
 import { navegacoes } from "./stubs/expo-router";
-import { nascimentoBRParaISO } from "../lib/validators";
+import { topicoVoluntariado, canaisObsoletos } from "@/lib/canalRealtime";
+import {
+  nascimentoBRParaISO,
+  isDataCalendarioBR,
+  isValidDateBR,
+  janelaIndisponibilidadeBR,
+} from "../lib/validators";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1 · VOLUNTARIADO · o ERP tem 7 status; o app tratava 3
@@ -425,5 +431,108 @@ describe("nascimentoBRParaISO", () => {
     expect(nascimentoBRParaISO("1990-05-17", HOJE)).toBeNull();
     expect(nascimentoBRParaISO("17/5/1990", HOJE)).toBeNull();
     expect(nascimentoBRParaISO("", HOJE)).toBeNull();
+  });
+});
+
+// ── Canal realtime · o tópico fixo derrubava a aba Servir ───────────────────
+// Relato do Marcos em 07/08: "duas vezes quando tentei abrir a aba de servir
+// apareceu o erro tente novamente". Não era rede nem 401 — era CRASH DE RENDER,
+// capturado pelo Error Boundary da Onda 2. A telemetria de produção tem os 2
+// eventos `render_crash`, com a mensagem literal do supabase-js:
+//   "cannot add `postgres_changes` callbacks for realtime:voluntariado-<id>
+//    after `subscribe()`"
+// Causa: tópico FIXO + `removeChannel` assíncrono ⇒ a 2ª montagem reencontrava
+// o canal ainda registrado e o `.on()` lançava dentro do `useEffect`.
+describe("canalRealtime", () => {
+  // ⚠️ MUTATION GUARD: voltar ao tópico fixo reintroduz o crash inteiro.
+  it("dá um tópico NOVO a cada montagem", () => {
+    const a = topicoVoluntariado("m1");
+    const b = topicoVoluntariado("m1");
+    expect(a).not.toBe(b);
+    expect(a.startsWith("voluntariado-m1-")).toBe(true);
+  });
+
+  // ⚠️ MUTATION GUARD: o supabase-js prefixa os tópicos com `realtime:`.
+  // Comparar sem isso não casa nada e a limpeza vira decoração — aí o tópico
+  // único troca o crash por vazamento de canais.
+  it("acha os canais velhos do membro, já com o prefixo do supabase", () => {
+    const registrados = [
+      "realtime:voluntariado-m1",          // o formato antigo, fixo
+      "realtime:voluntariado-m1-1699-2",   // um do formato novo
+      "realtime:voluntariado-m2-1699-1",   // outro membro
+      "realtime:qualquer-outra-coisa",
+    ];
+    expect(canaisObsoletos(registrados, "m1")).toEqual([
+      "realtime:voluntariado-m1",
+      "realtime:voluntariado-m1-1699-2",
+    ]);
+  });
+
+  it("não confunde com membro cujo id apenas COMEÇA igual", () => {
+    expect(canaisObsoletos(["realtime:voluntariado-m10-1-1"], "m1")).toEqual([]);
+  });
+});
+
+// ── Indisponibilidade do voluntário · a régua de NASCIMENTO recusava tudo ────
+// Relato do Marcos em 07/08, testando no aparelho: "coloquei diversas datas
+// 09/08/2026, 20/10/2026... mas sempre ele dá 'Data de início inválida'".
+// Causa: `Disponibilidade.tsx` validava com `isValidDateBR`, que termina em
+// `<= Date.now()` porque foi escrita pra DATA DE NASCIMENTO. As datas em que o
+// voluntário não pode servir são FUTURAS por definição ⇒ nenhuma passava.
+// Era a 2ª razão, independente da RLS, de a feature nunca ter gravado nada.
+describe("janelaIndisponibilidadeBR", () => {
+  const HOJE = "2026-08-07";
+
+  // ⚠️ MUTATION GUARD: voltar a usar a régua de nascimento aqui derruba isto.
+  it("ACEITA data futura — é o caso normal deste campo", () => {
+    expect(janelaIndisponibilidadeBR("09/08/2026", "09/08/2026", HOJE)).toEqual({
+      ok: true, de: "2026-08-09", ate: "2026-08-09",
+    });
+    expect(janelaIndisponibilidadeBR("20/10/2026", "25/10/2026", HOJE)).toEqual({
+      ok: true, de: "2026-10-20", ate: "2026-10-25",
+    });
+    // As duas datas do relato dele, contra a régua de nascimento:
+    expect(isValidDateBR("09/08/2026")).toBe(false);
+    expect(isValidDateBR("20/10/2026")).toBe(false);
+  });
+
+  it("aceita hoje e janela que COMEÇOU no passado mas ainda vale", () => {
+    expect(janelaIndisponibilidadeBR("07/08/2026", "07/08/2026", HOJE).ok).toBe(true);
+    // Viagem que começou ontem e termina semana que vem: é o fim dela que
+    // protege a escala. Cortar pelo início jogaria fora bloqueio legítimo.
+    expect(janelaIndisponibilidadeBR("05/08/2026", "12/08/2026", HOJE)).toEqual({
+      ok: true, de: "2026-08-05", ate: "2026-08-12",
+    });
+  });
+
+  it("recusa janela que já terminou (sumiria da lista ao salvar)", () => {
+    expect(janelaIndisponibilidadeBR("01/08/2026", "06/08/2026", HOJE)).toEqual({
+      ok: false, erro: "janela_passada",
+    });
+  });
+
+  it("recusa fim antes do início e data que não existe", () => {
+    expect(janelaIndisponibilidadeBR("20/10/2026", "19/10/2026", HOJE)).toEqual({
+      ok: false, erro: "fim_antes_do_inicio",
+    });
+    expect(janelaIndisponibilidadeBR("31/02/2026", "05/03/2026", HOJE)).toEqual({
+      ok: false, erro: "de_invalida",
+    });
+    expect(janelaIndisponibilidadeBR("09/08/2026", "9/8/2026", HOJE)).toEqual({
+      ok: false, erro: "ate_invalida",
+    });
+    expect(janelaIndisponibilidadeBR("", "", HOJE)).toEqual({
+      ok: false, erro: "de_invalida",
+    });
+  });
+
+  // ⚠️ MUTATION GUARD: as telas de NASCIMENTO não podem ter sido afrouxadas
+  // junto — foi por isso que a régua foi SEPARADA em vez de relaxada.
+  it("separar a régua NÃO afrouxou o nascimento", () => {
+    expect(isDataCalendarioBR("09/08/2099")).toBe(true);   // existe no calendário
+    expect(isValidDateBR("09/08/2099")).toBe(false);       // mas não é nascimento
+    expect(nascimentoBRParaISO("09/08/2099", HOJE)).toBeNull();
+    expect(isDataCalendarioBR("31/02/1990")).toBe(false);
+    expect(isValidDateBR("17/05/1990")).toBe(true);
   });
 });

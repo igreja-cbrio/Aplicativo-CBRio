@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -10,6 +14,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { CalendarioBR } from "@/components/ui/CalendarioBR";
 import { useColors } from "@/contexts/ThemeContext";
 import {
   listarIndisponibilidades,
@@ -17,17 +22,24 @@ import {
   removerIndisponibilidade,
   type Indisponibilidade,
 } from "@/lib/disponibilidade";
-import {
-  dateBRToISO,
-  isValidDateBR,
-  maskDateBR,
-} from "@/lib/validators";
+import { janelaIndisponibilidadeBR, type ErroJanela } from "@/lib/validators";
+import { hojeBRT } from "@/lib/dataBRT";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 function fmtIso(iso: string) {
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
   return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+}
+
+function isoParaBR(iso: string) {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : "";
+}
+
+function brParaISO(br: string) {
+  const m = br.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
 }
 
 export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
@@ -42,6 +54,7 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
   const [motivo, setMotivo] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [calendario, setCalendario] = useState<null | "de" | "ate">(null);
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -63,33 +76,36 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
     carregar();
   }, [carregar]);
 
+  function fecharForm() {
+    setAberto(false);
+    setCalendario(null);
+    setErro(null);
+    setDe("");
+    setAte("");
+    setMotivo("");
+  }
+
+  const MENSAGEM_ERRO: Record<ErroJanela, string> = {
+    de_invalida: t("Escolha a data de início."),
+    ate_invalida: t("Escolha a data de fim."),
+    fim_antes_do_inicio: t("A data final precisa ser igual ou depois da inicial."),
+    janela_passada: t("Esse período já passou. Bloqueie datas de hoje em diante."),
+  };
+
   async function salvar() {
     setErro(null);
-    if (!isValidDateBR(de)) {
-      setErro(t("Data de início inválida (DD/MM/AAAA)."));
-      return;
-    }
-    if (!isValidDateBR(ate)) {
-      setErro(t("Data de fim inválida (DD/MM/AAAA)."));
-      return;
-    }
-    const isoDe = dateBRToISO(de);
-    const isoAte = dateBRToISO(ate);
-    if (!isoDe || !isoAte) {
-      setErro(t("Data inválida."));
-      return;
-    }
-    if (isoAte < isoDe) {
-      setErro(t("A data final precisa ser igual ou depois da inicial."));
+    // ⚠️ A régua vive em `lib/validators` (pura, no portão do CI) — aqui só
+    // traduzimos o motivo. Era esta validação que recusava TODA data futura,
+    // porque usava a régua de NASCIMENTO (`isValidDateBR`).
+    const janela = janelaIndisponibilidadeBR(de, ate, hojeBRT());
+    if (!janela.ok) {
+      setErro(MENSAGEM_ERRO[janela.erro]);
       return;
     }
     setSalvando(true);
     try {
-      await adicionarIndisponibilidade(volProfileId, isoDe, isoAte, motivo);
-      setDe("");
-      setAte("");
-      setMotivo("");
-      setAberto(false);
+      await adicionarIndisponibilidade(volProfileId, janela.de, janela.ate, motivo);
+      fecharForm();
       await carregar();
     } catch (e) {
       setErro(e instanceof Error ? e.message : t("Falha ao salvar."));
@@ -116,6 +132,29 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
     );
   }
 
+  // A data final nunca pode ser antes da inicial nem antes de hoje — o
+  // calendário já desabilita esses dias em vez de deixar a pessoa errar.
+  const hoje = hojeBRT();
+  const minimoAte = useMemo(() => {
+    const isoDe = brParaISO(de);
+    return isoDe && isoDe > hoje ? isoDe : hoje;
+  }, [de, hoje]);
+
+  function escolherData(dataBR: string) {
+    if (calendario === "de") {
+      setDe(dataBR);
+      // Facilita o caso mais comum (bloquear UM dia) e conserta a janela
+      // invertida na hora, em vez de esperar o erro no Salvar.
+      const isoNovo = brParaISO(dataBR);
+      const isoAte = brParaISO(ate);
+      if (!ate || (isoNovo && isoAte && isoAte < isoNovo)) setAte(dataBR);
+    } else if (calendario === "ate") {
+      setAte(dataBR);
+    }
+    setErro(null);
+    setCalendario(null);
+  }
+
   return (
     <View style={styles.box}>
       <View style={styles.headerRow}>
@@ -136,6 +175,13 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
 
       {carregando ? (
         <ActivityIndicator color={colors.primary} />
+      ) : erro && !aberto ? (
+        <View style={styles.erroBox}>
+          <Text style={styles.erro}>{erro}</Text>
+          <Pressable onPress={carregar} hitSlop={6}>
+            <Text style={styles.linkAcao}>{t("Tentar de novo")}</Text>
+          </Pressable>
+        </View>
       ) : itens.length === 0 ? (
         <Text style={styles.semNada}>{t("Nenhum bloqueio. Você está disponível!")}</Text>
       ) : (
@@ -159,53 +205,115 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
         ))
       )}
 
-      {aberto && (
-        <View style={styles.form}>
-          <View style={styles.row2}>
-            <View style={{ flex: 1 }}>
-              <Input
-                label={t("De")}
-                value={de}
-                onChangeText={(v) => setDe(maskDateBR(v))}
-                placeholder="DD/MM/AAAA"
-                keyboardType="number-pad"
-                maxLength={10}
-              />
+      {/*
+        ⚠️ O formulário virou MODAL (07/08). Inline, ele ficava no meio de uma
+        tela longa: o teclado subia e cobria justamente o campo que estava sendo
+        preenchido ("a interface é ruim de ver os dados"). Aqui ele tem a tela
+        toda e o `KeyboardAvoidingView` é dele, não da tela hospedeira.
+      */}
+      <Modal
+        visible={aberto}
+        transparent
+        animationType="fade"
+        onRequestClose={fecharForm}
+        statusBarTranslucent
+      >
+        <KeyboardAvoidingView
+          style={styles.modalFundo}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <View style={styles.modalCartao}>
+            <View style={styles.topo}>
+              <Text style={styles.titulo}>{t("Bloquear datas")}</Text>
+              <Pressable onPress={fecharForm} hitSlop={10} accessibilityLabel={t("Fechar")}>
+                <Ionicons name="close" size={22} color={colors.textMuted} />
+              </Pressable>
             </View>
-            <View style={{ flex: 1 }}>
+
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.form}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.row2}>
+                <CampoData
+                  label={t("De")}
+                  valor={de}
+                  onPress={() => setCalendario("de")}
+                  colors={colors}
+                  placeholder={t("Escolher")}
+                />
+                <CampoData
+                  label={t("Até")}
+                  valor={ate}
+                  onPress={() => setCalendario("ate")}
+                  colors={colors}
+                  placeholder={t("Escolher")}
+                />
+              </View>
+
               <Input
-                label={t("Até")}
-                value={ate}
-                onChangeText={(v) => setAte(maskDateBR(v))}
-                placeholder="DD/MM/AAAA"
-                keyboardType="number-pad"
-                maxLength={10}
+                label={t("Motivo (opcional)")}
+                value={motivo}
+                onChangeText={setMotivo}
+                placeholder={t("Viagem, prova, etc.")}
+                returnKeyType="done"
               />
+
+              {!!erro && <Text style={styles.erro}>{erro}</Text>}
+            </ScrollView>
+
+            <View style={styles.botoes}>
+              <Button title={t("Cancelar")} variant="ghost" onPress={fecharForm} />
+              <Button title={t("Salvar")} onPress={salvar} loading={salvando} />
             </View>
           </View>
-          <Input
-            label={t("Motivo (opcional)")}
-            value={motivo}
-            onChangeText={setMotivo}
-            placeholder={t("Viagem, prova, etc.")}
-          />
-          {!!erro && <Text style={styles.erro}>{erro}</Text>}
-          <View style={styles.botoes}>
-            <Button
-              title={t("Cancelar")}
-              variant="ghost"
-              onPress={() => {
-                setAberto(false);
-                setErro(null);
-                setDe("");
-                setAte("");
-                setMotivo("");
-              }}
-            />
-            <Button title={t("Salvar")} onPress={salvar} loading={salvando} />
-          </View>
-        </View>
-      )}
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <CalendarioBR
+        visivel={calendario !== null}
+        titulo={calendario === "ate" ? t("Até que dia?") : t("A partir de que dia?")}
+        valor={calendario === "ate" ? ate : de}
+        // Só a data FINAL tem piso: bloqueio que começou ontem e termina semana
+        // que vem é legítimo, e é o fim dele que protege a escala.
+        minimoISO={calendario === "ate" ? minimoAte : null}
+        hojeISO={hoje}
+        onFechar={() => setCalendario(null)}
+        onEscolher={escolherData}
+      />
+    </View>
+  );
+}
+
+function CampoData({
+  label,
+  valor,
+  placeholder,
+  onPress,
+  colors,
+}: {
+  label: string;
+  valor: string;
+  placeholder: string;
+  onPress: () => void;
+  colors: Palette;
+}) {
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  return (
+    <View style={{ flex: 1, gap: spacing.xs }}>
+      <Text style={styles.campoLabel}>{label}</Text>
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [styles.campoData, pressed && { opacity: 0.7 }]}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${valor || placeholder}`}
+      >
+        <Text style={valor ? styles.campoValor : styles.campoPlaceholder}>
+          {valor || placeholder}
+        </Text>
+        <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
+      </Pressable>
     </View>
   );
 }
@@ -225,6 +333,12 @@ const makeStyles = (colors: Palette) =>
       alignItems: "center",
       justifyContent: "space-between",
     },
+    topo: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: spacing.sm,
+    },
     titulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800" },
     hint: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 20 },
     linkAcao: { color: colors.primary, fontSize: font.size.sm, fontWeight: "700" },
@@ -240,8 +354,40 @@ const makeStyles = (colors: Palette) =>
     itemPeriodo: { color: colors.text, fontSize: font.size.sm, fontWeight: "700" },
     itemMotivo: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
     removerBtn: { padding: 6 },
-    form: { gap: spacing.sm, marginTop: spacing.sm },
+    modalFundo: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.55)",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: spacing.lg,
+    },
+    modalCartao: {
+      width: "100%",
+      maxWidth: 420,
+      maxHeight: "80%",
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      padding: spacing.md,
+    },
+    form: { gap: spacing.sm, paddingBottom: spacing.sm },
     row2: { flexDirection: "row", gap: spacing.sm },
-    botoes: { flexDirection: "row", gap: spacing.sm },
+    botoes: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
+    erroBox: { gap: spacing.xs, paddingVertical: spacing.sm },
     erro: { color: colors.danger, fontSize: font.size.sm },
+    campoLabel: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "600" },
+    campoData: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      height: 52,
+      paddingHorizontal: spacing.md,
+      backgroundColor: colors.surfaceAlt,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    campoValor: { color: colors.text, fontSize: font.size.md, fontWeight: "600" },
+    campoPlaceholder: { color: colors.textMuted, fontSize: font.size.md },
   });

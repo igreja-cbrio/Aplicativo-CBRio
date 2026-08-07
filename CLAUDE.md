@@ -631,6 +631,162 @@ pessoa digitava, enviava, e só o SERVIDOR recusava, com 400 seco.
 - **i18n de `perfil.tsx` e `escala-supervisor.tsx`**: ficou de fora pra a
   publicação não misturar conserto de dado com varredura de tradução.
 
+## ⚠️⚠️ ONDA 2b · os 4 defeitos que o TESTE EM APARELHO achou (2026-08-07)
+
+O Marcos testou a Onda 2 no celular e reportou 5 pontos (o 1 e o 5 estavam
+certos). Os outros quatro **nenhum teste automático pegaria**, e três deles são
+a mesma família: código que existia há semanas e que só agora ficou alcançável.
+
+### 1 · A régua de NASCIMENTO recusava toda data de indisponibilidade
+
+Relato: *"coloquei diversas datas 09/08/2026, 20/10/2026... mas sempre ele dá
+'Data de início inválida'"*. `isValidDateBR` termina em `<= Date.now()` porque
+foi escrita pra data de NASCIMENTO — e as datas em que o voluntário não pode
+servir são **futuras por definição**. ⇒ **nenhuma data jamais foi aceita ali.**
+
+⚠️ Era a **2ª razão, independente da RLS**, de a tela nunca ter gravado nada:
+ontem eu consertei o caminho de escrita (`vol_availability` só aceitava
+service_role) e a validação continuava recusando antes de chegar lá.
+
+- A régua foi **SEPARADA, não afrouxada**: `isDataCalendarioBR` (só "existe no
+  calendário") + `janelaIndisponibilidadeBR` (aceita futuro). `isValidDateBR`
+  virou composição e **segue recusando futuro** — ela tem 5 chamadores, todos de
+  nascimento (cadastro, perfil, batismo, vínculo do Kids, `nascimentoBRParaISO`).
+  Afrouxá-la teria trocado um bug por outro, em 4 telas.
+- ⚠️ O corte da janela é pelo **FIM**, não pelo início: viagem que começou ontem
+  e termina semana que vem é bloqueio legítimo, e é o fim dela que protege a
+  escala. Janela já terminada é recusada porque `listarIndisponibilidades` só
+  exibe `unavailable_to >= hoje` — ela sumiria da lista ao salvar, e "salvei e
+  desapareceu" se lê como perda de dado.
+- `hoje` é **injetado em BRT** (`hojeBRT()`): com `toISOString()` a pessoa
+  perderia o direito de bloquear o dia de hoje a partir das 21h.
+- **2 mutantes** congelam isto: usar a régua de nascimento aqui, e cortar pelo
+  início.
+
+### 2 · O teclado cobria o formulário · calendário em JS PURO
+
+Relato: *"a interface é ruim de ver os dados, pois o teclado sobe e cobre"* +
+pedido de calendário clicável. `components/ui/CalendarioBR.tsx` + o formulário
+de bloqueio virou **modal** (inline, ele ficava no meio de uma tela longa e o
+`KeyboardAvoidingView` era da tela hospedeira).
+
+⚠️⚠️ **NADA de `@react-native-community/datetimepicker`** nem de qualquer picker
+nativo: **módulo nativo não sai por OTA** — entraria só num build novo, com
+revisão da Apple no caminho, e este conserto precisa chegar em quem já tem o app.
+O calendário é View/Text/Pressable. ⚠️ Toda a aritmética usa `Date` **LOCAL** e o
+ISO é montado por concatenação — `toISOString()` aqui devolveria o dia anterior.
+
+### 3 · ⚠️⚠️ A aba SERVIR caía em "Algo deu errado" · canal realtime
+
+Relato: *"duas vezes ao tentar abrir a aba de servir apareceu o erro tente
+novamente"*. **Não era rede, nem 401, nem rate limit** (as três hipóteses
+naturais). Era **crash de render**, capturado pelo Error Boundary que subiu
+ontem — que fez seu trabalho: antes disso, um throw de efeito **fechava o app**.
+
+Diagnóstico pela TELEMETRIA, não por suposição: exatamente 2 eventos
+`render_crash` em produção, do aparelho dele, com a mensagem literal
+*"cannot add `postgres_changes` callbacks for realtime:voluntariado-<id> after
+`subscribe()`"* e `label` apontando `VoluntariadoScreen`.
+
+A cadeia, em 3 fatos do supabase-js: `channel(topico)` **reaproveita** canal já
+registrado · `on()` **lança** em canal joined/joining · `removeChannel()` é
+assíncrono e o cleanup não espera. Tópico FIXO por membro ⇒ a 2ª montagem da
+tela reencontrava o canal vivo e o `.on()` lançava dentro do `useEffect`.
+
+- `lib/canalRealtime.ts` (régua PURA, no portão): **tópico novo por montagem**
+  + limpeza dos canais órfãos do mesmo membro. ⚠️ As duas juntas — tópico único
+  sozinho troca o crash por **vazamento de canais**, um por abertura da tela.
+- ⚠️ O bloco inteiro ganhou **try/catch**: realtime aqui é CONVENIÊNCIA (o
+  refetch por foco e por AppState já cobre o dado) e **nunca** pode derrubar a
+  tela. Custo declarado: se o canal falhar, a lista atualiza ao voltar pra tela
+  em vez de "em segundos".
+- `apiGet` era o **único** dos quatro verbos que lançava sem `.status` — quem
+  quisesse distinguir 401 de 429 numa leitura só tinha a string pra olhar.
+- ⚠️ Junto, em `Disponibilidade.tsx`: o erro de carregamento só era renderizado
+  **dentro** do bloco do formulário, então falha de rede aparecia como
+  *"Nenhum bloqueio. Você está disponível!"* — o mesmo estado vazio enganoso que
+  a Onda 2 corrigiu em meu-grupo e evento, sobrevivendo num terceiro lugar.
+
+### 4 · O SUPERVISOR não via os grupos dele
+
+Relato: *"me coloquei como supervisor mas não apareceu no aplicativo"*.
+`GET /app/meu-grupo` monta a lista de dois lugares só — roster e
+`mem_grupos.lider_id`. **`supervisor_id` não entra em lugar nenhum** daquele
+handler, embora o resto do domínio já trate supervisor como gestor pleno (é
+`gruposGeridos` = liderados ∪ supervisionados que autoriza `/grupos/:id/membros`,
+os pedidos e o `PUT` da Onda 1b).
+
+**Medido: 79 dos 87 grupos ativos com supervisor eram invisíveis pro próprio
+supervisor, atingindo 14 pessoas** — e como não havia nenhum outro caminho de
+navegação até `/grupo-membros`, **o save que consertei ontem era inalcançável
+pela tela**. Consertar o backend sem isto teria sido conserto que ninguém alcança.
+
+- Conserto **no app** (sai por OTA, sem tocar no servidor): `/meu-grupo` passa a
+  consumir `GET /app/grupos/meus`, que já devolve liderados ∪ supervisionados.
+- ⚠️ Em **seção própria**, não misturado nos cards: esta tela é de
+  PERTENCIMENTO ("meu grupo", com material e "falar com o líder"); injetar 10
+  grupos supervisionados nela viraria painel de gestão pra quem só quer ver o
+  próprio grupo.
+- ⚠️ O rótulo diz **"Grupos que você gerencia"**, não "supervisiona": o endpoint
+  não diz qual é qual, e afirmar o papel seria a tela inventar o que o payload
+  não carrega.
+- ⚠️ Dedup por id **não é cosmética**: quem lidera E supervisiona o mesmo grupo
+  apareceria duas vezes.
+- Chamada **best-effort e separada**: falha da lista de gestão não pode virar
+  "não conseguimos carregar seus grupos".
+- De quebra, matou o `contarPedidosGrupo()` que rodava **a cada foco de tela e
+  cujo resultado não era renderizado em lugar nenhum** desde 05/08 — agora as
+  pendências aparecem POR GRUPO, com o dado que já vem na mesma resposta.
+
+### 5 · Conta NOVA era mandada pra tela de cadastro de novo
+
+Relato: *"preenchi todos os dados, mas quando entrei ele pediu novamente pra eu
+confirmar quem eu era"*. **Não era o matcher casando com cadastro alheio**: a
+observação de identidade diz `{"created": false, "matched_by": "cpf"}` — ele
+casou com o cadastro que **ele mesmo** criou 3 minutos antes, no próprio signup.
+
+O portão exige `profiles.app_ficha_confirmada_em` (05/08 · dado herdado de
+vínculo não libera acesso). Só que o carimbo é escrito em **dois lugares, os
+dois do fluxo de quem entra por login** — `/identidade/completar` e
+`/identidade/confirmar`. O cadastro nativo, que é **justamente onde a pessoa
+digitou tudo**, não passava por nenhum: nascia com a ficha completa em
+`mem_membros` e `confirmouFicha` false ⇒ `completo: false` ⇒ rebatido.
+Medido na conta de teste: **3min19s preso na porta**, e ele ainda recebeu um
+código por e-mail pra provar que era quem tinha acabado de dizer que era.
+
+⚠️ É a **lição nº 2 do incidente de 06/08 se repetindo** ("ligar uma exigência
+exige cobrir TODOS os caminhos que a satisfazem") — cobri os dois caminhos de
+login e esqueci o terceiro, o cadastro.
+
+- Conserto: `cadastro.tsx` chama `completarCadastroApp(...)` depois do signup
+  **com sessão**, com os dados já na mão. Passa pela porta canônica (matcher,
+  vínculo, fila de duplicidade) e carimba.
+- ⚠️ **Best-effort**: falha de rede não derruba o cadastro (a conta já existe) —
+  cai no comportamento de hoje. Zero regressão no pior caso.
+- ⚠️ **Não relaxa nada no servidor**: `completo` continua exigindo `falta: []`,
+  então o carimbo nunca vira atalho de acesso.
+- ⚠️ Só vale pra quem passa pelo formulário nativo. Google/Apple continuam
+  pedindo a ficha — e é o certo: de lá vêm só nome e e-mail.
+
+### ⚠️⚠️ ACHADO DO LEVANTAMENTO: a migration `20260806120000` NÃO está viva
+
+O agente concluiu por DADO, não por arquivo: a conta de teste tem `mem_membros`
+criado no **mesmo microssegundo** do `profiles`, `mem_historico` dizendo
+*"Criado automaticamente via auth_signup"* e `origem_cadastro='app'` — nada
+disso existiria se o gatilho já criasse **só o profile**.
+
+⚠️ **A ORDEM IMPORTA e é contraintuitiva:** se essa migration for aplicada
+**antes** desta publicação chegar aos aparelhos, o caso 5 fica **PIOR** — a
+conta nova passa a chegar com `membro_id` NULL e `falta` com os 5 campos, e a
+pessoa preenche tudo de novo a partir do zero. **Publicar o app primeiro.**
+
+### ⏳ O que este teste NÃO cobre
+
+O portão (49 testes · 12/12 mutantes) garante a REGRA, **não a tela**. Nada da
+onda 2b foi executado em aparelho — calendário, modal, seção nova e o carimbo do
+cadastro precisam de teste humano. Os quatro defeitos de hoje são justamente da
+classe que só o aparelho pega.
+
 ## ⚠️⚠️ AUDITORIA DO APP · ONDA 0 (2026-08-06) · o que mudou NESTE repo
 
 Auditoria de 4 dimensões pedida pelo Marcos (versão · integração · código ·

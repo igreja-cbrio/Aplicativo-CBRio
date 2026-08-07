@@ -18,6 +18,7 @@ import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { completarCadastroApp } from "@/lib/api";
 import { DEFAULT_COUNTRY, type Country } from "@/constants/countries";
 import {
   dateBRToISO,
@@ -87,6 +88,43 @@ export default function CadastroScreen() {
           t("Enviamos um link de confirmação para o seu e-mail. Confirme para entrar."),
           [{ text: "OK", onPress: () => router.replace("/(auth)/login") }]
         );
+      } else {
+        // ⚠️⚠️ SEM ISTO, QUEM ACABOU DE SE CADASTRAR ERA MANDADO PRA TELA DE
+        // CADASTRO DE NOVO (07/08 · relato do Marcos: "preenchi todos os dados,
+        // mas quando entrei ele pediu novamente pra eu confirmar quem eu era").
+        //
+        // Desde 05/08 o portão exige `profiles.app_ficha_confirmada_em` — a
+        // marca de que ESTA CONTA provou a ficha (dado herdado de vínculo não
+        // libera acesso). Só que o carimbo é escrito em DOIS lugares, os dois
+        // do fluxo de quem entra por login: `/identidade/completar` e
+        // `/identidade/confirmar`. O cadastro nativo, que é justamente onde a
+        // pessoa DIGITOU tudo, não passava por nenhum deles: nascia com a ficha
+        // completa em `mem_membros` (o gatilho grava) e `confirmouFicha` false
+        // ⇒ `completo: false` ⇒ o `CadastroGate` rebatia. Medido na conta de
+        // teste: 3min19s preso na porta, e ele ainda recebeu um código por
+        // e-mail pra provar que era quem tinha acabado de dizer que era.
+        //
+        // Aqui a pessoa já tem sessão (logo, JWT) e os dados na mão: mandamos
+        // pela porta canônica, que faz o matcher, vincula o profile, manda par
+        // duvidoso pra fila de /entradas em vez de fundir, e CARIMBA.
+        //
+        // ⚠️ Best-effort de propósito: falha de rede aqui NÃO derruba o cadastro
+        // (a conta já existe) — cai no comportamento de hoje, com o gate
+        // pedindo a ficha. Zero regressão no pior caso.
+        // ⚠️ E NÃO relaxa nada no servidor: `completo` continua exigindo
+        // `falta: []`, então o carimbo nunca vira atalho de acesso.
+        try {
+          await completarCadastroApp({
+            nome_completo: nome,
+            telefone: `+${country.dial}${onlyDigits(phone)}`,
+            data_nascimento: dateBRToISO(nascimento)!,
+            email,
+            cpf: onlyDigits(cpf),
+            sexo,
+          });
+        } catch (err) {
+          console.warn("[cadastro] não foi possível confirmar a ficha agora:", err);
+        }
       }
       // Com a sessão criada, o guard de rotas leva direto para a área logada.
     } catch (e) {

@@ -79,6 +79,48 @@ const MUTANTES = [
     de: "  if (!isValidDateBR(br)) return null;",
     para: "  // mutante",
   },
+  {
+    // ⚠️ ESTE É O BUG DE 07/08, congelado. `Disponibilidade.tsx` validava as
+    // datas em que o voluntario NAO pode servir com a regua de NASCIMENTO, que
+    // termina em `<= Date.now()` — entao TODA data futura era recusada e a tela
+    // dizia "Data de inicio invalida" pra 09/08/2026 e 20/10/2026. Trocar o
+    // calendario puro pela regua de nascimento aqui parece consolidacao
+    // inocente ("sao duas funcoes quase iguais") e reintroduz o bug inteiro.
+    nome: "indisponibilidade: validar data futura com a regua de NASCIMENTO",
+    arq: "lib/validators.ts",
+    de: "  if (!isDataCalendarioBR(de)) return { ok: false, erro: \"de_invalida\" };",
+    para: "  if (!isValidDateBR(de)) return { ok: false, erro: \"de_invalida\" };",
+  },
+  {
+    // ⚠️ Cortar a janela pelo INICIO em vez do FIM: viagem que comecou ontem e
+    // termina semana que vem passa a ser recusada, e e justamente o bloqueio
+    // que ainda protege a escala futura.
+    nome: "indisponibilidade: cortar a janela pelo INICIO em vez do fim",
+    arq: "lib/validators.ts",
+    de: "  if (isoAte < hoje) return { ok: false, erro: \"janela_passada\" };",
+    para: "  if (isoDe < hoje) return { ok: false, erro: \"janela_passada\" };",
+  },
+  {
+    // ⚠️ O CRASH DA ABA SERVIR (07/08), congelado. Topico FIXO faz
+    // `RealtimeClient.channel()` REAPROVEITAR o canal ja registrado, e
+    // `RealtimeChannel.on()` LANCA em canal joined/joining — a 2a montagem da
+    // tela derrubava a arvore inteira ate o Error Boundary. "Simplificar" o
+    // topico de volta parece limpeza (o sufixo nao tem significado obvio) e
+    // reintroduz o bug exato que a telemetria registrou 2 vezes.
+    nome: "realtime: voltar ao topico FIXO do canal de voluntariado",
+    arq: "lib/canalRealtime.ts",
+    de: "  return `${prefixoVoluntariado(membroId)}-${Date.now()}-${sequencia}`;",
+    para: "  return prefixoVoluntariado(membroId);",
+  },
+  {
+    // ⚠️ O supabase-js registra os topicos com o prefixo `realtime:`. Comparar
+    // sem tirar o prefixo nao casa NADA: a limpeza vira decoracao e os canais
+    // orfaos acumulam a cada abertura da tela (vazamento silencioso).
+    nome: "realtime: ignorar o prefixo `realtime:` ao achar canal orfao",
+    arq: "lib/canalRealtime.ts",
+    de: "    const semPrefixo = t.startsWith(\"realtime:\") ? t.slice(\"realtime:\".length) : t;",
+    para: "    const semPrefixo = t;",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a
