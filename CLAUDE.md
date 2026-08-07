@@ -900,6 +900,36 @@ o campo. Se um dia for preciso, o caminho é `grupo_supervisao_observacoes`
 - Aba Pessoas mostrava o **enum cru** (`co_lider`, `lider_treinamento`).
 - Badge de pendentes aparecia pra supervisor, cuja tela **não tem** aba Pedidos.
 
+### Encontro é CARTÃO CLICÁVEL, e a visita mora dentro dele (07/08 · fecha o escopo)
+
+Ele viu a v1 e disse: *"não separaria os encontros de 'Suas visitas', faz um
+quadradinho clicável do encontro, aí quando clico vejo os comentários e a
+presença em um lugar só"*. A seção separada **saiu**: cada encontro é um cartão,
+o dia em que o supervisor esteve ganha o selo **"Você visitou"**, e o toque abre
+presença (com NOME), comentário do encontro, comentário da SUA visita e quem
+registrou.
+
+- `GET /app/grupos/:grupoId/encontros/:encontroId` traz os nomes **sob demanda** —
+  na lista seriam 24 encontros × N pessoas a cada abertura de tela.
+- ⚠️ **NÃO listamos AUSENTES**: a RPC `registrar_encontro_grupo` não cria linha
+  pra ausente, e deduzi-los do roster de HOJE afirmaria ausência de quem talvez
+  nem estivesse no grupo naquele dia. O que não se sabe, não se afirma.
+- ⚠️ **Visita sem encontro no mesmo dia continua aparecendo** — acontece quando o
+  encontro é apagado depois (a UNIQUE de data **não é parcial**, então ele some
+  da lista e a visita fica). Perder o comentário em silêncio seria o pior desfecho.
+- ⚠️ Falha ao abrir o detalhe cai no que a LISTA já tinha, com aviso.
+
+### ✅ Teste em aparelho da tela (07/08 · grupo "teste 2")
+
+Medido em produção: visita `realizada` com `supervisor_id` + `responsavel_id` +
+`registrado_por`; encontro com `registrado_por_nome = "Marcos Paulo (supervisor)"`;
+`vw_grupos_supervisao` já com `ultima_visita=07/08` e `visitas_mes_atual=1`;
+telemetria `grupo_visita_registrada` com `label:"presente"`.
+⚠️ O **"0 presenças" NÃO era bug** — o grupo está com **roster vazio**. Mas o
+modal mostrava "Quem esteve presente — 0/0" com lista em branco (lia como tela
+quebrada) e os 2 tipos de push novos **não tinham destino no `notifTap`** (o
+toque não navegava). Os dois corrigidos.
+
 ### ⏳ Reportado e NÃO consertado (é decisão, não código)
 
 - `_kpi_agregar_dado` não filtra `status` nem `deleted_at`/`ativo` no ramo
