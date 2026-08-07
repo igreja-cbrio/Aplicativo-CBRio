@@ -59,3 +59,31 @@ export function dateBRToISO(value: string) {
   if (!m) return null;
   return `${m[3]}-${m[2]}-${m[1]}`;
 }
+
+/**
+ * Nascimento em DD/MM/AAAA → ISO (YYYY-MM-DD) **válido**, ou `null`.
+ *
+ * ⚠️ Existe porque `/completar-cadastro` — a porta que TODO mundo atravessa pra
+ * entrar no app — tinha a própria versão, mais fraca: aceitava **31/02** (só
+ * conferia dia 1..31, não o calendário real). A pessoa digitava, enviava, e só
+ * o SERVIDOR recusava, com um 400 seco. Régua de campo vive aqui, no `lib/`,
+ * pra entrar no portão — nunca dentro do `.tsx`.
+ *
+ * ⚠️ SEM `new Date("YYYY-MM-DD")` na conversão: essa forma é interpretada em UTC
+ * e, em fuso negativo, volta um dia (a armadilha da faixa etária). A comparação
+ * com hoje é de STRING ISO, que é segura.
+ *
+ * @param hoje `YYYY-MM-DD` injetável — o teste não pode depender do relógio.
+ */
+export function nascimentoBRParaISO(br: string, hoje?: string): string | null {
+  if (!isValidDateBR(br)) return null;
+  const iso = dateBRToISO(br);
+  if (!iso) return null;
+  const limite = hoje || (() => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+  })();
+  // Nascimento no futuro não existe.
+  if (iso > limite) return null;
+  return iso;
+}

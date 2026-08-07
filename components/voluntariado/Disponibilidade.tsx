@@ -45,10 +45,19 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
 
   const carregar = useCallback(async () => {
     setCarregando(true);
-    const lista = await listarIndisponibilidades(volProfileId);
-    setItens(lista);
-    setCarregando(false);
-  }, [volProfileId]);
+    // ⚠️ Antes não havia try/catch: com a leitura indo pro backend (06/08), uma
+    // falha de rede rejeitaria a promise, `carregando` ficaria true PRA SEMPRE e
+    // a tela travaria num spinner. Erro tem que virar mensagem, não silêncio.
+    try {
+      const lista = await listarIndisponibilidades(volProfileId);
+      setItens(lista);
+      setErro(null);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : t("Não conseguimos carregar suas datas."));
+    } finally {
+      setCarregando(false);
+    }
+  }, [volProfileId, t]);
 
   useEffect(() => {
     carregar();

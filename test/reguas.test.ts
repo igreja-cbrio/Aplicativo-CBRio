@@ -20,6 +20,7 @@ import {
   dataLonga, quandoCurto, distanciaEmTexto,
 } from "@/lib/proximoEncontro";
 import { navegacoes } from "./stubs/expo-router";
+import { nascimentoBRParaISO } from "../lib/validators";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1 · VOLUNTARIADO · o ERP tem 7 status; o app tratava 3
@@ -393,5 +394,36 @@ describe("proximoEncontro · o estado do herói", () => {
     expect(distanciaEmTexto(1)).toBe("é amanhã");
     expect(distanciaEmTexto(4)).toBe("faltam 4 dias");
     expect(distanciaEmTexto(-3)).toBe("há 3 dias");
+  });
+});
+
+// ── Nascimento (porta que TODO mundo atravessa pra entrar no app) ───────────
+// A régua morava dentro de `completar-cadastro.tsx` e era mais fraca: aceitava
+// 31/02 porque só conferia dia 1..31. A pessoa digitava, enviava, e só o
+// SERVIDOR recusava — 400 seco na tela mais crítica do onboarding.
+describe("nascimentoBRParaISO", () => {
+  const HOJE = "2026-08-06";
+
+  it("converte data válida", () => {
+    expect(nascimentoBRParaISO("17/05/1990", HOJE)).toBe("1990-05-17");
+    expect(nascimentoBRParaISO("29/02/2024", HOJE)).toBe("2024-02-29"); // bissexto
+  });
+
+  it("recusa data que não existe no calendário", () => {
+    expect(nascimentoBRParaISO("31/02/1990", HOJE)).toBeNull();
+    expect(nascimentoBRParaISO("31/04/1990", HOJE)).toBeNull();
+    expect(nascimentoBRParaISO("29/02/2025", HOJE)).toBeNull(); // não bissexto
+  });
+
+  it("recusa nascimento no FUTURO (com hoje injetado, sem relógio da máquina)", () => {
+    expect(nascimentoBRParaISO("07/08/2026", HOJE)).toBeNull();
+    expect(nascimentoBRParaISO("06/08/2026", HOJE)).toBe("2026-08-06"); // hoje vale
+  });
+
+  it("recusa ano irreal e formato errado", () => {
+    expect(nascimentoBRParaISO("17/05/1899", HOJE)).toBeNull();
+    expect(nascimentoBRParaISO("1990-05-17", HOJE)).toBeNull();
+    expect(nascimentoBRParaISO("17/5/1990", HOJE)).toBeNull();
+    expect(nascimentoBRParaISO("", HOJE)).toBeNull();
   });
 });

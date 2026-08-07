@@ -10,6 +10,7 @@ import { TranslationProvider } from "@/lib/i18n";
 import { SplashPulse } from "@/components/brand/SplashPulse";
 import { BiometriaLock } from "@/components/auth/BiometriaLock";
 import { PortaoAtualizacao } from "@/components/app/PortaoAtualizacao";
+import { ErrorBoundary } from "@/components/app/ErrorBoundary";
 import { Onboarding } from "@/components/onboarding/Onboarding";
 import { biometriaAtiva } from "@/lib/biometria";
 import { onboardingVisto, marcarOnboardingVisto } from "@/lib/onboarding";
@@ -165,6 +166,14 @@ export default function RootLayout() {
   if (!fontScaleReady || !fontsLoaded) return null;
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      {/* ⚠️ ERROR BOUNDARY NA RAIZ, FORA de todos os providers (06/08/2026).
+          O app não tinha NENHUM: qualquer exceção de render subia até a raiz e o
+          React Native FECHAVA o app, sem mensagem (o handler da telemetria
+          registra o fatal e repassa pro padrão — a gente sabia do crash e a
+          pessoa ficava sem app). Fica aqui fora pra cobrir erro do tema, da
+          tradução, do portão de atualização e do auth também; por isso as cores
+          da tela de erro são fixas, e não do tema. */}
+      <ErrorBoundary>
       <SafeAreaProvider>
         <TranslationProvider>
           <ThemeProvider>
@@ -181,6 +190,7 @@ export default function RootLayout() {
           </ThemeProvider>
         </TranslationProvider>
       </SafeAreaProvider>
+      </ErrorBoundary>
     </GestureHandlerRootView>
   );
 }

@@ -24,13 +24,12 @@ import { useColors } from "@/contexts/ThemeContext";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { useMembro } from "@/lib/useMembro";
 import { supabase } from "@/lib/supabase";
+import { salvarPerfilMembro } from "@/lib/api";
 import {
   dateBRToISO,
-  isValidCPF,
   isValidDateBR,
   maskCPF,
   maskDateBR,
-  onlyDigits,
 } from "@/lib/validators";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
@@ -157,13 +156,8 @@ export default function PerfilScreen() {
       setMsg({ type: "err", text: "Faça login para editar o perfil." });
       return;
     }
-    const cpfDigits = onlyDigits(cpf);
     if (!name.trim()) {
       setMsg({ type: "err", text: "Informe seu nome completo." });
-      return;
-    }
-    if (cpf && !isValidCPF(cpf)) {
-      setMsg({ type: "err", text: "CPF inválido." });
       return;
     }
     if (nascimento && !isValidDateBR(nascimento)) {
@@ -179,17 +173,25 @@ export default function PerfilScreen() {
         .eq("id", user.id);
       if (pErr) throw pErr;
 
-      // 2) Vincula/cria/atualiza o membro no servidor (cruza CPF, telefone ou
-      //    nome; contorna o RLS com segurança, só no próprio cadastro).
-      const { data: vId, error: rErr } = await supabase.rpc("app_salvar_membro", {
-        p_cpf: cpfDigits || null,
-        p_nome: name.trim() || null,
-        p_telefone: telefone.trim() || null,
-        p_email: email.trim() || null,
-        p_nascimento: nascimento ? dateBRToISO(nascimento) : null,
+      // 2) Salva a ficha PELO BACKEND (06/08/2026 · auditoria).
+      //
+      // ⚠️⚠️ Aqui rodava a RPC `app_salvar_membro`, que procurava um cadastro por
+      // CPF **ou telefone ou NOME EXATO** e vinculava a conta ao primeiro que
+      // achasse, SEM prova de posse — qualquer pessoa logada digitava o nome de
+      // um homônimo e passava a ver o grupo, o comprovante de contribuições e os
+      // FILHOS NO KIDS de outra. A RPC já foi estreitada no servidor; esta tela
+      // deixar de chamá-la é o que permite dropá-la de vez.
+      //
+      // ⚠️ CPF NÃO VAI DAQUI: vincular conta a cadastro é ato de IDENTIDADE e só
+      // acontece em `/completar-cadastro` (CPF acha o cadastro → código vai pro
+      // contato DO CADASTRO → quem prova posse é vinculado).
+      const membroSalvo = await salvarPerfilMembro({
+        nome: name.trim() || null,
+        telefone: telefone.trim() || null,
+        data_nascimento: nascimento ? dateBRToISO(nascimento) : null,
       });
-      if (rErr) throw rErr;
-      if (vId) setMembroId(vId as string);
+      const vId = membroSalvo?.id || null;
+      if (vId) setMembroId(vId);
 
       // 3) E-mail (via auth — pode exigir confirmação)
       let emailAviso = false;
@@ -204,25 +206,19 @@ export default function PerfilScreen() {
         emailAviso = true;
       }
 
-      // 4) Recarrega os dados do membro vinculado
-      if (vId) {
-        const { data: m } = await supabase
-          .from("mem_membros")
-          .select("nome, cpf, data_nascimento, telefone, foto_url")
-          .eq("id", vId as string)
-          .is("deleted_at", null)
-          .maybeSingle();
-        if (m) {
-          if (m.nome) setName(m.nome);
-          setCpf(m.cpf ? maskCPF(m.cpf) : cpf);
-          setNascimento(isoToBR(m.data_nascimento));
-          if (m.telefone) setTelefone(m.telefone);
-          if (m.foto_url) setAvatarUrl((prev) => prev ?? m.foto_url);
-        }
+      // 4) Reflete o que o SERVIDOR gravou (a resposta já é a linha salva —
+      //    uma consulta a menos, e sem risco de ler algo diferente do que foi
+      //    gravado).
+      if (membroSalvo) {
+        if (membroSalvo.nome) setName(membroSalvo.nome);
+        setCpf(membroSalvo.cpf ? maskCPF(membroSalvo.cpf) : cpf);
+        setNascimento(isoToBR(membroSalvo.data_nascimento));
+        if (membroSalvo.telefone) setTelefone(membroSalvo.telefone);
+        if (membroSalvo.foto_url) setAvatarUrl((prev) => prev ?? membroSalvo.foto_url);
       }
 
       reloadMembro(); // propaga nome/CPF/telefone/vínculo pras outras telas
-      setMsg({ type: "ok", text: "Perfil salvo e vinculado ao seu cadastro." });
+      setMsg({ type: "ok", text: "Perfil salvo." });
       if (emailAviso) {
         Alert.alert(
           "Confirme o novo e-mail",
@@ -307,16 +303,22 @@ export default function PerfilScreen() {
               autoCapitalize="words"
             />
             <View>
+              {/* ⚠️ SOMENTE LEITURA (06/08/2026): o CPF deixou de ser editável aqui
+                  porque o endpoint de perfil não o aceita — trocar CPF é ato de
+                  IDENTIDADE (`/completar-cadastro`, com código pro contato do
+                  cadastro). Deixar o campo editável seria a tela prometendo uma
+                  gravação que não acontece, que é o defeito que estamos tirando. */}
               <Input
                 label="CPF"
                 value={cpf}
-                onChangeText={(t) => setCpf(maskCPF(t))}
+                editable={false}
                 placeholder="000.000.000-00"
                 keyboardType="number-pad"
                 maxLength={14}
               />
               <Text style={styles.lockHint}>
-                Informe seu CPF e salve para vincular ao seu cadastro na CBRio.
+                O CPF identifica seu cadastro na CBRio e não é alterado por aqui —
+                se estiver errado, fale com a secretaria.
               </Text>
             </View>
             <Input

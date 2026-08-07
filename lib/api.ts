@@ -303,6 +303,116 @@ export function listarPedidosGrupo(): Promise<{ admin: boolean; pedidos: GrupoPe
   return apiGet<{ admin: boolean; pedidos: GrupoPedido[] }>("/app/grupos/pedidos");
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+ * ⚠️⚠️ ESCRITAS QUE SAÍRAM DO SUPABASE DIRETO (auditoria 06/08/2026 · Onda 2)
+ *
+ * A LEI do projeto é "quem decide o que é válido é o BACKEND". Três telas ainda
+ * escreviam direto na tabela, e cada uma tinha um estrago próprio:
+ *   · perfil       → a RPC `app_salvar_membro` vinculava a conta a um cadastro
+ *                    por CPF, telefone OU **nome exato**, sem prova de posse;
+ *   · indisponib.  → gravava em `vol_availability`, onde só service_role tem
+ *                    policy desde 15/06 — a tabela está VAZIA: nunca funcionou;
+ *   · editar grupo → a RLS barra supervisor e o update sem `.select()` voltava
+ *                    0 linhas SEM erro, com a tela dizendo "Grupo atualizado".
+ * ───────────────────────────────────────────────────────────────────────── */
+
+export type PerfilMembroSalvo = {
+  id: string;
+  nome: string | null;
+  telefone: string | null;
+  data_nascimento: string | null;
+  cpf: string | null;
+  foto_url: string | null;
+};
+
+/**
+ * Salva a ficha do membro JÁ vinculado à conta.
+ * ⚠️ NÃO manda CPF: vincular conta a cadastro é ato de IDENTIDADE e passa só por
+ * `/app/identidade/*` (CPF acha o cadastro → código vai pro contato DO CADASTRO
+ * → quem prova posse é vinculado). O endpoint nem aceita `cpf` no allowlist.
+ */
+export async function salvarPerfilMembro(dados: {
+  nome?: string | null;
+  telefone?: string | null;
+  data_nascimento?: string | null;
+  endereco?: string | null;
+}): Promise<PerfilMembroSalvo> {
+  return apiPut<PerfilMembroSalvo>("/app/membro/perfil", dados);
+}
+
+export type IndisponibilidadeApi = {
+  id: string;
+  unavailable_from: string;
+  unavailable_to: string;
+  reason: string | null;
+};
+
+/** Janelas em que o voluntário não pode servir. */
+export async function listarIndisponibilidadesApi(): Promise<IndisponibilidadeApi[]> {
+  const r = await apiGet<IndisponibilidadeApi[]>("/app/voluntariado/indisponibilidades");
+  return Array.isArray(r) ? r : [];
+}
+
+export async function adicionarIndisponibilidadeApi(
+  inicio: string,
+  fim: string,
+  motivo: string | null,
+): Promise<IndisponibilidadeApi> {
+  return apiPost<IndisponibilidadeApi>("/app/voluntariado/indisponibilidade", {
+    inicio,
+    fim,
+    motivo: motivo?.trim() || null,
+  });
+}
+
+export async function removerIndisponibilidadeApi(id: string): Promise<void> {
+  await apiDelete(`/app/voluntariado/indisponibilidade/${encodeURIComponent(id)}`);
+}
+
+export type GrupoEditavel = {
+  id: string;
+  nome: string;
+  categoria: string | null;
+  descricao: string | null;
+  tema: string | null;
+  dia_semana: number | null;
+  horario: string | null;
+  local: string | null;
+  endereco: string | null;
+  bairro: string | null;
+};
+
+/**
+ * Edita o grupo. É PATCH: só vai o que mudou, e o servidor tem allowlist —
+ * `lider_id`, `ativo`, `temporada` e `aceitando_inscricoes` NÃO são editáveis
+ * por aqui (o PUT do web é update de objeto inteiro e apagaria esses campos).
+ * O servidor devolve 409 se nenhuma linha for afetada, em vez de fingir sucesso.
+ */
+/** O que a tela pode mandar. Aceita `null` de propósito: campo esvaziado é
+ *  "limpar" (e `nome` vazio o servidor recusa com 400, que é o certo). */
+export type GrupoEdicaoPatch = {
+  nome?: string | null;
+  categoria?: string | null;
+  descricao?: string | null;
+  tema?: string | null;
+  dia_semana?: number | null;
+  horario?: string | null;
+  local?: string | null;
+  endereco?: string | null;
+  bairro?: string | null;
+};
+
+export async function editarGrupo(
+  grupoId: string,
+  campos: GrupoEdicaoPatch,
+): Promise<GrupoEditavel> {
+  const r = await apiPut<{ ok: boolean; grupo: GrupoEditavel }>(
+    `/app/grupos/${encodeURIComponent(grupoId)}`,
+    campos,
+  );
+  return r.grupo;
+}
+
 export async function contarPedidosGrupo(): Promise<number> {
   const r = await apiGet<{ count: number }>("/app/grupos/pedidos/count");
   return r?.count ?? 0;
