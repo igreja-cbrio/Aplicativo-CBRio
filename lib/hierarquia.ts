@@ -30,7 +30,7 @@ import { router, type Href } from "expo-router";
  *
  *   /                      Home (raiz — não tem pai)
  *   ├── /meu-grupo         barra: Grupos
- *   │   ├── /grupos  /grupo-detalhe  /grupo-membros
+ *   │   ├── /grupos  /grupo-detalhe  /grupo-membros  /grupo-visita
  *   │   ├── /grupo-inscricoes  /grupo-editar
  *   ├── /voluntariado      barra: Servir
  *   │   └── /escala-supervisor
@@ -64,6 +64,8 @@ const PAI: Record<string, string> = {
   "/grupos": "/meu-grupo",
   "/grupo-detalhe": "/meu-grupo",
   "/grupo-membros": "/meu-grupo",
+  // Tela enxuta do SUPERVISOR (07/08) — irmã da de gestão, mesmo pai.
+  "/grupo-visita": "/meu-grupo",
   "/grupo-inscricoes": "/meu-grupo",
   "/grupo-editar": "/meu-grupo",
 

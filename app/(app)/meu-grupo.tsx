@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { apiGet, listarMeusGruposLider, type GrupoMeu } from "@/lib/api";
+import { rotaDoGrupo, ehSupervisao } from "@/lib/papelGrupo";
 import { trackEvento } from "@/lib/telemetria";
 import { abrirRota } from "@/lib/navegacao";
 import { BuscadorGrupos } from "./grupos";
@@ -133,6 +134,14 @@ export default function MeuGrupoScreen() {
     return geridos.filter((g) => !jaNaTela.has(g.id));
   }, [geridos, grupos]);
 
+  // Papel por grupo — o card do `/meu-grupo` não traz papel, então ele vem da
+  // MESMA resposta que já alimenta a seção de gestão (uma fonte só).
+  const papelPorId = useMemo(() => {
+    const m = new Map<string, string | null | undefined>();
+    for (const g of geridos || []) m.set(g.id, g.papel);
+    return m;
+  }, [geridos]);
+
   // Inscrições esperando decisão, por grupo. Substitui o `contarPedidosGrupo()`
   // que esta tela chamava a cada foco e cujo resultado NÃO era renderizado em
   // lugar nenhum desde 05/08 — requisição que não virava pixel.
@@ -142,8 +151,13 @@ export default function MeuGrupoScreen() {
     return m;
   }, [geridos]);
 
-  function abrirGestao(id: string, nome: string) {
-    router.navigate({ pathname: "/grupo-membros", params: { id, nome } } as any);
+  // ⚠️ A rota depende do PAPEL, e quem decide o papel é o SERVIDOR (`papel` em
+  // /app/grupos/meus · 07/08). Supervisor vai pra tela enxuta (frequência +
+  // comentário da visita); líder e coordenação seguem na tela completa. Papel
+  // ausente cai na completa — é o comportamento de sempre, então servidor
+  // antigo com bundle novo não esconde nada de ninguém (`lib/papelGrupo.ts`).
+  function abrirGestao(id: string, nome: string, papel?: string | null) {
+    router.navigate({ pathname: rotaDoGrupo(papel), params: { id, nome } } as any);
   }
 
   function falarComLider(g: Grupo) {
@@ -252,7 +266,7 @@ export default function MeuGrupoScreen() {
                           : t("inscrições esperando sua decisão")}
                       </Text>
                     )}
-                    <Button title={t("Gerenciar grupo")} onPress={() => abrirGestao(g.id, g.nome)} />
+                    <Button title={t("Gerenciar grupo")} onPress={() => abrirGestao(g.id, g.nome, papelPorId.get(g.id))} />
                   </>
                 ) : g.lider?.telefone ? (
                   <Button title={`${t("Falar com")} ${g.lider.nome.split(" ")[0]}`} onPress={() => falarComLider(g)} />
@@ -309,7 +323,7 @@ export default function MeuGrupoScreen() {
                 <Pressable
                   key={g.id}
                   style={({ pressed }) => [styles.geridoItem, pressed && { opacity: 0.7 }]}
-                  onPress={() => abrirGestao(g.id, g.nome)}
+                  onPress={() => abrirGestao(g.id, g.nome, g.papel)}
                   accessibilityRole="button"
                   accessibilityLabel={`${t("Gerenciar grupo")}: ${g.nome}`}
                 >
@@ -323,7 +337,11 @@ export default function MeuGrupoScreen() {
                       {g.membros_ativos ? ` · ${g.membros_ativos} ${t("pessoas")}` : ""}
                     </Text>
                   </View>
-                  {pend > 0 && (
+                  {/* ⚠️ Badge só pra quem tem PRA ONDE ir com ela: a tela do
+                      supervisor não tem aba Pedidos (decisão do Marcos), então
+                      um contador ali mandaria a pessoa procurar uma fila que a
+                      tela não mostra. */}
+                  {pend > 0 && !ehSupervisao(g.papel) && (
                     <View style={styles.pedidosBadge}>
                       <Text style={styles.pedidosBadgeTxt}>{pend}</Text>
                     </View>

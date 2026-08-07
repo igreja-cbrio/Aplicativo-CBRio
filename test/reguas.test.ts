@@ -24,6 +24,8 @@ import { topicoVoluntariado, canaisObsoletos } from "@/lib/canalRealtime";
 import {
   mascararTelefoneBR, digitosTelefone, exibirTelefone, limiteDigitos,
 } from "@/lib/telefone";
+import { rotaDoGrupo, ehSupervisao } from "@/lib/papelGrupo";
+import { montarRegistroVisita } from "@/lib/visitaSupervisao";
 import {
   iniciarCadastroNativo, terminarCadastroNativo, lerCadastroNativo,
   assinarCadastroNativo,
@@ -124,7 +126,7 @@ describe("hierarquia · a árvore do `cd ..`", () => {
   it("todo pai é alcançável (a Home ou outra rota do mapa)", () => {
     const rotas = [
       "/meu-grupo", "/voluntariado", "/cuidados", "/devocional", "/menu",
-      "/grupos", "/grupo-detalhe", "/grupo-membros", "/grupo-inscricoes", "/grupo-editar",
+      "/grupos", "/grupo-detalhe", "/grupo-membros", "/grupo-visita", "/grupo-inscricoes", "/grupo-editar",
       "/escala-supervisor", "/anotacoes", "/perfil", "/cartoes", "/familia", "/kids",
       "/kids-filho", "/kids-solicitar-vinculo", "/jornada", "/generosidade",
       "/comprovante-doacoes", "/inscricoes", "/batismo", "/inscricao-batismo", "/next",
@@ -438,6 +440,73 @@ describe("nascimentoBRParaISO", () => {
     expect(nascimentoBRParaISO("1990-05-17", HOJE)).toBeNull();
     expect(nascimentoBRParaISO("17/5/1990", HOJE)).toBeNull();
     expect(nascimentoBRParaISO("", HOJE)).toBeNull();
+  });
+});
+
+// ── Supervisor · qual tela abre e o que o interruptor decide (07/08) ────────
+// Pedido do Marcos: tela enxuta pro supervisor ("não precisa ver estudos,
+// pedidos de aprovação"), com frequência + comentário da visita, e a plataforma
+// entendendo que preencher = visita. Ele aprovou o interruptor "estive presente
+// no encontro" pra o indicador não medir "digitou" em vez de "foi lá".
+describe("papelGrupo", () => {
+  // ⚠️ MUTATION GUARD: medido em 07/08, **7 dos 87 grupos ativos têm
+  // `supervisor_id == lider_id`**. Se supervisor ganhasse a precedência, esses
+  // líderes perderiam Pedidos, Estudos e Editar do PRÓPRIO grupo.
+  it("supervisor vai pra tela enxuta; líder e coordenação, pra completa", () => {
+    expect(rotaDoGrupo("supervisor")).toBe("/grupo-visita");
+    expect(rotaDoGrupo("lider")).toBe("/grupo-membros");
+    expect(rotaDoGrupo("admin")).toBe("/grupo-membros");
+  });
+
+  // ⚠️ MUTATION GUARD: papel ausente tem que cair na tela COMPLETA. Mandar pra
+  // enxuta no escuro ESCONDERIA funcionalidade do líder — bundle novo contra
+  // servidor antigo não pode tirar nada de ninguém.
+  it("papel desconhecido/ausente cai na tela completa", () => {
+    expect(rotaDoGrupo(null)).toBe("/grupo-membros");
+    expect(rotaDoGrupo(undefined)).toBe("/grupo-membros");
+    expect(rotaDoGrupo("nenhum")).toBe("/grupo-membros");
+    expect(rotaDoGrupo("qualquer_coisa_nova")).toBe("/grupo-membros");
+  });
+
+  it("ehSupervisao é estrito", () => {
+    expect(ehSupervisao("supervisor")).toBe(true);
+    expect(ehSupervisao("lider")).toBe(false);
+    expect(ehSupervisao(null)).toBe(false);
+  });
+});
+
+describe("visitaSupervisao", () => {
+  const HOJE = "2026-08-07";
+
+  it("presente ⇒ grava a visita, com o comentário", () => {
+    expect(montarRegistroVisita({ data: "2026-08-07", presente: true, comentario: " tudo bem ", hoje: HOJE }))
+      .toEqual({ gravar: true, corpo: { data_visita: "2026-08-07", observacao: "tudo bem" } });
+    // Comentário vazio não vira string vazia no banco.
+    expect(montarRegistroVisita({ data: "2026-08-01", presente: true, comentario: "   ", hoje: HOJE }))
+      .toEqual({ gravar: true, corpo: { data_visita: "2026-08-01", observacao: null } });
+  });
+
+  // ⚠️⚠️ MUTATION GUARD — este é o teste que dá SENTIDO ao interruptor.
+  // O KPI real (`_kpi_agregar_dado`) conta a visita SEM olhar `status`, então
+  // gravar linha com "não estive presente" faria o indicador voltar a medir
+  // "digitou". Não gravar é o único jeito de o interruptor ter efeito.
+  it("NÃO presente ⇒ NÃO grava visita nenhuma", () => {
+    expect(montarRegistroVisita({ data: "2026-08-07", presente: false, comentario: "só recebi os números", hoje: HOJE }))
+      .toEqual({ gravar: false });
+  });
+
+  it("recusa data futura e data malformada (espelha o servidor)", () => {
+    expect(montarRegistroVisita({ data: "2026-08-08", presente: true, hoje: HOJE }))
+      .toEqual({ erro: "data_futura" });
+    expect(montarRegistroVisita({ data: "07/08/2026", presente: true, hoje: HOJE }))
+      .toEqual({ erro: "data_invalida" });
+    expect(montarRegistroVisita({ data: "", presente: true, hoje: HOJE }))
+      .toEqual({ erro: "data_invalida" });
+  });
+
+  it("hoje vale (o encontro é registrado no mesmo dia)", () => {
+    const r = montarRegistroVisita({ data: HOJE, presente: true, hoje: HOJE });
+    expect("gravar" in r && r.gravar).toBe(true);
   });
 });
 

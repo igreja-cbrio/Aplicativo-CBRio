@@ -42,7 +42,7 @@ const ITENS: Item[] = [
     label: "Grupos",
     icone: "people-outline",
     iconeAtivo: "people",
-    tambemAtivoEm: ["/grupos", "/grupo-detalhe", "/grupo-membros", "/grupo-inscricoes", "/grupo-editar", "/inscricao-grupos"],
+    tambemAtivoEm: ["/grupos", "/grupo-detalhe", "/grupo-membros", "/grupo-visita", "/grupo-inscricoes", "/grupo-editar", "/inscricao-grupos"],
   },
   { rota: "/voluntariado", label: "Servir", icone: "hand-left-outline", iconeAtivo: "hand-left", tambemAtivoEm: ["/escala-supervisor"] },
   { rota: "/cuidados", label: "Cuidados", icone: "heart-outline", iconeAtivo: "heart" },
