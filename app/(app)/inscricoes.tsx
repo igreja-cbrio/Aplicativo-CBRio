@@ -69,6 +69,16 @@ const ITENS: Item[] = [
 
 function StatusBadge({ status, styles, colors, t }: { status: StatusInscricao; styles: ReturnType<typeof makeStyles>; colors: Palette; t: (s: string) => string }) {
   if (status === "nenhum") return null;
+  // ⚠️ `"desconhecido"` = a consulta falhou. Mostrar nada seria o mesmo que
+  // dizer "você não está inscrito" — a mentira que esta mudança tira do app.
+  if (status === "desconhecido") {
+    return (
+      <View style={[styles.badge, { backgroundColor: "rgba(148,163,184,0.16)" }]}>
+        <View style={[styles.badgeDot, { backgroundColor: colors.textMuted }]} />
+        <Text style={[styles.badgeTxt, { color: colors.textMuted }]}>{t("Não carregou")}</Text>
+      </View>
+    );
+  }
   const ativo = status === "ativo";
   return (
     <View style={[styles.badge, { backgroundColor: ativo ? "rgba(63,166,107,0.16)" : "rgba(245,158,11,0.16)" }]}>

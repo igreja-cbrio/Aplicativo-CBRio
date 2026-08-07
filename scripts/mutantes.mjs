@@ -243,6 +243,19 @@ const MUTANTES = [
     de: '  return String(errorCode ?? "").trim() === "DeviceNotRegistered";',
     para: '  return !!String(errorCode ?? "").trim();',
   },
+  // ── "Nao sei" nao pode virar "nao" (07/08 · Onda 4) ──
+  {
+    nome: "falha: erro SEM status virar `servidor` em vez de `conexao`",
+    arq: "lib/falhaDeLeitura.ts",
+    de: "  if (!Number.isFinite(n)) return \"conexao\";",
+    para: "  if (!Number.isFinite(n)) return \"servidor\";",
+  },
+  {
+    nome: "falha: deixar a falha virar CONTEUDO na tela",
+    arq: "lib/falhaDeLeitura.ts",
+    de: "export function podeVirarConteudo(_motivo: MotivoFalha): boolean {",
+    para: "export function podeVirarConteudo(_motivo: MotivoFalha): boolean {\n  return true;",
+  },
   {
     nome: "lote: parar de deduplicar (2 notificacoes no mesmo aparelho)",
     arq: "lib/pushLotes.ts",

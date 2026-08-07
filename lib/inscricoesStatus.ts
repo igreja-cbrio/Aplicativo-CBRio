@@ -3,7 +3,12 @@ import { meuBatismo } from "./batismo";
 import { getVoluntariadoMe, getNextMe } from "./api";
 import { estadoVoluntariado } from "./volStatus";
 
-export type StatusInscricao = "nenhum" | "pendente" | "ativo";
+// ⚠️⚠️ `"desconhecido"` existe porque os 4 catches abaixo devolviam `"nenhum"`
+// (07/08/2026 · Onda 4). Erro de rede, timeout ou 429 viravam a AFIRMAÇÃO
+// "você não está inscrito em nada" no hub de Inscrições — e a pessoa acredita:
+// pode se reinscrever, ou achar que perdeu a vaga.
+// "Não consegui perguntar" NÃO é "a resposta é não". Ver `lib/falhaDeLeitura.ts`.
+export type StatusInscricao = "nenhum" | "pendente" | "ativo" | "desconhecido";
 
 export type InscricoesStatus = {
   batismo: StatusInscricao;
@@ -14,8 +19,9 @@ export type InscricoesStatus = {
 
 /**
  * Estado consolidado das inscrições do membro pra mostrar "já inscrito /
- * pendente" na tela de Inscrições. Cada fonte é independente e tolerante
- * a falha (cai em "nenhum" se a consulta falhar).
+ * pendente" na tela de Inscrições. Cada fonte é independente e, quando falha,
+ * devolve `"desconhecido"` — NUNCA `"nenhum"`, que seria afirmar o contrário
+ * do que não conseguimos ler.
  */
 export async function carregarStatusInscricoes(membroId: string | null): Promise<InscricoesStatus> {
   const [batismo, grupos, next, voluntariado] = await Promise.all([
@@ -34,7 +40,7 @@ async function statusBatismo(membroId: string | null): Promise<StatusInscricao> 
     if (!b) return "nenhum";
     return b.status === "realizado" ? "ativo" : "pendente";
   } catch {
-    return "nenhum";
+    return "desconhecido";
   }
 }
 
@@ -60,7 +66,7 @@ async function statusGrupos(membroId: string | null): Promise<StatusInscricao> {
       .limit(1);
     return pend && pend.length ? "pendente" : "nenhum";
   } catch {
-    return "nenhum";
+    return "desconhecido";
   }
 }
 
@@ -69,7 +75,7 @@ async function statusNext(): Promise<StatusInscricao> {
     const me = await getNextMe();
     return me.inscrito_next ? "ativo" : "nenhum";
   } catch {
-    return "nenhum";
+    return "desconhecido";
   }
 }
 
@@ -83,6 +89,6 @@ async function statusVoluntariado(): Promise<StatusInscricao> {
     // duas verdades sobre o mesmo dado.
     return estadoVoluntariado(me.inscricao.status, me.voluntario_ativo);
   } catch {
-    return "nenhum";
+    return "desconhecido";
   }
 }
