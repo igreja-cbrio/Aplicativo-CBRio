@@ -35,22 +35,48 @@ export function maskDateBR(value: string) {
   return d;
 }
 
-/** Valida uma data no formato DD/MM/AAAA (existente, não futura, ano >= 1900). */
-export function isValidDateBR(value: string) {
+/**
+ * A data EXISTE no calendário? (DD/MM/AAAA, ano >= 1900, 31/02 recusado.)
+ *
+ * ⚠️ NÃO tem regra de passado/futuro — quem decide isso é quem chama, porque a
+ * resposta depende do campo: nascimento não pode ser futuro, e data de
+ * indisponibilidade é futura por definição.
+ */
+export function isDataCalendarioBR(value: string) {
   const m = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (!m) return false;
   const day = +m[1];
   const month = +m[2];
   const year = +m[3];
   if (year < 1900 || month < 1 || month > 12 || day < 1 || day > 31) return false;
+  // Roundtrip pelo Date LOCAL (nunca `new Date("YYYY-MM-DD")`, que é UTC e em
+  // fuso negativo volta um dia): é o que recusa 31/02 e 29/02 fora do bissexto.
   const date = new Date(year, month - 1, day);
-  if (
-    date.getFullYear() !== year ||
-    date.getMonth() !== month - 1 ||
-    date.getDate() !== day
-  )
-    return false;
-  return date.getTime() <= Date.now();
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  );
+}
+
+/**
+ * Data de NASCIMENTO em DD/MM/AAAA: existe no calendário **e não é futura**.
+ *
+ * ⚠️⚠️ O nome é genérico por histórico, mas a régua é de NASCIMENTO — e isso já
+ * custou uma tela: `Disponibilidade.tsx` usava esta função pras datas em que o
+ * voluntário NÃO PODE servir, que são futuras por definição, então **toda data
+ * digitada ali era recusada** ("Data de início inválida"). Ninguém nunca
+ * conseguiu bloquear uma data — era a 2ª razão, independente da RLS, de a
+ * feature nunca ter funcionado.
+ *
+ * Chamadores legítimos (todos data de nascimento): cadastro, perfil,
+ * inscrição de batismo, vínculo do Kids e `nascimentoBRParaISO`.
+ * ⚠️ Campo que aceita futuro usa `isDataCalendarioBR` + a própria regra.
+ */
+export function isValidDateBR(value: string) {
+  if (!isDataCalendarioBR(value)) return false;
+  const m = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)!;
+  return new Date(+m[3], +m[2] - 1, +m[1]).getTime() <= Date.now();
 }
 
 /** Converte DD/MM/AAAA -> AAAA-MM-DD (ISO, para o banco). */
@@ -86,4 +112,47 @@ export function nascimentoBRParaISO(br: string, hoje?: string): string | null {
   // Nascimento no futuro não existe.
   if (iso > limite) return null;
   return iso;
+}
+
+export type ErroJanela =
+  | "de_invalida"
+  | "ate_invalida"
+  | "fim_antes_do_inicio"
+  | "janela_passada";
+
+export type JanelaIndisponibilidade =
+  | { ok: true; de: string; ate: string }
+  | { ok: false; erro: ErroJanela };
+
+/**
+ * Janela de indisponibilidade do voluntário (as datas em que ele NÃO pode
+ * servir) → ISO, ou o motivo da recusa.
+ *
+ * ⚠️ Aqui data futura é o caso NORMAL — foi usar a régua de nascimento
+ * (`isValidDateBR`) que fazia a tela recusar 09/08/2026 e 20/10/2026.
+ *
+ * ⚠️ O corte é pelo FIM, não pelo início: viagem que começou ontem e termina
+ * semana que vem é bloqueio legítimo, e é a escala futura que ela protege.
+ * Janela que já TERMINOU não é recusada por rigor — é que `listarIndisponibilidades`
+ * só exibe `unavailable_to >= hoje`, então ela sumiria da lista assim que
+ * salvasse, e "salvei e desapareceu" se lê como perda de dado.
+ *
+ * @param hoje `YYYY-MM-DD` **em BRT** (`hojeBRT()` de `lib/dataBRT`), injetável
+ *   porque teste não pode depender do relógio da máquina. ⚠️ NÃO passar
+ *   `toISOString().slice(0,10)`: das 21h do Rio em diante o dia UTC já virou e
+ *   a pessoa perderia o direito de bloquear o dia de hoje.
+ */
+export function janelaIndisponibilidadeBR(
+  de: string,
+  ate: string,
+  hoje: string,
+): JanelaIndisponibilidade {
+  if (!isDataCalendarioBR(de)) return { ok: false, erro: "de_invalida" };
+  if (!isDataCalendarioBR(ate)) return { ok: false, erro: "ate_invalida" };
+  const isoDe = dateBRToISO(de);
+  const isoAte = dateBRToISO(ate);
+  if (!isoDe || !isoAte) return { ok: false, erro: "de_invalida" };
+  if (isoAte < isoDe) return { ok: false, erro: "fim_antes_do_inicio" };
+  if (isoAte < hoje) return { ok: false, erro: "janela_passada" };
+  return { ok: true, de: isoDe, ate: isoAte };
 }

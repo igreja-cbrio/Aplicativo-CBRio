@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
-import { apiGet, contarPedidosGrupo } from "@/lib/api";
+import { apiGet, listarMeusGruposLider, type GrupoMeu } from "@/lib/api";
 import { trackEvento } from "@/lib/telemetria";
 import { abrirRota } from "@/lib/navegacao";
 import { BuscadorGrupos } from "./grupos";
@@ -42,7 +42,10 @@ type Grupo = {
 
 const DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
-function quandoEncontro(g: Grupo): string {
+// Serve pros dois formatos (o card do /meu-grupo e a linha do /grupos/meus):
+// os dois trazem dia e horário, e duplicar a formatação faria a mesma tela
+// escrever o mesmo grupo de dois jeitos.
+function quandoEncontro(g: { dia_semana: number | null; horario: string | null }): string {
   const partes: string[] = [];
   if (g.dia_semana != null && DIAS[g.dia_semana]) partes.push(DIAS[g.dia_semana]);
   if (g.horario) partes.push(g.horario.slice(0, 5));
@@ -70,22 +73,41 @@ export default function MeuGrupoScreen() {
    */
   const [aba, setAba] = useState<"meus" | "encontrar">("meus");
   const [grupos, setGrupos] = useState<Grupo[] | null>(null);
-  const [pedidosPend, setPedidosPend] = useState(0);
+  /**
+   * ⚠️⚠️ O SUPERVISOR NÃO VIA OS GRUPOS DELE (07/08/2026 · relato do Marcos:
+   * "me coloquei como supervisor mas não apareceu no aplicativo").
+   *
+   * `GET /app/meu-grupo` monta a lista de dois lugares só — o roster
+   * (`mem_grupo_membros`) e `mem_grupos.lider_id`. **`supervisor_id` não entra
+   * em lugar nenhum daquele handler**, embora o resto do domínio já trate
+   * supervisor como gestor pleno (é `gruposGeridos` = liderados ∪ supervisionados
+   * que autoriza `/grupos/:id/membros`, os pedidos e o `PUT` da Onda 1b).
+   * Medido em 07/08: **79 dos 87 grupos ativos com supervisor eram invisíveis
+   * pro próprio supervisor**, atingindo 14 pessoas — e como não havia NENHUM
+   * outro caminho de navegação até `/grupo-membros`, o conserto do save de
+   * ontem era inalcançável pela tela.
+   *
+   * `GET /app/grupos/meus` já devolve liderados ∪ supervisionados, com
+   * contagens. Consumir ele aqui resolve sem tocar no servidor (ou seja, sai
+   * por OTA) e sem transformar esta tela — que é de PERTENCIMENTO ("meu grupo
+   * de conexão", com material e "falar com o líder") — num painel de gestão:
+   * o que vem daqui fica numa seção própria, enxuta.
+   */
+  const [geridos, setGeridos] = useState<GrupoMeu[] | null>(null);
   // ⚠️ Falha de rede NÃO pode virar "você não está em um grupo" (06/08/2026).
   const [erroCarga, setErroCarga] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
+    // ⚠️ BEST-EFFORT e em separado: falha da lista de GESTÃO não pode virar
+    // "não conseguimos carregar seus grupos" pra quem só quer ver o próprio
+    // grupo. Erro aqui = seção some, o resto da tela fica de pé.
+    listarMeusGruposLider()
+      .then((r) => setGeridos(r.grupos || []))
+      .catch(() => setGeridos([]));
     try {
       const r = await apiGet<{ grupos: Grupo[] }>("/app/meu-grupo");
       setErroCarga(null);
-      const lista = r.grupos || [];
-      setGrupos(lista);
-      // Se lidera algum grupo, mostra quantas inscrições estão aguardando.
-      if (lista.some((g) => g.funcao === "lider")) {
-        contarPedidosGrupo().then(setPedidosPend).catch(() => setPedidosPend(0));
-      } else {
-        setPedidosPend(0);
-      }
+      setGrupos(r.grupos || []);
     } catch (e) {
       // ⚠️⚠️ Aqui era `setGrupos([])` — offline/401/500 viravam a MESMA tela de
       // "Você ainda não está em um grupo de conexão.", com um botão convidando
@@ -100,6 +122,29 @@ export default function MeuGrupoScreen() {
   // Papel de GESTÃO no grupo (vem de /app/meu-grupo: 'lider' quando o
   // mem_grupos.lider_id é o membro logado, mesmo sem linha no roster).
   const gerencia = (g: Grupo) => g.funcao === "lider" || g.funcao === "co_lider";
+
+  // Grupos que ele gerencia e que NÃO viraram card acima — na prática, os
+  // SUPERVISIONADOS (os liderados já vêm do /app/meu-grupo por `lider_id`).
+  // ⚠️ A dedup por id NÃO é cosmética: quem lidera E supervisiona o mesmo
+  // grupo, ou está no roster dele, apareceria duas vezes na mesma tela.
+  const outrosGeridos = useMemo(() => {
+    if (!geridos) return [];
+    const jaNaTela = new Set((grupos || []).map((g) => g.id));
+    return geridos.filter((g) => !jaNaTela.has(g.id));
+  }, [geridos, grupos]);
+
+  // Inscrições esperando decisão, por grupo. Substitui o `contarPedidosGrupo()`
+  // que esta tela chamava a cada foco e cujo resultado NÃO era renderizado em
+  // lugar nenhum desde 05/08 — requisição que não virava pixel.
+  const pendentesPorId = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const g of geridos || []) m.set(g.id, g.pendentes || 0);
+    return m;
+  }, [geridos]);
+
+  function abrirGestao(id: string, nome: string) {
+    router.navigate({ pathname: "/grupo-membros", params: { id, nome } } as any);
+  }
 
   function falarComLider(g: Grupo) {
     const tel = (g.lider?.telefone || "").replace(/\D/g, "");
@@ -199,10 +244,15 @@ export default function MeuGrupoScreen() {
                     <Text style={styles.liderInfo}>
                       {g.funcao === "co_lider" ? t("Você é co-líder deste grupo.") : t("Você lidera este grupo.")}
                     </Text>
-                    <Button
-                      title={t("Gerenciar grupo")}
-                      onPress={() => router.navigate({ pathname: "/grupo-membros", params: { id: g.id, nome: g.nome } } as any)}
-                    />
+                    {(pendentesPorId.get(g.id) || 0) > 0 && (
+                      <Text style={styles.pendentesAviso}>
+                        {pendentesPorId.get(g.id)}{" "}
+                        {pendentesPorId.get(g.id) === 1
+                          ? t("inscrição esperando sua decisão")
+                          : t("inscrições esperando sua decisão")}
+                      </Text>
+                    )}
+                    <Button title={t("Gerenciar grupo")} onPress={() => abrirGestao(g.id, g.nome)} />
                   </>
                 ) : g.lider?.telefone ? (
                   <Button title={`${t("Falar com")} ${g.lider.nome.split(" ")[0]}`} onPress={() => falarComLider(g)} />
@@ -241,6 +291,48 @@ export default function MeuGrupoScreen() {
               </View>
             </View>
           ))
+        )}
+
+        {/* Grupos que ele GERENCIA sem ser membro — o caso do supervisor.
+            ⚠️ O rótulo diz "gerencia", não "supervisiona": `/app/grupos/meus`
+            devolve liderados ∪ supervisionados e NÃO diz qual é qual, então
+            afirmar o papel aqui seria a tela inventar o que o payload não
+            carrega. É seção separada de propósito — estes não têm material,
+            próximo encontro nem "falar com o líder"; são trabalho, não
+            pertencimento. */}
+        {!erroCarga && outrosGeridos.length > 0 && (
+          <View style={styles.geridosBloco}>
+            <Text style={styles.geridosTitulo}>{t("Grupos que você gerencia")}</Text>
+            {outrosGeridos.map((g) => {
+              const pend = g.pendentes || 0;
+              return (
+                <Pressable
+                  key={g.id}
+                  style={({ pressed }) => [styles.geridoItem, pressed && { opacity: 0.7 }]}
+                  onPress={() => abrirGestao(g.id, g.nome)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t("Gerenciar grupo")}: ${g.nome}`}
+                >
+                  <View style={styles.geridoIcon}>
+                    <Ionicons name="shield-checkmark-outline" size={18} color={colors.brandMid} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.geridoNome} numberOfLines={1}>{g.nome}</Text>
+                    <Text style={styles.geridoSub} numberOfLines={1}>
+                      {quandoEncontro(g)}
+                      {g.membros_ativos ? ` · ${g.membros_ativos} ${t("pessoas")}` : ""}
+                    </Text>
+                  </View>
+                  {pend > 0 && (
+                    <View style={styles.pedidosBadge}>
+                      <Text style={styles.pedidosBadgeTxt}>{pend}</Text>
+                    </View>
+                  )}
+                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                </Pressable>
+              );
+            })}
+          </View>
         )}
 
         {/* ⚠️ Esta tela é a ÚNICA porta de Grupos (pedido do Marcos, ponto 6:
@@ -313,4 +405,27 @@ const makeStyles = (colors: Palette) =>
     pedidosSub: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 2 },
     pedidosBadge: { minWidth: 24, height: 24, borderRadius: 12, paddingHorizontal: 6, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
     pedidosBadgeTxt: { color: "#fff", fontSize: font.size.sm, fontWeight: "800" },
+    pendentesAviso: { color: colors.warning, fontSize: font.size.sm, fontWeight: "700" },
+    geridosBloco: { gap: spacing.xs },
+    geridosTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800", marginBottom: 2 },
+    geridoItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      borderRadius: radius.lg,
+    },
+    geridoIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.glass,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    geridoNome: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
+    geridoSub: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 2 },
   });

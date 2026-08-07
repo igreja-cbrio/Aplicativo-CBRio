@@ -52,7 +52,14 @@ export async function apiGet<T>(path: string, opts?: { auth?: boolean }): Promis
   const headers: Record<string, string> = { Accept: "application/json" };
   if (opts?.auth !== false) Object.assign(headers, await authHeaders());
   const resp = await fetch(`${BASE}${path}`, { headers });
-  if (!resp.ok) throw new Error(await parseErro(resp));
+  if (!resp.ok) {
+    // ⚠️ `apiGet` era o ÚNICO dos quatro verbos que lançava SEM o status
+    // (post/patch/put/delete já anexavam) — quem quisesse distinguir 401 de 429
+    // de 500 numa leitura só tinha a string da mensagem pra olhar.
+    const err = new Error(await parseErro(resp)) as Error & { status?: number };
+    err.status = resp.status;
+    throw err;
+  }
   return resp.json();
 }
 
