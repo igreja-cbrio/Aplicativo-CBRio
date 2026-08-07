@@ -21,9 +21,10 @@ import { CalendarioBR } from "@/components/ui/CalendarioBR";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import {
-  getGrupoRoster, getEncontrosGrupo, registrarEncontroGrupo,
+  getGrupoRoster, getEncontrosGrupo, registrarEncontroGrupo, getEncontroDetalhe,
   listarVisitasGrupo, registrarVisitaGrupo,
   type GrupoRoster, type GrupoEncontro, type VisitaSupervisao,
+  type GrupoEncontroDetalhe,
 } from "@/lib/api";
 import { montarRegistroVisita } from "@/lib/visitaSupervisao";
 import { subirUmNivel } from "@/lib/hierarquia";
@@ -97,6 +98,11 @@ export default function GrupoVisitaScreen() {
   const [aberto, setAberto] = useState(false);
   const [dataBR, setDataBR] = useState(isoParaBR(hojeBRT()));
   const [calendario, setCalendario] = useState(false);
+  // Detalhe do encontro aberto (pedido do Marcos: "um quadradinho clicável… aí
+  // vejo os comentários e a presença em um lugar só").
+  const [detalhe, setDetalhe] = useState<GrupoEncontroDetalhe | null>(null);
+  const [detalheErro, setDetalheErro] = useState<string | null>(null);
+  const [carregandoDetalhe, setCarregandoDetalhe] = useState(false);
   const [ausentes, setAusentes] = useState<Set<string>>(new Set());
   const [tema, setTema] = useState("");
   // ⚠️ LIGADO por padrão: o caso comum é o supervisor estar no encontro. Foi
@@ -139,6 +145,28 @@ export default function GrupoVisitaScreen() {
     () => membrosAtivos.filter((m) => m.membro_id && !ausentes.has(m.membro_id)),
     [membrosAtivos, ausentes],
   );
+
+  // Visita MINHA daquele dia — é o que junta os dois registros num lugar só.
+  const visitaDoDia = useCallback(
+    (dataISO: string) => (visitas || []).find((v) => v.data_visita === dataISO) || null,
+    [visitas],
+  );
+
+  async function abrirEncontro(e: GrupoEncontro) {
+    setDetalhe(null);
+    setDetalheErro(null);
+    setCarregandoDetalhe(true);
+    try {
+      const r = await getEncontroDetalhe(grupoId, e.id);
+      setDetalhe(r.encontro);
+    } catch (err) {
+      // Sem detalhe, mostramos o que a LISTA já tinha — melhor que modal vazio.
+      setDetalhe({ ...e, presentes: [] });
+      setDetalheErro(t("Não conseguimos carregar quem esteve presente."));
+    } finally {
+      setCarregandoDetalhe(false);
+    }
+  }
 
   function abrirForm() {
     setDataBR(isoParaBR(hojeBRT()));
@@ -310,37 +338,58 @@ export default function GrupoVisitaScreen() {
           <>
             {encontros === null ? (
               <Text style={styles.vazio}>{t("Não conseguimos carregar os encontros.")}</Text>
-            ) : encontros.length === 0 ? (
+            ) : encontros.length === 0 && (visitas || []).length === 0 ? (
               <Text style={styles.vazio}>{t("Nenhum encontro registrado ainda.")}</Text>
             ) : (
-              (encontros || []).map((e) => (
-                <View key={e.id} style={styles.linha}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.linhaTitulo}>{fmtIso(e.data)}</Text>
-                    <Text style={styles.linhaSub}>
-                      {e.presentes} {e.presentes === 1 ? t("presente") : t("presentes")}
-                      {e.tema ? ` · ${e.tema}` : ""}
-                    </Text>
-                    {e.registrado_por_nome ? (
-                      <Text style={styles.linhaAutor}>{t("Registrado por")}: {e.registrado_por_nome}</Text>
-                    ) : null}
-                  </View>
-                </View>
-              ))
-            )}
+              <>
+                {encontros.map((e) => {
+                  const v = visitaDoDia(e.data);
+                  return (
+                    <Pressable
+                      key={e.id}
+                      onPress={() => abrirEncontro(e)}
+                      style={({ pressed }) => [styles.linha, pressed && { opacity: 0.7 }]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t("Abrir encontro de")} ${fmtIso(e.data)}`}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.linhaTitulo}>{fmtIso(e.data)}</Text>
+                        <Text style={styles.linhaSub}>
+                          {e.presentes} {e.presentes === 1 ? t("presente") : t("presentes")}
+                          {e.tema ? ` · ${e.tema}` : ""}
+                        </Text>
+                        {/* Selo do que ESTE supervisor fez naquele dia — é o que
+                            substitui a seção "Suas visitas" que existia à parte. */}
+                        {v ? (
+                          <View style={styles.selo}>
+                            <Ionicons name="shield-checkmark" size={12} color={colors.brandMid} />
+                            <Text style={styles.seloTxt}>{t("Você visitou")}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                    </Pressable>
+                  );
+                })}
 
-            {(visitas || []).length > 0 && (
-              <View style={{ marginTop: spacing.lg, gap: spacing.xs }}>
-                <Text style={styles.secaoTitulo}>{t("Suas visitas")}</Text>
-                {(visitas || []).map((v) => (
-                  <View key={v.id} style={styles.linha}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.linhaTitulo}>{fmtIso(v.data_visita)}</Text>
-                      {v.observacao ? <Text style={styles.linhaSub}>{v.observacao}</Text> : null}
+                {/* ⚠️ Visita SEM encontro na mesma data não pode sumir: ela existe
+                    quando o encontro daquele dia foi apagado depois (a UNIQUE de
+                    data não é parcial, então ele some da lista e a visita fica).
+                    Perder o comentário em silêncio seria o pior desfecho. */}
+                {(visitas || [])
+                  .filter((v) => !(encontros || []).some((e) => e.data === v.data_visita))
+                  .map((v) => (
+                    <View key={v.id} style={styles.linha}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.linhaTitulo}>{fmtIso(v.data_visita)}</Text>
+                        <Text style={styles.linhaSub}>
+                          {t("Visita registrada (sem frequência neste dia)")}
+                        </Text>
+                        {v.observacao ? <Text style={styles.linhaSub}>{v.observacao}</Text> : null}
+                      </View>
                     </View>
-                  </View>
-                ))}
-              </View>
+                  ))}
+              </>
             )}
           </>
         ) : (
@@ -489,6 +538,95 @@ export default function GrupoVisitaScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* ── Encontro ABERTO: presença + os DOIS comentários num lugar só ────
+          Pedido do Marcos (07/08): "não separaria os encontros de Suas visitas;
+          faz um quadradinho clicável do encontro, aí quando eu clico vejo os
+          comentários e a presença em um lugar só". */}
+      <Modal
+        visible={!!detalhe || carregandoDetalhe}
+        transparent
+        animationType="fade"
+        onRequestClose={() => { setDetalhe(null); setDetalheErro(null); }}
+        statusBarTranslucent
+      >
+        <Pressable style={styles.modalFundo} onPress={() => { setDetalhe(null); setDetalheErro(null); }}>
+          <Pressable style={styles.modalCartao} onPress={() => {}}>
+            {carregandoDetalhe && !detalhe ? (
+              <ActivityIndicator color={colors.brandMid} style={{ paddingVertical: spacing.xl }} />
+            ) : detalhe ? (
+              <>
+                <View style={styles.modalTopo}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.titulo}>{fmtIso(detalhe.data)}</Text>
+                    {detalhe.tema ? <Text style={styles.sub}>{detalhe.tema}</Text> : null}
+                  </View>
+                  <Pressable
+                    onPress={() => { setDetalhe(null); setDetalheErro(null); }}
+                    hitSlop={10}
+                    accessibilityLabel={t("Fechar")}
+                  >
+                    <Ionicons name="close" size={22} color={colors.textMuted} />
+                  </Pressable>
+                </View>
+
+                <ScrollView contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.sm }}>
+                  <View style={{ gap: spacing.xs }}>
+                    <Text style={styles.secaoTitulo}>
+                      {t("Presença")} — {detalhe.presentes.length}
+                    </Text>
+                    {detalheErro ? (
+                      <Text style={styles.dica}>{detalheErro}</Text>
+                    ) : detalhe.presentes.length === 0 ? (
+                      <Text style={styles.dica}>
+                        {t("Ninguém foi marcado como presente neste encontro.")}
+                      </Text>
+                    ) : (
+                      detalhe.presentes.map((pp) => (
+                        <View key={pp.membro_id || pp.nome} style={styles.presencaLinha}>
+                          <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+                          <Text style={styles.presencaNome}>{pp.nome}</Text>
+                        </View>
+                      ))
+                    )}
+                    {/* ⚠️ Não listamos AUSENTES: o banco não guarda quem faltou
+                        (só quem esteve), e deduzir do roster de hoje afirmaria
+                        ausência de quem talvez nem estivesse no grupo na época. */}
+                  </View>
+
+                  {detalhe.observacoes ? (
+                    <View style={{ gap: spacing.xs }}>
+                      <Text style={styles.secaoTitulo}>{t("Comentário do encontro")}</Text>
+                      <Text style={styles.comentario}>{detalhe.observacoes}</Text>
+                    </View>
+                  ) : null}
+
+                  {(() => {
+                    const v = visitaDoDia(detalhe.data);
+                    if (!v) return null;
+                    return (
+                      <View style={{ gap: spacing.xs }}>
+                        <Text style={styles.secaoTitulo}>{t("Sua visita")}</Text>
+                        {v.observacao ? (
+                          <Text style={styles.comentario}>{v.observacao}</Text>
+                        ) : (
+                          <Text style={styles.dica}>{t("Visita registrada, sem comentário.")}</Text>
+                        )}
+                      </View>
+                    );
+                  })()}
+
+                  {detalhe.registrado_por_nome ? (
+                    <Text style={styles.linhaAutor}>
+                      {t("Registrado por")}: {detalhe.registrado_por_nome}
+                    </Text>
+                  ) : null}
+                </ScrollView>
+              </>
+            ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <CalendarioBR
         visivel={calendario}
         titulo={t("Data do encontro")}
@@ -603,4 +741,9 @@ const makeStyles = (colors: Palette) =>
     switchTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
     botoes: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
     erro: { color: colors.danger, fontSize: font.size.sm },
+    selo: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
+    seloTxt: { color: colors.brandMid, fontSize: 12, fontWeight: "700" },
+    presencaLinha: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 3 },
+    presencaNome: { color: colors.text, fontSize: font.size.md },
+    comentario: { color: colors.text, fontSize: font.size.md, lineHeight: 22 },
   });
