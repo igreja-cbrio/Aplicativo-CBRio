@@ -166,6 +166,8 @@ export default function DevocionalScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
         contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(false); }} tintColor={colors.primary} />
         }

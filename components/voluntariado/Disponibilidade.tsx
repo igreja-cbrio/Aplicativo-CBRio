@@ -4,7 +4,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -220,7 +219,7 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
       >
         <KeyboardAvoidingView
           style={styles.modalFundo}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior="padding"
         >
           <View style={styles.modalCartao}>
             <View style={styles.topo}>
@@ -231,10 +230,10 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
             </View>
 
             <ScrollView
+              automaticallyAdjustKeyboardInsets
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={styles.form}
-              showsVerticalScrollIndicator={false}
-            >
+              showsVerticalScrollIndicator={false}>
               <View style={styles.row2}>
                 <CampoData
                   label={t("De")}

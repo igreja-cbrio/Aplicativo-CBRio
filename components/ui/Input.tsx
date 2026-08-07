@@ -25,12 +25,24 @@ export function Input({ label, secure, ...rest }: Props) {
   return (
     <View style={styles.wrapper}>
       <Text style={styles.label}>{label}</Text>
-      <View style={styles.field}>
+      {/*
+        ⚠️⚠️ CAMPO `multiline` ERA UMA LINHA SÓ (07/08/2026). O estilo fixava
+        `height: 52` e o container centralizava verticalmente, então TODO
+        textarea do app — comentário da visita, motivo da saída, pedido de
+        oração, "mande uma mensagem", observação do batismo — mostrava uma
+        única linha do que a pessoa escrevia, com o texto no meio da caixa.
+        É a mesma queixa de "não dá pra ver o que estou digitando", por outra
+        causa que não o teclado.
+      */}
+      <View style={[styles.field, rest.multiline && styles.fieldMultiline]}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, rest.multiline && styles.inputMultiline]}
           placeholderTextColor={colors.textMuted}
           secureTextEntry={hidden}
           autoCapitalize="none"
+          // `top` é obrigatório no Android: sem ele o texto começa no MEIO da
+          // caixa alta e some conforme cresce.
+          textAlignVertical={rest.multiline ? "top" : undefined}
           {...rest}
         />
         {secure && (
@@ -60,12 +72,16 @@ const makeStyles = (colors: Palette) =>
       borderColor: colors.border,
       paddingHorizontal: spacing.md,
     },
+    fieldMultiline: { alignItems: "flex-start", paddingVertical: spacing.sm },
     input: {
       flex: 1,
       height: 52,
       color: colors.text,
       fontSize: font.size.md,
     },
+    // `minHeight` em vez de `height`: a caixa nasce com ~4 linhas e cresce com
+    // o texto, em vez de travar em 52px.
+    inputMultiline: { height: undefined, minHeight: 96, paddingTop: 0 },
     toggle: {
       color: colors.primary,
       fontSize: font.size.sm,

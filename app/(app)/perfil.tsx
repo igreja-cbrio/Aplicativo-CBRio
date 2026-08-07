@@ -4,7 +4,6 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -240,12 +239,12 @@ export default function PerfilScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior="padding"
       >
         <ScrollView
-          contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
-        >
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={styles.content}>
           <View style={styles.topRow}>
             <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
               <Ionicons name="chevron-back" size={24} color={colors.text} />

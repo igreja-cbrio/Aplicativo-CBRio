@@ -4,7 +4,6 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -208,10 +207,12 @@ export default function GrupoEditarScreen() {
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior="padding"
         style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
               <Ionicons name="chevron-back" size={24} color={colors.text} />
