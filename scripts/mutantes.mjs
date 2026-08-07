@@ -218,6 +218,37 @@ const MUTANTES = [
     de: '  if (texto.includes("projectid") || texto.includes("project id")) return "sem_project_id";',
     para: '  if (texto.includes("projectid") || texto.includes("project id")) return "sem_project_id";\n  return "permissao";',
   },
+  // ── Lote de push (07/08) · 1.801 de 1.820 tickets recusados, 98,9% ──
+  {
+    nome: "lote: voltar a misturar apps Expo no mesmo request",
+    arq: "lib/pushLotes.ts",
+    de: "    const proj = projetoDe(t);",
+    para: '    const proj = "todos";',
+  },
+  {
+    nome: "lote: juntar os DESCONHECIDOS num lote so (reproduz o bug)",
+    arq: "lib/pushLotes.ts",
+    de: "  for (const t of desconhecidos) lotes.push([t]);",
+    para: "  if (desconhecidos.length) lotes.push(desconhecidos);",
+  },
+  {
+    nome: "lote: ignorar o teto de 100 por request",
+    arq: "lib/pushLotes.ts",
+    de: "    for (let i = 0; i < lista.length; i += teto) lotes.push(lista.slice(i, i + teto));",
+    para: "    lotes.push(lista);",
+  },
+  {
+    nome: "lote: apagar token por QUALQUER erro (zeraria a tabela)",
+    arq: "lib/pushLotes.ts",
+    de: '  return String(errorCode ?? "").trim() === "DeviceNotRegistered";',
+    para: '  return !!String(errorCode ?? "").trim();',
+  },
+  {
+    nome: "lote: parar de deduplicar (2 notificacoes no mesmo aparelho)",
+    arq: "lib/pushLotes.ts",
+    de: "    if (!tok || vistos.has(tok)) continue;",
+    para: "    if (!tok) continue;",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

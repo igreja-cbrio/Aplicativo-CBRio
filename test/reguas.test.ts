@@ -17,6 +17,7 @@ import { fichaCompleta, faltaNaFicha, podeInscrever } from "@/lib/ficha";
 import { montarPayloadInscricao, extrasFaltando } from "@/lib/inscricaoPayload";
 import { tipoDaCapa, arquivoDaCapa, capaCabe, MAX_CAPA_BYTES } from "@/lib/capaGrupo";
 import { motivoDaFalhaPush, mensagemDoErro } from "@/lib/motivoPush";
+import { lotesDePush, tokenMorreu, MAX_POR_REQUEST } from "@/lib/pushLotes";
 import {
   estadoDoEncontro, ultimaOcorrencia, proximaOcorrencia,
   dataLonga, quandoCurto, distanciaEmTexto,
@@ -885,5 +886,93 @@ describe("motivoDaFalhaPush · o silêncio virou número", () => {
     expect(mensagemDoErro(null)).toBe("");
     expect(mensagemDoErro(undefined)).toBe("");
     expect(mensagemDoErro({ message: 42 })).toBe("[object Object]");
+  });
+});
+
+// ── Como partir o lote de push (07/08/2026) ─────────────────────────────────
+// O achado: `system_mobile_push_tickets` tem 1.820 tickets, ZERO com
+// `ticket_status='ok'` e 1.773 `PUSH_TOO_MANY_EXPERIENCE_IDS`. A Expo recusa o
+// REQUEST INTEIRO quando tokens de projetos diferentes vão juntos — um token do
+// app Staff derrubava a entrega dos 30 tokens iOS válidos do app de membros.
+// Nenhuma notificação push jamais chegou a ninguém.
+describe("lotesDePush · nunca misturar projeto no mesmo request", () => {
+  const T = (token: string, projeto_id?: string | null) => ({ token, projeto_id });
+
+  it("⚠️ MUTATION GUARD · projetos diferentes NUNCA no mesmo lote", () => {
+    // É o bug inteiro, numa linha. Se este teste passar com a régua errada,
+    // a régua não vale nada.
+    const lotes = lotesDePush([T("a", "membros"), T("b", "staff"), T("c", "membros")]);
+    for (const lote of lotes) {
+      expect(new Set(lote.map((t) => t.projeto_id)).size).toBe(1);
+    }
+    expect(lotes.length).toBe(2);
+  });
+
+  it("⚠️ MUTATION GUARD · token de projeto DESCONHECIDO vai SOZINHO", () => {
+    // Os 30 tokens de hoje têm projeto NULL. Agrupá-los reproduziria o bug com
+    // outro nome — são justamente os de origem ambígua.
+    const lotes = lotesDePush([T("a", null), T("b"), T("c", "   ")]);
+    expect(lotes).toEqual([[T("a", null)], [{ token: "b" }], [T("c", "   ")]]);
+    expect(lotes.every((l) => l.length === 1)).toBe(true);
+  });
+
+  it("respeita o teto de 100 por request dentro do MESMO projeto", () => {
+    const muitos = Array.from({ length: 250 }, (_, i) => T(`t${i}`, "membros"));
+    const lotes = lotesDePush(muitos);
+    expect(lotes.map((l) => l.length)).toEqual([100, 100, 50]);
+    expect(MAX_POR_REQUEST).toBe(100);
+  });
+
+  it("mistura real: conhecidos agrupados, desconhecidos um a um", () => {
+    const lotes = lotesDePush([
+      T("m1", "membros"), T("velho1", null), T("s1", "staff"),
+      T("m2", "membros"), T("velho2", null),
+    ]);
+    // 1 lote de membros (2) + 1 de staff (1) + 2 sozinhos = 4
+    expect(lotes.length).toBe(4);
+    expect(lotes[0].map((t) => t.token)).toEqual(["m1", "m2"]);
+    expect(lotes[1].map((t) => t.token)).toEqual(["s1"]);
+    expect(lotes.slice(2).every((l) => l.length === 1)).toBe(true);
+  });
+
+  it("deduplica por token (o mesmo aparelho não recebe 2 notificações)", () => {
+    const lotes = lotesDePush([T("a", "m"), T("a", "m"), T(" a ", "m"), T("b", "m")]);
+    expect(lotes).toEqual([[T("a", "m"), T("b", "m")]]);
+  });
+
+  it("ignora token vazio e entrada degenerada sem explodir", () => {
+    expect(lotesDePush([])).toEqual([]);
+    expect(lotesDePush(null)).toEqual([]);
+    expect(lotesDePush(undefined)).toEqual([]);
+    expect(lotesDePush([T(""), T("   ")])).toEqual([]);
+    expect(lotesDePush([T("a", "m")], 0)).toEqual([[T("a", "m")]]);
+  });
+
+  it("é determinístico na ordem (projetos ordenados)", () => {
+    const a = lotesDePush([T("x", "zeta"), T("y", "alfa")]);
+    const b = lotesDePush([T("y", "alfa"), T("x", "zeta")]);
+    expect(a).toEqual(b);
+    expect(a[0][0].projeto_id).toBe("alfa");
+  });
+});
+
+describe("tokenMorreu · só apaga o que é realmente permanente", () => {
+  it("⚠️ MUTATION GUARD · NÃO apaga por erro de LOTE", () => {
+    // Apagar por `PUSH_TOO_MANY_EXPERIENCE_IDS` teria zerado a tabela: 1.773
+    // tickets com esse código, e a culpa era do request, não do token. 30
+    // pessoas perderiam push por um defeito que não era delas.
+    expect(tokenMorreu("PUSH_TOO_MANY_EXPERIENCE_IDS")).toBe(false);
+    expect(tokenMorreu("MessageRateExceeded")).toBe(false);
+    expect(tokenMorreu("MessageTooBig")).toBe(false);
+    expect(tokenMorreu("HTTP_500")).toBe(false);
+    expect(tokenMorreu("NETWORK_ERROR")).toBe(false);
+    expect(tokenMorreu(null)).toBe(false);
+    expect(tokenMorreu(undefined)).toBe(false);
+    expect(tokenMorreu("")).toBe(false);
+  });
+
+  it("apaga o token de app desinstalado", () => {
+    expect(tokenMorreu("DeviceNotRegistered")).toBe(true);
+    expect(tokenMorreu("  DeviceNotRegistered  ")).toBe(true);
   });
 });
