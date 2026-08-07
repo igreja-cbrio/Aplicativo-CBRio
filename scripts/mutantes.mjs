@@ -186,6 +186,38 @@ const MUTANTES = [
     de: "  }, TETO_MS);",
     para: "  }, 100000000);",
   },
+  // ── Capa do grupo (07/08) · a capa nunca gravou pra ninguém: 0 de 278 ──
+  {
+    nome: "capa: CHUTAR image/jpeg quando o formato e desconhecido",
+    arq: "lib/capaGrupo.ts",
+    de: '  return (ext && POR_EXTENSAO[ext]) || null;',
+    para: '  return (ext && POR_EXTENSAO[ext]) || "image/jpeg";',
+  },
+  {
+    nome: "capa: voltar a derivar o formato da URI (o `content://` do Android)",
+    arq: "lib/capaGrupo.ts",
+    de: '  if ((TIPOS_CAPA as readonly string[]).includes(m)) return m as TipoCapa;',
+    para: '  if ((TIPOS_CAPA as readonly string[]).includes("nada")) return m as TipoCapa;',
+  },
+  {
+    nome: "capa: recusar envio quando o tamanho e desconhecido (fail-closed)",
+    arq: "lib/capaGrupo.ts",
+    de: '  if (typeof bytes !== "number" || !Number.isFinite(bytes) || bytes <= 0) return true;',
+    para: '  if (typeof bytes !== "number" || !Number.isFinite(bytes) || bytes <= 0) return false;',
+  },
+  // ── Push (07/08) · zero token no Android, escondido por um console.log ──
+  {
+    nome: "push: conferir permissao ANTES de credencial (o achado se disfarca)",
+    arq: "lib/motivoPush.ts",
+    de: '  if (texto.includes("fcm-credentials") || texto.includes("firebase")) return "credencial_fcm";',
+    para: '  if (texto.includes("permission")) return "permissao"; if (texto.includes("firebase")) return "credencial_fcm";',
+  },
+  {
+    nome: "push: falha desconhecida virar `permissao` em vez de `outro`",
+    arq: "lib/motivoPush.ts",
+    de: '  if (texto.includes("projectid") || texto.includes("project id")) return "sem_project_id";',
+    para: '  if (texto.includes("projectid") || texto.includes("project id")) return "sem_project_id";\n  return "permissao";',
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

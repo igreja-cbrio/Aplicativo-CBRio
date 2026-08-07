@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:mutantes": "node scripts/mutantes.mjs",
-    "verificar": "npm run typecheck && npm run test"
+    "i18n": "node scripts/i18n-cobertura.mjs",
+    "verificar": "npm run typecheck && npm run test && npm run i18n"
   },
   "dependencies": {
     "@bacons/apple-targets": "^4.0.7",

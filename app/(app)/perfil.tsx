@@ -19,6 +19,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { useMembro } from "@/lib/useMembro";
 import { supabase } from "@/lib/supabase";
@@ -44,6 +45,7 @@ export default function PerfilScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const t = useT();
 
   const [name, setName] = useState("");
   const [cpf, setCpf] = useState("");
@@ -102,8 +104,8 @@ export default function PerfilScreen() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Alert.alert(
-        "Permissão necessária",
-        "Permita o acesso às fotos para escolher um avatar."
+        t("Permissão necessária"),
+        t("Permita o acesso às fotos para escolher um avatar.")
       );
       return;
     }
@@ -135,14 +137,14 @@ export default function PerfilScreen() {
       await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id);
       setAvatarUrl(publicUrl);
       reloadMembro(); // atualiza o avatar compartilhado (Home, Menu, etc.)
-      setMsg({ type: "ok", text: "Foto de perfil atualizada." });
+      setMsg({ type: "ok", text: t("Foto de perfil atualizada.") });
     } catch (e) {
       setMsg({
         type: "err",
         text:
           e instanceof Error
-            ? `Falha ao enviar a foto: ${e.message}`
-            : "Falha ao enviar a foto.",
+            ? `${t("Falha ao enviar a foto")}: ${e.message}`
+            : t("Falha ao enviar a foto."),
       });
     } finally {
       setUploading(false);
@@ -152,15 +154,15 @@ export default function PerfilScreen() {
   async function handleSave() {
     setMsg(null);
     if (!user?.id) {
-      setMsg({ type: "err", text: "Faça login para editar o perfil." });
+      setMsg({ type: "err", text: t("Faça login para editar o perfil.") });
       return;
     }
     if (!name.trim()) {
-      setMsg({ type: "err", text: "Informe seu nome completo." });
+      setMsg({ type: "err", text: t("Informe seu nome completo.") });
       return;
     }
     if (nascimento && !isValidDateBR(nascimento)) {
-      setMsg({ type: "err", text: "Data de nascimento inválida (DD/MM/AAAA)." });
+      setMsg({ type: "err", text: t("Data de nascimento inválida (DD/MM/AAAA).") });
       return;
     }
     setSaving(true);
@@ -217,17 +219,17 @@ export default function PerfilScreen() {
       }
 
       reloadMembro(); // propaga nome/CPF/telefone/vínculo pras outras telas
-      setMsg({ type: "ok", text: "Perfil salvo." });
+      setMsg({ type: "ok", text: t("Perfil salvo.") });
       if (emailAviso) {
         Alert.alert(
-          "Confirme o novo e-mail",
-          "Enviamos um link para o novo e-mail. A troca só conclui após a confirmação."
+          t("Confirme o novo e-mail"),
+          t("Enviamos um link para o novo e-mail. A troca só conclui após a confirmação.")
         );
       }
     } catch (e) {
       setMsg({
         type: "err",
-        text: e instanceof Error ? e.message : "Não foi possível salvar.",
+        text: e instanceof Error ? e.message : t("Não foi possível salvar."),
       });
     } finally {
       setSaving(false);
@@ -243,10 +245,11 @@ export default function PerfilScreen() {
           automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.content}>
           <View style={styles.topRow}>
-            <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
+            <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}
+              accessibilityRole="button" accessibilityLabel={t("Voltar")}>
               <Ionicons name="chevron-back" size={24} color={colors.text} />
             </Pressable>
-            <Text style={styles.title}>Meu perfil</Text>
+            <Text style={styles.title}>{t("Meu perfil")}</Text>
             <View style={{ width: 24 }} />
           </View>
 
@@ -269,7 +272,7 @@ export default function PerfilScreen() {
                 )}
               </View>
             </Pressable>
-            <Text style={styles.avatarHint}>Toque para trocar a foto</Text>
+            <Text style={styles.avatarHint}>{t("Toque para trocar a foto")}</Text>
           </View>
 
           {/* Cartão de Membro — saiu do menu e passou a viver aqui (pedido do
@@ -282,9 +285,9 @@ export default function PerfilScreen() {
             >
               <Ionicons name="card-outline" size={22} color={colors.brandMid} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.cartoesText}>Cartão de Membro</Text>
+                <Text style={styles.cartoesText}>{t("Cartão de Membro")}</Text>
                 <Text style={styles.cartoesHint}>
-                  Apresente o QR na entrada dos cultos e eventos. Toque no cartão pra virar.
+                  {t("Apresente o QR na entrada dos cultos e eventos. Toque no cartão pra virar.")}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -293,7 +296,7 @@ export default function PerfilScreen() {
 
           <View style={styles.form}>
             <Input
-              label="Nome completo"
+              label={t("Nome completo")}
               value={name}
               onChangeText={setName}
               autoCapitalize="words"
@@ -313,25 +316,24 @@ export default function PerfilScreen() {
                 maxLength={14}
               />
               <Text style={styles.lockHint}>
-                O CPF identifica seu cadastro na CBRio e não é alterado por aqui —
-                se estiver errado, fale com a secretaria.
+                {t("O CPF identifica seu cadastro na CBRio e não é alterado por aqui — se estiver errado, fale com a secretaria.")}
               </Text>
             </View>
             <Input
-              label="E-mail"
+              label={t("E-mail")}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
             />
             <Input
-              label="Telefone"
+              label={t("Telefone")}
               value={telefone}
               onChangeText={setTelefone}
               placeholder="+55 21 99999-9999"
               keyboardType="phone-pad"
             />
             <Input
-              label="Data de nascimento"
+              label={t("Data de nascimento")}
               value={nascimento}
               onChangeText={(t) => setNascimento(maskDateBR(t))}
               placeholder="DD/MM/AAAA"
@@ -346,7 +348,7 @@ export default function PerfilScreen() {
             )}
 
             <Button
-              title="Salvar alterações"
+              title={t("Salvar alterações")}
               onPress={handleSave}
               loading={saving || loading}
             />

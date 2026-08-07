@@ -18,7 +18,8 @@ import { Input } from "@/components/ui/Input";
 import { useColors } from "@/contexts/ThemeContext";
 import { useAdminGrupo } from "@/lib/useAdminGrupo";
 import { supabase } from "@/lib/supabase";
-import { editarGrupo } from "@/lib/api";
+import { editarGrupo, enviarCapaGrupo, removerCapaGrupo } from "@/lib/api";
+import { arquivoDaCapa, capaCabe } from "@/lib/capaGrupo";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -94,27 +95,35 @@ export default function GrupoEditarScreen() {
     if (res.canceled || !res.assets?.[0]) return;
     const asset = res.assets[0];
     setMsg(null);
+
+    // ⚠️ Formato e tamanho conferidos ANTES de gastar a subida (a régua vive em
+    // `lib/capaGrupo.ts`, com teste). O servidor recusa igual — isto só evita
+    // mandar 3MB pra receber 400.
+    const arquivo = arquivoDaCapa(asset);
+    if (!arquivo) {
+      setMsg({ type: "err", text: t("Use uma imagem JPG, PNG ou WEBP.") });
+      return;
+    }
+    if (!capaCabe(asset.fileSize)) {
+      setMsg({ type: "err", text: t("Imagem muito grande (máximo 4MB).") });
+      return;
+    }
+
     setUploading(true);
     try {
-      const resp = await fetch(asset.uri);
-      const arrayBuffer = await resp.arrayBuffer();
-      const ext = (asset.uri.split(".").pop() || "jpg").toLowerCase();
-      const path = `${grupo.id}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from("grupos")
-        .upload(path, arrayBuffer, {
-          contentType: asset.mimeType ?? `image/${ext}`,
-          upsert: true,
-        });
-      if (upErr) throw upErr;
-      const { data } = supabase.storage.from("grupos").getPublicUrl(path);
-      const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
-      const { error: updErr } = await supabase
-        .from("mem_grupos")
-        .update({ foto_url: publicUrl })
-        .eq("id", grupo.id);
-      if (updErr) throw updErr;
-      setField("foto_url", publicUrl);
+      // ⚠️⚠️ SAI PELO BACKEND (07/08/2026 · fecho da Onda 2). Aqui era upload
+      // direto pro Storage + UPDATE direto em `mem_grupos` — e nunca gravou
+      // NADA: 0 de 278 linhas com `foto_url`, 0 objetos no bucket, desde 04/06.
+      // Eram dois defeitos empilhados: a policy do bucket exige
+      // `is_admin_or_diretor()` (16 de 113 profiles), e o UPDATE não tinha
+      // `.select()` — 0 linhas voltavam SEM erro e esta tela dizia "Capa
+      // atualizada." ainda pintando a imagem. É o MESMO estrago que o `salvar()`
+      // logo abaixo já teve, na Onda 1b, e que ficou pra trás aqui.
+      //
+      // ⚠️ Quem decide a URL final é o SERVIDOR (caminho único por upload, pra
+      // o CDN não servir a capa velha por 1h). A tela aplica o que voltar.
+      const url = await enviarCapaGrupo(grupo.id, arquivo);
+      setField("foto_url", url);
       setMsg({ type: "ok", text: t("Capa atualizada.") });
     } catch (e) {
       setMsg({
@@ -124,6 +133,33 @@ export default function GrupoEditarScreen() {
     } finally {
       setUploading(false);
     }
+  }
+
+  function removerCapa() {
+    if (!grupo?.foto_url) return;
+    Alert.alert(t("Remover a capa?"), t("O grupo volta a aparecer sem foto."), [
+      { text: t("Cancelar"), style: "cancel" },
+      {
+        text: t("Remover"),
+        style: "destructive",
+        onPress: async () => {
+          setMsg(null);
+          setUploading(true);
+          try {
+            await removerCapaGrupo(grupo.id);
+            setField("foto_url", null);
+            setMsg({ type: "ok", text: t("Capa removida.") });
+          } catch (e) {
+            setMsg({
+              type: "err",
+              text: e instanceof Error ? `${t("Falha ao remover a capa")}: ${e.message}` : t("Falha ao remover a capa."),
+            });
+          } finally {
+            setUploading(false);
+          }
+        },
+      },
+    ]);
   }
 
   async function salvar() {
@@ -218,7 +254,13 @@ export default function GrupoEditarScreen() {
             <View style={{ width: 24 }} />
           </View>
 
-          <Pressable onPress={escolherCapa} style={styles.capaWrap}>
+          <Pressable
+            onPress={escolherCapa}
+            disabled={uploading}
+            style={styles.capaWrap}
+            accessibilityRole="button"
+            accessibilityLabel={grupo.foto_url ? t("Trocar a capa do grupo") : t("Escolher a capa do grupo")}
+          >
             {grupo.foto_url ? (
               <Image source={{ uri: grupo.foto_url }} style={styles.capa} />
             ) : (
@@ -235,6 +277,16 @@ export default function GrupoEditarScreen() {
               )}
             </View>
           </Pressable>
+          {/* A capa aparece no catálogo público de grupos — quem escolhe merece
+              saber onde ela vai parar, e ter como desfazer. */}
+          <View style={styles.capaAcoes}>
+            <Text style={styles.capaAviso}>{t("A capa aparece na lista de grupos do app e do site.")}</Text>
+            {!!grupo.foto_url && (
+              <Pressable onPress={removerCapa} disabled={uploading} hitSlop={8} accessibilityRole="button">
+                <Text style={styles.capaRemover}>{t("Remover")}</Text>
+              </Pressable>
+            )}
+          </View>
 
           <Input
             label={t("Nome")}
@@ -329,6 +381,9 @@ const makeStyles = (colors: Palette) =>
     capa: { width: "100%", aspectRatio: 16 / 9, backgroundColor: colors.surfaceAlt },
     capaPlaceholder: { alignItems: "center", justifyContent: "center", gap: spacing.xs, borderWidth: 1, borderColor: colors.glassBorder, borderStyle: "dashed" },
     capaHint: { color: colors.textMuted, fontSize: font.size.sm },
+    capaAcoes: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, marginTop: -spacing.xs },
+    capaAviso: { color: colors.textMuted, fontSize: font.size.sm, flex: 1 },
+    capaRemover: { color: "#ef4444", fontSize: font.size.sm, fontWeight: "700" },
     capaBadge: {
       position: "absolute",
       right: spacing.md,

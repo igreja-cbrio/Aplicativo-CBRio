@@ -15,6 +15,8 @@ import { rotaPai, ehRaiz, subirUmNivel } from "@/lib/hierarquia";
 import { hojeBRT, diaBRT } from "@/lib/dataBRT";
 import { fichaCompleta, faltaNaFicha, podeInscrever } from "@/lib/ficha";
 import { montarPayloadInscricao, extrasFaltando } from "@/lib/inscricaoPayload";
+import { tipoDaCapa, arquivoDaCapa, capaCabe, MAX_CAPA_BYTES } from "@/lib/capaGrupo";
+import { motivoDaFalhaPush, mensagemDoErro } from "@/lib/motivoPush";
 import {
   estadoDoEncontro, ultimaOcorrencia, proximaOcorrencia,
   dataLonga, quandoCurto, distanciaEmTexto,
@@ -761,5 +763,127 @@ describe("janelaIndisponibilidadeBR", () => {
     expect(nascimentoBRParaISO("09/08/2099", HOJE)).toBeNull();
     expect(isDataCalendarioBR("31/02/1990")).toBe(false);
     expect(isValidDateBR("17/05/1990")).toBe(true);
+  });
+});
+
+// ── Capa do grupo · qual arquivo sobe (07/08/2026 · fecho da Onda 2) ────────
+// Contexto medido antes de escrever isto: `mem_grupos.foto_url` preenchido em
+// 0 de 278 linhas e bucket `grupos` com 0 objetos desde 04/06. A capa nunca
+// funcionou pra ninguém — e um dos dois defeitos era esta escolha de formato.
+describe("capa do grupo · o formato vem do MIME, não da URI", () => {
+  it("aceita os 3 formatos que o servidor aceita", () => {
+    expect(tipoDaCapa("image/jpeg", "file:///x.jpg")).toBe("image/jpeg");
+    expect(tipoDaCapa("image/png", "file:///x.png")).toBe("image/png");
+    expect(tipoDaCapa("image/webp", "file:///x.webp")).toBe("image/webp");
+    expect(tipoDaCapa("  IMAGE/JPEG ", "file:///x.jpg")).toBe("image/jpeg");
+  });
+
+  it("⚠️ MUTATION GUARD · Android: URI `content://` NÃO tem extensão", () => {
+    // A tela antiga fazia `asset.uri.split(".").pop()` e montava
+    // `image/media` como Content-Type — num aparelho Android, sempre.
+    const uri = "content://media/external/images/media/1000012345";
+    expect(tipoDaCapa("image/jpeg", uri)).toBe("image/jpeg"); // o MIME salva
+    expect(tipoDaCapa(null, uri)).toBeNull();                 // sem MIME, recusa
+    expect(arquivoDaCapa({ uri, mimeType: "image/jpeg" })).toEqual({
+      uri, name: "capa.jpg", type: "image/jpeg",
+    });
+  });
+
+  it("cai na extensão da URI quando o picker não informa o MIME", () => {
+    expect(tipoDaCapa(undefined, "file:///tmp/ImagePicker/abc.PNG")).toBe("image/png");
+    expect(tipoDaCapa("", "file:///tmp/abc.jpeg?x=1")).toBe("image/jpeg");
+    expect(tipoDaCapa(null, "file:///tmp/sem-extensao")).toBeNull();
+    expect(tipoDaCapa(null, "file:///tmp/ponto.no.fim.")).toBeNull();
+  });
+
+  it("aceita o `image/jpg` inválido que alguns Android devolvem", () => {
+    expect(tipoDaCapa("image/jpg", "content://x")).toBe("image/jpeg");
+  });
+
+  it("⚠️ MUTATION GUARD · recusa em vez de CHUTAR jpeg", () => {
+    // Mentir o Content-Type guardaria um HEIC com nome de JPEG: a capa
+    // apareceria quebrada no catálogo público e ninguém saberia por quê.
+    expect(tipoDaCapa("image/heic", "file:///x.heic")).toBeNull();
+    expect(tipoDaCapa("image/gif", "file:///x.gif")).toBeNull();
+    expect(tipoDaCapa("application/pdf", "file:///x.pdf")).toBeNull();
+    expect(arquivoDaCapa({ uri: "file:///x.heic", mimeType: "image/heic" })).toBeNull();
+  });
+
+  it("o nome do arquivo é NOSSO (o do aparelho pode ter acento e emoji)", () => {
+    const a = arquivoDaCapa({ uri: "file:///tmp/Foto 🎉 do grupo.png", mimeType: "image/png" });
+    expect(a?.name).toBe("capa.png");
+  });
+
+  it("recusa asset sem uri", () => {
+    expect(arquivoDaCapa(null)).toBeNull();
+    expect(arquivoDaCapa({ uri: "", mimeType: "image/jpeg" })).toBeNull();
+    expect(arquivoDaCapa({ uri: "   ", mimeType: "image/jpeg" })).toBeNull();
+  });
+
+  it("⚠️ MUTATION GUARD · tamanho é FAIL-OPEN quando desconhecido", () => {
+    // O `ImagePicker` nem sempre preenche `fileSize`. Recusar por dado ilegível
+    // barraria envio legítimo; quem recusa de verdade é o multer, com 400.
+    expect(capaCabe(undefined)).toBe(true);
+    expect(capaCabe(null)).toBe(true);
+    expect(capaCabe(NaN)).toBe(true);
+    expect(capaCabe(0)).toBe(true);
+    expect(capaCabe(1024)).toBe(true);
+    expect(capaCabe(MAX_CAPA_BYTES)).toBe(true);
+    expect(capaCabe(MAX_CAPA_BYTES + 1)).toBe(false);
+  });
+});
+
+// ── Por que o push não registrou (07/08/2026 · fecho da Onda 2) ─────────────
+// O achado: `app_push_tokens` tem 30 linhas, TODAS iOS. Zero Android, desde
+// sempre, porque o binário nunca teve Firebase. O que escondeu isso por dois
+// meses foi um `catch` que só fazia `console.log` — a falha não existia em
+// painel nenhum. Esta régua vira a mensagem opaca do módulo nativo num enum
+// que o painel CONTA; se ela classificar errado, o conserto vai ser verificado
+// contra o número errado.
+describe("motivoDaFalhaPush · o silêncio virou número", () => {
+  it("⚠️ MUTATION GUARD · a mensagem REAL do Android sem Firebase", () => {
+    // Literal de `expo-notifications/.../PushTokenModule.kt:88`.
+    const real = new Error(
+      "Make sure to complete the guide at https://docs.expo.dev/push-notifications/fcm-credentials/ : "
+      + "Default FirebaseApp is not initialized in this process br.com.cbrio.app."
+    );
+    expect(motivoDaFalhaPush(real)).toBe("credencial_fcm");
+  });
+
+  it("⚠️ MUTATION GUARD · credencial ganha de permissão quando as duas palavras aparecem", () => {
+    // A mensagem do Firebase interpola `e.message`, que pode conter
+    // "permission". Trocar a ordem faria o achado de hoje (credencial) se
+    // disfarçar de "as pessoas recusaram" — a conclusão errada mais fácil de
+    // tirar de "zero token no Android", e a que levaria ao conserto errado.
+    const misto = new Error("fcm-credentials : missing permission for FirebaseApp");
+    expect(motivoDaFalhaPush(misto)).toBe("credencial_fcm");
+  });
+
+  it("separa permissão, simulador, rede e projectId", () => {
+    expect(motivoDaFalhaPush(new Error("User denied notification permission"))).toBe("permissao");
+    expect(motivoDaFalhaPush(new Error("Must be a physical device to get a push token"))).toBe("simulador");
+    expect(motivoDaFalhaPush(new Error("Network request failed"))).toBe("rede");
+    expect(motivoDaFalhaPush(new Error("The request timed out"))).toBe("rede");
+    expect(motivoDaFalhaPush(new Error("No projectId found"))).toBe("sem_project_id");
+  });
+
+  it("cai em `outro` sem inventar causa (a mensagem crua vai junto no evento)", () => {
+    expect(motivoDaFalhaPush(new Error("algo totalmente novo"))).toBe("outro");
+    expect(motivoDaFalhaPush(null)).toBe("outro");
+    expect(motivoDaFalhaPush(undefined)).toBe("outro");
+    expect(motivoDaFalhaPush({})).toBe("outro");
+    expect(motivoDaFalhaPush("")).toBe("outro");
+  });
+
+  it("aceita erro que é string (nem tudo que o RN lança é Error)", () => {
+    expect(motivoDaFalhaPush("Firebase not configured")).toBe("credencial_fcm");
+  });
+
+  it("mensagemDoErro corta em 300 e nunca explode", () => {
+    expect(mensagemDoErro(new Error("  oi  "))).toBe("oi");
+    expect(mensagemDoErro("x".repeat(500))).toHaveLength(300);
+    expect(mensagemDoErro(null)).toBe("");
+    expect(mensagemDoErro(undefined)).toBe("");
+    expect(mensagemDoErro({ message: 42 })).toBe("[object Object]");
   });
 });
