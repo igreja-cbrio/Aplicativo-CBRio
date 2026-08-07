@@ -22,10 +22,11 @@
 // Falha de rede/endpoint (deploy em 2 etapas, app offline) NÃO bloqueia o app —
 // preso na tela de cadastro sem internet seria pior que dado incompleto.
 // ============================================================================
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { statusIdentidade } from "@/lib/api";
+import { assinarCadastroNativo, lerCadastroNativo } from "@/lib/cadastroEmAndamento";
 
 export function CadastroGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -35,8 +36,21 @@ export function CadastroGate({ children }: { children: React.ReactNode }) {
   const [incompleto, setIncompleto] = useState(false);
   const redirecionou = useRef(false);
 
+  // ⚠️⚠️ NÃO DECIDIR ENQUANTO O CADASTRO NATIVO ESTÁ SENDO CONCLUÍDO (07/08).
+  // A sessão nasce no `signUp` e o portão montava perguntando o status NA MESMA
+  // HORA — em paralelo com o `completarCadastroApp`, que é quem carimba. A
+  // resposta voltava `completo: false` e rebatia a pessoa 4 s DEPOIS de a ficha
+  // já estar confirmada no banco. Detalhes e a linha do tempo medida em
+  // `lib/cadastroEmAndamento.ts`. Quando a bandeira baixa, o efeito reexecuta e
+  // a checagem acontece normalmente — inclusive se o cadastro tiver falhado.
+  const cadastrando = useSyncExternalStore(
+    assinarCadastroNativo,
+    lerCadastroNativo,
+    lerCadastroNativo,
+  );
+
   useEffect(() => {
-    if (loading || !user?.id || checado) return;
+    if (loading || !user?.id || checado || cadastrando) return;
     let vivo = true;
     statusIdentidade()
       .then((s) => {
@@ -53,7 +67,7 @@ export function CadastroGate({ children }: { children: React.ReactNode }) {
         if (vivo) setChecado(true);
       });
     return () => { vivo = false; };
-  }, [loading, user?.id, checado, router]);
+  }, [loading, user?.id, checado, router, cadastrando]);
 
   // Trocou de conta → checa de novo na próxima montagem.
   useEffect(() => {

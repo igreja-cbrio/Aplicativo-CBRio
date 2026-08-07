@@ -780,12 +780,54 @@ disso existiria se o gatilho já criasse **só o profile**.
 conta nova passa a chegar com `membro_id` NULL e `falta` com os 5 campos, e a
 pessoa preenche tudo de novo a partir do zero. **Publicar o app primeiro.**
 
+### 2ª rodada do mesmo dia · o que o teste seguinte achou (07/08)
+
+Ele testou de novo: **1, 2 e o calendário passaram** (a indisponibilidade gravou
+e persistiu — `vol_availability` saiu de 0 pra 1 linha: "viagem", 20–31/08). Dois
+achados novos:
+
+**A · ⚠️ A escala LÊ o bloqueio, mas só metade do sistema o VIA.** Pergunta dele:
+*"veja se isso afeta as escalas quando forem montadas"*. Medido no ERP: são
+**dois modelos na mesma tabela** — por CULTO (`service_id` preenchido, o que a
+coordenação marca na tela) e por PERÍODO (`unavailable_from/to` com `service_id`
+NULL, o que **o app** grava). `POST /schedules/auto-fill` filtra por FAIXA DE
+DATA e **sempre respeitou**; mas `GET /services-availability` — a tela que a
+coordenação usa pra escalar **na mão** — filtrava `service_id não nulo` e
+mostrava "ninguém indisponível". Gerador automático e painel discordavam sobre a
+mesma pessoa no mesmo culto. Corrigido no ERP (PR #2338), com dedup por pessoa e
+o `motivo` na resposta. ⚠️ **Não era regressão**: a tabela só passou a receber
+bloqueio por período hoje, então é porta recém-aberta cujo destino não olhava
+pra ela.
+
+**B · O telefone não tinha limite** (`components/ui/PhoneInput.tsx`): aceitava
+qualquer quantidade de dígitos e o Contrato de porta exige 10–11 — a pessoa só
+descobria no fim do cadastro. Régua em `lib/telefone.ts` (máscara
+`(21) 99999-8888`, corte por país). ⚠️ O estado do pai continua guardando **só
+dígitos**: o `+55…` é concatenado na gravação, e parêntese ali viraria telefone
+inválido no banco.
+
+**C · ⚠️⚠️ O carimbo FUNCIONOU — o que sobrou foi CORRIDA.** Ele reportou que a
+conta nova pediu confirmação de novo, mas a medição mostra o contrário do
+esperado: `app_ficha_confirmada_em` gravado às **15:20:15.606** (`matched_by:
+cpf`), e a telemetria com `tela /completar-cadastro` às **15:20:19** — 4
+segundos DEPOIS. A sessão nasce dentro do `signUp`, o `RootNavigator` troca pra
+área logada e o `CadastroGate` monta perguntando `/identidade/status`
+**em paralelo** com o `completarCadastroApp` que ainda está no ar; a resposta
+volta `completo: false` (lida antes do carimbo) e o portão rebate.
+⚠️ Esperar N segundos não resolve (o tempo do serverless varia): o portão
+**não decide enquanto o cadastro está sendo concluído** (`lib/cadastroEmAndamento.ts`
++ `useSyncExternalStore` no gate). ⚠️ **FAIL-CLOSED**: a bandeira tem teto de 30 s
+— sem ele, um crash no meio do cadastro a deixaria ligada pra sempre e alguém
+entraria **sem ficha**, que é o oposto do que o portão existe pra fazer.
+⚠️ Não afrouxa nada: quem não completar cai na decisão normal quando a bandeira
+baixa, e quem diz se a ficha fechou continua sendo o servidor.
+
 ### ⏳ O que este teste NÃO cobre
 
-O portão (49 testes · 12/12 mutantes) garante a REGRA, **não a tela**. Nada da
-onda 2b foi executado em aparelho — calendário, modal, seção nova e o carimbo do
-cadastro precisam de teste humano. Os quatro defeitos de hoje são justamente da
-classe que só o aparelho pega.
+O portão (55 testes · 14/14 mutantes) garante a REGRA, **não a tela**. Nada da
+onda 2b foi executado em aparelho por mim — calendário, modal, seção nova, o
+carimbo do cadastro e a máscara de telefone precisam de teste humano. Os defeitos
+de hoje são justamente da classe que só o aparelho pega.
 
 ## ⚠️⚠️ AUDITORIA DO APP · ONDA 0 (2026-08-06) · o que mudou NESTE repo
 

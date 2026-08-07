@@ -19,6 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { completarCadastroApp } from "@/lib/api";
+import { iniciarCadastroNativo, terminarCadastroNativo } from "@/lib/cadastroEmAndamento";
 import { DEFAULT_COUNTRY, type Country } from "@/constants/countries";
 import {
   dateBRToISO,
@@ -73,6 +74,11 @@ export default function CadastroScreen() {
       return;
     }
     setLoading(true);
+    // ⚠️ Levanta a bandeira ANTES do signUp: a sessão nasce lá dentro e o
+    // `CadastroGate` monta na mesma hora. Sem isto ele pergunta o status
+    // enquanto o carimbo ainda está sendo gravado e rebate a pessoa pra tela de
+    // cadastro — foi o que aconteceu no 2º teste (ver lib/cadastroEmAndamento).
+    iniciarCadastroNativo();
     try {
       const { needsEmailConfirmation } = await signUp(email, password, {
         nome,
@@ -130,6 +136,10 @@ export default function CadastroScreen() {
     } catch (e) {
       setError(e instanceof Error ? e.message : t("Não foi possível criar a conta."));
     } finally {
+      // Baixa a bandeira SEMPRE — inclusive quando deu erro. Aí o portão volta
+      // a decidir normalmente (e é ele quem manda pra tela de cadastro, com
+      // razão, se a ficha não fechou).
+      terminarCadastroNativo();
       setLoading(false);
     }
   }
