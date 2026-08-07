@@ -703,18 +703,63 @@ próprio prop `refreshControl={}`** e corta a tag no lugar errado. Refeito com u
 scanner que conta `{}` e respeita aspas (`scratchpad/props_teclado.py`).
 **Régua: tag JSX com prop que contém outro elemento não se casa com regex.**
 
+### ✅ O PADRÃO · `components/ui/TecladoSeguro.tsx` (substitui o KAV em TODO o app)
+
+Marcos, ao ler que eu ia "medir tela a tela": *"você tá dizendo pra medir o
+celular das pessoas que usam? Faz de uma forma para ficar padrão."*
+
+Ele estava certo e a minha proposta anterior era ruim. O remendo oficial do
+`KeyboardAvoidingView` é o `keyboardVerticalOffset`, que exige **um número por
+tela**, calibrado num aparelho — e aparelho diferente, fonte aumentada ou
+dobrável já saem do calibre. Número decorado envelhece.
+
+**A diferença está em O QUE se mede.** O KAV usa o `onLayout`, que dá
+coordenadas **relativas ao pai**: em toda tela que não começa no topo da janela
+(ou seja, todas as que ficam sob a faixa superior) ele **sub-compensa exatamente
+o deslocamento do topo** — é por isso que o campo "quase" aparecia no iOS.
+`TecladoSeguro` mede a posição **ABSOLUTA** do container (`measureInWindow`) e
+compara com a posição real do topo do teclado (`endCoordinates.screenY`).
+
+⇒ **Zero constante de aparelho, de faixa ou de notch.** Funciona igual em tela
+cheia, dentro de `<Modal>`, com fonte aumentada e em aparelho que ninguém testou.
+
+- ⚠️ **Auto-corretivo nos dois mundos do Android**: janela que encolhe sozinha ⇒
+  o container já termina acima do teclado ⇒ folga 0 (não soma duas vezes);
+  janela que não encolhe (Modal, edge-to-edge) ⇒ a folga é exatamente o coberto.
+- ⚠️ **Não oscila**: o `paddingBottom` reduz a área INTERNA, não a altura do
+  container — a borda medida continua a mesma e a conta estabiliza na 1ª passada.
+- ⚠️ `max(0, …)` é obrigatório: padding NEGATIVO no RN **puxa o conteúdo pra fora
+  da tela** — seria trocar "campo coberto" por "campo cortado". Mutation-testado.
+- iOS escuta `keyboardWillShow` (acompanha a animação); Android, `keyboardDidShow`.
+- Régua pura em `lib/teclado.ts` (`folgaDoTeclado`), no portão, com mutante.
+- **21 arquivos** passaram a usar; `KeyboardAvoidingView` não é mais usado em
+  lugar nenhum do app.
+
+### ⚠️ EDGE-TO-EDGE está LIGADO neste projeto (medido em 07/08)
+
+`app.json` **não declara** `android.edgeToEdgeEnabled`, e no SDK 54 o default é
+ligado — `@expo/prebuild-config/.../withEdgeToEdge.js:56` faz
+`const edgeToEdgeEnabled = raw_edgeToEdgeEnabled !== false`. Ou seja: o app
+desenha de ponta a ponta da tela (por baixo da barra de status e da de navegação)
+e **o Android deixa de redimensionar a janela quando o teclado abre** — o teclado
+vira um *inset* que o app precisa tratar.
+
+⚠️ É a explicação mais provável de o resize não estar salvando nem as telas
+NÃO-modais. **Não é para desligar**: no Android 16 (targetSdk 36) deixa de ser
+opcional — o próprio plugin avisa isso ao ver `edgeToEdgeEnabled: false`.
+⇒ Por isso o padrão certo é o que MEDE (acima), e não o que espera a janela
+encolher. Com `TecladoSeguro` a conta fica correta **nos dois cenários**, então
+esta questão deixou de ser um risco em aberto.
+
 ### ⏳ O que a varredura deixou EM ABERTO
 
-- **`keyboardVerticalOffset` não existe em nenhum lugar do repo.** Em tela NÃO
-  modal o KAV fica sob a faixa superior, e o `frame.y` do `onLayout` é relativo ao
-  pai — a conta **sub-compensa** o offset do topo (~50 dp numa tela de
-  profundidade, ~100 numa tela de barra). É por isso que no iOS o campo "quase"
-  aparece. Acertar isso exige medir no aparelho, tela a tela — não chutei.
-- **Edge-to-edge**: o `app.json` não declara `android.edgeToEdgeEnabled` e no SDK
-  54 o default é TRUE, o que faria o `adjustResize` parar de redimensionar a
-  janela mesmo fora de modal. Um agente levantou isso como a explicação mais
-  provável; **não foi medido em aparelho** e não é premissa de nada aqui — o
-  conserto vale nos dois cenários.
+✅ **Os dois itens que estavam aqui foram RESOLVIDOS no mesmo dia** — o
+`keyboardVerticalOffset` por tela deixou de ser necessário (o `TecladoSeguro`
+mede) e o edge-to-edge deixou de ser incógnita (medido: está ligado, e o padrão
+novo funciona nos dois cenários). Ver as duas seções acima.
+
+O que segue valendo: **nada disto roda no portão** — ele cobre régua pura, e
+teclado é 100% tela. O critério de aceite é aparelho, campo por campo.
 
 ## ⚠️⚠️ ONDA 2b · os 4 defeitos que o TESTE EM APARELHO achou (2026-08-07)
 

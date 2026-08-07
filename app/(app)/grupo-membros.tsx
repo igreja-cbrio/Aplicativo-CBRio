@@ -34,7 +34,7 @@
 // ============================================================================
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator, Alert, KeyboardAvoidingView, Linking, Modal, Platform,
+  ActivityIndicator, Alert, Linking, Modal, Platform,
   Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -57,6 +57,7 @@ import {
   type GrupoMembro, type GrupoPedido, type GrupoRoster,
   type GrupoEncontro, type GrupoMaterial, type FuncaoApp,
 } from "@/lib/api";
+import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 type Aba = "membros" | "frequencia" | "pedidos" | "estudos";
 // ⚠️ SEM ÍCONE e com rótulo curto: 4 abas em 328 dp dão ~80 dp cada, e ícone
@@ -794,7 +795,7 @@ export default function GrupoMembrosScreen() {
 
       {/* ═══ Saída ═══ */}
       <Modal visible={!!saidaAlvo} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setSaidaAlvo(null)}>
-        <KeyboardAvoidingView style={styles.modalWrap} behavior="padding">
+        <TecladoSeguro style={styles.modalWrap}>
           <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{t("Registrar saída")}</Text>
@@ -821,7 +822,7 @@ export default function GrupoMembrosScreen() {
               {processandoId ? <ActivityIndicator color="#fff" size="small" /> : <Text style={[styles.btnTxt, { color: "#fff" }]}>{t("Confirmar saída")}</Text>}
             </Pressable>
           </View>
-        </KeyboardAvoidingView>
+        </TecladoSeguro>
       </Modal>
 
       {/* ═══ Transferência ═══ */}
@@ -854,7 +855,7 @@ export default function GrupoMembrosScreen() {
 
       {/* ═══ Chamada (frequência) ═══ */}
       <Modal visible={chamadaAberta} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setChamadaAberta(false)}>
-        <KeyboardAvoidingView style={styles.modalWrap} behavior="padding">
+        <TecladoSeguro style={styles.modalWrap}>
           <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom, maxHeight: "88%" }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{t("Frequência de hoje")}</Text>
@@ -905,12 +906,12 @@ export default function GrupoMembrosScreen() {
               )}
             </Pressable>
           </View>
-        </KeyboardAvoidingView>
+        </TecladoSeguro>
       </Modal>
 
       {/* ═══ Pedir ajuda ═══ */}
       <Modal visible={ajudaAberta} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setAjudaAberta(false)}>
-        <KeyboardAvoidingView style={styles.modalWrap} behavior="padding">
+        <TecladoSeguro style={styles.modalWrap}>
           <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{t("Preciso de ajuda")}</Text>
@@ -933,7 +934,7 @@ export default function GrupoMembrosScreen() {
               {enviandoAjuda ? <ActivityIndicator color="#fff" size="small" /> : <Text style={[styles.btnTxt, { color: "#fff" }]}>{t("Enviar pedido")}</Text>}
             </Pressable>
           </View>
-        </KeyboardAvoidingView>
+        </TecladoSeguro>
       </Modal>
 
     </SafeAreaView>

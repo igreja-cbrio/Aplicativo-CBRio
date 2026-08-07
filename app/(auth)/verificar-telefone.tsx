@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import {
-  KeyboardAvoidingView,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 export default function VerificarTelefoneScreen() {
   const { phone } = useLocalSearchParams<{ phone: string }>();
@@ -59,10 +59,7 @@ export default function VerificarTelefoneScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior="padding"
-      >
+      <TecladoSeguro        style={styles.flex}>
         <ScrollView
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
@@ -100,7 +97,7 @@ export default function VerificarTelefoneScreen() {
             </View>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </TecladoSeguro>
     </SafeAreaView>
   );
 }

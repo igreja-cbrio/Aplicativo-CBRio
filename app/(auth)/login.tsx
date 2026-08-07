@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import {
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -18,6 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 // Apple Sign-In requer App ID com "Sign in with Apple" (conta paga). Ativado.
 const APPLE_SIGNIN_ENABLED = true;
@@ -67,10 +67,7 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior="padding"
-      >
+      <TecladoSeguro        style={styles.flex}>
         <ScrollView
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
@@ -157,7 +154,7 @@ export default function LoginScreen() {
             />
           )}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </TecladoSeguro>
     </SafeAreaView>
   );
 }

@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   Alert,
-  KeyboardAvoidingView,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -29,6 +28,7 @@ import {
   onlyDigits,
 } from "@/lib/validators";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 export default function CadastroScreen() {
   const { signUp } = useAuth();
@@ -145,10 +145,7 @@ export default function CadastroScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior="padding"
-      >
+      <TecladoSeguro        style={styles.flex}>
         <ScrollView
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
@@ -270,7 +267,7 @@ export default function CadastroScreen() {
             </Link>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </TecladoSeguro>
     </SafeAreaView>
   );
 }

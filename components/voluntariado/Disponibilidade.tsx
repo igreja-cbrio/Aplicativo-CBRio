@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Modal,
   Pressable,
   ScrollView,
@@ -25,6 +24,7 @@ import { janelaIndisponibilidadeBR, type ErroJanela } from "@/lib/validators";
 import { hojeBRT } from "@/lib/dataBRT";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 function fmtIso(iso: string) {
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -217,10 +217,7 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
         onRequestClose={fecharForm}
         statusBarTranslucent
       >
-        <KeyboardAvoidingView
-          style={styles.modalFundo}
-          behavior="padding"
-        >
+        <TecladoSeguro          style={styles.modalFundo}>
           <View style={styles.modalCartao}>
             <View style={styles.topo}>
               <Text style={styles.titulo}>{t("Bloquear datas")}</Text>
@@ -267,7 +264,7 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
               <Button title={t("Salvar")} onPress={salvar} loading={salvando} />
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </TecladoSeguro>
       </Modal>
 
       <CalendarioBR

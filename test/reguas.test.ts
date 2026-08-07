@@ -26,6 +26,7 @@ import {
 } from "@/lib/telefone";
 import { rotaDoGrupo, ehSupervisao } from "@/lib/papelGrupo";
 import { montarRegistroVisita } from "@/lib/visitaSupervisao";
+import { folgaDoTeclado } from "@/lib/teclado";
 import {
   iniciarCadastroNativo, terminarCadastroNativo, lerCadastroNativo,
   assinarCadastroNativo,
@@ -440,6 +441,46 @@ describe("nascimentoBRParaISO", () => {
     expect(nascimentoBRParaISO("1990-05-17", HOJE)).toBeNull();
     expect(nascimentoBRParaISO("17/5/1990", HOJE)).toBeNull();
     expect(nascimentoBRParaISO("", HOJE)).toBeNull();
+  });
+});
+
+// ── Teclado · a folga é MEDIDA, não um número por tela (07/08) ──────────────
+// Marcos, ao ler que eu ia "medir tela a tela": "você tá dizendo pra medir o
+// celular das pessoas que usam? Faz de uma forma para ficar padrão."
+// Ele estava certo: `keyboardVerticalOffset` exige um número POR TELA calibrado
+// num aparelho — e aparelho diferente, fonte maior ou dobrável saem do calibre.
+// Esta régua compara duas posições REAIS medidas em tempo de execução.
+describe("folgaDoTeclado", () => {
+  it("devolve exatamente a parte coberta", () => {
+    // container termina em 800, teclado começa em 500 ⇒ 300 cobertos
+    expect(folgaDoTeclado(800, 500)).toBe(300);
+  });
+
+  // ⚠️ MUTATION GUARD: sem o `max(0, …)` a conta dá NEGATIVO quando o container
+  // termina ACIMA do teclado — e padding negativo no RN puxa o conteúdo pra
+  // fora da tela. Seria trocar "campo coberto" por "campo cortado".
+  it("nunca devolve negativo (container acima do teclado)", () => {
+    expect(folgaDoTeclado(400, 500)).toBe(0);
+    expect(folgaDoTeclado(500, 500)).toBe(0);
+  });
+
+  // É isto que torna a régua auto-corretiva: no Android que AINDA redimensiona
+  // a janela, o container já termina acima do teclado ⇒ nenhuma folga extra,
+  // sem somar a compensação duas vezes.
+  it("teclado fechado = folga zero", () => {
+    expect(folgaDoTeclado(800, null)).toBe(0);
+    expect(folgaDoTeclado(800, undefined)).toBe(0);
+  });
+
+  it("medida absurda é capada na altura do teclado", () => {
+    expect(folgaDoTeclado(5000, 500, 300)).toBe(300);
+    expect(folgaDoTeclado(800, 500, 300)).toBe(300);
+    expect(folgaDoTeclado(700, 500, 300)).toBe(200);
+  });
+
+  it("medida inválida não vira NaN no estilo", () => {
+    expect(folgaDoTeclado(Number.NaN, 500)).toBe(0);
+    expect(folgaDoTeclado(800, Number.POSITIVE_INFINITY)).toBe(0);
   });
 });
 

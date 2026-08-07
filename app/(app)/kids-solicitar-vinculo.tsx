@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  KeyboardAvoidingView,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -25,6 +24,7 @@ import { apiPost } from "@/lib/api";
 import { maskDateBR, isValidDateBR, dateBRToISO } from "@/lib/validators";
 import { supabase } from "@/lib/supabase";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 type Parentesco = "mae" | "pai" | "outro";
 
@@ -213,7 +213,7 @@ export default function KidsSolicitarVinculoScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <TecladoSeguro style={{ flex: 1 }}>
         <ScrollView
           automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -427,7 +427,7 @@ export default function KidsSolicitarVinculoScreen() {
 
           <Button title={t("Enviar solicitação")} onPress={enviar} loading={enviando} />
         </ScrollView>
-      </KeyboardAvoidingView>
+      </TecladoSeguro>
     </SafeAreaView>
   );
 }

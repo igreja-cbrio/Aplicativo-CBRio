@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Linking from "expo-linking";
@@ -11,6 +11,7 @@ import { useT } from "@/lib/i18n";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
+import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 type Estado = "validando" | "pronto" | "invalido";
 
@@ -94,7 +95,7 @@ export default function RedefinirSenha() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+      <TecladoSeguro  style={{ flex: 1 }}>
         <ScrollView
           automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -148,7 +149,7 @@ export default function RedefinirSenha() {
             </>
           )}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </TecladoSeguro>
     </SafeAreaView>
   );
 }

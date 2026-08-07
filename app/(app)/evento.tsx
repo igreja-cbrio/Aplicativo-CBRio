@@ -26,7 +26,6 @@
 // ============================================================================
 import { useCallback, useMemo, useState } from "react";
 import {
-  KeyboardAvoidingView,
   ActivityIndicator,
   Image,
   Pressable,
@@ -63,6 +62,7 @@ import {
   type TextosInscricao,
 } from "@/lib/api";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 function fmtValor(centavos?: number | null) {
   if (!centavos || centavos <= 0) return null;
@@ -277,7 +277,7 @@ export default function EventoScreen() {
           nem no iPhone (varredura de 07/08). `behavior="padding"` nas duas
           plataformas: o cálculo do RN é auto-corretivo (quando a janela já
           encolheu sozinha, o padding dá 0 e nada é somado duas vezes). */}
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <TecladoSeguro style={{ flex: 1 }}>
       <ScrollView
         automaticallyAdjustKeyboardInsets
         contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -455,7 +455,7 @@ export default function EventoScreen() {
           </>
         )}
       </ScrollView>
-      </KeyboardAvoidingView>
+      </TecladoSeguro>
     </SafeAreaView>
   );
 }

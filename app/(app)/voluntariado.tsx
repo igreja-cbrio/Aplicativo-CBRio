@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
-  KeyboardAvoidingView,
   Modal,
   Pressable,
   ScrollView,
@@ -36,6 +35,7 @@ import { Disponibilidade } from "@/components/voluntariado/Disponibilidade";
 import { isValidCPF, maskCPF, onlyDigits } from "@/lib/validators";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 const MAX_AREAS = 3;
 
@@ -313,10 +313,7 @@ export default function VoluntariadoScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["left", "right"]}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior="padding"
-      >
+      <TecladoSeguro        style={styles.flex}>
         <ScrollView
           automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -607,7 +604,7 @@ export default function VoluntariadoScreen() {
             </View>
           )}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </TecladoSeguro>
 
       {/* Recusar escala · motivo opcional */}
       <Modal visible={!!recusaId} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setRecusaId(null)}>
