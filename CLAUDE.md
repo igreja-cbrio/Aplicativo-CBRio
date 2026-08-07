@@ -527,6 +527,110 @@ casos não-staff eram gente que logou com Gmail e caiu num cadastro do
   Arthur) vão ver a tela de cadastro **uma vez**. É a régua dele aplicada a todo
   mundo, não regressão.
 
+## ⚠️⚠️ AUDITORIA DO APP · ONDA 2 · A PUBLICAÇÃO (2026-08-07)
+
+A onda que só existia por OTA. Cinco entregas, todas no app — o servidor foi
+preparado antes (PR #2327 do sistema).
+
+### 1 · ERROR BOUNDARY na raiz — o app não tinha NENHUM
+
+Varredura: **zero** `componentDidCatch`/`getDerivedStateFromError` em `app/`,
+`components/`, `lib/` e `contexts/`, e nenhuma rota exportava `ErrorBoundary` (o
+expo-router só protege rota que exporta o dele; o overlay de erro é só de DEV).
+Em produção, **qualquer exceção de render encerrava o app na cara da pessoa, sem
+mensagem**. O handler global de `lib/telemetria.ts` REGISTRAVA o fatal e
+repassava pro padrão — a gente sabia do crash e a pessoa ficava sem app.
+
+- `components/app/ErrorBoundary.tsx`, montado **na raiz e FORA de todos os
+  providers** (tema, tradução, portão de atualização, auth) — assim cobre erro
+  DELES também. ⚠️ Por isso as cores da tela de erro são **fixas**: não dá pra
+  usar `useColors()` (é componente de classe, e o provider pode ser justamente o
+  que quebrou).
+- "Tentar de novo" faz `Updates.reloadAsync()` (com guard de `Updates.isEnabled`,
+  que não existe em dev) e, se falhar, reseta o estado. Sem saída lateral, mas
+  sem beco sem saída.
+- Reporta `render_crash` na telemetria com a 1ª linha da pilha de componentes —
+  dá pra achar a tela sem despejar stack nem dado dela.
+- ⚠️ Gatilho já mapeado que isto contém: `scrollToIndex` do carrossel da Home sem
+  `getItemLayout`/`onScrollToIndexFailed` (uma leva grande de destaques lança
+  invariant).
+
+### 2 · As 3 telas que escreviam DIRETO no banco passaram pelo backend
+
+A LEI do projeto é "quem decide o que é válido é o BACKEND". Cada uma tinha um
+estrago próprio, e os dois primeiros eram **invisíveis**:
+
+- **Perfil** (`perfil.tsx`) chamava a RPC `app_salvar_membro`, que procurava
+  cadastro por CPF **ou telefone ou NOME EXATO** e vinculava a conta ao primeiro
+  que achasse, **sem prova de posse**. Agora: `PUT /app/membro/perfil`.
+  ⚠️ **CPF não vai mais daqui** e o campo virou **somente leitura**: o endpoint
+  não o aceita, e deixar editável seria a tela prometendo uma gravação que não
+  acontece. Trocar CPF é ato de IDENTIDADE (`/completar-cadastro`). A mensagem
+  deixou de dizer "e vinculado ao seu cadastro".
+  ⚠️ Com isso a RPC estreitada (`20260806140000`) **pode ser dropada** assim que
+  esta publicação estiver em todo mundo.
+- **Indisponibilidade** (`lib/disponibilidade.ts`) gravava em `vol_availability`,
+  onde **só service_role tem policy desde 15/06** — sonda: **0 linhas na tabela**,
+  ou seja **nunca funcionou**. O voluntário marcava as datas em que não pode
+  servir e a escala continuava contando com ele. Agora usa os 3 endpoints que já
+  existiam e **não tinham chamador**.
+  ⚠️ As assinaturas ficaram iguais pra a tela não mudar; `volProfileId` virou
+  parâmetro ignorado — **quem resolve o perfil de voluntário é o servidor, pelo
+  token**, e é bom que seja: o cliente não decide de quem é a indisponibilidade.
+  ⚠️ `getMeuVolProfileId` NÃO volta a consultar `vol_profiles`: helper morto
+  apontando pra tabela que o app não pode escrever foi como este bug nasceu.
+- **Editar grupo** (`grupo-editar.tsx`) fazia UPDATE direto e a RLS barra
+  supervisor; sem `.select()`, 0 linhas voltavam SEM erro e a tela dizia "Grupo
+  atualizado." Agora `PUT /app/grupos/:id` (Onda 1b), que autoriza pelo MESMO
+  critério que esta tela usa pra mostrar o botão e devolve **409** quando nada é
+  gravado. A tela reflete o que o servidor **normalizou** ("1930" → "19:30",
+  "casais" → "Casais") — senão mostraria uma coisa e o banco teria outra.
+
+### 3 · Falha de rede deixou de virar tela vazia enganosa
+
+- `meu-grupo.tsx`: o `catch` fazia `setGrupos([])` ⇒ offline/401/500 viravam a
+  MESMA tela de "Você ainda não está em um grupo de conexão", **com um botão
+  convidando a pessoa a entrar num grupo que ela já tem** — e o líder com rede
+  ruim lia que não lidera nada. Agora erro é erro, com "tentar de novo", e vem
+  ANTES do estado vazio na renderização.
+- `evento.tsx`: os dois fetches tinham `.catch(() => vazio)` ⇒ catálogo vazio ⇒
+  **"Evento não encontrado"** — na PORTA do evento, que é onde o sinal é pior,
+  escondendo o QR de quem ESTÁ inscrito. Virou `Promise.allSettled`, e **só é
+  falha quando as DUAS não vieram**: com a inscrição em mãos a tela ainda mostra
+  o QR, que é o que importa na entrada.
+- `Disponibilidade.tsx`: o `carregar` não tinha try/catch — com a leitura indo
+  pro backend, uma falha deixaria `carregando` **true pra sempre**.
+
+### 4 · `/completar-cadastro` parou de reimplementar régua fraca
+
+É a porta que TODO mundo atravessa pra entrar no app, e tinha a própria
+validação: aceitava **31/02** (só conferia dia 1..31) e CPF **sem DV** — a
+pessoa digitava, enviava, e só o SERVIDOR recusava, com 400 seco.
+
+- ⚠️ **A régua foi pra `lib/validators.ts`** (`nascimentoBRParaISO`, com `hoje`
+  injetável) porque **régua dentro de `.tsx` não roda no CI** — a lei do repo. 4
+  testes novos (41 no total) + **mutante próprio**: tirar o calendário real deixa
+  o portão vermelho (8/8 mutantes pegos).
+- CPF passou a conferir **DV** pela mesma `isValidCPF` do resto do app.
+- ⚠️ A conversão segue **sem `new Date("YYYY-MM-DD")`**: essa forma é UTC e em
+  fuso negativo volta um dia (a armadilha da faixa etária).
+
+### ⏳ O que NÃO deu pra fazer nesta onda, e por quê
+
+- **`build_number` na telemetria** (chega nulo em 100% dos eventos): o campo vem
+  de `Constants.nativeBuildVersion`, que o Expo aposentou — a fonte certa é
+  **`expo-application`, que é módulo NATIVO e não sai por OTA**. Fica pra Onda 3
+  (build). ⚠️ Alternativa OTA-safe pra medir "quem está em código velho":
+  `Updates.updateId`/`runtimeVersion` (expo-updates já está no binário), mas
+  exige coluna/whitelist no backend.
+- **Foto de capa do grupo**: continua sem gravar (0 de 140 grupos têm
+  `foto_url` — **nunca funcionou**). A policy do bucket `grupos` exige
+  `is_admin_or_diretor()` (`profiles.role`, esquema APOSENTADO) ou ser o líder,
+  então supervisor não passa nem no Storage. Consertar exige **endpoint de
+  upload**, não só o PUT.
+- **i18n de `perfil.tsx` e `escala-supervisor.tsx`**: ficou de fora pra a
+  publicação não misturar conserto de dado com varredura de tradução.
+
 ## ⚠️⚠️ AUDITORIA DO APP · ONDA 0 (2026-08-06) · o que mudou NESTE repo
 
 Auditoria de 4 dimensões pedida pelo Marcos (versão · integração · código ·

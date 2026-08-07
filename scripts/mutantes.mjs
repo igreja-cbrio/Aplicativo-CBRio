@@ -68,6 +68,17 @@ const MUTANTES = [
     de: "  if (diaSemana == null || diaSemana < 0 || diaSemana > 6) return { tipo: \"sem_dia\" };",
     para: "  if (!diaSemana || diaSemana > 6) return { tipo: \"sem_dia\" };",
   },
+  {
+    // ⚠️ A validação de nascimento morava dentro de `completar-cadastro.tsx` e
+    // aceitava 31/02 (só conferia dia 1..31). Como .tsx não roda no CI, ninguém
+    // pegaria a volta: bastaria "simplificar" tirando o `isValidDateBR` pra a
+    // porta que TODO mundo atravessa voltar a mandar data impossível pro
+    // servidor — e a pessoa levar 400 seco no meio do cadastro.
+    nome: "nascimento: aceitar data que nao existe (tirar o calendario real)",
+    arq: "lib/validators.ts",
+    de: "  if (!isValidDateBR(br)) return null;",
+    para: "  // mutante",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

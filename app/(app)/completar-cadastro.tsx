@@ -42,6 +42,9 @@ import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { completarCadastroApp, confirmarCodigoIdentidade, identidadePorCpf, statusIdentidade, type IdentidadePorCpf } from "@/lib/api";
 import { trackEvento } from "@/lib/telemetria";
+// Réguas de campo do app (as MESMAS das outras telas) — esta tela
+// reimplementava versões mais fracas, que só o servidor recusava.
+import { isValidCPF, nascimentoBRParaISO } from "@/lib/validators";
 
 const soDigitos = (s: string) => s.replace(/\D/g, "");
 
@@ -68,19 +71,11 @@ const mascaraData = (v: string) => {
   return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
 };
 
-// dd/mm/aaaa → ISO. Sem Date() no meio: `new Date("2026-08-04")` é UTC e
-// em fuso negativo volta um dia (a mesma armadilha da faixa etária).
-function dataParaIso(br: string): string | null {
-  const d = soDigitos(br);
-  if (d.length !== 8) return null;
-  const dia = Number(d.slice(0, 2));
-  const mes = Number(d.slice(2, 4));
-  const ano = Number(d.slice(4));
-  if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return null;
-  const anoAtual = new Date().getFullYear();
-  if (ano < 1900 || ano > anoAtual) return null;
-  return `${String(ano)}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
-}
+// dd/mm/aaaa → ISO válido, ou null. A régua vive em `lib/validators.ts`
+// (`nascimentoBRParaISO`), no PORTÃO: aqui dentro do .tsx ela não seria testada,
+// e a versão que morava aqui aceitava 31/02 — a pessoa só descobria no 400 do
+// servidor, na porta que todo mundo atravessa pra entrar no app.
+const dataParaIso = (br: string) => nascimentoBRParaISO(br);
 
 type Passo = "escolha" | "cpf" | "codigo" | "form";
 
@@ -239,12 +234,20 @@ export default function CompletarCadastroScreen() {
     // ⚠️ Quem manda é o SERVIDOR: `exige_cpf` vem do `/identidade/status` e é
     // false SÓ pra conta de revisão de loja (o revisor não tem CPF brasileiro e
     // travaria aqui → build recusado). O app não decide isso sozinho.
-    if (exigeCpf && cpfDig.length !== 11) {
-      setErro(t("Informe seu CPF (11 números) para continuar."));
+    // ⚠️ DV do CPF conferido AQUI (06/08/2026): o servidor exige CPF válido
+    // (`validarCamposPadrao` → `normalizarCpf`), então sem esta checagem a
+    // pessoa só descobria o dígito errado depois de enviar, num 400 seco. É a
+    // MESMA régua do resto do app (`lib/validators.ts`).
+    if (exigeCpf && !isValidCPF(cpfDig)) {
+      setErro(
+        cpfDig.length !== 11
+          ? t("Informe seu CPF (11 números) para continuar.")
+          : t("Esse CPF não é válido. Confira os números."),
+      );
       return;
     }
-    if (!exigeCpf && cpfDig && cpfDig.length !== 11) {
-      setErro(t("O CPF precisa ter 11 números (ou deixe em branco)."));
+    if (!exigeCpf && cpfDig && !isValidCPF(cpfDig)) {
+      setErro(t("Esse CPF não é válido (ou deixe em branco)."));
       return;
     }
     if (!sexo) { setErro(t("Selecione masculino ou feminino.")); return; }

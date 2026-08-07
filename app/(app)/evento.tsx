@@ -120,6 +120,10 @@ export default function EventoScreen() {
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<{ titulo: string; texto: string; pagamentoUrl?: string | null } | null>(null);
+  // ⚠️ "não conseguimos carregar" ≠ "evento não existe" (06/08/2026): na PORTA
+  // do evento, que é onde o sinal é pior, a segunda mensagem esconde o QR de
+  // quem está inscrito.
+  const [falhouCarga, setFalhouCarga] = useState(false);
 
   const carregar = useCallback(async () => {
     if (!id) return;
@@ -127,10 +131,18 @@ export default function EventoScreen() {
     try {
       // As duas listas em paralelo: o catálogo (dados do evento + campos) e as
       // minhas inscrições (que decide form × minha inscrição).
-      const [cat, mine] = await Promise.all([
-        buscarEventosAbertos().catch(() => ({ eventos: [] as EventoAberto[] })),
-        minhasInscricoesEventos().catch(() => ({ inscricoes: [] as MinhaInscricaoEvento[] })),
+      // ⚠️ `allSettled` em vez de `catch(() => vazio)`: engolir a falha fazia
+      // catálogo vazio e "evento não encontrado" — indistinguível de evento que
+      // realmente não existe.
+      const [rCat, rMine] = await Promise.allSettled([
+        buscarEventosAbertos(),
+        minhasInscricoesEventos(),
       ]);
+      const cat = rCat.status === "fulfilled" ? rCat.value : { eventos: [] as EventoAberto[] };
+      const mine = rMine.status === "fulfilled" ? rMine.value : { inscricoes: [] as MinhaInscricaoEvento[] };
+      // Só é falha de verdade quando as DUAS não vieram: com a minha inscrição
+      // em mãos a tela ainda mostra o QR, que é o que importa na entrada.
+      setFalhouCarga(rCat.status === "rejected" && rMine.status === "rejected");
       setEvento((cat.eventos || []).find((e) => e.id === id) ?? null);
       if ("textos" in cat && cat.textos) setTextos(cat.textos);
       const viva = (mine.inscricoes || []).find(
@@ -217,6 +229,23 @@ export default function EventoScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         {cabecalho}
         <ActivityIndicator style={{ marginTop: spacing.xl }} color={colors.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  // ⚠️ FALHA DE CARGA vem ANTES do "não encontrado": sem isto, ficar offline na
+  // porta do evento aparece como "esse evento não existe" pra quem está inscrito.
+  if (falhouCarga && !evento && !minha) {
+    return (
+      <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+        <Stack.Screen options={{ headerShown: false }} />
+        {cabecalho}
+        <Text style={styles.muted}>
+          {t("Não conseguimos carregar este evento. Verifique sua conexão.")}
+        </Text>
+        <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.md }}>
+          <Button title={t("Tentar de novo")} onPress={() => carregar()} />
+        </View>
       </SafeAreaView>
     );
   }

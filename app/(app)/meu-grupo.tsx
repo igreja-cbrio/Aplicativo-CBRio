@@ -71,10 +71,13 @@ export default function MeuGrupoScreen() {
   const [aba, setAba] = useState<"meus" | "encontrar">("meus");
   const [grupos, setGrupos] = useState<Grupo[] | null>(null);
   const [pedidosPend, setPedidosPend] = useState(0);
+  // ⚠️ Falha de rede NÃO pode virar "você não está em um grupo" (06/08/2026).
+  const [erroCarga, setErroCarga] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     try {
       const r = await apiGet<{ grupos: Grupo[] }>("/app/meu-grupo");
+      setErroCarga(null);
       const lista = r.grupos || [];
       setGrupos(lista);
       // Se lidera algum grupo, mostra quantas inscrições estão aguardando.
@@ -83,8 +86,12 @@ export default function MeuGrupoScreen() {
       } else {
         setPedidosPend(0);
       }
-    } catch {
-      setGrupos([]);
+    } catch (e) {
+      // ⚠️⚠️ Aqui era `setGrupos([])` — offline/401/500 viravam a MESMA tela de
+      // "Você ainda não está em um grupo de conexão.", com um botão convidando
+      // a pessoa a entrar num grupo que ela já tem. O líder com rede ruim lia
+      // que não lidera nada. Erro agora é erro, com caminho de tentar de novo.
+      setErroCarga(e instanceof Error ? e.message : "falha");
     }
   }, []);
 
@@ -145,7 +152,16 @@ export default function MeuGrupoScreen() {
             é a aba "Pedidos" dentro de Gerenciar grupo. A rota
             /grupo-inscricoes continua viva (link antigo e notificação de push
             apontam pra ela). */}
-        {grupos === null ? (
+        {/* ⚠️ ERRO vem ANTES do vazio: sem isto, "não conseguimos carregar" e
+            "você não está em grupo" são a mesma tela — e a segunda é mentira. */}
+        {erroCarga ? (
+          <View style={styles.center}>
+            <Ionicons name="cloud-offline-outline" size={32} color={colors.textMuted} />
+            <Text style={styles.vazio}>{t("Não conseguimos carregar seus grupos.")}</Text>
+            <Text style={styles.vazioSub}>{t("Verifique sua conexão e tente de novo.")}</Text>
+            <Button title={t("Tentar de novo")} onPress={() => carregar()} />
+          </View>
+        ) : grupos === null ? (
           <View style={styles.center}><ActivityIndicator color={colors.brandMid} /></View>
         ) : grupos.length === 0 ? (
           <View style={styles.center}>

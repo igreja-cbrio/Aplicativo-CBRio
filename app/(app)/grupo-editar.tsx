@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/Input";
 import { useColors } from "@/contexts/ThemeContext";
 import { useAdminGrupo } from "@/lib/useAdminGrupo";
 import { supabase } from "@/lib/supabase";
+import { editarGrupo } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -131,21 +132,33 @@ export default function GrupoEditarScreen() {
     setMsg(null);
     setSalvando(true);
     try {
-      const { error } = await supabase
-        .from("mem_grupos")
-        .update({
-          nome: grupo.nome?.trim() || null,
-          categoria: grupo.categoria?.trim() || null,
-          descricao: grupo.descricao?.trim() || null,
-          tema: grupo.tema?.trim() || null,
-          dia_semana: grupo.dia_semana,
-          horario: grupo.horario?.trim() || null,
-          local: grupo.local?.trim() || null,
-          endereco: grupo.endereco?.trim() || null,
-          bairro: grupo.bairro?.trim() || null,
-        })
-        .eq("id", grupo.id);
-      if (error) throw error;
+      // ⚠️⚠️ SAI PELO BACKEND (06/08/2026 · auditoria). Aqui era UPDATE DIRETO em
+      // `mem_grupos` — e a RLS de UPDATE só aceita `lider_id =
+      // current_user_membro_id()` OU nível grupos >= 3, ou seja **supervisor não
+      // passa**. Como o update não tinha `.select()` nem conferia linhas
+      // afetadas, 0 linhas voltavam SEM erro e esta tela dizia "Grupo
+      // atualizado." Medido em 06/08: o único supervisor com conta no app
+      // supervisiona 8 grupos e não é líder em 7 — 7 saves que mentiam.
+      //
+      // O endpoint autoriza pelo MESMO critério que esta tela usa pra mostrar o
+      // botão (`useAdminGrupo`), valida os campos (categoria em lista fechada —
+      // é regra de negócio; horário normalizado, porque a coluna é `time`) e
+      // devolve 409 quando nada é gravado, em vez de fingir sucesso.
+      const salvo = await editarGrupo(grupo.id, {
+        nome: grupo.nome?.trim() || null,
+        categoria: grupo.categoria?.trim() || null,
+        descricao: grupo.descricao?.trim() || null,
+        tema: grupo.tema?.trim() || null,
+        dia_semana: grupo.dia_semana,
+        horario: grupo.horario?.trim() || null,
+        local: grupo.local?.trim() || null,
+        endereco: grupo.endereco?.trim() || null,
+        bairro: grupo.bairro?.trim() || null,
+      });
+      // Reflete o que o servidor NORMALIZOU (ex.: "1930" virou "19:30",
+      // "casais" virou "Casais") — senão a tela mostraria o que a pessoa
+      // digitou e o banco teria outro valor.
+      if (salvo) setGrupo((g) => (g ? { ...g, ...salvo } : g));
       setMsg({ type: "ok", text: t("Grupo atualizado.") });
     } catch (e) {
       setMsg({
