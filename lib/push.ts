@@ -77,16 +77,38 @@ export async function registerForPush(userId: string): Promise<string | null> {
       .eq("id", userId)
       .maybeSingle();
 
-    const { error } = await supabase.from("app_push_tokens").upsert(
-      {
-        token,
-        user_id: userId,
-        membro_id: prof?.membro_id ?? null,
-        platform: Platform.OS,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "token" }
-    );
+    const base = {
+      token,
+      user_id: userId,
+      membro_id: prof?.membro_id ?? null,
+      platform: Platform.OS,
+      updated_at: new Date().toISOString(),
+    };
+
+    // ⚠️⚠️ `projeto_id` É O QUE DESTRAVA A ENTREGA (07/08/2026). A tabela recebe
+    // token de DOIS apps Expo (membros e CBRio Staff, mesma org e mesmo
+    // Supabase) e a Expo RECUSA O REQUEST INTEIRO quando eles vão juntos —
+    // 1.801 de 1.820 tickets em erro. Carimbar aqui é o que permite ao
+    // remetente agrupar por app (ver `lib/pushLotes.ts`).
+    //
+    // ⚠️ E ISTO PRECISA SOBREVIVER À COLUNA NÃO EXISTIR AINDA. No PostgREST,
+    // coluna desconhecida derruba a REQUISIÇÃO TODA — se este OTA chegar antes
+    // da migration, o registro de push pararia de funcionar por completo, que é
+    // pior do que o bug que estamos consertando. Então tenta com o carimbo e,
+    // se o servidor recusar, grava sem ele. Deixa de depender da ORDEM entre
+    // migration e OTA, que já nos custou caro antes.
+    let error = (await supabase
+      .from("app_push_tokens")
+      .upsert({ ...base, projeto_id: projectId }, { onConflict: "token" })).error;
+    if (error) {
+      const semColuna = /projeto_id/i.test(String(error.message ?? ""));
+      if (semColuna) {
+        trackEvento("push_sem_projeto", { reason: "coluna_ausente" });
+        error = (await supabase
+          .from("app_push_tokens")
+          .upsert(base, { onConflict: "token" })).error;
+      }
+    }
     // O token nasceu mas não foi guardado: a pessoa segue sem receber nada, e
     // esse caso era invisível — o `upsert` não lança, devolve `{ error }`.
     if (error) {
