@@ -743,6 +743,31 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Marcar todas como lidas": { en: "Mark all as read", es: "Marcar todas como leídas" },
   "Inscrito": { en: "Enrolled", es: "Inscrito" },
   "Pendente": { en: "Pending", es: "Pendiente" },
+  // ── Censo (08/08/2026) ──
+  "Censo": { en: "Census", es: "Censo" },
+  "Não consegui carregar": { en: "Couldn't load", es: "No se pudo cargar" },
+  "Não consegui carregar agora.": { en: "Couldn't load right now.", es: "No se pudo cargar ahora." },
+  "Nenhum censo aberto": { en: "No open census", es: "Ningún censo abierto" },
+  "Complete seu cadastro no app para participar dos próximos censos.": {
+    en: "Complete your profile in the app to take part in the next census.",
+    es: "Completa tu registro en la app para participar de los próximos censos.",
+  },
+  "Quando a igreja abrir um novo censo, ele aparece aqui.": {
+    en: "When the church opens a new census, it shows up here.",
+    es: "Cuando la iglesia abra un nuevo censo, aparecerá aquí.",
+  },
+  "Você já respondeu": { en: "You've already answered", es: "Ya respondiste" },
+  "Recebemos sua resposta do": { en: "We received your answer to the", es: "Recibimos tu respuesta del" },
+  "Cada pessoa responde uma vez só — é o que mantém os números certos. Obrigado por ter participado.": {
+    en: "Each person answers only once — that's what keeps the numbers right. Thank you for taking part.",
+    es: "Cada persona responde una sola vez — es lo que mantiene los números correctos. Gracias por participar.",
+  },
+  "Seus dados de cadastro já vêm preenchidos — você não precisa digitar CPF nem nome de novo.": {
+    en: "Your profile details come pre-filled — no need to type your ID or name again.",
+    es: "Tus datos de registro vienen precargados — no necesitas escribir CPF ni nombre otra vez.",
+  },
+  "Aberto até": { en: "Open until", es: "Abierto hasta" },
+  "Responder o censo": { en: "Answer the census", es: "Responder el censo" },
   "Sua jornada": { en: "Your journey", es: "Tu jornada" },
   "Sua caminhada na CBRio": { en: "Your walk at CBRio", es: "Tu caminar en CBRio" },
   "Sua caminhada na CBRio 💙": { en: "Your walk at CBRio 💙", es: "Tu caminar en CBRio 💙" },
