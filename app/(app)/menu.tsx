@@ -83,6 +83,7 @@ export default function MenuScreen() {
         { label: "Meu perfil", icon: "person-outline", onPress: () => router.navigate("/perfil") },
         { label: "Minha família", icon: "people-outline", onPress: () => router.navigate("/familia") },
         { label: "Sua jornada", icon: "trail-sign-outline", onPress: () => router.navigate("/jornada") },
+        { label: "Censo", icon: "clipboard-outline", onPress: () => router.navigate("/censo") },
         // ⚠️ "Generosidade" abre a tela do VALOR (texto), NUNCA chave PIX/QR/
         // link de pagamento — guideline 3.2.2(iv) da App Store. Ver o cabeçalho
         // de components/generosidade/GenerosidadeTexto.tsx antes de mexer.

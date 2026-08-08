@@ -1151,6 +1151,53 @@ nasceu em 07/08 com strings sem tradução num arquivo que **já importava
 enquanto código novo entra em PT duro (`npm run verificar` cobre RÉGUA e não vê
 tela nenhuma). Quem pagar um pedaço baixa o número em `scripts/i18n-cobertura.mjs`.
 
+## ⚠️ CENSO no app · só para quem NÃO respondeu (2026-08-08)
+
+Pedido do Matheus: *"o censo deve aparecer no app de membros também, para os
+membros que não fizeram. Quem já fez, o sistema vai saber pelo CPF, e vai ter um
+aviso dizendo que aquela pessoa já preencheu."*
+
+Tela `/censo` (Menu → Você, entre "Sua jornada" e "Generosidade").
+
+### ⚠️⚠️ QUEM DECIDE É O BACKEND — a tela não calcula nada
+
+`GET /api/app/censo` devolve `ja_respondeu` **e** a `url`, e **a url só é
+emitida para quem pode responder**. Se um dia esta tela tiver um bug e ignorar a
+flag, ela não tem para onde abrir. A trava não depende de o app estar
+atualizado — e é bom que não dependa: OTA chega em todo mundo, mas ninguém
+controla quando.
+
+### ⚠️⚠️ O CPF é o que fecha a janela do pós-processamento
+
+O vínculo resposta→pessoa no ERP é DEFERIDO de propósito (durante o culto,
+resolver identidade custava 7 das 8,3 idas ao banco por resposta). Existe uma
+janela — minutos a horas — em que a resposta está no banco, concluída, com o CPF
+certo, e **sem `membro_id`**. Checar só por vínculo diria "ainda não respondeu"
+para quem acabou de responder no culto, e o segundo envio **não é barrado por
+nada** (a idempotência do censo é por APARELHO, não por pessoa).
+A regra única vive em `backend/services/censoJaRespondeu.js` (repo do ERP) e é
+usada pelos DOIS caminhos — o prefill do formulário público e este endpoint.
+
+### ⚠️ O formulário NÃO foi reescrito em React Native
+
+São 108 perguntas com condicionais, rascunho, fila offline e um bloco sensível,
+tudo testado e no ar. A tela abre o MESMO formulário público num `WebView`, com
+`?t=<token>` — token de identidade assinado que o backend emitiu para esta
+sessão. Reimplementar seria uma segunda fonte de verdade, e a que ficasse para
+trás mentiria em silêncio.
+- ⚠️ **A pessoa não digita CPF**: o `POST /public/censo/:slug/prefill` aceita
+  `{ identidade }` e devolve os valores do cadastro. Pedir CPF + nascimento a
+  quem acabou de fazer login com senha é teatro de segurança — o token é
+  assinado, o CPF é digitável por qualquer um.
+- ⚠️ **`membro_id` nunca trafega cru** — senão bastaria trocar o uuid no
+  aparelho para responder no lugar de outra pessoa.
+- ⚠️ **Modal, não `WebBrowser`**: sair para o navegador perderia a sessão e faria
+  a pessoa se identificar de novo, que é justamente o atrito que o token remove.
+- ⚠️ Recarrega ao FOCAR — inclusive ao fechar o WebView, que é exatamente quando
+  `ja_respondeu` costuma ter mudado.
+- ⚠️ Erro de rede **não** vira "você já respondeu" nem "não tem censo": as duas
+  seriam afirmações falsas com cara de informação (a lição do `meu-grupo`).
+
 ## ⚠️⚠️ TELA DO SUPERVISOR · `/grupo-visita` (2026-08-07 · PRs #2339/#2340 + app)
 
 Pedido do Marcos: *"podemos deixar uma tela apenas para Registrar Frequência e
