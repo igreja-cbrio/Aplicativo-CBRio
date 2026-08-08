@@ -1,3 +1,21 @@
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║ ⛔⛔ NÃO RODE ESTE ARQUIVO. FÓSSIL PERIGOSO. (marcado em 08/08/2026)      ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
+--
+-- Ele cria `profiles` com as colunas `nome` e `cpf`, que **NÃO EXISTEM** na
+-- tabela viva (conferido no schema de produção: as colunas são `name`,
+-- `email`, `role`, `membro_id`, `is_membro_only`, …). O trigger daqui estouraria
+-- `42703 column does not exist` dentro do `AFTER INSERT` em `auth.users` — ou
+-- seja, **quebraria TODO cadastro novo do app**.
+--
+-- Quem manda em `profiles` e no gatilho de entrada de pessoa hoje são as
+-- migrations do ERP (`SISTEMA_INTEGRADO_CBRIO/supabase/migrations/`), não este
+-- repositório. Este arquivo fica só como registro do que o app esperava quando
+-- tinha banco próprio (projeto `otzemqml…`, abandonado na unificação).
+--
+-- O `SUPABASE_SETUP.md` mandava rodar isto no passo 2. Aquele passo foi
+-- REVOGADO em 08/08/2026.
+
 -- ============================================================
 -- CBRio — Tabela de perfis (profiles)
 -- Rode este script no Supabase: Dashboard -> SQL Editor -> New query -> Run

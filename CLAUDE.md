@@ -143,8 +143,16 @@ aparelho, e continua sendo passo humano antes de release.
   ⚠️ Baixar o bundle do `assets.eascdn.net` pra inspecionar dá **403**
   (requer assinatura do cliente) — pra ver o conteúdo, `npx expo export
   --platform android` local e `grep` no `.hbc` (o export SIM lê o `.env`).
-  ⚠️ `.env` local serve pro dev (`expo start`) e `.env.example` está
-  DESATUALIZADO (aponta pro projeto Supabase inicial `otzemqml…`).
+  ⚠️ `.env` local serve pro dev (`expo start`). ~~`.env.example` aponta pro
+  projeto inicial `otzemqml…`~~ → **CORRIGIDO em 08/08/2026** (Onda 5), junto
+  com o `SUPABASE_SETUP.md`, que era pior: o **passo 2 mandava rodar
+  `supabase/profiles.sql` no SQL Editor**, e esse arquivo cria `profiles` com
+  colunas `nome`/`cpf` que **não existem** na tabela viva — o trigger dele
+  estouraria `42703` no `AFTER INSERT` de `auth.users` e **quebraria todo
+  cadastro novo**. Passo revogado, arquivo marcado como FÓSSIL no cabeçalho.
+  ⚠️ **LEI QUE FICA**: neste repo, `supabase/*.sql` é **CÓPIA DE LEITURA** — os
+  16 arquivos foram marcados no próprio cabeçalho. A FONTE que roda são as
+  migrations do ERP. Não rode SQL daqui no painel.
 - **⚠️ Projeto EAS vive na ORGANIZAÇÃO `cbrio`** (transferido em 04/08/2026 da
   conta pessoal `mtoscano99`; `owner: "cbrio"` no app.json — mesmo projectId,
   OTAs/builds/credenciais preservados). Membros: mtoscano99 (owner) +
