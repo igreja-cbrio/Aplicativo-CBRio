@@ -1,9 +1,32 @@
 # Configuração do Supabase — CBRio
 
-Projeto: `https://otzemqmlprwhtvfxbvkj.supabase.co`
+> ## ⚠️⚠️ AVISO — LEIA ANTES DE SEGUIR QUALQUER PASSO DAQUI (08/08/2026)
+>
+> **Este documento descreve o SETUP ORIGINAL do app, de quando ele tinha banco
+> próprio. Ele NÃO descreve o sistema de hoje, e seguir os passos como estão
+> escritos causa estrago.**
+>
+> Dois erros que estavam aqui até 08/08:
+>
+> 1. **O projeto estava errado.** Dizia `otzemqmlprwhtvfxbvkj` — o projeto
+>    Supabase INICIAL do app, abandonado na unificação. O projeto **vivo**, com
+>    toda a base da igreja, é **`hhntwfawfnxvuobhdfkb`**. (`scripts/ota.js` já
+>    aborta a publicação se detectar a URL antiga.)
+> 2. **O passo 2 mandava rodar `supabase/profiles.sql` no SQL Editor** — e esse
+>    arquivo é FÓSSIL: ele cria `profiles` com colunas `nome` e `cpf`, que **não
+>    existem** na tabela viva (conferido no schema de produção). O trigger dele
+>    estouraria `42703` dentro do `AFTER INSERT` em `auth.users`, ou seja
+>    **quebraria todo cadastro novo**. Quem manda em `profiles` hoje são as
+>    migrations do ERP (`SISTEMA_INTEGRADO_CBRIO/supabase/migrations/`), não este
+>    repositório.
+>
+> **Regra que fica**: neste repo, `supabase/*.sql` é **cópia de leitura**, para
+> entender o que existe. A FONTE que roda é a pasta de migrations do ERP. Não
+> rode SQL daqui no painel.
 
-O código cliente já está pronto. Aqui está o passo a passo do que configurar no
-**painel do Supabase** e no app para tudo funcionar de verdade.
+Projeto vivo: `https://hhntwfawfnxvuobhdfkb.supabase.co`
+
+O passo a passo abaixo fica como registro histórico do setup inicial.
 
 ---
 
@@ -12,7 +35,7 @@ O código cliente já está pronto. Aqui está o passo a passo do que configurar
 No seu Mac, na raiz do projeto, crie o arquivo `.env`:
 
 ```
-EXPO_PUBLIC_SUPABASE_URL=https://otzemqmlprwhtvfxbvkj.supabase.co
+EXPO_PUBLIC_SUPABASE_URL=https://hhntwfawfnxvuobhdfkb.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=<sua anon public key>
 ```
 
@@ -21,11 +44,16 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=<sua anon public key>
 
 ---
 
-## 2. Tabela de perfis
+## 2. Tabela de perfis — ⛔ NÃO RODE
 
-No **SQL Editor** do Supabase, rode o conteúdo de [`supabase/profiles.sql`](./supabase/profiles.sql).
-Isso cria a tabela `profiles`, as políticas de RLS e o trigger que cria o perfil
-automaticamente no cadastro (puxando o `nome` enviado no signUp).
+~~No **SQL Editor** do Supabase, rode o conteúdo de `supabase/profiles.sql`.~~
+
+⚠️ **Passo REVOGADO em 08/08/2026.** `supabase/profiles.sql` é fóssil: cria
+`profiles` com `nome` e `cpf`, colunas que **não existem** na tabela viva. O
+trigger dele estouraria `42703` no `AFTER INSERT` de `auth.users` e **quebraria
+todo cadastro novo**. A tabela `profiles` já existe e é mantida pelas migrations
+do ERP. O arquivo continua no repo só como referência do que o app esperava no
+começo.
 
 ---
 
@@ -89,7 +117,7 @@ confirma o OTP.
 1. **Google Cloud Console** → crie um projeto → **APIs & Services → Credentials**.
 2. Crie um **OAuth client ID** do tipo **Web application**.
 3. Em **Authorized redirect URIs**, adicione o callback do Supabase:
-   `https://otzemqmlprwhtvfxbvkj.supabase.co/auth/v1/callback`
+   `https://hhntwfawfnxvuobhdfkb.supabase.co/auth/v1/callback`
 4. Copie o **Client ID** e **Client Secret**.
 5. No Supabase: **Authentication → Providers → Google** → cole Client ID/Secret → salve.
 
