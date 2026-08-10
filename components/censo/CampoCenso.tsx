@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { alternarOpcao, ehNeutra, NAO_SE_APLICA, type Pergunta } from "@/lib/censoForm";
 import { buscarCatalogo, type ItemCatalogo } from "@/lib/censoApi";
@@ -52,6 +53,7 @@ function tecladoDe(formato?: string) {
 
 export default function CampoCenso({ pergunta: p, valor, onChange, faltando }: Props) {
   const colors = useColors();
+  const t = useT();
   const s = useMemo(() => makeStyles(colors, !!faltando), [colors, faltando]);
 
   // ── busca em catálogo (igrejas do RJ, grupos ativos) ──
@@ -174,7 +176,7 @@ export default function CampoCenso({ pergunta: p, valor, onChange, faltando }: P
       <TextInput
         style={s.input}
         keyboardType="number-pad"
-        placeholder="DD/MM/AAAA"
+        placeholder={t("DD/MM/AAAA")}
         placeholderTextColor={colors.textMuted}
         value={br}
         maxLength={10}
@@ -234,6 +236,7 @@ export default function CampoCenso({ pergunta: p, valor, onChange, faltando }: P
  */
 function CampoBusca({ pergunta: p, valor, onChange, faltando }: Props) {
   const colors = useColors();
+  const t = useT();
   const s = useMemo(() => makeStyles(colors, !!faltando), [colors, faltando]);
   const [termo, setTermo] = useState("");
   const [itens, setItens] = useState<ItemCatalogo[]>([]);
@@ -268,14 +271,14 @@ function CampoBusca({ pergunta: p, valor, onChange, faltando }: Props) {
       <TextInput
         style={s.input}
         placeholder={p.catalogo === "grupos_ativos"
-          ? "Busque pelo nome do grupo ou do líder"
-          : "Comece a digitar o nome"}
+          ? t("Busque pelo nome do grupo ou do líder")
+          : t("Comece a digitar o nome")}
         placeholderTextColor={colors.textMuted}
         value={termo}
         onChangeText={setTermo}
         autoCorrect={false}
       />
-      {buscando && <Text style={s.rotulo}>Procurando…</Text>}
+      {buscando && <Text style={s.rotulo}>{t("Procurando…")}</Text>}
       {itens.map((i) => (
         <Pressable key={i.valor} onPress={() => onChange(i.valor)} style={s.opcao}>
           <View style={{ flex: 1 }}>
@@ -287,7 +290,7 @@ function CampoBusca({ pergunta: p, valor, onChange, faltando }: Props) {
       {!buscando && termo.trim().length >= 2 && p.permite_outro !== false && (
         <Pressable onPress={() => onChange(termo.trim())} style={s.opcao}>
           <Ionicons name="add-circle-outline" size={20} color={colors.textMuted} />
-          <Text style={s.opcaoTexto}>Usar “{termo.trim()}”</Text>
+          <Text style={s.opcaoTexto}>{t("Usar")} “{termo.trim()}”</Text>
         </Pressable>
       )}
     </View>

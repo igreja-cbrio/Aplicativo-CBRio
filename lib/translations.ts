@@ -1013,4 +1013,27 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   // ⚠️ Onda 4: esta frase existe porque a tela dizia "inscrições fechadas"
   // quando o que houve foi timeout. "Não sei" não pode virar "não".
   "Não foi possível verificar as inscrições. Toque pra tentar de novo.": { en: "We could not check registrations. Tap to try again.", es: "No pudimos verificar las inscripciones. Toca para intentar de nuevo." },
+
+  // ── Censo nativo no app (10/08/2026) ──
+  "Tente de novo.": { en: "Try again.", es: "Inténtalo de nuevo." },
+  "Não consegui enviar. Tente de novo.": { en: "Couldn't send. Try again.", es: "No pude enviar. Inténtalo de nuevo." },
+  "Não consegui abrir o formulário": { en: "Couldn't open the form", es: "No pude abrir el formulario" },
+  "Abrir no navegador": { en: "Open in browser", es: "Abrir en el navegador" },
+  "Este censo abre no navegador": { en: "This census opens in the browser", es: "Este censo se abre en el navegador" },
+  "Ele tem um tipo de pergunta que o app ainda não mostra. Para você não deixar nada em branco, respondemos pelo navegador.": { en: "It has a question type the app doesn't show yet. So you don't leave anything blank, let's answer in the browser.", es: "Tiene un tipo de pregunta que la app aún no muestra. Para que no dejes nada en blanco, respondemos en el navegador." },
+  "Recebemos, obrigado!": { en: "Got it, thank you!", es: "¡Recibido, gracias!" },
+  "Sua resposta foi registrada.": { en: "Your answer was recorded.", es: "Tu respuesta fue registrada." },
+  "Este censo não tem perguntas ainda.": { en: "This census has no questions yet.", es: "Este censo aún no tiene preguntas." },
+  "Parte": { en: "Part", es: "Parte" },
+  "respondidas": { en: "answered", es: "respondidas" },
+  "Falta responder 1 pergunta obrigatória nesta parte.": { en: "1 required question is still unanswered in this part.", es: "Falta responder 1 pregunta obligatoria en esta parte." },
+  "Faltam responder": { en: "Still unanswered:", es: "Faltan responder" },
+  "perguntas obrigatórias nesta parte.": { en: "required questions in this part.", es: "preguntas obligatorias en esta parte." },
+  "Enviando…": { en: "Sending…", es: "Enviando…" },
+  "Enviar respostas": { en: "Send answers", es: "Enviar respuestas" },
+  "DD/MM/AAAA": { en: "DD/MM/YYYY", es: "DD/MM/AAAA" },
+  "Procurando…": { en: "Searching…", es: "Buscando…" },
+  "Comece a digitar o nome": { en: "Start typing the name", es: "Empieza a escribir el nombre" },
+  "Busque pelo nome do grupo ou do líder": { en: "Search by group or leader name", es: "Busca por el nombre del grupo o del líder" },
+  "Usar": { en: "Use", es: "Usar" },
 };
