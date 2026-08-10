@@ -743,6 +743,12 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Marcar todas como lidas": { en: "Mark all as read", es: "Marcar todas como leídas" },
   "Inscrito": { en: "Enrolled", es: "Inscrito" },
   "Pendente": { en: "Pending", es: "Pendiente" },
+  // ── Conserto do loop de cadastro (10/08/2026) ──
+  "Falta só": { en: "Just missing", es: "Solo falta" },
+  "Ainda falta completar seu cadastro.": {
+    en: "Your profile still needs completing.",
+    es: "Todavía falta completar tu registro.",
+  },
   // ── Censo (08/08/2026) ──
   "Censo": { en: "Census", es: "Censo" },
   "Não consegui carregar": { en: "Couldn't load", es: "No se pudo cargar" },

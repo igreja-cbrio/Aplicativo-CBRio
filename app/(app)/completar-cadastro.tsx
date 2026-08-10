@@ -80,6 +80,16 @@ const dataParaIso = (br: string) => nascimentoBRParaISO(br);
 
 type Passo = "escolha" | "cpf" | "codigo" | "form";
 
+/** O servidor manda CHAVES em `falta` ('nascimento', 'sexo'…). Mostrar a chave
+ *  crua faria a tela dizer "falta sexo" com cara de erro de sistema. */
+const ROTULO_FALTA: Record<string, string> = {
+  nome: "seu nome completo",
+  telefone: "seu telefone",
+  nascimento: "sua data de nascimento",
+  cpf: "seu CPF",
+  sexo: "seu sexo",
+};
+
 export default function CompletarCadastroScreen() {
   const { user, signOut } = useAuth();
   const { colors } = useTheme();
@@ -155,8 +165,42 @@ export default function CompletarCadastroScreen() {
     };
   }, []);
 
+  // ⚠️⚠️ NÃO SAIR DAQUI PARA SER REBATIDO (conserto do LOOP · 10/08/2026).
+  //
+  // O relato: "preencho e volta pra mesma tela; não consigo entrar no app".
+  // Medido em produção: uma pessoa viu esta tela 9 VEZES e confirmou 3.
+  //
+  // Eram duas causas somadas. No servidor, o que a pessoa digitava era validado
+  // e DESCARTADO quando o matcher achava o cadastro dela (corrigido em
+  // appIdentidade.js). E aqui: `concluir()` navegava embora sem conferir nada —
+  // o portão então recalculava, achava campo faltando e devolvia a pessoa pra
+  // esta tela, que recomeça no passo do CPF. Ela tentava o caminho rápido de
+  // novo, confirmava de novo, e voltava de novo.
+  //
+  // Agora a tela PERGUNTA antes de sair. Se ainda falta algo, ela não entrega a
+  // pessoa a um portão que vai recusá-la: fica aqui, abre o formulário e DIZ o
+  // que falta. Sair para ser rebatido é o loop; ficar e pedir o campo é a saída.
   const concluir = useCallback(async () => {
     await reload();
+
+    try {
+      const s = await statusIdentidade();
+      if (s.completo === false) {
+        const faltando = (s.falta || []).map((f) => ROTULO_FALTA[f] || f);
+        setPasso("form");
+        setAviso(
+          faltando.length
+            ? `${t("Falta só")} ${faltando.join(", ")}.`
+            : t("Ainda falta completar seu cadastro."),
+        );
+        return;
+      }
+    } catch {
+      // Erro de rede aqui NÃO prende a pessoa: o portão faz a própria conferência
+      // e, se de fato faltar algo, ela volta pra cá com o aviso. Travar numa tela
+      // por falha de conexão é o defeito que este conserto existe para tirar.
+    }
+
     // ⚠️ `retorno` traz a pessoa de volta pra onde ela ESTAVA (ex.: o evento em
     // que ela ia se inscrever) em vez de despejá-la na Home — completar o
     // cadastro é um desvio no meio de uma tarefa, não a tarefa.
@@ -167,7 +211,7 @@ export default function CompletarCadastroScreen() {
       return;
     }
     router.replace("/");
-  }, [reload, router, retorno]);
+  }, [reload, router, retorno, t]);
 
   async function buscarPorCpf() {
     setErro(null); setAviso(null);
