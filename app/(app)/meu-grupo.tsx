@@ -151,6 +151,17 @@ export default function MeuGrupoScreen() {
     return m;
   }, [geridos]);
 
+  // ⚠️⚠️ O RÓTULO SEGUE O DADO, não uma constante. Se TODO grupo deste bloco
+  // for supervisão, diz "supervisor" (a linguagem da igreja, pedido do Marcos);
+  // se houver um liderado no meio — servidor antigo, resposta incompleta — o
+  // rótulo genérico volta sozinho, em vez de a tela anunciar supervisão de algo
+  // que a pessoa lidera.
+  const tituloDosGeridos = useMemo(() => {
+    if (!outrosGeridos.length) return "Grupos que você gerencia";
+    const todosSupervisao = outrosGeridos.every((g) => ehSupervisao(papelPorId.get(g.id)));
+    return todosSupervisao ? "Grupos que você é supervisor" : "Grupos que você gerencia";
+  }, [outrosGeridos, papelPorId]);
+
   // ⚠️ A rota depende do PAPEL, e quem decide o papel é o SERVIDOR (`papel` em
   // /app/grupos/meus · 07/08). Supervisor vai pra tela enxuta (frequência +
   // comentário da visita); líder e coordenação seguem na tela completa. Papel
@@ -308,15 +319,22 @@ export default function MeuGrupoScreen() {
         )}
 
         {/* Grupos que ele GERENCIA sem ser membro — o caso do supervisor.
-            ⚠️ O rótulo diz "gerencia", não "supervisiona": `/app/grupos/meus`
-            devolve liderados ∪ supervisionados e NÃO diz qual é qual, então
-            afirmar o papel aqui seria a tela inventar o que o payload não
-            carrega. É seção separada de propósito — estes não têm material,
-            próximo encontro nem "falar com o líder"; são trabalho, não
-            pertencimento. */}
+            ⚠️⚠️ O RÓTULO AGORA VEM DO DADO (10/08/2026 · apontamento 16).
+            Pedido do Marcos: *"mude o texto de 'grupos que você gerencia' para
+            'grupos que você é supervisor', faz mais sentido na linguagem da
+            igreja."*
+            ⚠️ Mas NÃO virou constante: o comentário antigo aqui dizia que o
+            payload "não diz qual é qual" — isso está DESATUALIZADO desde 07/08
+            (`papel` chega por grupo em `/app/grupos/meus`, e esta tela já o usa
+            pra decidir a rota). Derivar é o que impede a tela de MENTIR: se um
+            grupo LIDERADO cair neste bloco (servidor antigo, resposta
+            incompleta), o rótulo genérico volta sozinho em vez de anunciar
+            supervisão de algo que a pessoa lidera.
+            É seção separada de propósito — estes não têm material, próximo
+            encontro nem "falar com o líder"; são trabalho, não pertencimento. */}
         {!erroCarga && outrosGeridos.length > 0 && (
           <View style={styles.geridosBloco}>
-            <Text style={styles.geridosTitulo}>{t("Grupos que você gerencia")}</Text>
+            <Text style={styles.geridosTitulo}>{t(tituloDosGeridos)}</Text>
             {outrosGeridos.map((g) => {
               const pend = g.pendentes || 0;
               return (

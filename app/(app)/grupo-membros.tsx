@@ -43,6 +43,7 @@ import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-rou
 import * as Haptics from "expo-haptics";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { linkDeInscricao, precisaEscolherNaLista } from "@/lib/convite";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { hojeBRT } from "@/lib/dataBRT";
 import {
@@ -330,12 +331,23 @@ export default function GrupoMembrosScreen() {
       : null;
 
   async function convidar() {
-    // ⚠️ O link público é o de INSCRIÇÃO EM GRUPOS (`/inscricao-grupos`), que não
-    // aceita parâmetro de grupo — quem entra escolhe o grupo na lista. A mensagem
-    // diz o nome pra pessoa achar o certo; inventar um `?grupo=` daria link morto.
+    // ⚠️⚠️ LINK DO PRÓPRIO GRUPO (10/08/2026 · apontamento 2). O comentário que
+    // estava aqui dizia que "a página não aceita parâmetro de grupo" — FALSO, e
+    // conferido em produção: `?grupo=<id>` responde 200 e o ERP já usa isso no
+    // popup do mapa. Comentário desatualizado é pior que ausente: impediu o
+    // conserto por meses.
+    // ⚠️ A régua (`lib/convite.ts`) decide, porque 9 dos 102 grupos ativos são
+    // "por convite do líder" e o backend responde 403 a link neles — mandar o
+    // link específico desses recusaria todo mundo.
+    // ⚠️ E o TEXTO acompanha o link: com link direto, "é só entrar por aqui";
+    // com link geral, a pessoa PRECISA saber que tem que achar o grupo na lista.
+    const link = linkDeInscricao(grupo);
+    const comoEntrar = precisaEscolherNaLista(grupo)
+      ? t("Se inscreva aqui e escolha o nosso grupo na lista")
+      : t("É só se inscrever por aqui");
     try {
       await Share.share({
-        message: `${t("Vem pro nosso grupo de conexão")} "${nome}"${quandoTxt ? ` (${quandoTxt})` : ""}! ${t("Se inscreva aqui e escolha o nosso grupo na lista")}: https://cbrio.org/inscricao-grupos`,
+        message: `${t("Vem pro nosso grupo de conexão")} "${nome}"${quandoTxt ? ` (${quandoTxt})` : ""}! ${comoEntrar}: ${link}`,
       });
     } catch { /* a pessoa cancelou o compartilhamento */ }
   }

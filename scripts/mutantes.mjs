@@ -250,6 +250,19 @@ const MUTANTES = [
     de: "  if (!Number.isFinite(n)) return \"conexao\";",
     para: "  if (!Number.isFinite(n)) return \"servidor\";",
   },
+  // ── Link de convite (10/08 · Onda C) ──
+  {
+    nome: "convite: mandar link DIRETO pra grupo por convite (403 pra todo mundo)",
+    arq: "lib/convite.ts",
+    de: "  if (ehPorConvite(grupo)) return BASE_INSCRICAO;",
+    para: "  if (false as boolean) return BASE_INSCRICAO;",
+  },
+  {
+    nome: "convite: texto nao acompanha o link (manda achar na lista o que ja veio pronto)",
+    arq: "lib/convite.ts",
+    de: "  return linkDeInscricao(grupo) === BASE_INSCRICAO;",
+    para: "  return true;",
+  },
   // ── Data E HORA na previa (10/08) ──
   {
     nome: "data: voltar a mostrar relativo ('Em N dias') em vez de dia e mes",

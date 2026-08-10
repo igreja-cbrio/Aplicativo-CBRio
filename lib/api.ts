@@ -676,6 +676,8 @@ export type GrupoRoster = {
     id: string; nome: string; dia_semana: number | null; horario: string | null;
     local: string | null; endereco: string | null; bairro: string | null;
     descricao: string | null; categoria: string | null; aceitando_inscricoes: boolean | null;
+    /** 'temporada' | 'sempre_aberto' | 'fechado' — decide o link de convite (lib/convite.ts). */
+    modo_inscricao?: string | null;
     /**
      * ⚠️ A LÍDER PRINCIPAL. `funcao='lider'` no roster é só CADASTRO (pode ter
      * vários, nenhum recebe mensagem por isso); quem recebe o WhatsApp do grupo
