@@ -21,13 +21,14 @@ import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Stack, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import WebView from "react-native-webview";
@@ -58,6 +59,13 @@ function dataCurta(iso: string | null | undefined) {
 export default function CensoScreen() {
   const colors = useColors();
   const t = useT();
+  // ⚠️ Insets lidos AQUI, no corpo da tela — de propósito. Dentro de um `Modal`
+  // do React Native o SafeAreaView do safe-area-context não recebe inset nenhum
+  // (o modal é outra hierarquia nativa, e o provider vive na raiz do app), então
+  // `edges={["top"]}` não aplicava NADA: o cabeçalho com o X ficava por trás da
+  // Dynamic Island. O hook, chamado fora do modal, devolve o valor certo e a
+  // gente aplica na mão.
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [status, setStatus] = useState<CensoStatus | null>(null);
@@ -158,7 +166,10 @@ export default function CensoScreen() {
           perderia a sessão e faria a pessoa se identificar de novo — que é
           justamente o atrito que o token existe para remover. */}
       <Modal visible={abrindo && !!status?.url} animationType="slide" onRequestClose={() => setAbrindo(false)}>
-        <SafeAreaView style={styles.modalSafe} edges={["top"]}>
+        {/* ⚠️ `Platform.OS === "ios"` porque no Android o Modal NÃO desenha sob a
+            barra de status (edge-to-edge está desligado no app.json): somar o
+            inset lá criaria um vão duplicado no topo. */}
+        <View style={[styles.modalSafe, { paddingTop: Platform.OS === "ios" ? insets.top : 0 }]}>
           <View style={styles.header}>
             <Pressable onPress={() => setAbrindo(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
               <Ionicons name="close" size={26} color={colors.text} />
@@ -178,7 +189,7 @@ export default function CensoScreen() {
               )}
             />
           )}
-        </SafeAreaView>
+        </View>
       </Modal>
     </SafeAreaView>
   );
