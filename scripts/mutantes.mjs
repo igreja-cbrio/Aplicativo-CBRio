@@ -250,6 +250,19 @@ const MUTANTES = [
     de: "  if (!Number.isFinite(n)) return \"conexao\";",
     para: "  if (!Number.isFinite(n)) return \"servidor\";",
   },
+  // ── QR do cartao (10/08 · Onda B) ──
+  {
+    nome: "qr: erro deixar de vir ANTES (manda completar cadastro que ja esta certo)",
+    arq: "lib/cartaoQr.ts",
+    de: '  if (args.falhou) return "erro";',
+    para: '  if (false as boolean) return "erro";',
+  },
+  {
+    nome: "qr: desenhar QR fora do estado ok (quadrado preto no leitor)",
+    arq: "lib/cartaoQr.ts",
+    de: '  return estado === "ok";',
+    para: "  return true;",
+  },
   {
     nome: "falha: deixar a falha virar CONTEUDO na tela",
     arq: "lib/falhaDeLeitura.ts",

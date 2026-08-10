@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -138,6 +139,23 @@ export default function GrupoDetalheScreen() {
     }, [carregar])
   );
 
+  // ⚠️⚠️ CONFIRMAÇÃO ANTES DE ENVIAR (10/08/2026 · apontamento 8 do Marcos):
+  // *"ao tentar me inscrever em um grupo, ele não colocou janela de
+  // confirmação."* O botão disparava no PRIMEIRO toque e o pedido já ia pro
+  // líder — e recusar um pedido custa conversa dos dois lados.
+  // ⚠️ O nome do grupo entra na pergunta de propósito: o deep link e o mapa
+  // levam direto pra esta tela, e a pessoa pode não saber em qual grupo está.
+  function confirmarParticipar() {
+    Alert.alert(
+      t("Pedir para entrar?"),
+      `${t("Vamos enviar seu pedido para o líder de")} ${grupo?.nome || t("Grupo")}.`,
+      [
+        { text: t("Cancelar"), style: "cancel" },
+        { text: t("Enviar pedido"), onPress: () => { void participar(); } },
+      ],
+    );
+  }
+
   async function participar() {
     setErro(null);
     if (!membro?.membroId) {
@@ -262,7 +280,7 @@ export default function GrupoDetalheScreen() {
                 </Text>
               </Pressable>
             ) : (
-              <Button title={t("Quero participar")} onPress={participar} loading={enviando || estado === "carregando"} />
+              <Button title={t("Quero participar")} onPress={confirmarParticipar} loading={enviando || estado === "carregando"} />
             )}
             {erro && <Text style={styles.erro}>{erro}</Text>}
 

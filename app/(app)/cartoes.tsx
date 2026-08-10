@@ -13,6 +13,8 @@ import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import QRCode from "react-native-qrcode-svg";
+import { estadoDoQr, podeDesenharQr } from "@/lib/cartaoQr";
+import { trackEvento } from "@/lib/telemetria";
 import { Button } from "@/components/ui/Button";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { HoloTicket } from "@/components/cartao/HoloTicket";
@@ -55,6 +57,8 @@ export default function CartoesScreen() {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [vinculado, setVinculado] = useState(true);
+  // ⚠️ Separa "não consegui perguntar" de "a resposta é não" — ver lib/cartaoQr.ts.
+  const [qrFalhou, setQrFalhou] = useState(false);
   const [walletLoading, setWalletLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -88,7 +92,18 @@ export default function CartoesScreen() {
       setStatus(m.status ?? null);
       setNascimento(m.data_nascimento ?? null);
     }
-    const { data: tk } = await supabase.rpc("app_meu_qrcode");
+    // ⚠️⚠️ O ERRO DA RPC ERA DESCARTADO (10/08/2026). Era
+    // `const { data: tk } = await supabase.rpc(...)` — sem `error`. Então falha
+    // de rede, cota ou servidor virava a AFIRMAÇÃO "QR indisponível", que é a
+    // mesma mensagem de quem não tem CPF. Três estados, uma frase, nenhum
+    // caminho de saída.
+    const { data: tk, error: eQr } = await supabase.rpc("app_meu_qrcode");
+    setQrFalhou(!!eQr);
+    if (eQr) {
+      // Sem isto o defeito volta a ser invisível: NULL é resposta legítima da
+      // RPC (ela devolve null quando não acha CPF), então só o erro distingue.
+      trackEvento("qr_falhou", { message: String(eQr.message || eQr).slice(0, 200) });
+    }
     setToken((tk as string) ?? null);
     setLoading(false);
   }, [user?.id]);
@@ -96,6 +111,11 @@ export default function CartoesScreen() {
   useEffect(() => {
     carregar();
   }, [carregar]);
+
+  // ⚠️ A classificação vive em `lib/cartaoQr.ts` (pura, no portão) — a tela só
+  // escolhe o que mostrar. `erro` vem antes de tudo: quem teve timeout não deve
+  // ser mandado mexer num cadastro que já está certo.
+  const qr = estadoDoQr({ token, membroId, cpf, falhou: qrFalhou });
 
   async function addWallet() {
     setErro(null);
@@ -172,11 +192,33 @@ export default function CartoesScreen() {
                     <Text style={[styles.label, { marginTop: spacing.md }]}>{t("ID")}</Text>
                     <Text style={styles.value}>{cartaoId(membroId)}</Text>
 
+                    {/* ⚠️⚠️ Três estados diferentes davam a MESMA frase ("QR
+                        indisponível") e nenhum dizia o que fazer. O pior é que
+                        o caso da MAIORIA é conserto de 1 minuto: medido em
+                        10/08, **26 das 54 contas do app não têm CPF**, e sem
+                        CPF não existe QR possível (ele mapeia token → CPF).
+                        A régua vive em `lib/cartaoQr.ts`, com teste. */}
                     <View style={styles.qrBox}>
-                      {token ? (
-                        <QRCode value={token} size={150} backgroundColor="#ffffff" color="#0B1F26" />
+                      {podeDesenharQr(qr) ? (
+                        <QRCode value={token!} size={150} backgroundColor="#ffffff" color="#0B1F26" />
+                      ) : qr === "sem_cpf" ? (
+                        <Pressable onPress={() => router.navigate("/completar-cadastro")} accessibilityRole="button">
+                          <Text style={styles.qrMissing}>
+                            {t("Seu cartão precisa do CPF no cadastro. Toque para completar.")}
+                          </Text>
+                        </Pressable>
+                      ) : qr === "sem_vinculo" ? (
+                        <Pressable onPress={() => router.navigate("/completar-cadastro")} accessibilityRole="button">
+                          <Text style={styles.qrMissing}>
+                            {t("Complete seu cadastro para ter o cartão de membro.")}
+                          </Text>
+                        </Pressable>
                       ) : (
-                        <Text style={styles.qrMissing}>{t("QR indisponível")}</Text>
+                        <Pressable onPress={carregar} accessibilityRole="button">
+                          <Text style={styles.qrMissing}>
+                            {t("Não foi possível carregar o QR. Toque para tentar de novo.")}
+                          </Text>
+                        </Pressable>
                       )}
                     </View>
                   </View>
