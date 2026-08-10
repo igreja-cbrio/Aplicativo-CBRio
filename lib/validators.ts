@@ -73,10 +73,23 @@ export function isDataCalendarioBR(value: string) {
  * inscrição de batismo, vínculo do Kids e `nascimentoBRParaISO`.
  * ⚠️ Campo que aceita futuro usa `isDataCalendarioBR` + a própria regra.
  */
-export function isValidDateBR(value: string) {
+/**
+ * Data de NASCIMENTO: existe no calendário E não está no futuro.
+ *
+ * ⚠️ `hoje` é injetável (ISO `AAAA-MM-DD`) pelo mesmo motivo de
+ * `nascimentoBRParaISO`: teste que lê o relógio da máquina apodrece. Aconteceu
+ * aqui — a régua de indisponibilidade era testada com a data "09/08/2026" como
+ * exemplo de FUTURO, e em 10/08/2026 o teste virou vermelho para todo mundo, no
+ * CI, sem ninguém ter mudado uma linha de código.
+ * Sem argumento, usa o agora — os chamadores de tela não mudam.
+ */
+export function isValidDateBR(value: string, hoje?: string) {
   if (!isDataCalendarioBR(value)) return false;
   const m = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)!;
-  return new Date(+m[3], +m[2] - 1, +m[1]).getTime() <= Date.now();
+  const limite = hoje
+    ? new Date(`${hoje}T23:59:59`).getTime()
+    : Date.now();
+  return new Date(+m[3], +m[2] - 1, +m[1]).getTime() <= limite;
 }
 
 /** Converte DD/MM/AAAA -> AAAA-MM-DD (ISO, para o banco). */

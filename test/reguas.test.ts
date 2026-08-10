@@ -722,9 +722,12 @@ describe("janelaIndisponibilidadeBR", () => {
     expect(janelaIndisponibilidadeBR("20/10/2026", "25/10/2026", HOJE)).toEqual({
       ok: true, de: "2026-10-20", ate: "2026-10-25",
     });
-    // As duas datas do relato dele, contra a régua de nascimento:
-    expect(isValidDateBR("09/08/2026")).toBe(false);
-    expect(isValidDateBR("20/10/2026")).toBe(false);
+    // As duas datas do relato dele, contra a régua de nascimento.
+    // ⚠️ `HOJE` injetado: sem isso estas duas linhas viravam vermelhas sozinhas
+    // quando o calendário passasse de 09/08/2026 — e viraram, em 10/08, com o
+    // CI reprovando um código que ninguém tocou.
+    expect(isValidDateBR("09/08/2026", HOJE)).toBe(false);
+    expect(isValidDateBR("20/10/2026", HOJE)).toBe(false);
   });
 
   it("aceita hoje e janela que COMEÇOU no passado mas ainda vale", () => {
