@@ -20,6 +20,8 @@ import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { enviarFotoPerfil } from "@/lib/api";
+import { arquivoDaCapa, capaCabe } from "@/lib/capaGrupo";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { useMembro } from "@/lib/useMembro";
 import { supabase } from "@/lib/supabase";
@@ -121,20 +123,25 @@ export default function PerfilScreen() {
     setMsg(null);
     setUploading(true);
     try {
-      const resp = await fetch(asset.uri);
-      const arrayBuffer = await resp.arrayBuffer();
-      const ext = (asset.uri.split(".").pop() || "jpg").toLowerCase();
-      const path = `${user.id}/avatar.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from("avatars")
-        .upload(path, arrayBuffer, {
-          contentType: asset.mimeType ?? `image/${ext}`,
-          upsert: true,
-        });
-      if (upErr) throw upErr;
-      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-      const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
-      await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id);
+      // ⚠️⚠️ SAI PELO BACKEND (10/08/2026). Aqui era `fetch(asset.uri)` +
+      // `.arrayBuffer()` + upload direto — e o arquivo NUNCA chegava ao Storage
+      // no Android, onde a URI do ImagePicker é `content://…`. Medido: 18 de 121
+      // profiles têm foto (o caminho de gravação funciona), mas a pasta de quem
+      // reclamou não existe no bucket. É o UPLOAD que falhava, não o update.
+      // ⚠️ Multipart é o formato que o RN monta nativamente do `{uri,name,type}`,
+      // sem ler bytes no JS — é o que a capa de grupo já adotou em 07/08.
+      const arquivo = arquivoDaCapa(asset);
+      if (!arquivo) {
+        setMsg({ type: "err", text: t("Use uma imagem JPG, PNG ou WEBP.") });
+        return;
+      }
+      if (!capaCabe(asset.fileSize)) {
+        setMsg({ type: "err", text: t("Imagem muito grande (máximo 4MB).") });
+        return;
+      }
+      // ⚠️ Quem decide a URL final é o SERVIDOR (caminho único por upload, pra o
+      // CDN não servir a foto velha por 1h). A tela aplica o que voltar.
+      const publicUrl = await enviarFotoPerfil(arquivo);
       setAvatarUrl(publicUrl);
       reloadMembro(); // atualiza o avatar compartilhado (Home, Menu, etc.)
       setMsg({ type: "ok", text: t("Foto de perfil atualizada.") });

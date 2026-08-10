@@ -494,6 +494,24 @@ export async function enviarCapaGrupo(
   return r?.foto_url ?? null;
 }
 
+/**
+ * Foto de PERFIL · sai pelo backend (10/08/2026 · Onda B).
+ *
+ * ⚠️ O caminho antigo (`fetch(asset.uri)` + `.arrayBuffer()` + upload direto)
+ * nunca chegava ao Storage no Android, onde a URI do ImagePicker é
+ * `content://…`. Medido: 18 de 121 profiles têm foto — o caminho de GRAVAÇÃO
+ * funciona; era o UPLOAD que falhava.
+ * ⚠️ Quem decide a URL final é o SERVIDOR (caminho único por upload).
+ */
+export async function enviarFotoPerfil(
+  arquivo: { uri: string; name: string; type: string },
+): Promise<string | null> {
+  const r = await apiUpload<{ ok: boolean; avatar_url: string | null }>(
+    "/app/membro/foto", "foto", arquivo,
+  );
+  return r?.avatar_url ?? null;
+}
+
 /** Tira a capa do grupo (o app só sabia SUBSTITUIR — foto errada não tinha desfazer). */
 export async function removerCapaGrupo(grupoId: string): Promise<void> {
   await apiDelete<{ ok: boolean }>(`/app/grupos/${encodeURIComponent(grupoId)}/foto`);

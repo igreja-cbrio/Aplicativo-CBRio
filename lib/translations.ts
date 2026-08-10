@@ -978,6 +978,15 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Escolher a capa do grupo": { en: "Choose the group cover photo", es: "Elegir la portada del grupo" },
   "A capa aparece na lista de grupos do app e do site.": { en: "The cover photo appears in the group list on the app and the website.", es: "La portada aparece en la lista de grupos de la app y del sitio." },
 
+  // ───────────────── Onda B · cartão e inscrição (10/08/2026) ─────────────────
+  "Seu cartão precisa do CPF no cadastro. Toque para completar.": { en: "Your card needs your CPF on file. Tap to complete it.", es: "Tu tarjeta necesita el CPF en el registro. Toca para completarlo." },
+  "Complete seu cadastro para ter o cartão de membro.": { en: "Complete your profile to get your member card.", es: "Completa tu registro para tener la tarjeta de miembro." },
+  "Não foi possível carregar o QR. Toque para tentar de novo.": { en: "We could not load the QR code. Tap to try again.", es: "No pudimos cargar el QR. Toca para intentar de nuevo." },
+  "Pedir para entrar?": { en: "Request to join?", es: "¿Pedir para entrar?" },
+  // ⚠️ Frase partida pelo NOME do grupo, que é DADO e não se traduz.
+  "Vamos enviar seu pedido para o líder de": { en: "We will send your request to the leader of", es: "Enviaremos tu solicitud al líder de" },
+  "Enviar pedido": { en: "Send request", es: "Enviar solicitud" },
+
   // ───────────────── Inscrições · hub e detalhe do grupo (07/08/2026) ─────────────────
   "Eventos da igreja": { en: "Church events", es: "Eventos de la iglesia" },
   "Todos": { en: "All", es: "Todos" },

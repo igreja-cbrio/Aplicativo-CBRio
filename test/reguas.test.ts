@@ -19,6 +19,7 @@ import { tipoDaCapa, arquivoDaCapa, capaCabe, MAX_CAPA_BYTES } from "@/lib/capaG
 import { motivoDaFalhaPush, mensagemDoErro } from "@/lib/motivoPush";
 import { lotesDePush, tokenMorreu, MAX_POR_REQUEST } from "@/lib/pushLotes";
 import { motivoDaFalha, podeVirarConteudo, ler } from "@/lib/falhaDeLeitura";
+import { estadoDoQr, podeDesenharQr, temCpf } from "@/lib/cartaoQr";
 import {
   estadoDoEncontro, ultimaOcorrencia, proximaOcorrencia,
   dataLonga, quandoCurto, distanciaEmTexto,
@@ -1023,5 +1024,56 @@ describe("motivoDaFalha · separa o que não deu pra perguntar", () => {
     await expect(ler(Promise.resolve(42))).resolves.toEqual({ ok: true, valor: 42 });
     await expect(ler(Promise.reject(comStatus(429)))).resolves.toEqual({ ok: false, motivo: "limite" });
     await expect(ler(Promise.reject(new Error("off")))).resolves.toEqual({ ok: false, motivo: "conexao" });
+  });
+});
+
+// ── QR do cartão: três estados, uma frase (10/08/2026 · Onda B) ─────────────
+// Apontamento 13 do Marcos: "o QR code do membro não está aparecendo, ele diz
+// 'QR code não disponível'". Medido: 26 das 54 contas do app com cadastro NÃO
+// têm CPF — e sem CPF não existe QR possível (ele mapeia token → CPF). A tela
+// dava a MESMA frase pra 3 estados e nenhum dizia o que fazer. E o pior: a
+// chamada descartava o erro, então timeout virava "indisponível".
+describe("estadoDoQr · não confundir 'não sei' com 'não tem'", () => {
+  const OK = { token: "abc123", membroId: "m1", cpf: "12345678901", falhou: false };
+
+  it("com token, desenha", () => {
+    expect(estadoDoQr(OK)).toBe("ok");
+    expect(podeDesenharQr("ok")).toBe(true);
+  });
+
+  it("⚠️ MUTATION GUARD · erro vem ANTES de tudo", () => {
+    // Se a ordem inverter, quem teve timeout é mandado completar um cadastro
+    // que já está certo. Mesma lei do lib/falhaDeLeitura.ts.
+    expect(estadoDoQr({ ...OK, token: null, falhou: true })).toBe("erro");
+    expect(estadoDoQr({ token: null, membroId: null, cpf: null, falhou: true })).toBe("erro");
+    expect(estadoDoQr({ ...OK, cpf: null, falhou: true })).toBe("erro");
+  });
+
+  it("sem vínculo e sem CPF são estados DIFERENTES (caminhos diferentes)", () => {
+    expect(estadoDoQr({ token: null, membroId: null, cpf: null, falhou: false })).toBe("sem_vinculo");
+    expect(estadoDoQr({ token: null, membroId: "m1", cpf: null, falhou: false })).toBe("sem_cpf");
+    expect(estadoDoQr({ token: null, membroId: "m1", cpf: "123", falhou: false })).toBe("sem_cpf");
+  });
+
+  it("vinculado, com CPF, sem token e sem erro → trata como erro, não inventa", () => {
+    expect(estadoDoQr({ token: null, membroId: "m1", cpf: "12345678901", falhou: false })).toBe("erro");
+    expect(estadoDoQr({ token: "   ", membroId: "m1", cpf: "12345678901", falhou: false })).toBe("erro");
+  });
+
+  it("⚠️ MUTATION GUARD · nunca desenha QR fora do estado `ok`", () => {
+    // `react-native-qrcode-svg` com value vazio desenha um quadrado preto sem
+    // sentido em vez de falhar — e QR ilegível no leitor da recepção é pior que
+    // a ausência dele.
+    for (const e of ["sem_vinculo", "sem_cpf", "erro"] as const) {
+      expect(podeDesenharQr(e)).toBe(false);
+    }
+  });
+
+  it("temCpf exige 11 dígitos, ignorando máscara", () => {
+    expect(temCpf("123.456.789-01")).toBe(true);
+    expect(temCpf("12345678901")).toBe(true);
+    expect(temCpf("1234567890")).toBe(false);
+    expect(temCpf(null)).toBe(false);
+    expect(temCpf("")).toBe(false);
   });
 });
