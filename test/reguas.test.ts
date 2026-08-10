@@ -13,7 +13,7 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 import { estadoVoluntariado, volEncerrado } from "@/lib/volStatus";
 import { rotaPai, ehRaiz, subirUmNivel } from "@/lib/hierarquia";
 import { hojeBRT, diaBRT } from "@/lib/dataBRT";
-import { fichaCompleta, faltaNaFicha, podeInscrever } from "@/lib/ficha";
+import { fichaCompleta, faltaNaFicha, podeInscrever, jaTemNaFicha } from "@/lib/ficha";
 import { montarPayloadInscricao, extrasFaltando } from "@/lib/inscricaoPayload";
 import { tipoDaCapa, arquivoDaCapa, capaCabe, MAX_CAPA_BYTES } from "@/lib/capaGrupo";
 import { motivoDaFalhaPush, mensagemDoErro } from "@/lib/motivoPush";
@@ -1075,5 +1075,46 @@ describe("estadoDoQr · não confundir 'não sei' com 'não tem'", () => {
     expect(temCpf("1234567890")).toBe(false);
     expect(temCpf(null)).toBe(false);
     expect(temCpf("")).toBe(false);
+  });
+});
+
+// ── A ficha não deve ser reperguntada (10/08/2026 · apontamento 4) ──────────
+// Marcos: "no batismo ele pediu data de nascimento, sendo que supostamente já
+// tem no sistema, deveria ter apenas o pedido do tamanho da camisa". A tela
+// tinha o dado em `useMembro()` e mostrava o campo de qualquer jeito.
+describe("jaTemNaFicha · só pergunta o que falta", () => {
+  const COMPLETO = {
+    nome: "Marcos Paulo", telefone: "21999998888", email: "m@cbrio.org",
+    cpf: "12345678901", dataNascimento: "1990-05-17", genero: "masculino",
+  };
+
+  it("com a ficha completa, não pergunta nada do padrão", () => {
+    for (const c of ["nome", "telefone", "email", "cpf", "dataNascimento", "genero"] as const) {
+      expect(jaTemNaFicha(COMPLETO, c)).toBe(true);
+    }
+  });
+
+  it("pergunta só o campo que falta", () => {
+    expect(jaTemNaFicha({ ...COMPLETO, dataNascimento: null }, "dataNascimento")).toBe(false);
+    expect(jaTemNaFicha({ ...COMPLETO, dataNascimento: null }, "nome")).toBe(true);
+    expect(jaTemNaFicha({ ...COMPLETO, genero: null }, "genero")).toBe(false);
+  });
+
+  it("⚠️ MUTATION GUARD · usa a MESMA validação de faltaNaFicha, não `!!campo`", () => {
+    // Telefone de 8 dígitos e CPF de 9 estão "preenchidos" e o servidor RECUSA.
+    // Um `!!campo` diria que já tem, a tela não perguntaria, e a pessoa levaria
+    // 400 no fim do formulário — que é o defeito que o CPF já causou em 50 das
+    // 75 contas em 05/08.
+    expect(jaTemNaFicha({ ...COMPLETO, telefone: "99998888" }, "telefone")).toBe(false);
+    expect(jaTemNaFicha({ ...COMPLETO, cpf: "123456789" }, "cpf")).toBe(false);
+    // Nome sem sobrenome também é reprovado pelo contrato.
+    expect(jaTemNaFicha({ ...COMPLETO, nome: "Marcos" }, "nome")).toBe(false);
+  });
+
+  it("sem membro, pergunta tudo", () => {
+    for (const c of ["nome", "telefone", "email", "cpf", "dataNascimento", "genero"] as const) {
+      expect(jaTemNaFicha(null, c)).toBe(false);
+      expect(jaTemNaFicha(undefined, c)).toBe(false);
+    }
   });
 });

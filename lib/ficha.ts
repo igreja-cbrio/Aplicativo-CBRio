@@ -63,3 +63,28 @@ export function faltaNaFicha(m?: MembroFicha | null): string[] {
 export function podeInscrever(m?: MembroFicha | null): boolean {
   return faltaNaFicha(m).length === 0;
 }
+
+/**
+ * A ficha JÁ TEM este campo? — é o que decide se a tela de inscrição precisa
+ * PERGUNTAR ou não (10/08/2026 · apontamento 4 do Marcos).
+ *
+ * ⚠️ O DEFEITO QUE ISTO CONSERTA: *"No batismo, quando fui tentar me inscrever
+ * ele pediu data de nascimento, sendo que supostamente já tem no sistema,
+ * deveria ter apenas o pedido do tamanho da camisa."* A tela tinha o dado em
+ * `useMembro()` e mostrava o campo de qualquer jeito.
+ *
+ * ⚠️ A regra do Marcos (05/08, no topo deste arquivo) já dizia isso: *"nas
+ * inscrições ela só preenche campos A MAIS, e nunca os padrão que já foram
+ * preenchidos"*. Faltava a função pra a tela poder obedecer.
+ *
+ * ⚠️ USA A MESMA VALIDAÇÃO de `faltaNaFicha` de propósito — não um `!!campo`
+ * solto. Telefone com 8 dígitos e CPF com 9 são "preenchidos" e mesmo assim o
+ * servidor recusa; perguntar de novo nesse caso é o certo. Uma régua só, um
+ * lugar só.
+ */
+export function jaTemNaFicha(
+  m: MembroFicha | null | undefined,
+  campo: keyof typeof CAMPOS_CONTRATO,
+): boolean {
+  return !faltaNaFicha(m).includes(CAMPOS_CONTRATO[campo]);
+}

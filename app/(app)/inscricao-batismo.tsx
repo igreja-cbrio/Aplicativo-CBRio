@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { SeusDados, fichaCompleta } from "@/components/inscricoes/SeusDados";
+import { jaTemNaFicha } from "@/lib/ficha";
 import { useT } from "@/lib/i18n";
 import { criarInscricao } from "@/lib/inscricoes";
 import { dateBRToISO, isValidDateBR, maskDateBR } from "@/lib/validators";
@@ -47,11 +48,24 @@ export default function InscricaoBatismoScreen() {
       .catch(() => {});
   }, []);
 
+  // ⚠️⚠️ PRÉ-PREENCHE O NASCIMENTO DA FICHA (10/08/2026 · apontamento 4).
+  // A tela SEMPRE mostrava o campo, mesmo tendo o dado em `useMembro()`.
+  // Palavras do Marcos: *"no batismo ele pediu data de nascimento, sendo que
+  // supostamente já tem no sistema, deveria ter apenas o pedido do tamanho da
+  // camisa."* A regra dele de 05/08 já dizia isso (topo de `lib/ficha.ts`):
+  // nas inscrições só se pergunta campo A MAIS.
+  // ⚠️ Pré-preencher, e não só esconder: o payload continua carregando a data
+  // (`data_nascimento` mais abaixo), então o servidor e o fanout não mudam.
   useEffect(() => {
     if (membro) {
       setNome((v) => v || membro.nome);
       setTelefone((v) => v || membro.telefone);
       setEmail((v) => v || membro.email);
+      if (membro.dataNascimento) {
+        // ISO (AAAA-MM-DD) → DD/MM/AAAA, que é o formato do campo e do parser.
+        const [a, m, d] = String(membro.dataNascimento).slice(0, 10).split("-");
+        if (a && m && d) setNascimento((v) => v || `${d}/${m}/${a}`);
+      }
     }
   }, [membro]);
 
@@ -142,14 +156,20 @@ export default function InscricaoBatismoScreen() {
           <Input label={t("E-mail")} value={email} onChangeText={setEmail} keyboardType="email-address" />
         </>
       )}
-      <Input
-        label={t("Data de nascimento")}
-        value={nascimento}
-        onChangeText={(v) => setNascimento(maskDateBR(v))}
-        placeholder="DD/MM/AAAA"
-        keyboardType="number-pad"
-        maxLength={10}
-      />
+      {/* ⚠️ Só aparece quando a ficha NÃO tem — a régua é `jaTemNaFicha`, a
+          MESMA de `faltaNaFicha` (telefone de 8 dígitos e CPF de 9 contam como
+          faltando, porque o servidor recusa). Quem já tem nascimento no cadastro
+          vê apenas o tamanho da camisa, que é o campo A MAIS do batismo. */}
+      {!jaTemNaFicha(membro, "dataNascimento") && (
+        <Input
+          label={t("Data de nascimento")}
+          value={nascimento}
+          onChangeText={(v) => setNascimento(maskDateBR(v))}
+          placeholder="DD/MM/AAAA"
+          keyboardType="number-pad"
+          maxLength={10}
+        />
+      )}
       <Input label={t("Tamanho da camisa (opcional)")} value={camisa} onChangeText={setCamisa} placeholder="P / M / G / GG" />
       <Checkbox
         checked={deficiencia}
