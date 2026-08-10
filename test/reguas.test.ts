@@ -20,6 +20,7 @@ import { motivoDaFalhaPush, mensagemDoErro } from "@/lib/motivoPush";
 import { lotesDePush, tokenMorreu, MAX_POR_REQUEST } from "@/lib/pushLotes";
 import { motivoDaFalha, podeVirarConteudo, ler } from "@/lib/falhaDeLeitura";
 import { estadoDoQr, podeDesenharQr, temCpf } from "@/lib/cartaoQr";
+import { linkDeInscricao, ehPorConvite, precisaEscolherNaLista } from "@/lib/convite";
 import {
   estadoDoEncontro, ultimaOcorrencia, proximaOcorrencia,
   dataLonga, quandoCurto, distanciaEmTexto, dataComHora, horaCurta,
@@ -1157,5 +1158,52 @@ describe("dataComHora · responde 'que dia' E 'que hora'", () => {
     expect(horaCurta(null)).toBe("");
     expect(horaCurta("19:30")).toBe("19:30");
     expect(horaCurta("07:00")).toBe("7h");
+  });
+});
+
+// ── O link que o líder compartilha (10/08/2026 · apontamento 2) ─────────────
+// "tem como colocar o link de inscrição daquele grupo específico, não do link
+// geral". Já era possível — o comentário no código dizia o contrário, e isso
+// impediu o conserto: conferido em produção, `?grupo=<id>` responde 200.
+// ⚠️ Mas 9 dos 102 grupos ativos são "por convite do líder" e o backend responde
+// 403 a link neles — mandar o link específico recusaria todo mundo.
+describe("linkDeInscricao · o grupo certo, sem quebrar os por convite", () => {
+  const NORMAL = { id: "abc-123", modo_inscricao: "temporada" };
+  const SEMPRE = { id: "abc-123", modo_inscricao: "sempre_aberto" };
+  const CONVITE = { id: "abc-123", modo_inscricao: "fechado" };
+
+  it("grupo normal ganha link DIRETO", () => {
+    expect(linkDeInscricao(NORMAL)).toBe("https://www.cbrio.org/inscricao-grupos?grupo=abc-123");
+    expect(linkDeInscricao(SEMPRE)).toBe("https://www.cbrio.org/inscricao-grupos?grupo=abc-123");
+  });
+
+  it("⚠️ MUTATION GUARD · grupo POR CONVITE cai no link geral", () => {
+    // Com link direto, o backend responde 403 e o convite do líder vira um link
+    // que recusa todo mundo — hoje o geral ao menos funciona.
+    expect(linkDeInscricao(CONVITE)).toBe("https://www.cbrio.org/inscricao-grupos");
+    expect(ehPorConvite(CONVITE)).toBe(true);
+    expect(ehPorConvite(NORMAL)).toBe(false);
+  });
+
+  it("sem id, link geral (não monta `?grupo=` vazio)", () => {
+    expect(linkDeInscricao({ id: null, modo_inscricao: "temporada" }))
+      .toBe("https://www.cbrio.org/inscricao-grupos");
+    expect(linkDeInscricao(null)).toBe("https://www.cbrio.org/inscricao-grupos");
+    expect(linkDeInscricao({ id: "  ", modo_inscricao: "temporada" }))
+      .toBe("https://www.cbrio.org/inscricao-grupos");
+  });
+
+  it("⚠️ MUTATION GUARD · o TEXTO acompanha o link", () => {
+    // Trocar o link sem trocar o texto é o pior desfecho: mandaria procurar na
+    // lista um grupo já pré-selecionado, ou entrar direto num link que cai na
+    // lista geral.
+    expect(precisaEscolherNaLista(NORMAL)).toBe(false);
+    expect(precisaEscolherNaLista(CONVITE)).toBe(true);
+    expect(precisaEscolherNaLista(null)).toBe(true);
+  });
+
+  it("usa www (o apex responde 307) e escapa o id", () => {
+    expect(linkDeInscricao(NORMAL)).toContain("https://www.cbrio.org");
+    expect(linkDeInscricao({ id: "a b", modo_inscricao: "temporada" })).toContain("a%20b");
   });
 });

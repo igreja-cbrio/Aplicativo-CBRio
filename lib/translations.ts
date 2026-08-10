@@ -444,6 +444,13 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Confirmar sua inscrição no batismo?": { en: "Confirm your baptism registration?", es: "¿Confirmar tu inscripción al bautismo?" },
   "A equipe vai falar com você sobre os próximos passos.": { en: "The team will talk to you about the next steps.", es: "El equipo hablará contigo sobre los próximos pasos." },
   "Confirmar inscrição": { en: "Confirm registration", es: "Confirmar inscripción" },
+
+  // ───────────────── Onda C · acabamento (10/08/2026) ─────────────────
+  "Minha família": { en: "My family", es: "Mi familia" },
+  "Grupos que você é supervisor": { en: "Groups you supervise", es: "Grupos que supervisas" },
+  "É só se inscrever por aqui": { en: "Just sign up here", es: "Solo inscríbete aquí" },
+  "Vem pro nosso grupo de conexão": { en: "Come to our connect group", es: "Ven a nuestro grupo de conexión" },
+  "Se inscreva aqui e escolha o nosso grupo na lista": { en: "Sign up here and pick our group from the list", es: "Inscríbete aquí y elige nuestro grupo en la lista" },
   "Próximo batismo": { en: "Next baptism", es: "Próximo bautismo" },
   "Conversar com um pastor": { en: "Talk to a pastor", es: "Hablar con un pastor" },
   "Quer um aconselhamento ou uma conversa? Um pastor ou líder entra em contato com você.": { en: "Want counseling or a chat? A pastor or leader will reach out to you.", es: "¿Quieres consejería o una conversación? Un pastor o líder se pondrá en contacto contigo." },

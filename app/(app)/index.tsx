@@ -35,22 +35,41 @@ function primeiroNome(nomeCompleto?: string, email?: string | null) {
 type Atalho = {
   label: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
-  href: "/generosidade" | "/batismo" | "/kids" | "/jornada" | "/next";
+  href: "/generosidade" | "/batismo" | "/kids" | "/jornada" | "/next" | "/inscricoes" | "/videos";
 };
 
 /**
- * ⚠️ Atalho aqui é SÓ pra o que não está na barra de baixo nem no menu —
- * pedido do Marcos (04/08/2026): "os itens que estejam no menu não sejam
- * atalhos". Saíram Devocional, Meu grupo, Servir, Cuidados e Inscrições
- * (os 4 primeiros estão na barra, sempre a um toque).
- * "No culto" também saiu: virou o CARD DE AO VIVO no topo, que só aparece
- * enquanto o culto está acontecendo.
+ * ⚠️⚠️ A REGRA É **NÃO REPETIR A BARRA DE BAIXO** — não "não repetir o menu".
+ *
+ * Este comentário dizia "os itens que estejam no menu não sejam atalhos", e
+ * isso é ambíguo o bastante pra me fazer ler errado em 10/08/2026: eu quase
+ * recusei o pedido do Marcos achando que ele contradizia a própria regra dele.
+ * Ele esclareceu: *"os atalhos só não devem ser igual ao menu de rodapé,
+ * justamente o que eu pedi. Inscrições e pregações estão no outro menu,
+ * exatamente como jornada, next, batismo, kids que estão no outro menu mas
+ * ficam no atalho."*
+ *
+ * ⇒ O que MANDA é a `BottomBar` (`components/ui/BottomBar.tsx`): Grupos,
+ * Servir, Cuidados, Devocional e Menu. Nada daí vira atalho, porque já está
+ * sempre a um toque. Estar no /menu NÃO impede — Jornada, NEXT, Batismo e Kids
+ * estão lá e são atalhos desde o começo.
+ *
+ * "No culto" saiu por outro motivo: virou o CARD DE AO VIVO no topo, que só
+ * aparece enquanto o culto acontece.
+ *
+ * ⚠️ A grade é de 3 colunas. Hoje são 6 itens (2 linhas cheias), mas a
+ * Generosidade é filtrada por FEATURES: com ela desligada ficam 5 e a última
+ * linha fica com 2. Quem acrescentar um 7º deixa 3+3+1 — decidir o que sai
+ * junto, não empurrar.
  */
 const ATALHOS: Atalho[] = [
   { label: "Sua jornada", icon: "trail-sign", href: "/jornada" },
   { label: "NEXT", icon: "sparkles", href: "/next" },
   { label: "Batismo", icon: "water", href: "/batismo" },
   { label: "Kids", icon: "happy", href: "/kids" },
+  { label: "Inscrições", icon: "clipboard", href: "/inscricoes" },
+  // ⚠️ A tela de pregações é `/videos` — não existe rota `/pregacoes`.
+  { label: "Pregações", icon: "videocam", href: "/videos" },
   { label: "Generosidade", icon: "gift", href: "/generosidade" },
 ];
 

@@ -463,7 +463,11 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
     header: { padding: spacing.lg, paddingBottom: spacing.md, gap: spacing.md },
-    headerEmbutido: { paddingTop: 0 },
+    // ⚠️ Era `paddingTop: 0` e o toggle Lista|Mapa colava nas abas de cima
+    // (10/08/2026 · apontamento 7). O `gap: 16` do header não vale ANTES do
+    // primeiro filho — e no modo embutido o primeiro filho passa a ser o
+    // toggle. Precisa de padding próprio.
+    headerEmbutido: { paddingTop: spacing.md },
     listContent: { paddingHorizontal: spacing.lg, paddingBottom: 40, gap: spacing.md },
     mapWrap: { flex: 1, paddingHorizontal: spacing.lg, paddingBottom: 100 },
     topRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: spacing.sm },
