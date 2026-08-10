@@ -985,7 +985,6 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Pedir para entrar?": { en: "Request to join?", es: "¿Pedir para entrar?" },
   // ⚠️ Frase partida pelo NOME do grupo, que é DADO e não se traduz.
   "Vamos enviar seu pedido para o líder de": { en: "We will send your request to the leader of", es: "Enviaremos tu solicitud al líder de" },
-  "Enviar pedido": { en: "Send request", es: "Enviar solicitud" },
 
   // ───────────────── Inscrições · hub e detalhe do grupo (07/08/2026) ─────────────────
   "Eventos da igreja": { en: "Church events", es: "Eventos de la iglesia" },
