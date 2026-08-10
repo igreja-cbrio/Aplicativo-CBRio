@@ -250,6 +250,19 @@ const MUTANTES = [
     de: "  if (!Number.isFinite(n)) return \"conexao\";",
     para: "  if (!Number.isFinite(n)) return \"servidor\";",
   },
+  // ── Data E HORA na previa (10/08) ──
+  {
+    nome: "data: voltar a mostrar relativo ('Em N dias') em vez de dia e mes",
+    arq: "lib/proximoEncontro.ts",
+    de: "  return hora ? `${dia} · ${hora}` : dia;",
+    para: "  return hora ? `em breve · ${hora}` : \"em breve\";",
+  },
+  {
+    nome: "data: inventar meia-noite quando nao ha hora",
+    arq: "lib/proximoEncontro.ts",
+    de: '  if (!horario) return "";',
+    para: '  if (!horario) return "00:00";',
+  },
   // ── Ficha: nao repergunte (10/08 · apontamento 4) ──
   {
     nome: "ficha: `!!campo` em vez da validacao real (telefone de 8 digitos passa)",

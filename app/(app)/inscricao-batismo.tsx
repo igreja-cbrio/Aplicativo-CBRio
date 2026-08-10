@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Linking, StyleSheet, Text, View } from "react-native";
+import { Alert, Linking, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -69,6 +69,24 @@ export default function InscricaoBatismoScreen() {
     }
   }, [membro]);
 
+  // ⚠️⚠️ CONFIRMAÇÃO ANTES DE ENVIAR (10/08/2026). O formulário disparava direto
+  // e a inscrição de batismo é ato pastoral — não um toque a mais numa lista.
+  // ⚠️ A pergunta cita a DATA do próximo batismo, que a tela já calculou
+  // (`proximoBatismo()`): confirmar sem saber pra quando é não é confirmar.
+  function confirmarEnviar() {
+    const quando = proxDt ? `
+
+${t("Próximo batismo")}: ${formatProximoBatismo(proxDt)}` : "";
+    Alert.alert(
+      t("Confirmar sua inscrição no batismo?"),
+      `${t("A equipe vai falar com você sobre os próximos passos.")}${quando}`,
+      [
+        { text: t("Cancelar"), style: "cancel" },
+        { text: t("Confirmar inscrição"), onPress: () => { void enviar(); } },
+      ],
+    );
+  }
+
   async function enviar() {
     setError(null);
     if (!nome || !telefone) {
@@ -113,7 +131,7 @@ export default function InscricaoBatismoScreen() {
       subtitle={t("Inscreva-se para ser batizado(a) na CBRio.")}
       icon="water"
       submitLabel={t("Quero me batizar")}
-      onSubmit={enviar}
+      onSubmit={confirmarEnviar}
       submitting={enviando || loading}
       enviado={enviado}
       enviadoTexto={grupoUrl ? t("Inscrição confirmada! Entre no grupo do batismo pra receber os próximos passos.") : undefined}
