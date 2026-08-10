@@ -17,7 +17,7 @@
 //  sabe quem ela é. Uma segunda implementação em React Native seria uma segunda
 //  fonte de verdade, e a que ficasse para trás mentiria em silêncio.
 // ============================================================================
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -31,13 +31,20 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Stack, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import WebView from "react-native-webview";
 import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { apiGet } from "@/lib/api";
+import * as WebBrowser from "expo-web-browser";
+import * as Crypto from "expo-crypto";
+import FormCenso from "@/components/censo/FormCenso";
+import {
+  buscarPesquisa, prefill, enviarResposta, tiposNaoSuportados,
+  type PesquisaPublica,
+} from "@/lib/censoApi";
+import type { Respostas } from "@/lib/censoForm";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type CensoStatus = {
@@ -46,6 +53,8 @@ type CensoStatus = {
   ja_respondeu?: boolean;
   respondida_em?: string | null;
   url?: string | null;
+  /** Token cru — é com ele que o formulário NATIVO se identifica. */
+  token?: string | null;
 };
 
 function dataCurta(iso: string | null | undefined) {
@@ -88,6 +97,78 @@ export default function CensoScreen() {
   useFocusEffect(useCallback(() => { carregar(); }, [carregar]));
 
   const p = status?.pesquisa;
+
+  // ── formulário nativo ─────────────────────────────────────────────────────
+  const [form, setForm] = useState<PesquisaPublica | null>(null);
+  const [valoresIniciais, setValoresIniciais] = useState<Respostas>({});
+  const [carregandoForm, setCarregandoForm] = useState(false);
+  const [erroForm, setErroForm] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  const [erroEnvio, setErroEnvio] = useState<string | null>(null);
+  const [enviado, setEnviado] = useState(false);
+
+  const naoSuportados = useMemo(
+    () => (form ? tiposNaoSuportados(form.perguntas) : []),
+    [form],
+  );
+
+  // ⚠️ `envio_id` nasce UMA vez por abertura do formulário e não muda em
+  // re-tentativa: é ele que dá a idempotência no servidor (UNIQUE parcial por
+  // pesquisa+envio). Gerar um novo a cada toque em "Enviar" transformaria
+  // toque duplo em duas respostas.
+  const envioId = useRef<string>("");
+
+  async function abrirFormulario() {
+    if (!p?.slug) return;
+    setAbrindo(true);
+    setEnviado(false);
+    setErroEnvio(null);
+    setErroForm(null);
+    setCarregandoForm(true);
+    envioId.current = Crypto.randomUUID();
+    try {
+      const pesquisa = await buscarPesquisa(p.slug);
+      setForm(pesquisa);
+      // Pré-preenchimento é conveniência: se falhar, a pessoa preenche à mão.
+      if (status?.token) {
+        try {
+          const r = await prefill(p.slug, status.token);
+          setValoresIniciais(r?.valores || {});
+        } catch { setValoresIniciais({}); }
+      }
+    } catch (e) {
+      setErroForm(e instanceof Error ? e.message : t("Tente de novo."));
+    } finally {
+      setCarregandoForm(false);
+    }
+  }
+
+  async function abrirNaWeb() {
+    if (!status?.url) return;
+    setAbrindo(false);
+    await WebBrowser.openBrowserAsync(status.url, { dismissButtonStyle: "close" });
+    carregar();
+  }
+
+  async function enviarRespostas(respostas: Respostas, consentimento: boolean) {
+    if (!p?.slug) return;
+    setEnviando(true);
+    setErroEnvio(null);
+    try {
+      await enviarResposta(p.slug, {
+        respostas, consentimento,
+        envio_id: envioId.current,
+        identidade: status?.token || null,
+      });
+      setEnviado(true);
+    } catch (e) {
+      // ⚠️ Mensagem do servidor, não "algo deu errado": ele diz QUAL resposta
+      // obrigatória falta, e é a única informação que resolve.
+      setErroEnvio(e instanceof Error ? e.message : t("Não consegui enviar. Tente de novo."));
+    } finally {
+      setEnviando(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -155,20 +236,24 @@ export default function CensoScreen() {
             )}
             <Button
               title={t("Responder o censo")}
-              onPress={() => setAbrindo(true)}
+              onPress={abrirFormulario}
               disabled={!status.url}
             />
           </GlassCard>
         )}
       </ScrollView>
 
-      {/* Modal em vez de navegar para fora: sair do app para o navegador
-          perderia a sessão e faria a pessoa se identificar de novo — que é
-          justamente o atrito que o token existe para remover. */}
-      <Modal visible={abrindo && !!status?.url} animationType="slide" onRequestClose={() => setAbrindo(false)}>
-        {/* ⚠️ `Platform.OS === "ios"` porque no Android o Modal NÃO desenha sob a
-            barra de status (edge-to-edge está desligado no app.json): somar o
-            inset lá criaria um vão duplicado no topo. */}
+      {/* ⚠️ FORMULÁRIO NATIVO (decisão do Matheus · 10/08/2026): quem preenche
+          PELO APP responde aqui dentro; o QR do culto continua abrindo a web.
+          O WebView saiu — ele custou dois bugs de chrome (cabeçalho atrás da
+          Dynamic Island, X de fechar escondido) e nenhum deles era da página.
+
+          ⚠️ MAS a web continua sendo a implementação COMPLETA. Se o
+          questionário tiver um tipo de pergunta que este app não renderiza, o
+          app NÃO tenta improvisar nem esconde a pergunta — manda para a web.
+          Esconder faria a pessoa enviar o censo sem responder algo que existe,
+          e o gráfico daquela pergunta ficaria vazio sem ninguém entender. */}
+      <Modal visible={abrindo} animationType="slide" onRequestClose={() => setAbrindo(false)}>
         <View style={[styles.modalSafe, { paddingTop: Platform.OS === "ios" ? insets.top : 0 }]}>
           <View style={styles.header}>
             <Pressable onPress={() => setAbrindo(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
@@ -177,18 +262,43 @@ export default function CensoScreen() {
             <Text style={styles.headerTitle}>{p?.titulo ?? t("Censo")}</Text>
             <View style={{ width: 26 }} />
           </View>
-          {!!status?.url && (
-            <WebView
-              source={{ uri: status.url }}
-              style={{ flex: 1 }}
-              startInLoadingState
-              renderLoading={() => (
-                <View style={styles.centro}>
-                  <ActivityIndicator color={colors.primary} />
-                </View>
+
+          {carregandoForm ? (
+            <View style={styles.centro}><ActivityIndicator color={colors.primary} /></View>
+          ) : erroForm ? (
+            <View style={styles.centro}>
+              <Text style={styles.titulo}>{t("Não consegui abrir o formulário")}</Text>
+              <Text style={styles.texto}>{erroForm}</Text>
+              {!!status?.url && (
+                <Button title={t("Abrir no navegador")} onPress={() => abrirNaWeb()} />
               )}
+            </View>
+          ) : naoSuportados.length > 0 ? (
+            <View style={styles.centro}>
+              <Ionicons name="open-outline" size={30} color={colors.textMuted} />
+              <Text style={styles.titulo}>{t("Este censo abre no navegador")}</Text>
+              <Text style={styles.texto}>
+                {t("Ele tem um tipo de pergunta que o app ainda não mostra. Para você não deixar nada em branco, respondemos pelo navegador.")}
+              </Text>
+              <Button title={t("Abrir no navegador")} onPress={() => abrirNaWeb()} />
+            </View>
+          ) : enviado ? (
+            <View style={styles.centro}>
+              <Ionicons name="checkmark-circle" size={38} color={colors.success} />
+              <Text style={styles.titulo}>{t("Recebemos, obrigado!")}</Text>
+              <Text style={styles.texto}>{t("Sua resposta foi registrada.")}</Text>
+              <Button title={t("Fechar")} onPress={() => { setAbrindo(false); carregar(); }} />
+            </View>
+          ) : form ? (
+            <FormCenso
+              perguntas={form.perguntas}
+              consentimentoTexto={form.consentimento_texto}
+              valoresIniciais={valoresIniciais}
+              enviando={enviando}
+              erroEnvio={erroEnvio}
+              onEnviar={enviarRespostas}
             />
-          )}
+          ) : null}
         </View>
       </Modal>
     </SafeAreaView>
