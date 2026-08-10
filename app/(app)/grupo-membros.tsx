@@ -32,7 +32,7 @@
 // ⚠️ FREQUÊNCIA usa a RPC `registrar_encontro_grupo` (o mesmo escritor do web e
 // do fluxo do WhatsApp) — não existe segunda régua de presença.
 // ============================================================================
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator, Alert, Linking, Modal, Platform,
   Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, TextInput, View,
@@ -43,6 +43,7 @@ import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-rou
 import * as Haptics from "expo-haptics";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { acaoAoFechar } from "@/lib/descartarRascunho";
 import { linkDeInscricao, precisaEscolherNaLista } from "@/lib/convite";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { hojeBRT } from "@/lib/dataBRT";
@@ -126,6 +127,9 @@ export default function GrupoMembrosScreen() {
   const [tema, setTema] = useState("");
   const [comentario, setComentario] = useState("");
   const [salvandoChamada, setSalvandoChamada] = useState(false);
+  // ⚠️ `useRef` e não `useState`: isto não pinta nada na tela, e como state
+  // dispararia um render a cada abertura do modal sem mudar um pixel.
+  const presentesIniciais = useRef(0);
   // Ajuda
   const [ajudaAberta, setAjudaAberta] = useState(false);
   const [ajudaMsg, setAjudaMsg] = useState("");
@@ -221,10 +225,60 @@ export default function GrupoMembrosScreen() {
     } finally { setProcessandoId(null); }
   }
 
+  /**
+   * ⚠️ Fechar SÓ pergunta quando há trabalho a perder — a régua vive em
+   * `lib/descartarRascunho.ts` (pura, no portão, com mutante).
+   *
+   * Na chamada, "trabalho" não é ter gente marcada: ela NASCE com todo mundo
+   * marcado. O sinal é ter MEXIDO — desmarcado alguém — ou ter digitado tema ou
+   * comentário. Sem essa distinção, o app perguntaria em toda saída e a pessoa
+   * aprenderia a dispensar a pergunta no automático, que é o oposto de proteger.
+   */
+  function fecharChamada() {
+    const mexeuNaChamada = presentes.size !== presentesIniciais.current;
+    const acao = acaoAoFechar({
+      campos: [tema, comentario],
+      mudouAlgo: mexeuNaChamada,
+      salvando: salvandoChamada,
+    });
+    // Está gravando: não fecha nem pergunta. Fechar no meio do envio deixa a
+    // pessoa sem saber se salvou — e ela tenta de novo, duplicando a chamada.
+    if (acao === "aguardar") return;
+    if (acao === "fechar") { setChamadaAberta(false); return; }
+    Alert.alert(
+      t("Descartar a frequência?"),
+      t("Você marcou presenças que ainda não foram salvas."),
+      [
+        { text: t("Continuar preenchendo"), style: "cancel" },
+        { text: t("Descartar"), style: "destructive", onPress: () => setChamadaAberta(false) },
+      ],
+    );
+  }
+
+  function fecharAjuda() {
+    const acao = acaoAoFechar({ campos: [ajudaMsg], salvando: enviandoAjuda });
+    if (acao === "aguardar") return;
+    if (acao === "fechar") { setAjudaAberta(false); return; }
+    Alert.alert(
+      t("Descartar sua mensagem?"),
+      t("O que você escreveu não foi enviado."),
+      [
+        { text: t("Continuar escrevendo"), style: "cancel" },
+        { text: t("Descartar"), style: "destructive", onPress: () => setAjudaAberta(false) },
+      ],
+    );
+  }
+
   function abrirChamada() {
     // Começa com TODO MUNDO marcado: na prática o líder desmarca quem faltou, e
     // é bem menos toque do que marcar 12 pessoas uma a uma.
-    setPresentes(new Set((data?.membros || []).map((m) => m.membro_id).filter(Boolean) as string[]));
+    const todos = new Set((data?.membros || []).map((m) => m.membro_id).filter(Boolean) as string[]);
+    setPresentes(todos);
+    // ⚠️ Guarda o TAMANHO inicial pra saber depois se a pessoa mexeu na chamada.
+    // Não dá pra usar "tem gente marcada" como sinal: a chamada NASCE com todo
+    // mundo marcado, então isso perguntaria sempre — e pergunta que aparece à
+    // toa se aprende a dispensar no automático.
+    presentesIniciais.current = todos.size;
     setTema(""); setComentario(""); setChamadaAberta(true);
   }
 
@@ -866,12 +920,17 @@ export default function GrupoMembrosScreen() {
       </Modal>
 
       {/* ═══ Chamada (frequência) ═══ */}
-      <Modal visible={chamadaAberta} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setChamadaAberta(false)}>
+      {/* ⚠️⚠️ FECHAR PERGUNTA QUANDO HÁ TRABALHO A PERDER (10/08 · item 15).
+          O Marcos descreveu como "ao clicar fora ele apenas sai" — a causa real
+          é o BOTÃO VOLTAR do Android (`onRequestClose`), porque estes modais não
+          fecham por toque no backdrop. O efeito é o mesmo: a chamada inteira
+          some com um toque errado. */}
+      <Modal visible={chamadaAberta} animationType="slide" transparent statusBarTranslucent onRequestClose={fecharChamada}>
         <TecladoSeguro style={styles.modalWrap}>
           <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom, maxHeight: "88%" }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{t("Frequência de hoje")}</Text>
-              <Pressable onPress={() => setChamadaAberta(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
+              <Pressable onPress={fecharChamada} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
                 <Ionicons name="close" size={24} color={colors.text} />
               </Pressable>
             </View>
@@ -922,12 +981,12 @@ export default function GrupoMembrosScreen() {
       </Modal>
 
       {/* ═══ Pedir ajuda ═══ */}
-      <Modal visible={ajudaAberta} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setAjudaAberta(false)}>
+      <Modal visible={ajudaAberta} animationType="slide" transparent statusBarTranslucent onRequestClose={fecharAjuda}>
         <TecladoSeguro style={styles.modalWrap}>
           <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{t("Preciso de ajuda")}</Text>
-              <Pressable onPress={() => setAjudaAberta(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
+              <Pressable onPress={fecharAjuda} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
                 <Ionicons name="close" size={24} color={colors.text} />
               </Pressable>
             </View>

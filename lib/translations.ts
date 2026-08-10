@@ -447,6 +447,17 @@ export const TRANSLATIONS: Record<string, Traducao> = {
 
   // ───────────────── Onda C · acabamento (10/08/2026) ─────────────────
   "Minha família": { en: "My family", es: "Mi familia" },
+
+  // ───────── Item 15 · não perder o que já foi digitado (10/08) ─────────
+  "Descartar a frequência?": { en: "Discard the attendance?", es: "¿Descartar la asistencia?" },
+  "Você marcou presenças que ainda não foram salvas.": { en: "You marked attendance that has not been saved yet.", es: "Marcaste asistencias que aún no se guardaron." },
+  "Descartar sua mensagem?": { en: "Discard your message?", es: "¿Descartar tu mensaje?" },
+  "O que você escreveu não foi enviado.": { en: "What you wrote was not sent.", es: "Lo que escribiste no fue enviado." },
+  "Descartar o registro?": { en: "Discard the record?", es: "¿Descartar el registro?" },
+  "O que você preencheu ainda não foi salvo.": { en: "What you filled in has not been saved yet.", es: "Lo que completaste aún no se guardó." },
+  "Continuar preenchendo": { en: "Keep filling it in", es: "Seguir completando" },
+  "Continuar escrevendo": { en: "Keep writing", es: "Seguir escribiendo" },
+  "Descartar": { en: "Discard", es: "Descartar" },
   "Grupos que você é supervisor": { en: "Groups you supervise", es: "Grupos que supervisas" },
   "É só se inscrever por aqui": { en: "Just sign up here", es: "Solo inscríbete aquí" },
   "Vem pro nosso grupo de conexão": { en: "Come to our connect group", es: "Ven a nuestro grupo de conexión" },

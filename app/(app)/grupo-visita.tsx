@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   Modal,
   Pressable,
@@ -18,6 +19,7 @@ import { Input } from "@/components/ui/Input";
 import { CalendarioBR } from "@/components/ui/CalendarioBR";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { acaoAoFechar } from "@/lib/descartarRascunho";
 import {
   getGrupoRoster, getEncontrosGrupo, registrarEncontroGrupo, getEncontroDetalhe,
   listarVisitasGrupo, registrarVisitaGrupo,
@@ -165,6 +167,36 @@ export default function GrupoVisitaScreen() {
     } finally {
       setCarregandoDetalhe(false);
     }
+  }
+
+  /**
+   * ⚠️ Só pergunta quando há trabalho a perder (`lib/descartarRascunho.ts`).
+   *
+   * Aqui o sinal é o INVERSO da chamada do líder: o formulário abre com
+   * `ausentes` VAZIO (todo mundo presente por padrão), então "mexeu" é ter
+   * marcado alguém como ausente — enquanto na tela do líder é ter DESMARCADO.
+   * Mesma régua, sinais opostos; por isso quem decide é o chamador, e a função
+   * pura só recebe `mudouAlgo`.
+   *
+   * ⚠️ `presente` (o interruptor "estive no encontro") NÃO entra: ele nasce
+   * `true` e desligá-lo é uma escolha de 1 toque, refeita em 1 toque.
+   */
+  function fecharRegistro() {
+    const acao = acaoAoFechar({
+      campos: [tema, comentario],
+      mudouAlgo: ausentes.size > 0,
+      salvando,
+    });
+    if (acao === "aguardar") return;
+    if (acao === "fechar") { setAberto(false); return; }
+    Alert.alert(
+      t("Descartar o registro?"),
+      t("O que você preencheu ainda não foi salvo."),
+      [
+        { text: t("Continuar preenchendo"), style: "cancel" },
+        { text: t("Descartar"), style: "destructive", onPress: () => setAberto(false) },
+      ],
+    );
   }
 
   function abrirForm() {
@@ -430,12 +462,16 @@ export default function GrupoVisitaScreen() {
       </ScrollView>
 
       {/* ── Registro: chamada + comentário + o interruptor ─────────────────── */}
-      <Modal visible={aberto} transparent animationType="fade" onRequestClose={() => setAberto(false)} statusBarTranslucent>
+      {/* ⚠️⚠️ AS TRÊS SAÍDAS PASSAM PELA MESMA DECISÃO (10/08 · item 15): o X,
+          o botão VOLTAR do Android (`onRequestClose`) e o "Cancelar". Consertar
+          só uma delas deixaria o mesmo estrago vivo pelas outras duas — e a que
+          o Marcos encontrou foi justamente a menos óbvia (o voltar). */}
+      <Modal visible={aberto} transparent animationType="fade" onRequestClose={fecharRegistro} statusBarTranslucent>
         <TecladoSeguro style={styles.modalFundo}>
           <View style={styles.modalCartao}>
             <View style={styles.modalTopo}>
               <Text style={styles.titulo}>{t("Registrar encontro")}</Text>
-              <Pressable onPress={() => setAberto(false)} hitSlop={10} accessibilityLabel={t("Fechar")}>
+              <Pressable onPress={fecharRegistro} hitSlop={10} accessibilityLabel={t("Fechar")}>
                 <Ionicons name="close" size={22} color={colors.textMuted} />
               </Pressable>
             </View>
@@ -535,7 +571,7 @@ export default function GrupoVisitaScreen() {
             </ScrollView>
 
             <View style={styles.botoes}>
-              <Button title={t("Cancelar")} variant="ghost" onPress={() => setAberto(false)} />
+              <Button title={t("Cancelar")} variant="ghost" onPress={fecharRegistro} />
               <Button title={t("Salvar")} onPress={salvar} loading={salvando} />
             </View>
           </View>

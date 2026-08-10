@@ -250,6 +250,25 @@ const MUTANTES = [
     de: "  if (!Number.isFinite(n)) return \"conexao\";",
     para: "  if (!Number.isFinite(n)) return \"servidor\";",
   },
+  // ── Nao perder o que foi digitado (10/08 · item 15) ──
+  {
+    nome: "rascunho: perguntar SEMPRE (atrito que ensina a dispensar a pergunta)",
+    arq: "lib/descartarRascunho.ts",
+    de: "  return campos.some((c) => String(c ?? \"\").trim().length > 0);",
+    para: "  return true;",
+  },
+  {
+    nome: "rascunho: espaco em branco virar rascunho",
+    arq: "lib/descartarRascunho.ts",
+    de: '  return campos.some((c) => String(c ?? "").trim().length > 0);',
+    para: '  return campos.some((c) => String(c ?? "").length > 0);',
+  },
+  {
+    nome: "rascunho: FECHAR no meio do envio (a pessoa reenvia e duplica)",
+    arq: "lib/descartarRascunho.ts",
+    de: '  if (args.salvando) return "aguardar";',
+    para: '  if (args.salvando) return "fechar";',
+  },
   // ── Link de convite (10/08 · Onda C) ──
   {
     nome: "convite: mandar link DIRETO pra grupo por convite (403 pra todo mundo)",
