@@ -4,6 +4,88 @@
 > relevante (novo módulo, dependência, decisão de arquitetura, config de
 > backend). Ele é a memória e o contexto contínuo do app.
 
+## 📬 MATHEUS — RECADO ABERTO (10/08/2026 · escrito pela sessão do Marcos)
+
+> Este bloco existe porque **não há canal direto entre as duas sessões de Claude
+> Code**. O `CLAUDE.md` é o canal — a sua sessão carrega este arquivo ao abrir o
+> projeto. **Apaga este bloco quando resolver**, ou responde escrevendo aqui.
+
+### 1 · Só você destrava: Firebase para o push do Android
+
+**Você tem o acesso ao Google Console, o Marcos não.** Enquanto isso não sai, os
+avisos de grupo que eu estou construindo chegam **só no iPhone**.
+
+**Medido:** `app_push_tokens` tem 31 linhas, **100% iOS, zero Android**. A causa
+está provada pelo aparelho: a telemetria registrou, do Xiaomi do Marcos, a
+mensagem literal do módulo nativo —
+`Default FirebaseApp is not initialized in this process br.com.cbrio.app`.
+O projeto **nunca teve** `google-services.json` nem `android.googleServicesFile`
+no `app.json` (`git log --all` volta vazio nos dois).
+
+⚠️ **Não é adotar o Firebase como backend.** O Supabase continua sendo tudo. O
+FCM é só o *carteiro* que o Android exige — o mesmo papel que a APNs já cumpre no
+iOS. E o SDK do Firebase **já está compilado no APK**
+(`firebase-messaging:24.0.1`, via `expo-notifications`): falta só o arquivo de
+config.
+
+**Os 4 passos:**
+1. **Anexar ao projeto Google Cloud `crm-cbrio` que a igreja JÁ TEM.** ⚠️ NÃO
+   criar projeto novo, e nunca em Gmail pessoal — o assistente do Firebase
+   oferece isso por padrão. É de `crm-cbrio` que já sai a conta de serviço
+   `eas-submit@` do Play Console.
+2. Registrar app Android com o package **`br.com.cbrio.app`** e baixar o
+   `google-services.json`.
+3. `eas credentials -p android` → Push Notifications → **FCM V1**. ⚠️ Conta de
+   serviço **dedicada**, só com `firebasemessaging.messages.create` — não a
+   padrão, que compartilha raio de dano com a que publica no Play.
+4. **Build Android novo.** ⚠️⚠️ Com `version` ainda **`"1.0.0"`**. Subir a versão
+   dispara a armadilha do `runtimeVersion` e **congela o OTA da frota inteira,
+   iOS incluído**. O `google-services.json` não muda o `runtimeVersion`.
+
+### 2 · Coordenação: onde eu vou mexer (pra não colidirmos)
+
+Vi seus commits de hoje em `completar-cadastro.tsx`, `lib/validators.ts`,
+`test/reguas.test.ts`, `lib/translations.ts` e a tela nova `censo.tsx`.
+
+| arquivo | o que eu preciso fazer | risco |
+|---|---|---|
+| `lib/translations.ts` | +chaves de i18n (dívida em 282, com teto no gate) | conflito fácil |
+| `test/reguas.test.ts` | +testes de régua nova | conflito fácil |
+| **`lib/ficha.ts`** | **unificar a régua de "o que falta"** | ⚠️ **encosta no seu conserto do CPF** |
+
+⚠️ **O terceiro é o que importa.** Um apontamento do Marcos é que o batismo pede
+data de nascimento que a ficha já tem, e o NEXT inscreve sem mostrar a data. A
+causa é a mesma: **três réguas diferentes de "o que falta"** (uma com 3 campos,
+uma com 6, e o NEXT sem nenhuma).
+
+**Eu vou ESPERAR você confirmar antes de tocar `lib/ficha.ts`.** Se já terminou,
+escreve aqui que terminou. Se está em curso, escreve o que você está mudando no
+gate pra eu não desfazer.
+
+### 3 · Pergunta sobre o seu #2358
+
+Você mergeou **#2358 — "loop infinito no completar-cadastro: o campo era validado
+e descartado"** (em `appIdentidade.js`). É exatamente o bug que o Marcos
+descreveu. **Isso cobre o caso todo, ou ficou ponta na tela
+`completar-cadastro.tsx`?** Tenho 2 apontamentos na mesma vizinhança e quero
+somar ao seu trabalho, não duplicar.
+
+### 4 · O que já foi ao ar hoje, pra você não tropeçar
+
+- **ERP #2361** — as **5 travas** de entrada em grupo que o app não tinha
+  (gênero, `ativo`, `aceitando_inscricoes`, `fechado`, temporada). Régua nova em
+  `backend/utils/entradaGrupoApp.js`. ⚠️ `publicGrupos.js` **ainda tem a cópia**
+  dele, de propósito (é a porta pública principal, 462 dos 463 pedidos) — há
+  ponteiro nos dois lados e **as duas têm que concordar**.
+- **ERP #2362** — a trava de sexo virou **uma regra só** (desconhecido não passa)
+  + migration `20260810160000` de backfill: 51 pessoas onde a própria pessoa
+  declarou o sexo e o matcher descartava. ⚠️ **Não inferir sexo por nome** — está
+  escrito na migration o porquê.
+- **ERP #2361** trocou o número do Suporte da Apple: estava `5521999079031`, que
+  **não tem caixa nenhuma no sistema**.
+- **ERP #2354** (mover a função da API pra `pdx1`/Oregon) está **aberto de
+  propósito** — é a API inteira, e o Marcos vai mergear numa janela calma.
+
 ## Visão geral
 
 App de membros da igreja **CBRio**. Está sendo **reconstruído do zero, módulo a
