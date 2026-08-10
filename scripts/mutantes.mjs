@@ -250,6 +250,19 @@ const MUTANTES = [
     de: "  if (!Number.isFinite(n)) return \"conexao\";",
     para: "  if (!Number.isFinite(n)) return \"servidor\";",
   },
+  // ── Busca sem acento na chamada (10/08 · item 1) ──
+  {
+    nome: "busca: parar de ignorar acento ('joao' nao acha 'Joao')",
+    arq: "lib/buscaTexto.ts",
+    de: "normalize(\"NFD\")",
+    para: "normalize(\"NFC\")",
+  },
+  {
+    nome: "busca: termo vazio deixar de casar (a chamada abre vazia)",
+    arq: "lib/buscaTexto.ts",
+    de: "  if (!t) return true;",
+    para: "  if (!t) return false;",
+  },
   // ── Nao perder o que foi digitado (10/08 · item 15) ──
   {
     nome: "rascunho: perguntar SEMPRE (atrito que ensina a dispensar a pergunta)",

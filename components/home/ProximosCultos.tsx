@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, Dimensions, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
@@ -9,8 +9,10 @@ import { type CultoUpcoming, formatCultoDia, formatCultoHora } from "@/lib/culto
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { BRAND_FONT } from "@/lib/fonts";
 
-const { width: SCREEN_W } = Dimensions.get("window");
-const CARD_W = Math.round((SCREEN_W - spacing.lg * 2) * 0.74);
+// ⚠️ `CARD_W`/`Dimensions` saíram em 10/08 junto com o carrossel: a largura era
+// congelada no import (`Dimensions.get` roda UMA vez), então o card ficava com a
+// medida errada depois de girar o aparelho ou mudar a fonte do sistema. Em
+// coluna o card usa 100% e o problema some junto.
 const DURACAO_CULTO_MIN = 120; // janela em que o culto conta como "ao vivo"
 
 type Grupo = {
@@ -147,20 +149,34 @@ export function ProximosCultos({ cultos }: { cultos: CultoUpcoming[] }) {
         </View>
       )}
 
+      {/* ⚠️⚠️ COLUNA, NÃO CARROSSEL (10/08/2026 · apontamento 9). O Marcos:
+          *"os cultos estão organizados de uma forma não tão visual, não fica
+          claro quais são todos os cultos sem ter que rolar para o lado."*
+          MEDIDO na semana de 10/08: **6 cultos viram 2 CARDS** (o `agrupar()`
+          junta os horários do mesmo dia num card com pills). Um carrossel onde
+          cabe 1,3 card, pra mostrar 2 — a rolagem lateral existia pra esconder
+          nada, e ainda sugeria que havia mais coisa fora da tela.
+          ⚠️ `.map()` e NÃO FlatList: a Home inteira já é um ScrollView vertical,
+          e lista virtualizada dentro de scroll do mesmo eixo quebra o gesto e
+          reclama em runtime. Com 2-4 itens não há o que virtualizar.
+          ⚠️ O `marginHorizontal: -spacing.lg` do container faz o bloco sangrar
+          pra fora (era o que o carrossel precisava) — a coluna devolve o padding
+          aqui, senão os cards vazam 24px pra fora da tela. */}
       {restantes.length > 0 && (
-        <FlatList
-          data={restantes.slice(0, 8)}
-          keyExtractor={(g) => `${g.data}-${g.nomeBase}`}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          snapToInterval={CARD_W + spacing.sm}
-          decelerationRate="fast"
-          contentContainerStyle={{ paddingHorizontal: spacing.lg }}
-          ItemSeparatorComponent={() => <View style={{ width: spacing.sm }} />}
-          renderItem={({ item }) => (
-            <CultoCard grupo={item} agora={agora} hojeIso={hojeIso} router={router} colors={colors} styles={styles} t={t} />
-          )}
-        />
+        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+          {restantes.slice(0, 6).map((item) => (
+            <CultoCard
+              key={`${item.data}-${item.nomeBase}`}
+              grupo={item}
+              agora={agora}
+              hojeIso={hojeIso}
+              router={router}
+              colors={colors}
+              styles={styles}
+              t={t}
+            />
+          ))}
+        </View>
       )}
     </View>
   );
@@ -415,7 +431,7 @@ const makeStyles = (colors: Palette) =>
     headerRow: { flexDirection: "row", alignItems: "center", gap: 8 },
     titulo: { color: colors.text, fontSize: font.size.md, fontFamily: BRAND_FONT },
     cardWrap: {
-      width: CARD_W,
+      width: "100%",
       borderRadius: radius.lg,
     },
     card: {

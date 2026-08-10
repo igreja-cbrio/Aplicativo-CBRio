@@ -22,6 +22,7 @@ import { motivoDaFalha, podeVirarConteudo, ler } from "@/lib/falhaDeLeitura";
 import { estadoDoQr, podeDesenharQr, temCpf } from "@/lib/cartaoQr";
 import { linkDeInscricao, ehPorConvite, precisaEscolherNaLista } from "@/lib/convite";
 import { acaoAoFechar, temRascunho } from "@/lib/descartarRascunho";
+import { casaBusca, normalizarBusca, filtrarPorTexto } from "@/lib/buscaTexto";
 import {
   estadoDoEncontro, ultimaOcorrencia, proximaOcorrencia,
   dataLonga, quandoCurto, distanciaEmTexto, dataComHora, horaCurta,
@@ -1246,5 +1247,55 @@ describe("acaoAoFechar · só pergunta quando há trabalho a perder", () => {
     expect(acaoAoFechar({ campos: ["oi"], salvando: true })).toBe("aguardar");
     expect(acaoAoFechar({ campos: [], salvando: true })).toBe("aguardar");
     expect(acaoAoFechar({ mudouAlgo: true, salvando: true })).toBe("aguardar");
+  });
+});
+
+// ── Busca por nome, sem acento (10/08/2026 · apontamento 1) ────────────────
+// A chamada ganhou busca porque o roster vai até 57 pessoas. ⚠️ Ignorar acento
+// não é enfeite: quem digita no meio do encontro escreve "joao", não "João" — o
+// teclado nem oferece o til sem segurar a tecla. Busca sensível a acento não
+// acha metade dos nomes brasileiros, e a pessoa conclui que o nome não está no
+// grupo. A régua estava presa dentro de um .tsx (não rodava no portão).
+describe("busca sem acento · acha o nome como a pessoa digita", () => {
+  it("⚠️ MUTATION GUARD · 'joao' acha 'João'", () => {
+    expect(casaBusca("João da Silva", "joao")).toBe(true);
+    expect(casaBusca("JOSÉ Antônio", "jose")).toBe(true);
+    expect(casaBusca("Maria Conceição", "conceicao")).toBe(true);
+    expect(casaBusca("Ângela", "angela")).toBe(true);
+  });
+
+  it("o contrário também: com acento acha sem", () => {
+    expect(casaBusca("Joao sem acento", "joão")).toBe(true);
+  });
+
+  it("busca por SUBSTRING, não só prefixo (gente procura por sobrenome)", () => {
+    expect(casaBusca("Marcos Paulo Almeida", "almeida")).toBe(true);
+    expect(casaBusca("Marcos Paulo Almeida", "paulo")).toBe(true);
+  });
+
+  it("⚠️ MUTATION GUARD · termo VAZIO casa com tudo", () => {
+    // É o estado inicial do campo: a lista tem que aparecer inteira antes de a
+    // pessoa digitar. Se isto virar `false`, a chamada abre vazia.
+    for (const v of ["", "   ", null, undefined]) {
+      expect(casaBusca("qualquer nome", v)).toBe(true);
+    }
+  });
+
+  it("não casa o que não tem", () => {
+    expect(casaBusca("João da Silva", "pedro")).toBe(false);
+    expect(casaBusca(null, "pedro")).toBe(false);
+  });
+
+  it("filtrarPorTexto devolve a lista ORIGINAL quando não há termo", () => {
+    const lista = [{ nome: "Ana" }, { nome: "Bruno" }];
+    expect(filtrarPorTexto(lista, "", (x) => x.nome)).toBe(lista); // mesma referência
+    expect(filtrarPorTexto(lista, "an", (x) => x.nome)).toEqual([{ nome: "Ana" }]);
+    expect(filtrarPorTexto(lista, "zzz", (x) => x.nome)).toEqual([]);
+  });
+
+  it("normalizarBusca aguenta entrada degenerada", () => {
+    expect(normalizarBusca(null)).toBe("");
+    expect(normalizarBusca(undefined)).toBe("");
+    expect(normalizarBusca("  MARIA  ")).toBe("maria");
   });
 });

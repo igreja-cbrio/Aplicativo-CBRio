@@ -458,6 +458,10 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Continuar preenchendo": { en: "Keep filling it in", es: "Seguir completando" },
   "Continuar escrevendo": { en: "Keep writing", es: "Seguir escribiendo" },
   "Descartar": { en: "Discard", es: "Descartar" },
+
+  // ───────── Item 1 · busca na chamada (10/08) ─────────
+  "Buscar pessoa…": { en: "Search person…", es: "Buscar persona…" },
+  "Ninguém com esse nome no grupo.": { en: "No one with that name in the group.", es: "Nadie con ese nombre en el grupo." },
   "Grupos que você é supervisor": { en: "Groups you supervise", es: "Grupos que supervisas" },
   "É só se inscrever por aqui": { en: "Just sign up here", es: "Solo inscríbete aquí" },
   "Vem pro nosso grupo de conexão": { en: "Come to our connect group", es: "Ven a nuestro grupo de conexión" },
