@@ -441,6 +441,10 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Tente novamente.": { en: "Please try again.", es: "Intenta de nuevo." },
   "Inscrição confirmada! Entre no grupo do batismo pra receber os próximos passos.": { en: "Registration confirmed! Join the baptism group to get the next steps.", es: "¡Inscripción confirmada! Entra al grupo del bautismo para recibir los próximos pasos." },
   "Entrar no grupo do batismo": { en: "Join the baptism group", es: "Entrar al grupo del bautismo" },
+  "Confirmar sua inscrição no batismo?": { en: "Confirm your baptism registration?", es: "¿Confirmar tu inscripción al bautismo?" },
+  "A equipe vai falar com você sobre os próximos passos.": { en: "The team will talk to you about the next steps.", es: "El equipo hablará contigo sobre los próximos pasos." },
+  "Confirmar inscrição": { en: "Confirm registration", es: "Confirmar inscripción" },
+  "Próximo batismo": { en: "Next baptism", es: "Próximo bautismo" },
   "Conversar com um pastor": { en: "Talk to a pastor", es: "Hablar con un pastor" },
   "Quer um aconselhamento ou uma conversa? Um pastor ou líder entra em contato com você.": { en: "Want counseling or a chat? A pastor or leader will reach out to you.", es: "¿Quieres consejería o una conversación? Un pastor o líder se pondrá en contacto contigo." },
   "Quero conversar": { en: "I want to talk", es: "Quiero hablar" },
@@ -522,7 +526,6 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   // ───────────────── Batismo ─────────────────
   "Inscreva-se para ser batizado(a) na CBRio.": { en: "Sign up to be baptized at CBRio.", es: "Inscríbete para ser bautizado(a) en CBRio." },
   "Quero me batizar": { en: "I want to be baptized", es: "Quiero bautizarme" },
-  "Próximo batismo": { en: "Next baptism", es: "Próximo bautismo" },
   "É hoje! 🙌": { en: "It's today! 🙌", es: "¡Es hoy! 🙌" },
   "Amanhã": { en: "Tomorrow", es: "Mañana" },
   "Em": { en: "In", es: "En" },

@@ -156,6 +156,32 @@ export function quandoCurto(diaSemana: number | null | undefined, horario?: stri
   return partes.join(", ");
 }
 
+/** Só a HORA, do jeito da casa: "20h" quando é redonda, "20:30" quando não. */
+export function horaCurta(horario?: string | null): string {
+  if (!horario) return "";
+  const [h, m] = String(horario).trim().split(":");
+  if (h == null || h === "" || Number.isNaN(Number(h))) return "";
+  return m && m !== "00" ? `${h}:${m}` : `${Number(h)}h`;
+}
+
+/**
+ * "Terça, 20 de agosto · 19:30" — data E HORA (10/08/2026 · item 4).
+ *
+ * ⚠️⚠️ POR QUE ISTO EXISTE: a prévia dos encontros do NEXT usava
+ * `formatRelativo`, que devolve **"Em 5 dias"** — nem data, nem hora. O pedido
+ * do Marcos era literalmente o oposto: *"eu nem consegui ver a data nem nada"*.
+ * "Em 5 dias" não responde "que dia é?" nem "que hora é?", que é o que a pessoa
+ * precisa pra decidir se consegue ir.
+ *
+ * ⚠️ Sem hora, devolve só a data — não inventa "00:00", que soaria como
+ * meia-noite. Hora ausente é comum: `NextEncontro.horario` é opcional.
+ */
+export function dataComHora(iso: string, horario?: string | null): string {
+  const dia = dataLonga(iso);
+  const hora = horaCurta(horario);
+  return hora ? `${dia} · ${hora}` : dia;
+}
+
 /** "faltam 4 dias" · "é hoje" · "é amanhã" · "há 3 dias". */
 export function distanciaEmTexto(dias: number): string {
   if (dias === 0) return "é hoje";

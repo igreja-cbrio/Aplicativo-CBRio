@@ -16,6 +16,7 @@ import * as Location from "expo-location";
 import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { dataComHora } from "@/lib/proximoEncontro";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { Skeleton } from "@/components/anim/Skeleton";
 import { useNextSync } from "@/lib/useNextSync";
@@ -80,7 +81,7 @@ export default function NextScreen() {
     const quando = me?.encontros?.length
       ? `
 
-${t("Primeiro encontro")}: ${formatRelativo(me.encontros[0].data)}`
+${t("Primeiro encontro")}: ${dataComHora(me.encontros[0].data, me.encontros[0].horario)}`
       : "";
     Alert.alert(
       t("Confirmar sua inscrição no NEXT?"),
@@ -246,7 +247,7 @@ ${t("Primeiro encontro")}: ${formatRelativo(me.encontros[0].data)}`
                   <View key={enc.id} style={styles.previaLinha}>
                     <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
                     <Text style={styles.previaTxt}>
-                      {enc.titulo ? `${enc.titulo} · ` : ""}{formatRelativo(enc.data)}
+                      {enc.titulo ? `${enc.titulo} · ` : ""}{dataComHora(enc.data, enc.horario)}
                     </Text>
                   </View>
                 ))}

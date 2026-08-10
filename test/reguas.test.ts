@@ -22,7 +22,7 @@ import { motivoDaFalha, podeVirarConteudo, ler } from "@/lib/falhaDeLeitura";
 import { estadoDoQr, podeDesenharQr, temCpf } from "@/lib/cartaoQr";
 import {
   estadoDoEncontro, ultimaOcorrencia, proximaOcorrencia,
-  dataLonga, quandoCurto, distanciaEmTexto,
+  dataLonga, quandoCurto, distanciaEmTexto, dataComHora, horaCurta,
 } from "@/lib/proximoEncontro";
 import { navegacoes } from "./stubs/expo-router";
 import { topicoVoluntariado, canaisObsoletos } from "@/lib/canalRealtime";
@@ -1116,5 +1116,46 @@ describe("jaTemNaFicha · só pergunta o que falta", () => {
       expect(jaTemNaFicha(null, c)).toBe(false);
       expect(jaTemNaFicha(undefined, c)).toBe(false);
     }
+  });
+});
+
+// ── Data E HORA na prévia (10/08/2026 · o que o Marcos pediu de verdade) ────
+// A prévia dos encontros usava `formatRelativo`, que devolve "Em 5 dias" — nem
+// data, nem hora. O pedido era o oposto: "eu nem consegui ver a data nem nada".
+// "Em 5 dias" não responde "que dia é?" nem "que hora é?", que é o que a pessoa
+// precisa pra decidir se consegue ir.
+describe("dataComHora · responde 'que dia' E 'que hora'", () => {
+  it("junta data longa e hora", () => {
+    expect(dataComHora("2026-08-20", "19:30")).toBe("Quinta, 20 de agosto · 19:30");
+    expect(dataComHora("2026-08-20", "20:00")).toBe("Quinta, 20 de agosto · 20h");
+  });
+
+  it("aceita o `time` do Postgres (com segundos)", () => {
+    expect(dataComHora("2026-08-20", "19:30:00")).toBe("Quinta, 20 de agosto · 19:30");
+    expect(dataComHora("2026-08-20", "20:00:00")).toBe("Quinta, 20 de agosto · 20h");
+  });
+
+  it("⚠️ MUTATION GUARD · sem hora, NÃO inventa meia-noite", () => {
+    // `NextEncontro.horario` é opcional. Um "00:00" soaria como meia-noite e
+    // faria a pessoa achar que o encontro é de madrugada.
+    for (const h of [null, undefined, "", "   "]) {
+      expect(dataComHora("2026-08-20", h)).toBe("Quinta, 20 de agosto");
+    }
+  });
+
+  it("⚠️ MUTATION GUARD · o resultado NUNCA é relativo", () => {
+    // Se alguém trocar de volta por `formatRelativo`, isto reprova: o texto tem
+    // que carregar o DIA e o MÊS, não "Em N dias".
+    const txt = dataComHora("2026-08-20", "19:30");
+    expect(txt).toContain("20");
+    expect(txt).toContain("agosto");
+    expect(txt).not.toMatch(/dias|Hoje|Amanhã/);
+  });
+
+  it("horaCurta ignora hora inválida em vez de imprimir NaN", () => {
+    expect(horaCurta("abc")).toBe("");
+    expect(horaCurta(null)).toBe("");
+    expect(horaCurta("19:30")).toBe("19:30");
+    expect(horaCurta("07:00")).toBe("7h");
   });
 });
