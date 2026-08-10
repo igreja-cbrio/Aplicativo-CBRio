@@ -74,6 +74,24 @@ export default function NextScreen() {
     }, [])
   );
 
+  // ⚠️ CONFIRMA ANTES DE GRAVAR. Antes, o único aviso era um Alert DEPOIS da
+  // inscrição — a pessoa descobria que estava inscrita, não decidia.
+  function confirmarInscrever() {
+    const quando = me?.encontros?.length
+      ? `
+
+${t("Primeiro encontro")}: ${formatRelativo(me.encontros[0].data)}`
+      : "";
+    Alert.alert(
+      t("Confirmar sua inscrição no NEXT?"),
+      `${t("A equipe vai te receber nos encontros do NEXT.")}${quando}`,
+      [
+        { text: t("Cancelar"), style: "cancel" },
+        { text: t("Quero participar"), onPress: () => { void inscrever(); } },
+      ],
+    );
+  }
+
   async function inscrever() {
     setInscrevendo(true);
     try {
@@ -213,9 +231,30 @@ export default function NextScreen() {
                 {t("O NEXT é onde a gente te conhece e te conecta no coração da CBRio. São encontros pra você descobrir como dar próximos passos com Jesus.")}
               </Text>
             </View>
+            {/* ⚠️⚠️ OS ENCONTROS APARECEM ANTES DE DECIDIR (10/08/2026 ·
+                apontamento 4). Palavras do Marcos: *"como os dados já estavam
+                preenchidos ele não me levou pra tela de inscrição, me colocou um
+                modal e quando disse sim ele já me inscreveu, mas eu nem consegui
+                ver a data nem nada."*
+                ⚠️ O dado JÁ ESTAVA no aparelho: `/app/next/me` devolve
+                `encontros` mesmo pra quem não está inscrito, e a tela só os
+                mostrava DEPOIS de inscrever. Nenhuma chamada nova. */}
+            {me.encontros.length > 0 && (
+              <View style={styles.previaWrap}>
+                <Text style={styles.section}>{t("Quando acontece")}</Text>
+                {me.encontros.slice(0, 4).map((enc) => (
+                  <View key={enc.id} style={styles.previaLinha}>
+                    <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
+                    <Text style={styles.previaTxt}>
+                      {enc.titulo ? `${enc.titulo} · ` : ""}{formatRelativo(enc.data)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
             <Button
               title={t("Quero participar do NEXT")}
-              onPress={inscrever}
+              onPress={confirmarInscrever}
               loading={inscrevendo}
             />
           </>
@@ -383,4 +422,8 @@ const makeStyles = (colors: Palette) =>
     },
     turmaNome: { color: colors.text, fontSize: font.size.md, fontWeight: "800" },
     turmaSub: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 2 },
+    // Prévia dos encontros ANTES de decidir (10/08 · apontamento 4).
+    previaWrap: { gap: spacing.xs, marginBottom: spacing.sm },
+    previaLinha: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+    previaTxt: { color: colors.textMuted, fontSize: font.size.sm, flex: 1 },
   });

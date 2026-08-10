@@ -432,6 +432,15 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Pedido de oração": { en: "Prayer request", es: "Petición de oración" },
   "Conte pelo que podemos orar…": { en: "Tell us what we can pray for…", es: "Cuéntanos por qué podemos orar…" },
   "Enviar pedido": { en: "Send request", es: "Enviar petición" },
+
+  // ───────────────── Item 4 · Next e batismo (10/08/2026) ─────────────────
+  "Quando acontece": { en: "When it happens", es: "Cuándo ocurre" },
+  "Primeiro encontro": { en: "First gathering", es: "Primer encuentro" },
+  "Confirmar sua inscrição no NEXT?": { en: "Confirm your NEXT registration?", es: "¿Confirmar tu inscripción en NEXT?" },
+  "A equipe vai te receber nos encontros do NEXT.": { en: "The team will welcome you at the NEXT gatherings.", es: "El equipo te recibirá en los encuentros de NEXT." },
+  "Tente novamente.": { en: "Please try again.", es: "Intenta de nuevo." },
+  "Inscrição confirmada! Entre no grupo do batismo pra receber os próximos passos.": { en: "Registration confirmed! Join the baptism group to get the next steps.", es: "¡Inscripción confirmada! Entra al grupo del bautismo para recibir los próximos pasos." },
+  "Entrar no grupo do batismo": { en: "Join the baptism group", es: "Entrar al grupo del bautismo" },
   "Conversar com um pastor": { en: "Talk to a pastor", es: "Hablar con un pastor" },
   "Quer um aconselhamento ou uma conversa? Um pastor ou líder entra em contato com você.": { en: "Want counseling or a chat? A pastor or leader will reach out to you.", es: "¿Quieres consejería o una conversación? Un pastor o líder se pondrá en contacto contigo." },
   "Quero conversar": { en: "I want to talk", es: "Quiero hablar" },

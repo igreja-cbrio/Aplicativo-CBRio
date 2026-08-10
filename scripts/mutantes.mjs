@@ -250,6 +250,13 @@ const MUTANTES = [
     de: "  if (!Number.isFinite(n)) return \"conexao\";",
     para: "  if (!Number.isFinite(n)) return \"servidor\";",
   },
+  // ── Ficha: nao repergunte (10/08 · apontamento 4) ──
+  {
+    nome: "ficha: `!!campo` em vez da validacao real (telefone de 8 digitos passa)",
+    arq: "lib/ficha.ts",
+    de: "  return !faltaNaFicha(m).includes(CAMPOS_CONTRATO[campo]);",
+    para: "  return !!(m as Record<string, unknown> | null | undefined)?.[campo];",
+  },
   // ── QR do cartao (10/08 · Onda B) ──
   {
     nome: "qr: erro deixar de vir ANTES (manda completar cadastro que ja esta certo)",
