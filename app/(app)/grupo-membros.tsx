@@ -44,6 +44,7 @@ import * as Haptics from "expo-haptics";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { acaoAoFechar } from "@/lib/descartarRascunho";
+import { filtrarPorTexto } from "@/lib/buscaTexto";
 import { linkDeInscricao, precisaEscolherNaLista } from "@/lib/convite";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { hojeBRT } from "@/lib/dataBRT";
@@ -127,6 +128,7 @@ export default function GrupoMembrosScreen() {
   const [tema, setTema] = useState("");
   const [comentario, setComentario] = useState("");
   const [salvandoChamada, setSalvandoChamada] = useState(false);
+  const [buscaChamada, setBuscaChamada] = useState("");
   // ⚠️ `useRef` e não `useState`: isto não pinta nada na tela, e como state
   // dispararia um render a cada abertura do modal sem mudar um pixel.
   const presentesIniciais = useRef(0);
@@ -279,7 +281,7 @@ export default function GrupoMembrosScreen() {
     // mundo marcado, então isso perguntaria sempre — e pergunta que aparece à
     // toa se aprende a dispensar no automático.
     presentesIniciais.current = todos.size;
-    setTema(""); setComentario(""); setChamadaAberta(true);
+    setTema(""); setComentario(""); setBuscaChamada(""); setChamadaAberta(true);
   }
 
   async function salvarChamada() {
@@ -355,6 +357,13 @@ export default function GrupoMembrosScreen() {
   // protegida aqui — antes a tela escondia as ações de todos os líderes.
   const liderPrincipalId = grupo?.lider_id || null;
   const membros = data?.membros || [];
+  // ⚠️ Só a CHAMADA filtra — a lista principal da tela continua inteira. E a
+  // busca ignora acento: quem digita no meio do encontro escreve "joao", não
+  // "João" (ver `lib/buscaTexto.ts`).
+  const membrosFiltrados = useMemo(
+    () => filtrarPorTexto(membros, buscaChamada, (m) => m.nome),
+    [membros, buscaChamada],
+  );
   const pendentes = data?.pendentes || [];
   const nome = grupo?.nome || params.nome || t("Grupo");
   const quandoTxt = quandoCurto(grupo?.dia_semana, grupo?.horario);
@@ -927,20 +936,49 @@ export default function GrupoMembrosScreen() {
           some com um toque errado. */}
       <Modal visible={chamadaAberta} animationType="slide" transparent statusBarTranslucent onRequestClose={fecharChamada}>
         <TecladoSeguro style={styles.modalWrap}>
-          <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom, maxHeight: "88%" }]}>
+          {/* ⚠️⚠️ ALTURA DA CHAMADA (10/08/2026 · apontamento 1). O Marcos:
+              *"é muito ruim esse modal de subir e descer pra encontrar as
+              pessoas, pode fazer todas as pessoas aparecerem na tela e fica
+              maior."*
+              MEDIDO (1.433 vínculos ativos, 93 grupos com roster): mediana 9,
+              p75 15, p90 23, **máximo 57**. Com a janela de 320px cabiam ~8
+              nomes ⇒ só **47% dos grupos** cabiam sem rolar. Com a folha
+              inteira, **87%**.
+              ⚠️ Pros 13% restantes altura NÃO basta — daí a busca abaixo.
+              ⚠️ `flex: 1` em vez de outro número fixo: `applyFontScale`
+              multiplica o tamanho do texto no boot, então qualquer teto em
+              pixels cabe menos nomes com fonte grande e o defeito volta. */}
+          <View style={[styles.sheet, styles.sheetAlta, { paddingBottom: spacing.md + insets.bottom }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{t("Frequência de hoje")}</Text>
               <Pressable onPress={fecharChamada} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
                 <Ionicons name="close" size={24} color={colors.text} />
               </Pressable>
             </View>
+            {/* ⚠️ A busca só aparece em roster grande: em grupo de 7 pessoas
+                ela seria um campo a mais pra ignorar, e ainda roubaria altura da
+                lista — que é justamente o que estamos devolvendo. O corte em 12
+                fica entre a mediana (9) e o p75 (15). */}
+            {membros.length > 12 && (
+              <TextInput
+                style={styles.input}
+                placeholder={t("Buscar pessoa…")}
+                placeholderTextColor={colors.textMuted}
+                value={buscaChamada}
+                onChangeText={setBuscaChamada}
+                autoCorrect={false}
+              />
+            )}
             <ScrollView
               keyboardShouldPersistTaps="handled"
               automaticallyAdjustKeyboardInsets
-              style={{ maxHeight: 320 }}>
+              style={{ flex: 1 }}>
               {/* Todos começam MARCADOS — o líder desmarca quem faltou (bem menos
                   toque do que marcar 12 pessoas). */}
-              {membros.map((m) => {
+              {membrosFiltrados.length === 0 && (
+                <Text style={styles.chamadaVazio}>{t("Ninguém com esse nome no grupo.")}</Text>
+              )}
+              {membrosFiltrados.map((m) => {
                 const mid = m.membro_id;
                 if (!mid) return null;
                 const on = presentes.has(mid);
@@ -958,6 +996,10 @@ export default function GrupoMembrosScreen() {
                 );
               })}
             </ScrollView>
+            {/* ⚠️ Fora do ScrollView de propósito: tema, comentário e Salvar
+                ficam ANCORADOS. Com 57 nomes, deixá-los rolar junto tiraria o
+                botão de salvar da tela — a pessoa marcaria a chamada inteira e
+                não acharia como gravar. */}
             <Text style={styles.sheetLabel}>{t("Tema do encontro (opcional)")}</Text>
             <TextInput style={styles.input} placeholder={t("Ex.: Estudo 3 — Perdão")} placeholderTextColor={colors.textMuted} value={tema} onChangeText={setTema} />
             <Text style={styles.sheetLabel}>{t("Comentário do líder (opcional)")}</Text>
@@ -1132,6 +1174,9 @@ function makeStyles(c: Palette) {
     acaoItem: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 14 },
     acaoTxt: { color: c.text, fontSize: font.size.md, fontWeight: "600" },
     acaoTxtPerigo: { color: c.danger },
+    // ⚠️ `flex: 1` e não outro teto fixo — ver o comentário no modal.
+    sheetAlta: { flex: 1, maxHeight: "94%" },
+    chamadaVazio: { color: c.textMuted, fontSize: font.size.sm, textAlign: "center", paddingVertical: 24 },
     chamadaLinha: {
       flexDirection: "row", alignItems: "center", gap: spacing.sm,
       paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border,
