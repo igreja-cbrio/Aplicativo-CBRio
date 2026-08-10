@@ -46,6 +46,7 @@ import { trackEvento } from "@/lib/telemetria";
 // reimplementava versões mais fracas, que só o servidor recusava.
 import { isValidCPF, nascimentoBRParaISO } from "@/lib/validators";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
+import { abrirFichaCadastro, fecharFichaCadastro } from "@/lib/cadastroAberto";
 
 const soDigitos = (s: string) => s.replace(/\D/g, "");
 
@@ -100,6 +101,14 @@ export default function CompletarCadastroScreen() {
   const { retorno } = useLocalSearchParams<{ retorno?: string }>();
   const t = useT();
   const { reload } = useMembro();
+
+  // ⚠️ Enquanto esta tela está montada, o portão de atualização não cobra —
+  // reiniciar o app aqui apaga o que a pessoa digitou, e no caminho rápido ela
+  // PRECISA sair do app pra ler o código no e-mail (ver lib/cadastroAberto.ts).
+  useEffect(() => {
+    abrirFichaCadastro();
+    return () => { fecharFichaCadastro(); };
+  }, []);
 
   const [passo, setPasso] = useState<Passo>("escolha");
   const [erro, setErro] = useState<string | null>(null);

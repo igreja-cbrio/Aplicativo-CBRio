@@ -22,7 +22,7 @@
 // ⚠️ No-op em desenvolvimento (`expo-updates` desligado) — senão a tela apareceria
 // em dev e no Expo Go, onde `reloadAsync` nem existe.
 // ============================================================================
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ActivityIndicator, AppState, Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import * as Updates from "expo-updates";
 import { abaixoDoPiso } from "@/lib/versaoApp";
@@ -31,6 +31,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
+import { assinarFichaCadastro, lerFichaCadastro } from "@/lib/cadastroAberto";
 
 /**
  * Busca por atualização na abertura e a cada volta do background — o padrão do
@@ -59,8 +60,29 @@ function useBuscaAtualizacao() {
   // já estava no aparelho quando o app abriu (ou quando voltou do background),
   // cobra. Isso mantém o "se não atualizar não usa" — não se atravessa um ciclo
   // de background com bundle velho — sem interromper quem está no meio de algo.
-  const baixouNestaSessao = useRef(false);
-  const [, forcar] = useState(0);
+  // ⚠️⚠️ CONSERTO (10/08/2026) — A CORRIDA QUE FECHAVA O TECLADO NO ANDROID.
+  //
+  // Relato: "quando ela clica no campo para preencher o CPF, o teclado aparece
+  // e some rápido e ela trava ali, não consegue colocar o CPF pra avançar".
+  //
+  // O defeito estava aqui, não no teclado. Duas coisas erradas:
+  //
+  //  1. `baixouNestaSessao` era um REF lido durante o render — ou seja, mudar
+  //     seu valor não re-renderizava, e o `forcar()` que vinha depois era uma
+  //     segunda atualização, num commit separado.
+  //  2. A bandeira só subia DEPOIS do `await fetchUpdateAsync()`. Mas quem
+  //     acende `isUpdatePending` é um evento NATIVO, que chega quando o
+  //     download termina — pode chegar ANTES do await resolver em JS.
+  //
+  // Nessa janela de milissegundos, `isUpdatePending` era true e a bandeira
+  // ainda false: o portão aparecia, DESMONTANDO a árvore inteira do app, e
+  // logo depois voltava. Quem estava com o teclado aberto no campo de CPF via
+  // exatamente isso — o campo remontado, o foco perdido, o que foi digitado
+  // apagado — e o CadastroGate reiniciava a tela no primeiro passo. Não tinha
+  // como avançar: a cada checagem de atualização, a tela recomeçava.
+  //
+  // Agora a bandeira é ESTADO e sobe ANTES de baixar. Não existe mais janela.
+  const [baixouNestaSessao, setBaixouNestaSessao] = useState(false);
 
   const buscar = useCallback(async () => {
     if (!Updates.isEnabled || buscando.current) return;
@@ -68,9 +90,9 @@ function useBuscaAtualizacao() {
     try {
       const r = await Updates.checkForUpdateAsync();
       if (r.isAvailable) {
+        // ⚠️ ANTES do fetch, de propósito: é o que fecha a corrida.
+        setBaixouNestaSessao(true);
         await Updates.fetchUpdateAsync(); // vira isUpdatePending
-        baixouNestaSessao.current = true;
-        forcar((n) => n + 1);
       }
     } catch {
       // Sem rede / servidor fora: silêncio de propósito. O app segue usável com
@@ -85,8 +107,7 @@ function useBuscaAtualizacao() {
     const sub = AppState.addEventListener("change", (s) => {
       if (s === "active") {
         // Voltou do background: o que foi baixado antes disso passa a valer.
-        baixouNestaSessao.current = false;
-        forcar((n) => n + 1);
+        setBaixouNestaSessao(false);
         buscar();
       }
     });
@@ -190,6 +211,10 @@ export function PortaoAtualizacao({ children }: { children: React.ReactNode }) {
   const [falhou, setFalhou] = useState(false);
   const baixouNestaSessao = useBuscaAtualizacao();
   const piso = usaPisoDeVersao();
+  // ⚠️ Ficha de cadastro aberta ⇒ o portão espera (ver lib/cadastroAberto.ts).
+  // O caminho rápido manda um código por E-MAIL: a pessoa TEM que sair do app
+  // pra ler, e cobrar a atualização na volta apagava o formulário dela.
+  const fichaAberta = useSyncExternalStore(assinarFichaCadastro, lerFichaCadastro, lerFichaCadastro);
 
   async function aplicar() {
     setAplicando(true);
@@ -209,7 +234,7 @@ export function PortaoAtualizacao({ children }: { children: React.ReactNode }) {
   if (piso.bloquear) return <TelaLoja piso={piso} colors={colors} styles={styles} t={t} />;
 
   // ⚠️ `Updates.isEnabled` é false em dev/Expo Go — ali o portão não existe.
-  if (!Updates.isEnabled || !isUpdatePending || baixouNestaSessao.current) return <>{children}</>;
+  if (!Updates.isEnabled || !isUpdatePending || baixouNestaSessao || fichaAberta) return <>{children}</>;
 
   return (
     <View style={styles.tela}>
