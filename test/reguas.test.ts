@@ -21,6 +21,7 @@ import { lotesDePush, tokenMorreu, MAX_POR_REQUEST } from "@/lib/pushLotes";
 import { motivoDaFalha, podeVirarConteudo, ler } from "@/lib/falhaDeLeitura";
 import { estadoDoQr, podeDesenharQr, temCpf } from "@/lib/cartaoQr";
 import { linkDeInscricao, ehPorConvite, precisaEscolherNaLista } from "@/lib/convite";
+import { acaoAoFechar, temRascunho } from "@/lib/descartarRascunho";
 import {
   estadoDoEncontro, ultimaOcorrencia, proximaOcorrencia,
   dataLonga, quandoCurto, distanciaEmTexto, dataComHora, horaCurta,
@@ -1205,5 +1206,45 @@ describe("linkDeInscricao · o grupo certo, sem quebrar os por convite", () => {
   it("usa www (o apex responde 307) e escapa o id", () => {
     expect(linkDeInscricao(NORMAL)).toContain("https://www.cbrio.org");
     expect(linkDeInscricao({ id: "a b", modo_inscricao: "temporada" })).toContain("a%20b");
+  });
+});
+
+// ── Não perca o que já foi digitado (10/08/2026 · apontamento 15) ───────────
+// "ao clicar fora ele apenas sai sem perguntar... vi isso tentando registrar a
+// frequência". ⚠️ A causa não é o toque fora — é o BOTÃO VOLTAR do Android
+// (`onRequestClose`); estes modais não fecham por backdrop. O efeito é o mesmo:
+// a chamada inteira some com um toque errado.
+describe("acaoAoFechar · só pergunta quando há trabalho a perder", () => {
+  it("modal vazio fecha DIRETO", () => {
+    expect(acaoAoFechar({})).toBe("fechar");
+    expect(acaoAoFechar({ campos: ["", null, undefined] })).toBe("fechar");
+    expect(acaoAoFechar({ campos: [], mudouAlgo: false })).toBe("fechar");
+  });
+
+  it("⚠️ MUTATION GUARD · espaço em branco NÃO é rascunho", () => {
+    // Um toque acidental na barra de espaço não deve passar a exigir
+    // confirmação pra sair de todo modal.
+    expect(acaoAoFechar({ campos: ["   ", "\n"] })).toBe("fechar");
+    expect(temRascunho(["  "])).toBe(false);
+  });
+
+  it("texto digitado pergunta", () => {
+    expect(acaoAoFechar({ campos: ["oi"] })).toBe("perguntar");
+    expect(acaoAoFechar({ campos: ["", "comentário do líder"] })).toBe("perguntar");
+  });
+
+  it("⚠️ MUTATION GUARD · `mudouAlgo` cobre o trabalho SEM texto", () => {
+    // A queixa veio da tela de frequência, onde o trabalho é a chamada inteira
+    // e pode não haver uma letra digitada. Só olhar os campos perderia o caso.
+    expect(acaoAoFechar({ campos: ["", ""], mudouAlgo: true })).toBe("perguntar");
+    expect(temRascunho([], true)).toBe(true);
+  });
+
+  it("⚠️⚠️ MUTATION GUARD · SALVANDO não fecha e não pergunta", () => {
+    // Fechar no meio do envio deixa a pessoa sem saber se gravou — e ela tenta
+    // de novo, duplicando a chamada. É o único desfecho aqui que gera dado sujo.
+    expect(acaoAoFechar({ campos: ["oi"], salvando: true })).toBe("aguardar");
+    expect(acaoAoFechar({ campos: [], salvando: true })).toBe("aguardar");
+    expect(acaoAoFechar({ mudouAlgo: true, salvando: true })).toBe("aguardar");
   });
 });
