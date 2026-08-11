@@ -250,6 +250,19 @@ const MUTANTES = [
     de: "  if (!Number.isFinite(n)) return \"conexao\";",
     para: "  if (!Number.isFinite(n)) return \"servidor\";",
   },
+  // ── Domingo ancora na Home (11/08 · item 9) ──
+  {
+    nome: "home: domingo lido em UTC (em UTC-3 vira sabado e nunca ancora)",
+    arq: "lib/homeCultos.ts",
+    de: "  const d = new Date(`${s}T12:00:00`);",
+    para: "  const d = new Date(s);",
+  },
+  {
+    nome: "home: destaque volta a ser o primeiro (domingo deixa de ancorar)",
+    arq: "lib/homeCultos.ts",
+    de: "  return domingo >= 0 ? domingo : 0;",
+    para: "  return 0;",
+  },
   // ── Busca sem acento na chamada (10/08 · item 1) ──
   {
     nome: "busca: parar de ignorar acento ('joao' nao acha 'Joao')",
@@ -284,9 +297,12 @@ const MUTANTES = [
   },
   // ── Link de convite (10/08 · Onda C) ──
   {
-    nome: "convite: mandar link DIRETO pra grupo por convite (403 pra todo mundo)",
+    // ⚠️ O mutante antigo travava o fallback pro link geral em grupo 'fechado'.
+    // O Marcos derrubou essa regra em 11/08 (o lider TEM que poder convidar), e
+    // a ancora sumiu junto. O que sobra pra proteger e o link VAZIO.
+    nome: "convite: montar `?grupo=` sem id (link quebrado no WhatsApp do lider)",
     arq: "lib/convite.ts",
-    de: "  if (ehPorConvite(grupo)) return BASE_INSCRICAO;",
+    de: "  if (!id) return BASE_INSCRICAO;",
     para: "  if (false as boolean) return BASE_INSCRICAO;",
   },
   {

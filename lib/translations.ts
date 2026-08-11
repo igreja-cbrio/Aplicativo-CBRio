@@ -461,6 +461,10 @@ export const TRANSLATIONS: Record<string, Traducao> = {
 
   // ───────── Item 1 · busca na chamada (10/08) ─────────
   "Buscar pessoa…": { en: "Search person…", es: "Buscar persona…" },
+
+  // ───────── Tarja de culto ao vivo na Home (11/08) ─────────
+  "Culto ao vivo agora": { en: "Service live now", es: "Culto en vivo ahora" },
+  "Culto ao vivo agora — abrir": { en: "Service live now — open", es: "Culto en vivo ahora — abrir" },
   "Ninguém com esse nome no grupo.": { en: "No one with that name in the group.", es: "Nadie con ese nombre en el grupo." },
   "Grupos que você é supervisor": { en: "Groups you supervise", es: "Grupos que supervisas" },
   "É só se inscrever por aqui": { en: "Just sign up here", es: "Solo inscríbete aquí" },

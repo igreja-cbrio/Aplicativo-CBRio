@@ -42,7 +42,12 @@ export type GrupoParaLink = {
 export function linkDeInscricao(grupo: GrupoParaLink | null | undefined): string {
   const id = String(grupo?.id ?? "").trim();
   if (!id) return BASE_INSCRICAO;
-  if (ehPorConvite(grupo)) return BASE_INSCRICAO;
+  // ⚠️⚠️ GRUPO 'fechado' TAMBÉM GANHA O LINK PRÓPRIO (Marcos · 11/08/2026).
+  // Eu tinha feito o contrário — caía no link geral, porque o backend recusava
+  // com 403. Era justamente o caso em que o líder MAIS precisa do link: "por
+  // convite do líder" só existe se o líder puder convidar. O backend liberou
+  // junto (`publicGrupos.js` + `utils/entradaGrupoApp.js`); o grupo segue fora
+  // de toda lista pública, e a inscrição segue virando pedido pra ele aprovar.
   return `${BASE_INSCRICAO}?grupo=${encodeURIComponent(id)}`;
 }
 
