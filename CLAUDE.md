@@ -180,6 +180,93 @@ alavanca que elas usam de propósito. A trava do `POST /app/inscricoes` (ERP
 #2361) está CERTA justamente porque barra inscrição NOVA e não expulsa quem já
 entrou.
 
+## ⚠️⚠️ SERVIR · a tela mandava quem JÁ SERVE pro formulário (11/08/2026)
+
+Relato do Marcos: *"Pedro Fernandes, nosso responsável da produção que está
+escalado em todos os cultos, ao abrir o app e entrar em servir apareceu as áreas
+para ele escolher e o pedido de quero ser voluntário."*
+
+**A causa era do APP, e o servidor sempre soube a resposta.**
+
+`lib/useVoluntariadoSync.ts` lia **as tabelas direto** e nunca chamava
+`GET /app/voluntariado/me`. O sinal de "esta pessoa está no time" vinha de
+**`mem_membros.voluntario`** — coluna `true` em **0 de 4.072** membros vivos
+(medido). Logo `voluntario_ativo` era **sempre false pra todo mundo**, e quem não
+tinha linha em `vol_inscricoes` caia no formulário. O Pedro tem **57 escalas** e
+**zero inscrição** — ele nunca precisou se inscrever, já servia.
+
+⚠️ No servidor, `resolverVolProfile` (`backend/routes/app.js` · **Matheus,
+25/06**) resolve o perfil por `auth_user_id` → CPF → `membresia_id` → e-mail,
+faz backfill do vínculo e já devolve `voluntario_ativo`. Conferido: o perfil do
+Pedro está **vinculado** e **não arquivado**. **A tela só nunca perguntou.**
+
+⚠️⚠️ **ERAM DUAS VERDADES NO MESMO APP.** `lib/jornada.ts` e
+`lib/inscricoesStatus.ts` **já chamavam** `getVoluntariadoMe()` — a Jornada e o
+hub de Inscrições mostravam o Pedro como quem serve enquanto a aba Servir oferecia
+a ele "quero ser voluntário". É a mesma divergência que `lib/volStatus.ts` matou
+em 05/08: a **RÉGUA** foi unificada, a **FONTE** não. Quando aparecer divergência
+entre duas telas sobre o mesmo dado, conferir **de onde cada uma lê**, não só como
+cada uma decide.
+
+### Os dois vazamentos no caminho
+
+1. **O cast silencioso.** `getVoluntariadoMe()` fazia `return obj as VoluntariadoMe`.
+   Campo ausente chega `undefined`, a régua cai no status da inscrição e o
+   formulário volta — **sem erro de TypeScript e sem falhar teste nenhum**. A
+   conferência virou **`lib/voluntariadoMe.ts`** (pura, no portão, 2 mutantes).
+   ⚠️ `=== true` de propósito: truthy frouxo aceitaria a **string `"false"`**.
+2. **O curto-circuito do `membro_id`.** Conta sem `membro_id` respondia
+   `voluntario_ativo: false` **sem perguntar**. Mas o servidor resolve por
+   `auth_user_id` e e-mail — não precisa do `membro_id`. Medido: **21 das 125
+   contas** não têm `membro_id`, e **1 delas tem perfil de voluntário vivo com 5
+   escalas**. Decisão tomada no cliente sobre dado que o cliente não tem.
+
+⚠️ **Falha de rede NÃO vira "você não é voluntário"** — mostrar o formulário a
+quem serve é o estado enganoso que esta correção existe pra matar (mesma família do
+`meu-grupo` e do `evento` na Onda 2).
+
+⚠️ O bloco **"Já sirvo — informe seu CPF"** saiu da tela: o servidor resolve
+sozinho agora. **Não reintroduzir busca por CPF DIGITADO** — "CPF identifica, não
+autentica" é lei do projeto, e aqui ela entregaria escalas, telefone e e-mail de
+quem tivesse o CPF conhecido. (`POST /app/voluntariado/vincular-cpf` existe no
+backend desde 09/07 e continua lá — só não é mais chamado por esta tela.)
+
+### ⏳ Follow-up medido, NÃO feito (é do ERP, e é 1 linha)
+
+`/app/voluntariado/me` calcula `const ativo = vp?.allocation_status === 'active'`.
+**`allocation_status` é `'active'` em 928 de 928 perfis** — não discrimina
+ninguém. O sinal que separa é **`arquivado`** (793 false × 135 true). Hoje **2
+perfis arquivados** que a cadeia resolve apareceriam como "ativo". Trocar por
+`vp?.arquivado === false` conserta; deixei pro Matheus porque é o código dele e
+ele volta nessa área.
+
+## ⚠️ APRESENTAÇÃO DE BEBÊS · o card do app é LINK MORTO (medido 11/08/2026)
+
+Pedido do Marcos: *"Apresentação de Bebês está fora do app, quero que tudo seja
+dentro do app."* Medindo antes de construir, o quadro é pior do que "está fora":
+
+- `inscricoes.tsx:66` abre **`https://www.cbrio.org/apresentacao-criancas`**, e essa
+  rota **não existe no ERP**: 0 referências em `src/` (nem `App.tsx`, nem
+  componente). Devolve **HTTP 200 só pelo catch-all do SPA** da Vercel, então
+  parece viva e não renderiza formulário nenhum.
+- **`apresentacao_bebes` tem 0 linhas.** Nunca foi usada, por porta nenhuma.
+  (⚠️ Uma nota antiga minha dizia "6 de 6 linhas órfãs" — **estava errada**.)
+- O único código real é do **TOTEM**: `GET|POST
+  /api/membresia/totem/apresentacao-bebe` (+ `src/api.js:1309-1310`), que é do
+  balcão e já calcula o **2º domingo do mês** como data.
+
+⚠️ **O que ele quer somar** é o vínculo de família: *"perguntar se o filho é
+dela; se sim, indicar o vínculo e completar os dados se a criança não existir como
+família; se for outra pessoa, preencher os dados completos dos responsáveis e da
+criança."* Estado do dado pra isso: `mem_familias` **2.074** ·
+`mem_membros.familia_id` **999 de 4.072** · `kids_criancas` **4.332 vivas** · e
+**`mem_vinculos_familiares` com 6 linhas** (a tabela de parentesco está
+praticamente vazia).
+
+⚠️⚠️ **NÃO confundir com o que foi recusado**: a recusa de 10/08 foi ligar
+`autorizado_buscar=true` (autorização de RETIRADA no Kids) por formulário. Vínculo
+de **família** é outra coisa e ele pediu explicitamente. Retirada continua fora.
+
 ## Visão geral
 
 App de membros da igreja **CBRio**. Está sendo **reconstruído do zero, módulo a
