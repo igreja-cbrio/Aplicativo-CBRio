@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, router } from "expo-router";
+import { Stack, router, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
@@ -30,38 +30,12 @@ const MAPS = "https://maps.apple.com/?q=CBRio+Barra+da+Tijuca";
 export default function FaleConoscoScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const router = useRouter();
   const t = useT();
   const { user } = useAuth();
   const { membro } = useMembro();
 
-  const [mensagem, setMensagem] = useState("");
-  const [enviando, setEnviando] = useState(false);
 
-  async function enviar() {
-    if (!mensagem.trim()) {
-      Alert.alert(t("Escreva sua mensagem"), t("Conte pra gente o que você precisa."));
-      return;
-    }
-    setEnviando(true);
-    try {
-      await criarInscricao(
-        "contato",
-        {
-          mensagem: mensagem.trim(),
-          nome: membro?.nome || null,
-          email: membro?.email || user?.email || null,
-          telefone: membro?.telefone || null,
-          membro_id: membro?.membroId ?? null,
-        },
-        user?.id
-      );
-      setMensagem("");
-      Alert.alert(t("Mensagem enviada 💙"), t("Recebemos seu contato. Nossa equipe vai te responder em breve."));
-    } catch (e) {
-      Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível enviar."));
-    }
-    setEnviando(false);
-  }
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
@@ -88,21 +62,26 @@ export default function FaleConoscoScreen() {
             <Canal icon="location" label={t("Como chegar")} onPress={() => Linking.openURL(MAPS)} colors={colors} styles={styles} t={t} />
           </View>
 
-          {/* Formulário · sólido (form denso com textarea não usa glass · HIG) */}
-          <View style={styles.card}>
+          {/* ⚠️⚠️ O FORMULÁRIO SAIU DAQUI (11/08/2026 · apontamento 14). Ele era
+              a QUARTA porta de preenchimento do app, e a mais escondida — quatro
+              toques (Menu → Ajustes → Configurações → Ajuda). Palavras do Marcos:
+              *"hoje vejo que tem muitas portas de preenchimento que podem
+              confundir; ter uma porta só e a pessoa diz o que precisa faz mais
+              sentido."*
+              ⚠️ Os CANAIS acima ficam: WhatsApp, Instagram, e-mail e o mapa não
+              são "porta de preenchimento" — são jeitos de chegar na igreja, e
+              tirá-los não simplificaria nada, só removeria caminho. */}
+          <Pressable
+            style={styles.card}
+            onPress={() => router.navigate("/falar-com-a-igreja")}
+            accessibilityRole="button"
+            accessibilityLabel={t("Falar com a CBRio")}
+          >
             <Text style={styles.cardTitle}>{t("Mande uma mensagem")}</Text>
-            <Text style={styles.cardText}>{t("Dúvida, sugestão ou pedido — escreva aqui que a gente responde.")}</Text>
-            <TextInput
-              style={styles.textarea}
-              value={mensagem}
-              onChangeText={setMensagem}
-              placeholder={t("Sua mensagem…")}
-              placeholderTextColor={colors.textMuted}
-              multiline
-              accessibilityLabel={t("Sua mensagem")}
-            />
-            <Button title={t("Enviar")} onPress={enviar} loading={enviando} />
-          </View>
+            <Text style={styles.cardText}>
+              {t("Conversa com pastor, pedido de oração, dúvida ou sugestão — num lugar só.")}
+            </Text>
+          </Pressable>
         </ScrollView>
       </TecladoSeguro>
     </SafeAreaView>

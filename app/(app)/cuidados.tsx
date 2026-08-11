@@ -18,7 +18,7 @@ import { useMembro } from "@/lib/useMembro";
 import { criarInscricao } from "@/lib/inscricoes";
 import { meusPedidosCuidado, type PedidoCuidado } from "@/lib/meusPedidos";
 import { useT } from "@/lib/i18n";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
@@ -38,13 +38,11 @@ export default function CuidadosScreen() {
   const { user } = useAuth();
   const { membro } = useMembro();
   const colors = useColors();
+  const router = useRouter();
   const t = useT();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const [oracao, setOracao] = useState("");
-  const [enviandoOracao, setEnviandoOracao] = useState(false);
   const [enviandoSos, setEnviandoSos] = useState(false);
-  const [enviandoAcons, setEnviandoAcons] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [pedidos, setPedidos] = useState<PedidoCuidado[]>([]);
   const [pedidosFalhou, setPedidosFalhou] = useState(false);
@@ -59,61 +57,7 @@ export default function CuidadosScreen() {
 
   useFocusEffect(carregarPedidos);
 
-  async function enviarOracao() {
-    if (!oracao.trim()) {
-      setMsg(t("Escreva seu pedido de oração."));
-      return;
-    }
-    setMsg(null);
-    setEnviandoOracao(true);
-    try {
-      await criarInscricao(
-        "oracao",
-        {
-          mensagem: oracao.trim(),
-          nome: membro?.nome || null,
-          telefone: membro?.telefone || null,
-          membro_id: membro?.membroId ?? null,
-        },
-        user?.id
-      );
-      setOracao("");
-      Alert.alert(
-        t("Recebemos seu pedido 🙏"),
-        t("Nossa equipe vai orar por você. Que Deus te console.")
-      );
-      setTimeout(carregarPedidos, 1500);
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : t("Não foi possível enviar."));
-    } finally {
-      setEnviandoOracao(false);
-    }
-  }
 
-  async function pedirAconselhamento() {
-    setMsg(null);
-    setEnviandoAcons(true);
-    try {
-      await criarInscricao(
-        "aconselhamento",
-        {
-          nome: membro?.nome || null,
-          telefone: membro?.telefone || null,
-          membro_id: membro?.membroId ?? null,
-        },
-        user?.id
-      );
-      Alert.alert(
-        t("Pedido enviado"),
-        t("Um pastor ou líder vai entrar em contato com você em breve.")
-      );
-      setTimeout(carregarPedidos, 1500);
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : t("Não foi possível enviar."));
-    } finally {
-      setEnviandoAcons(false);
-    }
-  }
 
   function abrirSOS() {
     Alert.alert(
@@ -197,34 +141,38 @@ export default function CuidadosScreen() {
             </Pressable>
           </View>
 
-          {/* Pedido de oração · sólido (form denso não usa glass · HIG) */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{t("Pedido de oração")}</Text>
-            <TextInput
-              style={styles.textarea}
-              value={oracao}
-              onChangeText={setOracao}
-              placeholder={t("Conte pelo que podemos orar…")}
-              placeholderTextColor={colors.textMuted}
-              multiline
-            />
-            {msg && <Text style={styles.err}>{msg}</Text>}
-            <Button title={t("Enviar pedido")} onPress={enviarOracao} loading={enviandoOracao} />
-          </View>
+          {/* ⚠️⚠️ DUAS PORTAS, NÃO QUATRO (11/08/2026 · apontamento 14).
+              Decisão do Marcos: *"vamos separar em duas portas então, uma que é
+              esse contato SOS, que tem que ser destacado como é hoje, e a outra
+              é o fale com a CBRio: ao clicar, você teria 3 opções — marcar
+              conversa com pastor, pedir oração, e a terceira opção de enviar
+              mensagem de dúvida, sugestão, pedido ou feedback."*
 
-          {/* Aconselhamento · sólido */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{t("Conversar com um pastor")}</Text>
-            <Text style={styles.cardText}>
-              {t("Quer um aconselhamento ou uma conversa? Um pastor ou líder entra em contato com você.")}
-            </Text>
-            <Button
-              title={t("Quero conversar")}
-              variant="ghost"
-              onPress={pedirAconselhamento}
-              loading={enviandoAcons}
-            />
-          </View>
+              Aqui havia DOIS cartões (oração com textarea, e aconselhamento com
+              botão), e o "Fale conosco" morava a QUATRO toques daqui (Menu →
+              Ajustes → Configurações → Ajuda). Os três viraram uma entrada só.
+
+              ⚠️ O SOS acima NÃO entrou na fusão, de propósito: é a única destas
+              portas que pode salvar alguém em minuto zero, e ele oferece o CVV
+              188 ANTES de qualquer formulário. Virar item de lista somaria dois
+              toques entre a pessoa e o socorro. */}
+          <Pressable
+            style={styles.portaUnica}
+            onPress={() => router.navigate("/falar-com-a-igreja")}
+            accessibilityRole="button"
+            accessibilityLabel={t("Falar com a CBRio")}
+          >
+            <View style={styles.portaIcone}>
+              <Ionicons name="chatbubbles" size={22} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>{t("Falar com a CBRio")}</Text>
+              <Text style={styles.cardText}>
+                {t("Conversa com pastor, pedido de oração, dúvida ou sugestão — num lugar só.")}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </Pressable>
 
           {/* Meus pedidos — acompanhamento do que já enviei */}
           {pedidosFalhou && pedidos.length === 0 && (
@@ -313,6 +261,15 @@ const makeStyles = (colors: Palette) =>
       textAlign: "center",
       textDecorationLine: "underline",
       marginTop: spacing.xs,
+    },
+    portaUnica: {
+      flexDirection: "row", alignItems: "center", gap: spacing.md,
+      backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md,
+      borderWidth: 1, borderColor: colors.glassBorder,
+    },
+    portaIcone: {
+      width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center",
+      backgroundColor: colors.primary + "18",
     },
     card: {
       backgroundColor: colors.surface,
