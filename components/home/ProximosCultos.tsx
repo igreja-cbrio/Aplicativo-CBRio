@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { indiceDoDestaque } from "@/lib/homeCultos";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { type CultoUpcoming, formatCultoDia, formatCultoHora } from "@/lib/cultos";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -114,40 +115,35 @@ export function ProximosCultos({ cultos }: { cultos: CultoUpcoming[] }) {
 
   const grupos = agrupar(cultos);
 
-  // Herói: grupo de HOJE com culto ao vivo agora ou com o próximo horário
-  // ainda por vir. Os demais grupos seguem no scroll horizontal.
+  // `hojeIso` marca o card de hoje com a tag "HOJE" (o cálculo do herói saiu em
+  // 11/08 — quem decide o destaque agora é `indiceDoDestaque`).
   const hoje = new Date(agora);
   const pad = (n: number) => String(n).padStart(2, "0");
   const hojeIso = `${hoje.getFullYear()}-${pad(hoje.getMonth() + 1)}-${pad(hoje.getDate())}`;
 
-  // Herói = primeiro grupo de HOJE com culto ao vivo ou próximo. Remove
-  // por ÍNDICE (não por referência) pra garantir que ele não duplique
-  // na lista de baixo.
-  let heroiIdx = -1;
-  for (let i = 0; i < grupos.length; i++) {
-    const g = grupos[i];
-    if (g.data !== hojeIso) continue;
-    const st = statusDosHorarios(g.itens, agora);
-    if ([...st.values()].some((s) => s === "ao_vivo" || s === "proximo")) {
-      heroiIdx = i;
-      break;
-    }
-  }
-  const heroi = heroiIdx >= 0 ? grupos[heroiIdx] : null;
-  const restantes = grupos.filter((_, i) => i !== heroiIdx);
-
-  // ⚠️⚠️ DESENHO PEDIDO PELO MARCOS (10/08/2026, 2ª rodada do apontamento 9):
-  // *"ao invés de 4 retângulos um embaixo do outro, você podia fazer 3 quadrados
-  // menores embaixo e o próximo culto um retângulo em cima no tamanho dos 3, e
-  // aí quando ele estiver ao vivo manter o que você fazia antes de dar destaque
-  // e mandar para transmissão."*
+  // ⚠️⚠️ DESENHO PEDIDO PELO MARCOS (11/08/2026, 3ª rodada do apontamento 9):
+  // *"a lógica do culto mais próximo ficar maior é boa, mas o culto de domingo
+  // tem muitos horários e fica feio pois ele passa. Coloque o culto de domingo
+  // sempre em cima para os horários ficarem certos; apenas em horário de culto
+  // coloque uma tarja acima dos cultos dizendo culto ao vivo para clicar."*
   //
-  // ⇒ O PRÓXIMO culto sempre em cima, ocupando a largura toda. Os seguintes
-  // viram cartões menores lado a lado.
-  // ⚠️ Quando há culto AO VIVO ou próximo hoje, o destaque continua sendo o
-  // `HeroiHoje` — é ele que leva pra transmissão, e o Marcos pediu pra manter.
-  const destaque = heroi ?? restantes[0] ?? null;
-  const grade = (heroi ? restantes : restantes.slice(1)).slice(0, 3);
+  // ⇒ O DOMINGO é ÂNCORA (`lib/homeCultos.ts`): fica sempre em cima, com os 4
+  // horários dele juntos. Antes o destaque era o PRÓXIMO culto, então ele
+  // trocava de lugar ao longo da semana e remontava o bloco inteiro.
+  // ⇒ E o "ao vivo" saiu do card: virou TARJA acima de tudo. Separa as duas
+  // perguntas — "quando é o culto?" (o card, estável) e "tem culto AGORA?"
+  // (a tarja, que só existe na hora).
+  const idxDestaque = indiceDoDestaque(grupos);
+  const destaque = idxDestaque >= 0 ? grupos[idxDestaque] : null;
+  const grade = grupos.filter((_, i) => i !== idxDestaque).slice(0, 3);
+
+  // O culto que está acontecendo AGORA, em qualquer dia — é o alvo da tarja.
+  let cultoAoVivo: CultoUpcoming | null = null;
+  for (const g of grupos) {
+    const st = statusDosHorarios(g.itens, agora);
+    const achou = g.itens.find((c) => st.get(c.id) === "ao_vivo");
+    if (achou) { cultoAoVivo = achou; break; }
+  }
 
   return (
     <View style={{ gap: spacing.sm, marginHorizontal: -spacing.lg }}>
@@ -156,13 +152,26 @@ export function ProximosCultos({ cultos }: { cultos: CultoUpcoming[] }) {
         <Text style={styles.titulo}>{t("Próximos cultos")}</Text>
       </View>
 
+      {/* ⚠️ A TARJA só existe em horário de culto. Fora dele, nada ocupa espaço
+          na Home — foi o pedido: "APENAS em horário de culto". */}
+      {cultoAoVivo && (
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <Pressable
+            style={styles.tarjaAoVivo}
+            onPress={() => router.navigate({ pathname: "/culto-detalhe", params: { id: cultoAoVivo!.id } })}
+            accessibilityRole="button"
+            accessibilityLabel={t("Culto ao vivo agora — abrir")}
+          >
+            <View style={styles.aoVivoPonto} />
+            <Text style={styles.tarjaAoVivoTxt} numberOfLines={1}>{t("Culto ao vivo agora")}</Text>
+            <Ionicons name="chevron-forward" size={16} color="#fff" />
+          </Pressable>
+        </View>
+      )}
+
       {destaque && (
         <View style={{ paddingHorizontal: spacing.lg }}>
-          {heroi ? (
-            <HeroiHoje grupo={heroi} agora={agora} router={router} colors={colors} styles={styles} t={t} />
-          ) : (
-            <CultoCard grupo={destaque} agora={agora} hojeIso={hojeIso} router={router} colors={colors} styles={styles} t={t} />
-          )}
+          <CultoCard grupo={destaque} agora={agora} hojeIso={hojeIso} router={router} colors={colors} styles={styles} t={t} />
         </View>
       )}
 
@@ -250,91 +259,11 @@ function HoraPill({
 }
 
 /** Card-herói do culto de HOJE: countdown ao vivo ou badge AO VIVO. */
-function HeroiHoje({
-  grupo,
-  agora,
-  router,
-  colors,
-  styles,
-  t,
-}: {
-  grupo: Grupo;
-  agora: number;
-  router: ReturnType<typeof useRouter>;
-  colors: Palette;
-  styles: ReturnType<typeof makeStyles>;
-  t: ReturnType<typeof useT>;
-}) {
-  const cor = grupo.cor || colors.primary;
-  const st = statusDosHorarios(grupo.itens, agora);
-  const horarios = grupo.itens.slice().sort((a, b) => a.hora.localeCompare(b.hora));
-  const aoVivo = horarios.find((c) => st.get(c.id) === "ao_vivo") ?? null;
-  const proximo = horarios.find((c) => st.get(c.id) === "proximo") ?? null;
-  const alvo = aoVivo ?? proximo ?? horarios[0];
-
-  return (
-    <GlassCard style={{ overflow: "hidden" }}>
-      <Pressable
-        onPress={() => router.navigate({ pathname: "/culto-detalhe", params: { id: alvo.id } })}
-        style={[styles.card, styles.heroiCard]}
-      >
-        <View style={[styles.heroiBarra, { backgroundColor: cor }]} />
-        <View style={styles.headerCard}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <View style={[styles.tag, { backgroundColor: cor }]}>
-              <Text style={styles.tagTxt}>{t("HOJE")}</Text>
-            </View>
-            {aoVivo && (
-              <View style={styles.aoVivoBadge}>
-                <View style={styles.aoVivoPonto} />
-                <Text style={styles.aoVivoTxt}>{t("AO VIVO agora")}</Text>
-              </View>
-            )}
-          </View>
-          <Text style={[styles.nome, styles.heroiNome]} numberOfLines={1}>
-            {grupo.nomeBase}
-          </Text>
-          {!aoVivo && proximo && (
-            <Text style={styles.countdown}>
-              {contagem(t, inicioDoCulto(proximo) - agora) || formatCultoHora(proximo.hora)}
-            </Text>
-          )}
-        </View>
-
-        <View style={styles.horarios}>
-          {horarios.map((c) => (
-            <HoraPill key={c.id} culto={c} status={st.get(c.id)} cor={cor} router={router} styles={styles} />
-          ))}
-        </View>
-
-        <View style={styles.feats}>
-          {grupo.has_online && (
-            <View style={styles.feat}>
-              <Ionicons name="videocam" size={11} color={colors.brandMid} />
-              <Text style={styles.featTxt}>{t("online")}</Text>
-            </View>
-          )}
-          {grupo.has_kids && (
-            <View style={styles.feat}>
-              <Ionicons name="happy" size={11} color={colors.brandMid} />
-              <Text style={styles.featTxt}>{t("kids")}</Text>
-            </View>
-          )}
-        </View>
-
-        {aoVivo && grupo.has_online && (
-          <Pressable
-            onPress={() => router.navigate({ pathname: "/culto-detalhe", params: { id: aoVivo.id } })}
-            style={[styles.assistirBtn, { backgroundColor: cor }]}
-          >
-            <Ionicons name="play" size={15} color="#fff" />
-            <Text style={styles.assistirTxt}>{t("Assistir online")}</Text>
-          </Pressable>
-        )}
-      </Pressable>
-    </GlassCard>
-  );
-}
+/* ⚠️ `HeroiHoje` foi REMOVIDO em 11/08/2026. Ele era o card grande de "hoje",
+   que virava destaque quando havia culto ao vivo ou próximo. O Marcos trocou o
+   desenho: o destaque agora é fixo no DOMINGO (`lib/homeCultos.ts`) e o "ao
+   vivo" virou uma TARJA acima do bloco. Era função local, sem export e sem
+   outro chamador — ver o git se precisar do visual antigo. */
 
 function CultoCard({
   grupo,
@@ -473,6 +402,14 @@ const makeStyles = (colors: Palette) =>
     // ⚠️ Cartão da linha de baixo: menos respiro e altura mínima pra os três
     // ficarem do mesmo tamanho mesmo com nomes de comprimentos diferentes.
     cardCompacto: { padding: spacing.sm, gap: 6, minHeight: 96 },
+    // ⚠️ Tarja de AO VIVO: some fora do horário de culto, então ela pode ser
+    // vermelha e chamativa sem poluir a Home no resto da semana.
+    tarjaAoVivo: {
+      flexDirection: "row", alignItems: "center", gap: spacing.sm,
+      backgroundColor: "#DC2626", borderRadius: radius.md,
+      paddingVertical: 10, paddingHorizontal: spacing.md,
+    },
+    tarjaAoVivoTxt: { color: "#fff", fontWeight: "800", fontSize: font.size.sm, flex: 1 },
     heroiBarra: {
       position: "absolute",
       top: 0,

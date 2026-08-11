@@ -23,6 +23,7 @@ import { estadoDoQr, podeDesenharQr, temCpf } from "@/lib/cartaoQr";
 import { linkDeInscricao, ehPorConvite, precisaEscolherNaLista } from "@/lib/convite";
 import { acaoAoFechar, temRascunho } from "@/lib/descartarRascunho";
 import { casaBusca, normalizarBusca, filtrarPorTexto } from "@/lib/buscaTexto";
+import { ehDomingo, indiceDoDestaque } from "@/lib/homeCultos";
 import {
   estadoDoEncontro, ultimaOcorrencia, proximaOcorrencia,
   dataLonga, quandoCurto, distanciaEmTexto, dataComHora, horaCurta,
@@ -1179,10 +1180,17 @@ describe("linkDeInscricao · o grupo certo, sem quebrar os por convite", () => {
     expect(linkDeInscricao(SEMPRE)).toBe("https://www.cbrio.org/inscricao-grupos?grupo=abc-123");
   });
 
-  it("⚠️ MUTATION GUARD · grupo POR CONVITE cai no link geral", () => {
-    // Com link direto, o backend responde 403 e o convite do líder vira um link
-    // que recusa todo mundo — hoje o geral ao menos funciona.
-    expect(linkDeInscricao(CONVITE)).toBe("https://www.cbrio.org/inscricao-grupos");
+  it("⚠️⚠️ grupo POR CONVITE também ganha link direto (Marcos · 11/08)", () => {
+    // Este teste travava o CONTRÁRIO até 10/08 — eu mandava o link geral porque
+    // o backend recusava 'fechado' com 403. Era justamente o caso em que o líder
+    // MAIS precisa do link: "por convite do líder" só existe se o líder puder
+    // convidar. Palavras dele: "libera o link direto para os grupos por convite
+    // também, mesmo fechados. eles não devem ser achados na lista de grupos
+    // públicos, mas se o líder quiser convidar alguém, deve poder."
+    // O backend liberou junto (publicGrupos.js + utils/entradaGrupoApp.js).
+    expect(linkDeInscricao(CONVITE)).toBe("https://www.cbrio.org/inscricao-grupos?grupo=abc-123");
+    // `ehPorConvite` continua dizendo a verdade sobre o grupo — ela só não
+    // decide mais o link.
     expect(ehPorConvite(CONVITE)).toBe(true);
     expect(ehPorConvite(NORMAL)).toBe(false);
   });
@@ -1198,10 +1206,11 @@ describe("linkDeInscricao · o grupo certo, sem quebrar os por convite", () => {
   it("⚠️ MUTATION GUARD · o TEXTO acompanha o link", () => {
     // Trocar o link sem trocar o texto é o pior desfecho: mandaria procurar na
     // lista um grupo já pré-selecionado, ou entrar direto num link que cai na
-    // lista geral.
+    // lista geral. Agora só quem NÃO tem id cai no geral.
     expect(precisaEscolherNaLista(NORMAL)).toBe(false);
-    expect(precisaEscolherNaLista(CONVITE)).toBe(true);
+    expect(precisaEscolherNaLista(CONVITE)).toBe(false);
     expect(precisaEscolherNaLista(null)).toBe(true);
+    expect(precisaEscolherNaLista({ id: null, modo_inscricao: "temporada" })).toBe(true);
   });
 
   it("usa www (o apex responde 307) e escapa o id", () => {
@@ -1297,5 +1306,47 @@ describe("busca sem acento · acha o nome como a pessoa digita", () => {
     expect(normalizarBusca(null)).toBe("");
     expect(normalizarBusca(undefined)).toBe("");
     expect(normalizarBusca("  MARIA  ")).toBe("maria");
+  });
+});
+
+// ── Quem fica em cima na Home (11/08/2026 · apontamento 9, 3ª rodada) ──────
+// "o culto de domingo tem muitos horários e fica feio pois ele passa. Coloque o
+// culto de domingo sempre em cima." Antes o destaque era o PRÓXIMO culto, então
+// ele trocava de lugar ao longo da semana e remontava o bloco.
+describe("indiceDoDestaque · o domingo é âncora", () => {
+  // 2026-08-16 é domingo; 2026-08-12 é quarta.
+  const QUARTA = { data: "2026-08-12" };
+  const DOMINGO = { data: "2026-08-16" };
+  const SABADO = { data: "2026-08-15" };
+
+  it("⚠️ MUTATION GUARD · o domingo sobe mesmo não sendo o primeiro", () => {
+    expect(indiceDoDestaque([QUARTA, SABADO, DOMINGO])).toBe(2);
+    expect(indiceDoDestaque([DOMINGO, QUARTA])).toBe(0);
+  });
+
+  it("sem domingo na lista, o primeiro (que é o próximo — a lista vem ordenada)", () => {
+    expect(indiceDoDestaque([QUARTA, SABADO])).toBe(0);
+  });
+
+  it("lista vazia devolve -1 (a Home não renderiza destaque nenhum)", () => {
+    expect(indiceDoDestaque([])).toBe(-1);
+    expect(indiceDoDestaque(null)).toBe(-1);
+    expect(indiceDoDestaque(undefined)).toBe(-1);
+  });
+
+  it("⚠️⚠️ MUTATION GUARD · domingo é lido no fuso do BRASIL, não em UTC", () => {
+    // `new Date("2026-08-16")` é UTC no JS e, em UTC-3, volta como SÁBADO 21h —
+    // o domingo simplesmente não seria reconhecido e o destaque nunca ancorava.
+    expect(ehDomingo("2026-08-16")).toBe(true);
+    expect(ehDomingo("2026-08-15")).toBe(false);
+    expect(ehDomingo("2026-08-17")).toBe(false);
+    // com hora junto (como vem de alguns payloads) o corte tem que funcionar
+    expect(ehDomingo("2026-08-16T19:30:00Z")).toBe(true);
+  });
+
+  it("data inválida não vira domingo por acidente", () => {
+    for (const v of ["", "  ", "16/08/2026", "abc", null, undefined]) {
+      expect(ehDomingo(v)).toBe(false);
+    }
   });
 });
