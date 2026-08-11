@@ -250,6 +250,26 @@ const MUTANTES = [
     de: "  if (!Number.isFinite(n)) return \"conexao\";",
     para: "  if (!Number.isFinite(n)) return \"servidor\";",
   },
+  // ── /voluntariado/me: o campo que chegava errado calado (11/08) ──
+  {
+    nome: "me: truthy frouxo em voluntario_ativo (string \"false\" viraria true)",
+    arq: "lib/voluntariadoMe.ts",
+    de: "  const voluntario_ativo = obj?.voluntario_ativo === true;",
+    para: "  const voluntario_ativo = !!obj?.voluntario_ativo;",
+  },
+  {
+    nome: "me: inscricao sem status virar objeto meio-preenchido",
+    arq: "lib/voluntariadoMe.ts",
+    de: "  if (!status) return null;",
+    para: "  if (false) return null;",
+  },
+  // ── Servir: quem esta escalado nao ve formulario (11/08) ──
+  {
+    nome: "servir: exigir inscricao de quem JA SERVE (caso Pedro Fernandes)",
+    arq: "lib/volStatus.ts",
+    de: "  if (voluntarioAtivo === true) return \"ativo\";",
+    para: "  if (voluntarioAtivo === true && !!status) return \"ativo\";",
+  },
   // ── Porta unica (11/08 · item 14) ──
   {
     nome: "porta: o SOS virar item de lista (2 toques a mais ate o socorro)",

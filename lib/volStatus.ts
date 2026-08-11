@@ -43,12 +43,25 @@ const PENDENTE = new Set(["inscrito", "enviado_ministerio"]);
  */
 const ENCERRADO = new Set(["nao_responde", "nao_pode_ou_duplicata", "desistente"]);
 
+/**
+ * ⚠⚠ `voluntarioAtivo` é O QUE MAIS IMPORTA AQUI, e ele vem do SERVIDOR.
+ *
+ * Ele responde "esta pessoa está no time?" — e essa é a pergunta certa, do
+ * mesmo jeito que em Grupos quem decide é o ROSTER e não o pedido de entrada.
+ * Sem ele, a tela pergunta "você se inscreveu?" e manda pro formulário quem
+ * serve há anos: o Pedro Fernandes, escalado em ~89 cultos, via "quero ser
+ * voluntário" (relato do Marcos · 11/08/2026).
+ *
+ * ⚠️ O comentario antigo daqui dizia que a flag `mem_membros.voluntario` cobria
+ * o voluntário antigo sem inscrição. **Ela cobre ZERO pessoas**: medi
+ * `voluntario = true` em **0 de 4.072** membros vivos. Quem responde de verdade
+ * é `vol_profiles` (não arquivado), resolvido em
+ * `backend/utils/perfilVoluntarioApp.js`.
+ */
 export function estadoVoluntariado(
   status: string | null | undefined,
   voluntarioAtivo?: boolean | null
 ): EstadoVoluntariado {
-  // A flag `mem_membros.voluntario` cobre o voluntário antigo (backfill) que não
-  // tem inscrição — se ela diz que serve, serve.
   if (voluntarioAtivo === true) return "ativo";
   const s = (status || "").trim();
   if (!s) return "nenhum";

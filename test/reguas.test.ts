@@ -25,6 +25,7 @@ import { acaoAoFechar, temRascunho } from "@/lib/descartarRascunho";
 import { casaBusca, normalizarBusca, filtrarPorTexto } from "@/lib/buscaTexto";
 import { ehDomingo, indiceDoDestaque } from "@/lib/homeCultos";
 import { OPCOES_PORTA, opcaoPorTipo, podeEnviar, ehDaPortaUnica } from "@/lib/portaUnica";
+import { normalizarVoluntariadoMe } from "@/lib/voluntariadoMe";
 import {
   estadoDoEncontro, ultimaOcorrencia, proximaOcorrencia,
   dataLonga, quandoCurto, distanciaEmTexto, dataComHora, horaCurta,
@@ -83,9 +84,26 @@ describe("volStatus · os 7 status do ERP", () => {
     expect(estadoVoluntariado("")).toBe("nenhum");
   });
 
-  it("a flag mem_membros.voluntario vence (voluntário antigo, sem inscrição)", () => {
+  it("⚠⚠ MUTATION GUARD · quem ESTÁ SERVINDO não precisa de inscrição", () => {
+    // O caso do Pedro Fernandes (Marcos · 11/08/2026): escalado em ~89 cultos,
+    // ZERO linha em `vol_inscricoes`, e a tela de Servir oferecia a ele "quero
+    // ser voluntário". Esta régua sempre esteve CERTA — o furo era o servidor
+    // nunca mandar `true` (resolvia o perfil por `vol_profiles.auth_user_id`,
+    // preenchido em 20 de 928). Exigir status aqui quebraria o Pedro de novo.
     expect(estadoVoluntariado(null, true)).toBe("ativo");
+    expect(estadoVoluntariado(undefined, true)).toBe("ativo");
+    // Serve HOJE ganha de fila encerrada no passado: a equipe encerrou uma
+    // inscrição antiga, mas ele está na escala do próximo domingo.
     expect(estadoVoluntariado("nao_responde", true)).toBe("ativo");
+    expect(estadoVoluntariado("desistente", true)).toBe("ativo");
+  });
+
+  it("⚠️ não serve e não se inscreveu ⇒ formulário (não 'pendente')", () => {
+    // Fila que ninguém está tratando é pior que oferecer o formulário: quem vê
+    // "pendente" espera, e ninguém vem.
+    for (const flag of [false, null, undefined]) {
+      expect(estadoVoluntariado(null, flag)).toBe("nenhum");
+    }
   });
 
   it("volEncerrado só é true pros terminais", () => {
@@ -1401,5 +1419,50 @@ describe("porta única · 3 opções, e o SOS fora dela", () => {
     for (const v of ["sos", "grupos", "batismo", "", null, undefined]) {
       expect(podeEnviar(v, "texto qualquer")).toBe(false);
     }
+  });
+});
+
+// ── /app/voluntariado/me · o campo que chegava errado em silêncio (11/08) ───
+// Marcos: "Pedro Fernandes, escalado em todos os cultos, ao entrar em servir
+// apareceu o pedido de quero ser voluntário." Ele tem 57 escalas e ZERO
+// inscrição — e `voluntario_ativo` vinha de `mem_membros.voluntario`, coluna
+// `true` em 0 de 4.072 membros. A tela nunca perguntou ao servidor.
+describe("resposta de /voluntariado/me · normalização", () => {
+  it("⚠️⚠️ MUTATION GUARD · sem o campo, NÃO inventa que a pessoa é voluntária", () => {
+    // Erra pro lado seguro em quem não sabemos…
+    expect(normalizarVoluntariadoMe({ inscricao: null }).voluntario_ativo).toBe(false);
+    expect(normalizarVoluntariadoMe({}).voluntario_ativo).toBe(false);
+    expect(normalizarVoluntariadoMe(null).voluntario_ativo).toBe(false);
+  });
+
+  it("⚠️⚠️ MUTATION GUARD · quem o servidor diz que serve, SERVE", () => {
+    // …e nunca pro lado de negar quem serve: era esse o defeito relatado.
+    // Trocar `=== true` por um truthy frouxo faria a string "false" passar;
+    // trocar por `!!` mantém isto verde mas quebra o teste da string abaixo.
+    expect(normalizarVoluntariadoMe({ voluntario_ativo: true }).voluntario_ativo).toBe(true);
+    // Serve HOJE, sem inscrição nenhuma — o caso do Pedro.
+    const me = normalizarVoluntariadoMe({ voluntario_ativo: true, inscricao: null });
+    expect(estadoVoluntariado(me.inscricao?.status, me.voluntario_ativo)).toBe("ativo");
+  });
+
+  it("⚠️ string não é booleano: \"false\" do servidor não vira true", () => {
+    for (const v of ["false", "true", 1, 0, "", "sim", {}]) {
+      expect(normalizarVoluntariadoMe({ voluntario_ativo: v }).voluntario_ativo).toBe(false);
+    }
+  });
+
+  it("aceita envelope { data } e objeto cru", () => {
+    expect(normalizarVoluntariadoMe({ data: { voluntario_ativo: true } }).voluntario_ativo).toBe(true);
+    expect(normalizarVoluntariadoMe({ voluntario_ativo: true }).voluntario_ativo).toBe(true);
+  });
+
+  it("⚠️ inscrição sem status vira null (não objeto meio-preenchido)", () => {
+    // Com `status: undefined` a régua leria "" e responderia "nenhum" — diria
+    // que a pessoa nunca se inscreveu tendo ela inscrição na fila.
+    expect(normalizarVoluntariadoMe({ inscricao: { id: "x" } }).inscricao).toBeNull();
+    expect(normalizarVoluntariadoMe({ inscricao: { id: "x", status: "  " } }).inscricao).toBeNull();
+    const ok = normalizarVoluntariadoMe({ inscricao: { id: "x", status: "inscrito" } });
+    expect(ok.inscricao?.status).toBe("inscrito");
+    expect(estadoVoluntariado(ok.inscricao?.status, ok.voluntario_ativo)).toBe("pendente");
   });
 });
