@@ -990,7 +990,13 @@ export type MinhaInscricaoEvento = {
   bolsa_tipo: string | null;   // integral | parcial
   valor_cobrado_centavos: number | null;
   respostas: Record<string, unknown>;
-  comprovante_url: string;     // /i/c/<token> — o MESMO QR que a portaria lê
+  // /i/c/<token> — o MESMO QR que a portaria lê no check-in.
+  // ⚠️ NULO enquanto a inscrição não está `confirmada`: vaga reservada não é
+  // inscrição, e comprovante de quem não pagou é o que a portaria aceitaria na
+  // entrada. Quem decide é o servidor — o app não monta esse link sozinho.
+  comprovante_url: string | null;
+  // Por que não veio: 'aguardando_pagamento' | 'cancelada' (null = veio).
+  comprovante_bloqueado?: string | null;
   pagamento: {
     status: string | null;
     metodo: string | null;
