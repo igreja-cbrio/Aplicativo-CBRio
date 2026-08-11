@@ -167,3 +167,97 @@ export function avisoDoVinculo(quem: QuemApresenta, familiaNome: string | null):
     ? `A criança vai entrar na sua família (${familiaNome}) e aparecer em "Minha família".`
     : `Vamos criar a sua família no sistema e a criança vai aparecer em "Minha família".`;
 }
+
+// ============================================================================
+// SAÚDE / INCLUSÃO DA CRIANÇA (11/08/2026)
+//
+// Apontamento do Marcos: *"a criação de uma criança no Kids gera mais campos do
+// que temos na apresentação de bebê, exemplo dos campos de alergia, deficiência
+// física... Eu só não quero ter crianças ou pessoas com dados faltando porque em
+// um lugar pede uma coisa e no outro pede outra."*
+//
+// Medido em 11/08: das crianças criadas desde 28/07, **34 pela porta do Kids têm
+// saúde respondida (100%)** e **as 2 que entraram pela apresentação, nenhuma**.
+//
+// ⚠️⚠️ E o dano é concreto: `tem_espectro` e `tem_limitacao_fisica` são a régua do
+// PAGER no totem do Kids — obrigatório desde 03/08. Criança com autismo que entra
+// por esta porta chega no domingo com o campo NULO e não cai na regra.
+//
+// ⚠️ Espelho de `backend/utils/saudeCrianca.js`. Mudou lá, muda aqui.
+// ============================================================================
+
+export type SaudeForm = {
+  /** `null` = ainda não respondeu. NÃO é "não". */
+  tem_alergia: boolean | null;
+  alergia_qual: string;
+  tem_espectro: boolean | null;
+  espectro_qual: string;
+  tem_limitacao_fisica: boolean | null;
+  limitacao_fisica_qual: string;
+};
+
+export const VAZIO_SAUDE: SaudeForm = {
+  tem_alergia: null, alergia_qual: "",
+  tem_espectro: null, espectro_qual: "",
+  tem_limitacao_fisica: null, limitacao_fisica_qual: "",
+};
+
+/** As 3 perguntas, na ordem em que a tela mostra. */
+export const PERGUNTAS_SAUDE = [
+  {
+    campo: "tem_alergia", detalhe: "alergia_qual",
+    titulo: "Tem alergia?",
+    ajuda: "Alimento, medicamento, picada — o que a equipe precisa saber antes do lanche.",
+    placeholder: "Alergia a quê?",
+  },
+  {
+    campo: "tem_espectro", detalhe: "espectro_qual",
+    titulo: "É autista (TEA)?",
+    ajuda: "A gente prepara a sala e entrega o pager pra família.",
+    placeholder: "O que ajuda a acolher bem? (opcional)",
+  },
+  {
+    campo: "tem_limitacao_fisica", detalhe: "limitacao_fisica_qual",
+    titulo: "Tem alguma limitação física?",
+    ajuda: "Pra receber a criança do jeito certo — e a família também leva pager.",
+    placeholder: "Qual? (opcional)",
+  },
+] as const satisfies ReadonlyArray<{
+  campo: keyof SaudeForm; detalhe: keyof SaudeForm;
+  titulo: string; ajuda: string; placeholder: string;
+}>;
+
+/**
+ * O que vai no payload.
+ *
+ * ⚠️⚠️ Pergunta não respondida **não entra** — nem como `false`. `null` no banco é
+ * "ninguém perguntou" (o estado de 98% da base); `false` é "a família disse que
+ * não". Mandar `false` onde não se perguntou transformaria "não sei" em "não tem",
+ * e a régua do pager passaria a EXCLUIR criança sobre a qual não se sabe nada.
+ *
+ * ⚠️ O texto do detalhe só vale com resposta SIM — detalhe preenchido junto de um
+ * "não" é contradição que alguém lê no domingo sem saber de que lado ficar.
+ */
+export function saudeParaPayload(s: SaudeForm): Record<string, boolean | string> {
+  const out: Record<string, boolean | string> = {};
+  for (const p of PERGUNTAS_SAUDE) {
+    const v = s[p.campo];
+    if (v !== true && v !== false) continue;
+    out[p.campo] = v;
+    if (v === true) {
+      const txt = String(s[p.detalhe] ?? "").trim();
+      if (txt) out[p.detalhe] = txt.slice(0, 500);
+    }
+  }
+  return out;
+}
+
+/**
+ * A família vai receber pager por INCLUSÃO?
+ *
+ * ⚠️ Só pra AVISAR na hora em que ela responde sim — quem decide o pager é o totem,
+ * no check-in. `null` (não perguntado) nunca é `true`: não inventamos inclusão.
+ */
+export function avisaPagerInclusao(s: SaudeForm): boolean {
+  return s.tem_espectro === true || s.tem_limitacao_fisica === true;
+}

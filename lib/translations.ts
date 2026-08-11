@@ -502,6 +502,24 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Nome do responsável": { en: "Guardian's name", es: "Nombre del responsable" },
   "E-mail (opcional)": { en: "Email (optional)", es: "Correo (opcional)" },
 
+  // ───── Saúde e inclusão da criança na apresentação (11/08) ─────
+  // ⚠️ As MESMAS 3 perguntas do formulário do Kids — o desalinhamento que o
+  // Marcos mandou consertar. Duas delas decidem o pager no totem.
+  "Sim": { en: "Yes", es: "Sí" },
+  "Não": { en: "No", es: "No" },
+  "Saúde e inclusão": { en: "Health and inclusion", es: "Salud e inclusión" },
+  "Ajuda a equipe do Kids a receber sua criança do jeito certo. Pode pular o que não se aplica.": { en: "Helps the Kids team welcome your child the right way. Skip anything that doesn't apply.", es: "Ayuda al equipo de Kids a recibir a tu hijo de la manera correcta. Puedes saltar lo que no aplique." },
+  "Tem alergia?": { en: "Any allergies?", es: "¿Tiene alergias?" },
+  "Alimento, medicamento, picada — o que a equipe precisa saber antes do lanche.": { en: "Food, medication, insect bites — what the team needs to know before snack time.", es: "Alimento, medicamento, picadura — lo que el equipo necesita saber antes de la merienda." },
+  "Alergia a quê?": { en: "Allergic to what?", es: "¿Alergia a qué?" },
+  "É autista (TEA)?": { en: "Is the child autistic (ASD)?", es: "¿Es autista (TEA)?" },
+  "A gente prepara a sala e entrega o pager pra família.": { en: "We prepare the room and hand the family a pager.", es: "Preparamos la sala y entregamos el localizador a la familia." },
+  "O que ajuda a acolher bem? (opcional)": { en: "What helps us welcome them well? (optional)", es: "¿Qué ayuda a acogerlo bien? (opcional)" },
+  "Tem alguma limitação física?": { en: "Any physical limitation?", es: "¿Tiene alguna limitación física?" },
+  "Pra receber a criança do jeito certo — e a família também leva pager.": { en: "So we welcome the child the right way — and the family gets a pager too.", es: "Para recibir al niño de la manera correcta — y la familia también lleva localizador." },
+  "Qual? (opcional)": { en: "Which one? (optional)", es: "¿Cuál? (opcional)" },
+  "No domingo vocês vão receber um pager: a equipe chama a família na hora que precisar.": { en: "On Sunday you'll get a pager: the team calls the family the moment they need to.", es: "El domingo recibirán un localizador: el equipo llama a la familia cuando lo necesite." },
+
   // ───── Outro responsável na apresentação (11/08) ─────
   "O outro responsável também entrou na família — quando ele baixar o app, já vai ver vocês lá.": { en: "The other guardian also joined the family — when they open the app, they'll already see you there.", es: "El otro responsable también entró en la familia — cuando abra la app, ya los verá ahí." },
   "O outro responsável já está em outra família no sistema. Registramos o parentesco com a criança e a equipe vai alinhar.": { en: "The other guardian is already in another family in the system. We recorded the relationship with the child and the team will sort it out.", es: "El otro responsable ya está en otra familia del sistema. Registramos el parentesco con el niño y el equipo lo alineará." },
