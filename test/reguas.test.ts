@@ -12,6 +12,7 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { estadoVoluntariado, volEncerrado } from "@/lib/volStatus";
 import { rotaPai, ehRaiz, subirUmNivel } from "@/lib/hierarquia";
+import { acaoDaBarra, ehRotaDeBarra, irParaBarra, ROTAS_BARRA } from "@/lib/nav";
 import { hojeBRT, diaBRT } from "@/lib/dataBRT";
 import { fichaCompleta, faltaNaFicha, podeInscrever, jaTemNaFicha } from "@/lib/ficha";
 import { montarPayloadInscricao, extrasFaltando } from "@/lib/inscricaoPayload";
@@ -196,9 +197,51 @@ describe("hierarquia · a árvore do `cd ..`", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 3 · DIA DA IGREJA · BRT, não UTC
-// O culto de quarta é 20h; com `toISOString()` o dia UTC vira às 21h BRT e o
-// culto saía da lista de "próximos" DURANTE o próprio culto.
+// 2b · O TOQUE NA BARRA DE BAIXO (11/08/2026 · "a navegação tá travada")
+// A régua é curta e a guarda é uma só, mas é a que importa: `replace` aqui
+// destruiria a aba a cada toque, e voltar pra ela pagaria montagem nova + a
+// busca do `useFocusEffect` + o spinner. `navigate` volta pra instância VIVA,
+// com a rolagem e o que já tinha carregado.
+// ─────────────────────────────────────────────────────────────────────────────
+describe("barra de baixo · reaproveita a aba viva", () => {
+  afterEach(() => {
+    navegacoes.length = 0;
+  });
+
+  // ⚠️⚠️ MUTATION GUARD: trocar por `replace` "pra não empilhar" é a otimização
+  // de boa-fé que faz a aba recarregar do zero toda vez.
+  it("NUNCA usa replace (destruiria a aba e forçaria recarga a cada troca)", () => {
+    irParaBarra("/meu-grupo", "/voluntariado");
+    expect(navegacoes).toEqual(["/voluntariado"]);
+    expect(navegacoes.some((n) => n.startsWith("(replace)"))).toBe(false);
+  });
+
+  it("da Home e de tela de profundidade também é navigate", () => {
+    expect(acaoDaBarra("/", "/menu")).toBe("ir");
+    expect(acaoDaBarra("/grupo-detalhe", "/meu-grupo")).toBe("ir");
+    irParaBarra("/cartoes", "/menu");
+    expect(navegacoes).toEqual(["/menu"]);
+  });
+
+  it("toque no item já aceso não navega", () => {
+    expect(acaoDaBarra("/menu", "/menu")).toBe("nada");
+    irParaBarra("/menu", "/menu");
+    expect(navegacoes).toEqual([]);
+  });
+
+  it("query string não muda a decisão (deep link com ?aba= é a mesma tela)", () => {
+    expect(acaoDaBarra("/menu?x=1", "/menu")).toBe("nada");
+    expect(acaoDaBarra("/meu-grupo?aba=encontrar", "/cuidados")).toBe("ir");
+  });
+
+  it("as 5 rotas da barra são as mesmas que a barra desenha", () => {
+    expect([...ROTAS_BARRA]).toEqual(["/meu-grupo", "/voluntariado", "/cuidados", "/devocional", "/menu"]);
+    for (const r of ROTAS_BARRA) expect(ehRotaDeBarra(r)).toBe(true);
+    expect(ehRotaDeBarra("/")).toBe(false);
+    expect(ehRotaDeBarra("/grupo-detalhe")).toBe(false);
+  });
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 describe("dataBRT · o dia de operação da igreja", () => {
   afterEach(() => {
