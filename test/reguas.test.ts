@@ -27,6 +27,13 @@ import { ehDomingo, indiceDoDestaque } from "@/lib/homeCultos";
 import { OPCOES_PORTA, opcaoPorTipo, podeEnviar, ehDaPortaUnica } from "@/lib/portaUnica";
 import { normalizarVoluntariadoMe } from "@/lib/voluntariadoMe";
 import {
+  CAMPOS_DA_CRIANCA,
+  avisoDoVinculo,
+  faltaNoPedido,
+  nascimentoParaISO,
+  podeEnviarPedido,
+} from "@/lib/apresentacaoCrianca";
+import {
   estadoDoEncontro, ultimaOcorrencia, proximaOcorrencia,
   dataLonga, quandoCurto, distanciaEmTexto, dataComHora, horaCurta,
 } from "@/lib/proximoEncontro";
@@ -1464,5 +1471,70 @@ describe("resposta de /voluntariado/me · normalização", () => {
     const ok = normalizarVoluntariadoMe({ inscricao: { id: "x", status: "inscrito" } });
     expect(ok.inscricao?.status).toBe("inscrito");
     expect(estadoVoluntariado(ok.inscricao?.status, ok.voluntario_ativo)).toBe("pendente");
+  });
+});
+
+// ── Apresentação de criança · "sem CPF, identificamos pelo pai" (11/08) ─────
+// Marcos: "quando cadastrar uma criança deve gerar pessoa no sistema que aparece
+// em minha família, com as regras de criança, sem CPF, identificamos pelo pai."
+describe("apresentação de criança · a régua da tela", () => {
+  const CRI = { nome: "Ana Clara", nascimento: "10/03/2025", sexo: "F" as const };
+  const RESP = { nome: "Joana Souza", telefone: "(21) 99999-1111", email: "" };
+
+  it("⚠️⚠️ MUTATION GUARD · o formulário NÃO tem campo de CPF", () => {
+    // A regra do Marcos é identificar pelo responsável. Um campo de CPF aqui —
+    // mesmo opcional — seria pedir documento de menor numa tela de
+    // autoatendimento, e o servidor recusa o envio se o campo chegar.
+    expect(CAMPOS_DA_CRIANCA).toEqual(["nome", "nascimento", "sexo"]);
+    expect((CAMPOS_DA_CRIANCA as readonly string[])).not.toContain("cpf");
+  });
+
+  it("⚠️ MUTATION GUARD · nascimento é validado de verdade (31/02 não passa)", () => {
+    // `new Date(2025, 1, 31)` NÃO estoura no JS — vira 03/03. Só o round-trip
+    // pega, e sem isso a data inexistente iria pro banco.
+    expect(nascimentoParaISO("31/02/2025")).toBeNull();
+    expect(nascimentoParaISO("29/02/2024")).toBe("2024-02-29"); // bissexto existe
+    expect(nascimentoParaISO("29/02/2025")).toBeNull();
+    expect(nascimentoParaISO("10/13/2025")).toBeNull();
+    expect(nascimentoParaISO("10/03/2025")).toBe("2025-03-10");
+  });
+
+  it("⚠️ nascimento FUTURO não passa (criança não nasceu ainda)", () => {
+    expect(nascimentoParaISO("01/01/2099")).toBeNull();
+  });
+
+  it("filho próprio: só os dados da criança bastam", () => {
+    expect(podeEnviarPedido("propria", CRI, { nome: "", telefone: "", email: "" })).toBe(true);
+    expect(faltaNoPedido("propria", CRI, { nome: "", telefone: "", email: "" })).toEqual([]);
+  });
+
+  it("⚠️ filho de OUTRA pessoa exige nome e telefone do responsável", () => {
+    // "Se for outra pessoa, ela tem que preencher os dados completos dos
+    // responsáveis e criança" — palavras dele.
+    const semResp = faltaNoPedido("outra", CRI, { nome: "", telefone: "", email: "" });
+    expect(semResp).toContain("Nome do responsável");
+    expect(semResp).toContain("Telefone do responsável");
+    expect(podeEnviarPedido("outra", CRI, RESP)).toBe(true);
+  });
+
+  it("⚠️ MUTATION GUARD · sexo NÃO é obrigatório (o servidor aceita nulo)", () => {
+    // Exigir aqui deixaria a tela mais rígida que a porta — a pessoa travaria
+    // num campo que o servidor não pede.
+    expect(podeEnviarPedido("propria", { ...CRI, sexo: null }, RESP)).toBe(true);
+  });
+
+  it("⚠️⚠️ MUTATION GUARD · o aviso DIZ em qual família a criança entra", () => {
+    // Guarda do caso Benjamin/Mariane Gaia (lei do ERP · 22/07): quem está
+    // agrupada na família da irmã pela Membresia colocaria o próprio filho na
+    // família errada. O único jeito honesto de evitar é a pessoa LER o nome.
+    expect(avisoDoVinculo("propria", "Família Silva")).toContain("Família Silva");
+    // Sem household ainda, o aviso diz que uma vai ser criada — também é verdade.
+    expect(avisoDoVinculo("propria", null)).toBeTruthy();
+    // Filho de terceiro NÃO entra em família nenhuma: nada a avisar.
+    expect(avisoDoVinculo("outra", "Família Silva")).toBeNull();
+  });
+
+  it("nome de 1 letra não passa (typo, não nome)", () => {
+    expect(podeEnviarPedido("propria", { ...CRI, nome: "A" }, RESP)).toBe(false);
   });
 });
