@@ -359,6 +359,57 @@ CLAUDE.md já registrava que essa string **não deve** ser traduzida. `ehFormato
 pior que não traduzir: a máscara do campo (`maskDateBR`) é dia-primeiro, e o
 placeholder passaria a mentir sobre a ordem que o campo aceita.
 
+## ⚠️⚠️ SAÚDE DA CRIANÇA na apresentação · e a tabela errada (11/08/2026)
+
+Apontamento do Marcos: *"a criação de uma criança no Kids gera mais campos do que
+temos na apresentação de bebê, exemplo dos campos de alergia, deficiência
+física... Eu só não quero ter crianças ou pessoas com dados faltando porque em um
+lugar pede uma coisa e no outro pede outra."*
+
+Ele estava certo. Medido no recorte justo (crianças criadas **desde 28/07**,
+quando o formulário do Kids ganhou os campos): **34 pela porta do Kids · 100% com
+saúde respondida** contra **2 pela apresentação · 0%**.
+
+⚠️⚠️ **E o dano é operacional, não estético:** `tem_espectro` e
+`tem_limitacao_fisica` são a **régua do PAGER** no totem do Kids, obrigatório
+desde 03/08 (decisão da Mari). Criança com autismo que entrava por esta porta
+chegava no domingo com o campo NULO e **não caía na regra** — o pager só saía se
+o voluntário percebesse e editasse a ficha na hora.
+
+A tela ganhou o bloco **"Saúde e inclusão"** com as 3 perguntas do formulário do
+Kids (`lib/apresentacaoCrianca.ts` · `PERGUNTAS_SAUDE`, espelho de
+`backend/utils/saudeCrianca.js`):
+
+- ⚠️⚠️ **Pergunta em branco NÃO vira `false`.** `saudeParaPayload` só manda o que
+  foi respondido — no banco `null` é "ninguém perguntou" (98% da base) e `false`
+  é "a família disse que não". Mandar `false` faria a régua do pager **excluir
+  ativamente** criança sobre a qual não se sabe nada.
+- ⚠️ **Nenhuma é obrigatória.** Travar o envio empurraria a família a responder
+  qualquer coisa pra passar — dado ruim é pior que campo vazio.
+- Tocar de novo na mesma resposta volta pra "não respondi": é como a pessoa
+  desfaz um toque errado sem ficar presa a um "não" que ela não quis dar.
+- Responder **"sim"** em TEA ou limitação mostra na hora o aviso do pager — a
+  novidade não fica pro domingo de manhã. Quem DECIDE o pager continua sendo o
+  totem, no check-in.
+- ⚠️ São **3 perguntas, não 8**: `kids_criancas` tem 8 campos de saúde, e entram
+  as que movem o domingo (alergia → lanche; TEA e limitação → pager). Pedir 8
+  campos numa tela de autoatendimento troca dado bom por formulário abandonado.
+
+### ⚠️⚠️ E o servidor gravava na tabela que a equipe do Kids NÃO lê
+
+Achado no mesmo trabalho, e é mais grave que os campos: `POST
+/app/apresentacao-crianca` escrevia em **`apresentacao_bebes`**, que só tem o
+totem como leitor. Quem a aba Apresentação de crianças do `/kids` lê é
+**`apresentacao_criancas`**. A família veria "recebemos" e o balcão não saberia de
+nada no domingo. Corrigido no ERP (PR #2408); a tela não muda por causa disso.
+
+### ⚠️ `mem_membros.genero` é `masculino`/`feminino`, nunca `M`/`F`
+
+Medido: 4.045 vivos, 579 com sexo, **ZERO com valor curto**. O servidor comparava
+com `'M'` pra decidir quem entra como pai e quem entra como mãe — condição sempre
+falsa, então os dois campos saíam nulos. Conserto no ERP. **A tela segue mandando
+`M`/`F`** (é o formato do Kids); quem traduz é o servidor.
+
 ## Visão geral
 
 App de membros da igreja **CBRio**. Está sendo **reconstruído do zero, módulo a

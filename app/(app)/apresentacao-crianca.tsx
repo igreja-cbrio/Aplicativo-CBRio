@@ -33,6 +33,11 @@ import {
   podeEnviarPedido,
   outroEmBranco,
   VAZIO_OUTRO,
+  VAZIO_SAUDE,
+  PERGUNTAS_SAUDE,
+  saudeParaPayload,
+  avisaPagerInclusao,
+  type SaudeForm,
   type CriancaForm,
   type OutroResponsavelForm,
   type QuemApresenta,
@@ -68,6 +73,7 @@ export default function ApresentacaoCriancaScreen() {
 
   const [quem, setQuem] = useState<QuemApresenta | null>(null);
   const [crianca, setCrianca] = useState<CriancaForm>(VAZIA);
+  const [saude, setSaude] = useState<SaudeForm>(VAZIO_SAUDE);
   const [resp, setResp] = useState<ResponsavelForm>(VAZIO_RESP);
   const [outro, setOutro] = useState<OutroResponsavelForm>(VAZIO_OUTRO);
   const [abriuOutro, setAbriuOutro] = useState(false);
@@ -115,7 +121,7 @@ export default function ApresentacaoCriancaScreen() {
           text: t("Descartar"),
           style: "destructive",
           onPress: () => {
-            setCrianca(VAZIA); setResp(VAZIO_RESP); setOutro(VAZIO_OUTRO);
+            setCrianca(VAZIA); setResp(VAZIO_RESP); setOutro(VAZIO_OUTRO); setSaude(VAZIO_SAUDE);
             setAbriuOutro(false); setObs(""); setErro(null); setQuem(null);
           },
         },
@@ -141,6 +147,10 @@ export default function ApresentacaoCriancaScreen() {
             nome: crianca.nome.trim(),
             data_nascimento: nascimentoParaISO(crianca.nascimento),
             sexo: crianca.sexo,
+            // ⚠️ Só o que foi RESPONDIDO entra. Pergunta em branco fica de fora do
+            // payload — no banco, `null` é "ninguém perguntou" e `false` é "a
+            // família disse que não", e confundir os dois quebra a régua do pager.
+            ...saudeParaPayload(saude),
           },
           ...(quem === "outra"
             ? { responsavel: { nome: resp.nome.trim(), telefone: resp.telefone, email: resp.email || null } }
@@ -331,6 +341,68 @@ export default function ApresentacaoCriancaScreen() {
                   identificamos pelo pai" (Marcos · 11/08). O servidor recusa o
                   envio se o campo chegar. */}
 
+              {/* ── Saúde e inclusão ──────────────────────────────────────
+                  ⚠️ São as MESMAS 3 perguntas do formulário do Kids — é o
+                  desalinhamento que o Marcos mandou consertar ("não quero ter
+                  crianças com dados faltando porque em um lugar pede uma coisa e
+                  no outro pede outra"). Duas delas decidem o PAGER no totem.
+                  ⚠️ Nenhuma é obrigatória: quem não responde deixa o campo NULO,
+                  que é a verdade. Travar o envio aqui empurraria a família a
+                  responder qualquer coisa pra passar. */}
+              <Text style={styles.secao}>{t("Saúde e inclusão")}</Text>
+              <Text style={styles.saudeIntro}>
+                {t("Ajuda a equipe do Kids a receber sua criança do jeito certo. Pode pular o que não se aplica.")}
+              </Text>
+
+              {PERGUNTAS_SAUDE.map((p) => {
+                const valor = saude[p.campo] as boolean | null;
+                return (
+                  <View key={p.campo} style={styles.saudeBloco}>
+                    <Text style={styles.saudeTitulo}>{t(p.titulo)}</Text>
+                    <Text style={styles.saudeAjuda}>{t(p.ajuda)}</Text>
+                    <View style={styles.sexoRow}>
+                      {([true, false] as const).map((op) => (
+                        <Pressable
+                          key={String(op)}
+                          onPress={() =>
+                            setSaude((sd) => ({
+                              ...sd,
+                              // Tocar de novo na mesma resposta VOLTA pra "não
+                              // respondi" — é como a pessoa desfaz um toque errado
+                              // sem ficar presa a um "não" que ela não quis dar.
+                              [p.campo]: valor === op ? null : op,
+                              ...(op === false ? { [p.detalhe]: "" } : {}),
+                            }))
+                          }
+                          style={[styles.sexoBtn, valor === op && styles.sexoBtnOn]}
+                          accessibilityRole="button"
+                        >
+                          <Text style={[styles.sexoTxt, valor === op && styles.sexoTxtOn]}>
+                            {op ? t("Sim") : t("Não")}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                    {valor === true && (
+                      <Input
+                        label={t(p.placeholder)}
+                        value={String(saude[p.detalhe] ?? "")}
+                        onChangeText={(v) => setSaude((sd) => ({ ...sd, [p.detalhe]: v }))}
+                        autoCapitalize="sentences"
+                      />
+                    )}
+                  </View>
+                );
+              })}
+
+              {avisaPagerInclusao(saude) && (
+                <View style={styles.avisoCard}>
+                  <Text style={styles.avisoTxt}>
+                    {t("No domingo vocês vão receber um pager: a equipe chama a família na hora que precisar.")}
+                  </Text>
+                </View>
+              )}
+
               {quem === "outra" && (
                 <>
                   <Text style={styles.secao}>{t("Dados do responsável")}</Text>
@@ -501,6 +573,10 @@ const makeStyles = (c: Palette) =>
     },
     avisoTxt: { color: c.text, fontSize: font.size.sm, flex: 1, lineHeight: 19 },
     avisoSub: { color: c.textMuted, fontSize: font.size.sm, marginTop: 2 },
+    saudeIntro: { color: c.textMuted, fontSize: font.size.sm, lineHeight: 18 },
+    saudeBloco: { gap: spacing.xs },
+    saudeTitulo: { color: c.text, fontSize: font.size.md, fontWeight: "700" },
+    saudeAjuda: { color: c.textMuted, fontSize: font.size.sm, lineHeight: 18 },
     sexoRow: { flexDirection: "row", gap: spacing.sm },
     sexoBtn: {
       flex: 1, paddingVertical: spacing.md, borderRadius: radius.lg, alignItems: "center",
