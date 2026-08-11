@@ -467,6 +467,7 @@ export const TRANSLATIONS: Record<string, Traducao> = {
 
   // ───────── Porta única · falar com a CBRio (11/08) ─────────
   "Falar com a CBRio": { en: "Talk to CBRio", es: "Hablar con CBRio" },
+  "Sala prevista": { en: "Expected room", es: "Sala prevista" },
   "O que você precisa hoje?": { en: "What do you need today?", es: "¿Qué necesitas hoy?" },
   "Conversa com pastor, pedido de oração, dúvida ou sugestão — num lugar só.": { en: "Talk to a pastor, prayer request, question or suggestion — all in one place.", es: "Hablar con un pastor, pedido de oración, duda o sugerencia — en un solo lugar." },
   "Marcar conversa com um pastor": { en: "Schedule a talk with a pastor", es: "Agendar una conversación con un pastor" },

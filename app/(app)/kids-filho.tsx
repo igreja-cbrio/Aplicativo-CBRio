@@ -236,7 +236,15 @@ export default function KidsFilhoScreen() {
               {d?.sala_sugerida && (
                 <View style={[styles.salaPill, { backgroundColor: (d.sala_sugerida.cor || colors.brandMid) + "22" }]}>
                   <View style={[styles.salaDot, { backgroundColor: d.sala_sugerida.cor || colors.brandMid }]} />
-                  <Text style={styles.salaTxt}>{t("Sala")}: {d.sala_sugerida.nome}</Text>
+                  {/* ⚠️⚠️ ISTO É A SALA PREVISTA PELA IDADE, NÃO A SALA DO CHECK-IN
+                      (medido 11/08/2026). `sala_sugerida` vem de `app.js`, que a
+                      calcula pela faixa etária; a sala REAL é escolha do voluntário
+                      no totem (`kids_checkins.sala_id`, e o servidor só valida).
+                      Elas divergem de propósito: irmão junto, sala cheia,
+                      aniversário na virada de faixa.
+                      Dizer "Sala: POP! 1" mandava o pai bater na porta errada no
+                      meio do culto. O rótulo agora não afirma o que não sabe. */}
+                  <Text style={styles.salaTxt}>{t("Sala prevista")}: {d.sala_sugerida.nome}</Text>
                 </View>
               )}
 
