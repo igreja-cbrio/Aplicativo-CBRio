@@ -162,6 +162,12 @@ export default function EventoScreen() {
   );
 
   const temCampoImagem = (evento?.campos || []).some((c) => c.tipo === "imagem");
+  // ⚠️⚠️ Cartão cobrado numa plataforma externa (e-Inscrição): quem decide é o
+  // SERVIDOR (`so_web`). O app NÃO reimplementa a escolha "Pix aqui × cartão lá
+  // fora" — quem sabe perguntar isso é o formulário público. Inscrever por
+  // dentro levaria a pessoa a uma página de pagamento SEM cartão, sem ela nunca
+  // saber que a opção existia em outro lugar.
+  const soWeb = !!evento?.so_web;
 
   async function enviar() {
     if (!evento || !membro) return;
@@ -368,6 +374,13 @@ export default function EventoScreen() {
                 onPress={() => abrirInscricaoEvento(sucesso.pagamentoUrl as string)}
               />
             ) : null}
+          </GlassCard>
+        ) : soWeb ? (
+          <GlassCard style={styles.card}>
+            <Text style={styles.desc}>
+              {t("Neste evento você escolhe como pagar antes de se inscrever: no Pix a inscrição é feita aqui mesmo; no cartão de crédito ela é feita em outro site.")}
+            </Text>
+            <Button title={t("Escolher forma de pagamento")} onPress={() => abrirInscricaoEvento(ev!.url)} />
           </GlassCard>
         ) : temCampoImagem ? (
           /* Evento que pede FOTO: o app não sobe arquivo neste formulário —
