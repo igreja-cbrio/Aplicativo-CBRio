@@ -267,6 +267,98 @@ praticamente vazia).
 `autorizado_buscar=true` (autorização de RETIRADA no Kids) por formulário. Vínculo
 de **família** é outra coisa e ele pediu explicitamente. Retirada continua fora.
 
+## ⚠️⚠️ APRESENTAÇÃO DE CRIANÇA · porta nativa + a criança vira PESSOA (11/08/2026)
+
+Pedido do Marcos: *"Apresentação de Bebês está fora do app, quero que tudo seja
+dentro do app. Quando a pessoa marcar que quer apresentar bebê, já que já temos os
+dados dela dentro do app, tem que perguntar se o filho é dela; se sim, indicar o
+vínculo, completar os dados se a criança não existir como família já. Se for outra
+pessoa, ela tem que preencher os dados completos dos responsáveis e criança."*
+
+E a regra de identidade, dele: *"quando cadastrar uma criança deve gerar pessoa no
+sistema que aparece em minha família, com as regras de criança, **SEM CPF,
+identificamos pelo pai**."*
+
+**⚠⚠ O CARD ERA UM LINK MORTO** (medido 11/08): `cbrio.org/apresentacao-criancas`
+**não tem rota no ERP** (0 referências em `src/`) e devolvia HTTP 200 só pelo
+catch-all do SPA da Vercel — parecia viva e não renderizava formulário nenhum.
+`apresentacao_bebes` tinha **0 linhas**. O comentario antigo do card dizia que era
+"porta WEB de propósito, pra não criar um 2º caminho de escrita de pessoa": o
+racional estava certo e o fato estava errado — **não havia 1º caminho**.
+
+### As duas portas da tela
+
+| escolha | o que pede | o que grava |
+|---|---|---|
+| **É meu filho ou minha filha** | só os dados da criança | criança vira **pessoa** + entra na **família de quem pediu** + `mem_vinculos_familiares` recíproco (`filho`/`pai_mae`) |
+| **É filho de outra pessoa** | dados completos dos responsáveis + da criança | **só o pedido** — nenhuma pessoa, nenhum vínculo |
+
+⚠️ **Filho de terceiro NÃO cria pessoa de propósito**: criar criança **e adulto** a
+partir de formulário preenchido por outra pessoa, e ligar duas famílias sem as duas
+terem agido, é exatamente o que o Contrato de porta existe pra impedir.
+
+### As regras de criança (`backend/utils/criancaApresentacao.js`)
+
+- **CPF nunca é pedido nem gravado.** `CAMPOS_PROIBIDOS_CRIANCA` recusa se vier, e
+  a tela **não tem o campo** (com mutante). Placeholder de CPF em tela de
+  autoatendimento seria pedir documento de menor.
+- **`status: 'visitante'`, NUNCA `membro_ativo`**: a base de membresia (1.826)
+  alimenta o NSM e os KPIs, e criança apresentada não é membro. Já existem **53
+  crianças ≤12 anos** em `mem_membros` — a porta não é inédita; o que é novo é ela
+  ser consistente.
+- **`origem_cadastro='apresentacao_crianca_app'`** — sem marca, um dia ninguém sabe
+  por qual porta cada uma das 4.000 pessoas entrou.
+- Nascimento validado no SERVIDOR e na tela: **31/02 não passa** (`new Date(2025,
+  1, 31)` não estoura no JS, vira 03/03 — só o round-trip pega) e **futura não
+  passa**. Meio-dia LOCAL, nunca `new Date("AAAA-MM-DD")` (essa forma é UTC e em
+  fuso negativo devolve o dia anterior).
+- **Sexo NÃO é obrigatório** (tem mutante): exigir na tela a deixaria mais rígida
+  que a porta, e a pessoa travaria num campo que o servidor não pede.
+
+### ⚠⚠ Dedup pela FAMÍLIA, não por quem preencheu
+
+O pai e a mãe cadastrando o **mesmo filho** criariam duas pessoas, e a criança
+apareceria duplicada em "Minha família" das duas contas. Sem CPF pra desempatar (é
+o ponto da regra), **nome normalizado + nascimento DENTRO da família** é a chave.
+
+### ⚠⚠ NÃO passa pelo matcher canônico, de propósito
+
+O matcher liga por CPF → e-mail+nome → telefone+nome → nascimento+nome, e criança
+**não tem nenhuma dessas chaves**. O único ramo que a alcançaria é nascimento+nome,
+que casaria com QUALQUER homônimo da mesma data. A identidade dela é o VÍNCULO com o
+responsável — *"identificamos pelo pai"*.
+
+### ⚠⚠ O aviso DIZ em qual família a criança entra (guarda do caso Benjamin)
+
+O `GET` devolve o **nome da família + os nomes de quem está nela**, e a tela mostra
+antes de confirmar. É a guarda contra o caso **Benjamin/Mariane Gaia** (lei do ERP
+· 22/07): quem está agrupada na família da irmã pela Membresia colocaria o próprio
+filho na família errada, e o único jeito honesto de evitar é a pessoa **ler**. Tem
+mutante — tirar o nome do aviso deixa o portão vermelho.
+
+⚠️ Reusa **`entrarNaFamilia`/`vincularParentesco`** (`services/familiaVinculo`), os
+MESMOS do convite de familiar: duas réguas de "entrar na família" divergiriam, e é a
+de lá que "Minha família" lê.
+
+⚠⚠ **NÃO toca no Kids**: não cria `kids_criancas`, não cria `kids_responsaveis` e
+não liga `autorizado_buscar`. Autorização de **RETIRADA** no totem é a decisão de
+proteção de criança que o Marcos arquivou em 11/08 pra conversar com a Mari. Vínculo
+de **família** é outra coisa, e foi ela que ele pediu.
+
+⚠️ Idempotente (reenviar não cria 2º pedido pra mesma criança na mesma cerimônia) ·
+data = **2º domingo do mês**, espelho do `_proximoSegundoDomingo` do totem (se as
+duas discordassem, o app marcaria a família para um domingo e o balcão esperaria
+noutro) · aviso ao Kids **AWAITED** (lei de 31/07: o container congela na resposta).
+
+### ⚠️ O portão de i18n aprendeu o que é MÁSCARA DE FORMATO
+
+`placeholder="DD/MM/AAAA"` subia o contador de strings soltas — e o próprio
+CLAUDE.md já registrava que essa string **não deve** ser traduzida. `ehFormato()`
+(em `scripts/i18n-cobertura.mjs`) ignora máscara de formato, com padrão **estreito**
+("Data de nascimento" não casa; "DD/MM/AAAA" casa). Traduzir pra "MM/DD/YYYY" seria
+pior que não traduzir: a máscara do campo (`maskDateBR`) é dia-primeiro, e o
+placeholder passaria a mentir sobre a ordem que o campo aceita.
+
 ## Visão geral
 
 App de membros da igreja **CBRio**. Está sendo **reconstruído do zero, módulo a
