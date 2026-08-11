@@ -812,6 +812,11 @@ export const TRANSLATIONS: Record<string, Traducao> = {
     es: "Muestra este código en la entrada. También se abre en el navegador, si prefieres.",
   },
   "Abrir comprovante": { en: "Open ticket", es: "Abrir comprobante" },
+  "Neste evento você escolhe como pagar antes de se inscrever: no Pix a inscrição é feita aqui mesmo; no cartão de crédito ela é feita em outro site.": {
+    en: "For this event you choose how to pay before signing up: with Pix you sign up right here; with a credit card you sign up on another site.",
+    es: "En este evento eliges cómo pagar antes de inscribirte: con Pix te inscribes aquí mismo; con tarjeta de crédito te inscribes en otro sitio.",
+  },
+  "Escolher forma de pagamento": { en: "Choose payment method", es: "Elegir forma de pago" },
   "O código de entrada aparece aqui assim que o seu pagamento for confirmado.": {
     en: "Your entry code appears here as soon as your payment is confirmed.",
     es: "Tu código de entrada aparece aquí en cuanto se confirme el pago.",

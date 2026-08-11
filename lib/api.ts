@@ -956,6 +956,11 @@ export type EventoAberto = {
   /** Teto de parcelas do evento (null = teto da conta do provedor). A escolha
    *  das parcelas continua na página hospedada de pagamento. */
   parcelas_max: number | null;
+  /** ⚠️ Cartão cobrado por uma plataforma externa (e-Inscrição). Quando true, o
+   *  app NÃO inscreve por dentro: abre o formulário público, que é quem sabe
+   *  perguntar Pix × cartão. Quem decide é o servidor — o app só obedece. */
+  so_web?: boolean;
+  checkout_externo?: { nome: string } | null;
   campos: CampoEvento[];
   msg_sucesso_titulo: string | null;
   msg_sucesso_texto: string | null;
