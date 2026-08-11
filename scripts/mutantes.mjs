@@ -250,6 +250,19 @@ const MUTANTES = [
     de: "  if (!Number.isFinite(n)) return \"conexao\";",
     para: "  if (!Number.isFinite(n)) return \"servidor\";",
   },
+  // ── Apresentacao de crianca (11/08) ──
+  {
+    nome: "crianca: aceitar 31/02 (data que nao existe iria pro banco)",
+    arq: "lib/apresentacaoCrianca.ts",
+    de: "  if (d.getFullYear() !== ano || d.getMonth() !== mes - 1 || d.getDate() !== dia) return null;",
+    para: "  if (false) return null;",
+  },
+  {
+    nome: "crianca: aviso sem o NOME da familia (caso Benjamin/Mariane)",
+    arq: "lib/apresentacaoCrianca.ts",
+    de: "    ? `A criança vai entrar na sua família (${familiaNome}) e aparecer em \"Minha família\".`",
+    para: "    ? `A criança vai aparecer em \"Minha família\".`",
+  },
   // ── /voluntariado/me: o campo que chegava errado calado (11/08) ──
   {
     nome: "me: truthy frouxo em voluntario_ativo (string \"false\" viraria true)",

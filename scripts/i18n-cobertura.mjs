@@ -56,6 +56,26 @@ const arquivos = [join(RAIZ, "app"), join(RAIZ, "components")].flatMap((d) => va
 // ── 1. chaves usadas em t("…") × dicionário ────────────────────────────────
 const dicionario = readFileSync(join(RAIZ, "lib", "translations.ts"), "utf8");
 /** A chave é a própria frase em PORTUGUÊS (ver `lib/i18n.ts`). */
+/**
+ * ⚠️ Máscara de FORMATO não é texto traduzível — é a forma que a pessoa deve
+ * digitar. O CLAUDE.md já registrava isso ("`\"CPF\"` e `\"DD/MM/AAAA\"` **não
+ * devem** ser traduzidas"), mas o contador não sabia: um `placeholder`
+ * `"DD/MM/AAAA"` numa tela nova subia o número de soltas e o teto ficava
+ * vermelho por causa de uma string que NÃO deve entrar no dicionário.
+ *
+ * Traduzir "DD/MM/AAAA" para "MM/DD/YYYY" seria pior que não traduzir: a máscara
+ * do campo (`maskDateBR`) é dia-primeiro, então o placeholder passaria a mentir
+ * sobre a ordem que o campo aceita.
+ *
+ * ⚠️ Padrão ESTREITO de propósito: só letras de formato, barra, hífen, dois
+ * pontos e dígito. "Data de nascimento" não casa; "DD/MM/AAAA" e "hh:mm" casam.
+ */
+function ehFormato(s) {
+  const v = String(s).trim();
+  if (v.length < 4) return false;
+  return /^[DMAYHhSs0-9]+([\/\-:. ][DMAYHhSs0-9]+)+$/.test(v);
+}
+
 function noDicionario(chave) {
   // As chaves do arquivo são literais entre aspas duplas seguidas de `:`.
   const escapado = chave.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -84,7 +104,11 @@ for (const arq of arquivos) {
   let soltas = 0;
   for (const re of [RE_PROP, RE_JSX, RE_ALERT]) {
     for (const m of src.matchAll(re)) {
-      for (const g of m.slice(1)) if (g && g.trim() && !g.trim().startsWith("//")) soltas += 1;
+      for (const g of m.slice(1)) {
+        if (!g || !g.trim() || g.trim().startsWith("//")) continue;
+        if (ehFormato(g)) continue;
+        soltas += 1;
+      }
     }
   }
   if (soltas) soltasPorArquivo.push([soltas, rel]);

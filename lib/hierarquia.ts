@@ -64,6 +64,9 @@ const PAI: Record<string, string> = {
   // A porta única de falar com a igreja sobe pra Cuidados — é de onde ela é
   // aberta, e é onde fica o SOS (a outra porta). Sem esta linha, `subirUmNivel`
   // cairia na Home e a pessoa perderia o contexto.
+  // A apresentação de criança sobe pra Inscrições — é de onde ela é aberta.
+  "/apresentacao-crianca": "/inscricoes",
+
   "/falar-com-a-igreja": "/cuidados",
 
   "/grupos": "/meu-grupo",

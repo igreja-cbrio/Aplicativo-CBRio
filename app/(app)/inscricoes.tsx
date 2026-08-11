@@ -38,7 +38,7 @@ type Item = {
   desc: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
   /** Tela do app. Ausente quando a porta é web (ver `url`). */
-  href?: "/batismo" | "/grupos" | "/next" | "/voluntariado";
+  href?: "/batismo" | "/grupos" | "/next" | "/voluntariado" | "/apresentacao-crianca";
   /** Porta PÚBLICA do sistema, aberta no navegador in-app. */
   url?: string;
   chave?: Chave;
@@ -52,18 +52,25 @@ const ITENS: Item[] = [
   // (a ÁREA). Aqui é a PORTA de inscrição — rótulos iguais em dois lugares
   // faziam parecer duas coisas (05/08/2026).
   { label: "Quero servir", desc: "Sirva na CBRio", icon: "hand-left", href: "/voluntariado", chave: "voluntariado" },
-  // ⚠️ PORTA WEB, de propósito. O sistema tem 7 portas de inscrição e esta
-  // faltava no app — foi o exemplo que o Marcos deu ("a aba de inscrições do
-  // sistema consta com apresentação de bebês"). Abre o formulário público em
-  // vez de reimplementar: a porta exige dado de CRIANÇA e o consentimento de
-  // MENOR (LGPD art. 14 §1º) com snapshot do texto, e uma segunda
-  // implementação seria um segundo caminho de escrita de pessoa — o que o
-  // Contrato de porta existe pra impedir. Mesmo desenho dos "Eventos abertos".
+  // ⚠⚠ ERA UM LINK MORTO, e isso foi MEDIDO (11/08/2026): a URL
+  // `cbrio.org/apresentacao-criancas` **não tem rota no ERP** (0 referências em
+  // `src/`) e devolvia HTTP 200 só pelo catch-all do SPA da Vercel — parecia
+  // viva e não renderizava formulário nenhum. `apresentacao_bebes` tinha **0
+  // linhas**: ninguém nunca conseguiu se inscrever, por porta nenhuma.
+  //
+  // ⚠️ O comentário antigo daqui dizia que era "porta WEB de propósito, pra não
+  // criar um 2º caminho de escrita de pessoa". O racional estava certo e o fato
+  // estava errado — não havia 1º caminho. Agora a porta é nativa e passa por
+  // `POST /app/apresentacao-crianca`, que é o ÚNICO escritor.
+  //
+  // Pedido do Marcos: *"quero que tudo seja dentro do app"* + *"quando cadastrar
+  // uma criança deve gerar pessoa no sistema que aparece em minha família, com as
+  // regras de criança, sem CPF, identificamos pelo pai."*
   {
     label: "Apresentação de crianças",
     desc: "Apresente seu filho na igreja",
     icon: "happy",
-    url: "https://www.cbrio.org/apresentacao-criancas",
+    href: "/apresentacao-crianca",
   },
 ];
 
