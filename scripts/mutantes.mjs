@@ -23,6 +23,15 @@ import { spawnSync } from "node:child_process";
 
 const MUTANTES = [
   {
+    // ⚠️ `replace` "pra não empilhar" é a otimização de boa-fé que destrói a
+    // aba a cada toque: voltar pra ela paga montagem nova + a busca do
+    // `useFocusEffect` + o spinner. `navigate` volta pra instância viva.
+    nome: "barra: trocar navigate por replace (recarrega a aba a cada toque)",
+    arq: "lib/nav.ts",
+    de: "  router.navigate(destino as Href);",
+    para: "  router.replace(destino as Href);",
+  },
+  {
     nome: "volStatus: tratar status terminal como pendente",
     arq: "lib/volStatus.ts",
     de: 'const ENCERRADO = new Set(["nao_responde", "nao_pode_ou_duplicata", "desistente"]);',

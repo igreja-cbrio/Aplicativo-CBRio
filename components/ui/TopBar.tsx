@@ -57,6 +57,9 @@ export function TopBar({
   // Grupos → Servir → Cuidados → Devocional na barra, o histórico exigia 4
   // toques repassando telas já vistas. Subindo na árvore, da tela de barra a
   // Home é UM toque. Mapa em lib/hierarquia.ts.
+  // ⚠️ O retorno tátil do voltar mora DENTRO de `subirUmNivel` (lib/hierarquia)
+  // pra valer também nas ~35 telas com seta própria e no botão físico do
+  // Android — não repetir aqui, senão vibra duas vezes.
   const voltar = () => subirUmNivel(pathname);
 
   return (
@@ -80,7 +83,7 @@ export function TopBar({
               <Pressable
                 onPress={voltar}
                 hitSlop={10}
-                style={styles.btn}
+                style={({ pressed }) => [styles.btn, pressed && styles.btnPressionado]}
                 accessibilityRole="button"
                 accessibilityLabel={t("Voltar")}
               >
@@ -100,7 +103,7 @@ export function TopBar({
           <Pressable
             onPress={() => router.push("/notificacoes")}
             hitSlop={8}
-            style={styles.btn}
+            style={({ pressed }) => [styles.btn, pressed && styles.btnPressionado]}
             accessibilityRole="button"
             accessibilityLabel={t("Notificações")}
           >
@@ -116,6 +119,7 @@ export function TopBar({
         <Pressable
           onPress={() => router.push("/perfil")}
           hitSlop={8}
+          style={({ pressed }) => pressed && styles.btnPressionado}
           accessibilityRole="button"
           accessibilityLabel={t("Meu perfil")}
         >
@@ -155,6 +159,8 @@ const makeStyles = (colors: Palette) =>
       alignItems: "center", justifyContent: "center",
       backgroundColor: colors.surfaceAlt,
     },
+    // Resposta visível enquanto a próxima tela não desenhou (ver `voltar`).
+    btnPressionado: { opacity: 0.5 },
     // Mesma proporção do header antigo da Home (150×42) — `contain` mantém a
     // arte inteira dentro da caixa, então o que manda no tamanho é a altura.
     logo: { width: 150, height: 38 },

@@ -10,8 +10,11 @@ export const router = {
   push: (destino: unknown) => {
     navegacoes.push(String(destino));
   },
+  // ⚠️ `replace` é MARCADO: a barra de baixo troca de irmã com replace (pra não
+  // empilhar) e entra com navigate — se as duas registrassem igual, o teste não
+  // teria como provar a diferença, que é justamente a régua.
   replace: (destino: unknown) => {
-    navegacoes.push(String(destino));
+    navegacoes.push(`(replace) ${String(destino)}`);
   },
   back: () => {
     navegacoes.push("(back)");
