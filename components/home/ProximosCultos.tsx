@@ -136,6 +136,19 @@ export function ProximosCultos({ cultos }: { cultos: CultoUpcoming[] }) {
   const heroi = heroiIdx >= 0 ? grupos[heroiIdx] : null;
   const restantes = grupos.filter((_, i) => i !== heroiIdx);
 
+  // ⚠️⚠️ DESENHO PEDIDO PELO MARCOS (10/08/2026, 2ª rodada do apontamento 9):
+  // *"ao invés de 4 retângulos um embaixo do outro, você podia fazer 3 quadrados
+  // menores embaixo e o próximo culto um retângulo em cima no tamanho dos 3, e
+  // aí quando ele estiver ao vivo manter o que você fazia antes de dar destaque
+  // e mandar para transmissão."*
+  //
+  // ⇒ O PRÓXIMO culto sempre em cima, ocupando a largura toda. Os seguintes
+  // viram cartões menores lado a lado.
+  // ⚠️ Quando há culto AO VIVO ou próximo hoje, o destaque continua sendo o
+  // `HeroiHoje` — é ele que leva pra transmissão, e o Marcos pediu pra manter.
+  const destaque = heroi ?? restantes[0] ?? null;
+  const grade = (heroi ? restantes : restantes.slice(1)).slice(0, 3);
+
   return (
     <View style={{ gap: spacing.sm, marginHorizontal: -spacing.lg }}>
       <View style={[styles.headerRow, { paddingHorizontal: spacing.lg }]}>
@@ -143,9 +156,13 @@ export function ProximosCultos({ cultos }: { cultos: CultoUpcoming[] }) {
         <Text style={styles.titulo}>{t("Próximos cultos")}</Text>
       </View>
 
-      {heroi && (
+      {destaque && (
         <View style={{ paddingHorizontal: spacing.lg }}>
-          <HeroiHoje grupo={heroi} agora={agora} router={router} colors={colors} styles={styles} t={t} />
+          {heroi ? (
+            <HeroiHoje grupo={heroi} agora={agora} router={router} colors={colors} styles={styles} t={t} />
+          ) : (
+            <CultoCard grupo={destaque} agora={agora} hojeIso={hojeIso} router={router} colors={colors} styles={styles} t={t} />
+          )}
         </View>
       )}
 
@@ -162,19 +179,25 @@ export function ProximosCultos({ cultos }: { cultos: CultoUpcoming[] }) {
           ⚠️ O `marginHorizontal: -spacing.lg` do container faz o bloco sangrar
           pra fora (era o que o carrossel precisava) — a coluna devolve o padding
           aqui, senão os cards vazam 24px pra fora da tela. */}
-      {restantes.length > 0 && (
-        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
-          {restantes.slice(0, 6).map((item) => (
-            <CultoCard
-              key={`${item.data}-${item.nomeBase}`}
-              grupo={item}
-              agora={agora}
-              hojeIso={hojeIso}
-              router={router}
-              colors={colors}
-              styles={styles}
-              t={t}
-            />
+      {/* ⚠️ `flex: 1` em cada um: com 3 cultos viram 3 quadrados; com 2, dois
+          cartões de meia largura; com 1, um só ocupando a linha. Largura fixa de
+          1/3 deixaria um quadradinho solto e torto quando a semana tem poucos
+          cultos — e a semana medida em 10/08 tinha só 2 grupos de horário. */}
+      {grade.length > 0 && (
+        <View style={{ paddingHorizontal: spacing.lg, flexDirection: "row", gap: spacing.sm }}>
+          {grade.map((item) => (
+            <View key={`${item.data}-${item.nomeBase}`} style={{ flex: 1 }}>
+              <CultoCard
+                grupo={item}
+                agora={agora}
+                hojeIso={hojeIso}
+                router={router}
+                colors={colors}
+                styles={styles}
+                t={t}
+                compacto
+              />
+            </View>
           ))}
         </View>
       )}
@@ -321,6 +344,7 @@ function CultoCard({
   colors,
   styles,
   t,
+  compacto = false,
 }: {
   grupo: Grupo;
   agora: number;
@@ -329,6 +353,8 @@ function CultoCard({
   colors: Palette;
   styles: ReturnType<typeof makeStyles>;
   t: ReturnType<typeof useT>;
+  /** Cartão da linha de baixo: menor, sem os selos de online/kids. */
+  compacto?: boolean;
 }) {
   const cor = grupo.cor || colors.primary;
   const dia = formatCultoDia(grupo.data);
@@ -379,7 +405,7 @@ function CultoCard({
           onPress={() => primeiro && router.navigate({ pathname: "/culto-detalhe", params: { id: primeiro.id } })}
           onPressIn={lift}
           onPressOut={drop}
-          style={styles.card}
+          style={[styles.card, compacto && styles.cardCompacto]}
         >
           <View style={[styles.heroiBarra, { backgroundColor: cor }]} />
           <View style={styles.headerCard}>
@@ -406,20 +432,25 @@ function CultoCard({
             ))}
           </View>
 
-          <View style={styles.feats}>
-            {grupo.has_online && (
-              <View style={styles.feat}>
-                <Ionicons name="videocam" size={11} color={colors.brandMid} />
-                <Text style={styles.featTxt}>{t("online")}</Text>
-              </View>
-            )}
-            {grupo.has_kids && (
-              <View style={styles.feat}>
-                <Ionicons name="happy" size={11} color={colors.brandMid} />
-                <Text style={styles.featTxt}>{t("kids")}</Text>
-              </View>
-            )}
-          </View>
+          {/* ⚠️ Os selos saem no compacto: em 1/3 da largura eles quebram linha
+              e desalinham a altura dos três cartões. A informação continua no
+              destaque de cima e na tela do culto. */}
+          {!compacto && (
+            <View style={styles.feats}>
+              {grupo.has_online && (
+                <View style={styles.feat}>
+                  <Ionicons name="videocam" size={11} color={colors.brandMid} />
+                  <Text style={styles.featTxt}>{t("online")}</Text>
+                </View>
+              )}
+              {grupo.has_kids && (
+                <View style={styles.feat}>
+                  <Ionicons name="happy" size={11} color={colors.brandMid} />
+                  <Text style={styles.featTxt}>{t("kids")}</Text>
+                </View>
+              )}
+            </View>
+          )}
         </Pressable>
       </GlassCard>
     </Animated.View>
@@ -439,6 +470,9 @@ const makeStyles = (colors: Palette) =>
       gap: spacing.sm,
     },
     heroiCard: { paddingTop: spacing.md + 4 },
+    // ⚠️ Cartão da linha de baixo: menos respiro e altura mínima pra os três
+    // ficarem do mesmo tamanho mesmo com nomes de comprimentos diferentes.
+    cardCompacto: { padding: spacing.sm, gap: 6, minHeight: 96 },
     heroiBarra: {
       position: "absolute",
       top: 0,

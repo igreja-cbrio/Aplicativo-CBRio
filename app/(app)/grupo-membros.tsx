@@ -1011,7 +1011,14 @@ export default function GrupoMembrosScreen() {
               onChangeText={setComentario}
               multiline
             />
-            <Pressable style={[styles.btn, styles.btnAceitar, { marginTop: spacing.md }]} disabled={salvandoChamada} onPress={salvarChamada} accessibilityRole="button">
+            {/* ⚠️⚠️ `flexGrow: 0` NÃO É ENFEITE (regressão de 10/08, achada pelo
+                Marcos: "o botão de registrar presentes ficou gigantesco").
+                `styles.btn` tem `flex: 1` porque foi desenhado pra DOIS botões
+                lado a lado (aceitar/recusar) dividindo a largura. Enquanto a
+                folha tinha altura de conteúdo, esse `flex: 1` era inofensivo.
+                Quando a folha virou `flex: 1` pra a lista crescer, o botão
+                passou a absorver TODA a sobra vertical. */}
+            <Pressable style={[styles.btn, styles.btnAceitar, { marginTop: spacing.md, flexGrow: 0 }]} disabled={salvandoChamada} onPress={salvarChamada} accessibilityRole="button">
               {salvandoChamada ? <ActivityIndicator color="#fff" size="small" /> : (
                 <Text style={[styles.btnTxt, { color: "#fff" }]}>
                   {t("Salvar")} · {presentes.size} {presentes.size === 1 ? t("presente") : t("presentes")}
