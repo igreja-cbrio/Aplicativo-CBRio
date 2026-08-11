@@ -961,6 +961,10 @@ export type EventoAberto = {
   msg_sucesso_texto: string | null;
   /** Já tenho inscrição viva neste evento (alimenta o seletor "Meus eventos"). */
   inscrito: boolean;
+  /** ⚠️ Inscrito MAS sem pagamento: vaga reservada, lugar NÃO garantido. Vem do
+   *  backend de propósito — `inscrito` sozinho fazia a aba dizer "Inscrito" pra
+   *  quem só reservou. Opcional porque bundle novo fala com backend antigo. */
+  pagamento_pendente?: boolean;
   /** Form público — fallback quando o app não sabe renderizar (campo `imagem`). */
   url: string;
 };
