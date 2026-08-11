@@ -250,6 +250,19 @@ const MUTANTES = [
     de: "  if (!Number.isFinite(n)) return \"conexao\";",
     para: "  if (!Number.isFinite(n)) return \"servidor\";",
   },
+  // ── Porta unica (11/08 · item 14) ──
+  {
+    nome: "porta: o SOS virar item de lista (2 toques a mais ate o socorro)",
+    arq: "lib/portaUnica.ts",
+    de: '    tipo: "aconselhamento",',
+    para: '    tipo: "sos" as never,',
+  },
+  {
+    nome: "porta: exigir texto pra conversar com pastor (barreira onde nao havia)",
+    arq: "lib/portaUnica.ts",
+    de: "  if (!opcao.exigeMensagem) return true;",
+    para: "  if (false as boolean) return true;",
+  },
   // ── Domingo ancora na Home (11/08 · item 9) ──
   {
     nome: "home: domingo lido em UTC (em UTC-3 vira sabado e nunca ancora)",

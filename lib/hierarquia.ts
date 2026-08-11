@@ -61,6 +61,11 @@ const PAI: Record<string, string> = {
   "/menu": "/",
 
   // grupos
+  // A porta única de falar com a igreja sobe pra Cuidados — é de onde ela é
+  // aberta, e é onde fica o SOS (a outra porta). Sem esta linha, `subirUmNivel`
+  // cairia na Home e a pessoa perderia o contexto.
+  "/falar-com-a-igreja": "/cuidados",
+
   "/grupos": "/meu-grupo",
   "/grupo-detalhe": "/meu-grupo",
   "/grupo-membros": "/meu-grupo",

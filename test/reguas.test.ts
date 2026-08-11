@@ -24,6 +24,7 @@ import { linkDeInscricao, ehPorConvite, precisaEscolherNaLista } from "@/lib/con
 import { acaoAoFechar, temRascunho } from "@/lib/descartarRascunho";
 import { casaBusca, normalizarBusca, filtrarPorTexto } from "@/lib/buscaTexto";
 import { ehDomingo, indiceDoDestaque } from "@/lib/homeCultos";
+import { OPCOES_PORTA, opcaoPorTipo, podeEnviar, ehDaPortaUnica } from "@/lib/portaUnica";
 import {
   estadoDoEncontro, ultimaOcorrencia, proximaOcorrencia,
   dataLonga, quandoCurto, distanciaEmTexto, dataComHora, horaCurta,
@@ -1347,6 +1348,58 @@ describe("indiceDoDestaque · o domingo é âncora", () => {
   it("data inválida não vira domingo por acidente", () => {
     for (const v of ["", "  ", "16/08/2026", "abc", null, undefined]) {
       expect(ehDomingo(v)).toBe(false);
+    }
+  });
+});
+
+// ── A porta única de falar com a igreja (11/08/2026 · apontamento 14) ───────
+// Decisão do Marcos: "vamos separar em duas portas então, uma que é esse contato
+// SOS, que tem que ser destacado como é hoje, e a outra é o fale com a CBRio: ao
+// clicar, você teria 3 opções — marcar conversa com pastor, pedir oração, e a
+// terceira opção de enviar mensagem de dúvida, sugestão, pedido ou feedback."
+describe("porta única · 3 opções, e o SOS fora dela", () => {
+  it("⚠️⚠️ MUTATION GUARD · o SOS NÃO é item desta porta", () => {
+    // É a única destas portas que pode salvar alguém em minuto zero: tem tela
+    // própria e oferece CVV 188 ANTES de qualquer formulário. Virar item de
+    // lista somaria dois toques entre a pessoa e o socorro.
+    expect(ehDaPortaUnica("sos")).toBe(false);
+    expect(opcaoPorTipo("sos")).toBeNull();
+    expect(OPCOES_PORTA.some((o) => (o.tipo as string) === "sos")).toBe(false);
+  });
+
+  it("são exatamente as 3 que ele pediu, na ordem que ele pediu", () => {
+    expect(OPCOES_PORTA.map((o) => o.tipo)).toEqual(["aconselhamento", "oracao", "contato"]);
+  });
+
+  it("⚠️ MUTATION GUARD · os 3 tipos JÁ EXISTIAM (nenhuma categoria nova)", () => {
+    // Tipo novo exigiria mexer na fila do Cuidados, no filtro do ERP e na
+    // análise por IA. Inventar categoria aqui criaria um TERCEIRO vocabulário
+    // pra "o que você precisa" — `conversas_setores` e `cui_pedidos` já têm o
+    // deles.
+    for (const o of OPCOES_PORTA) {
+      expect(["aconselhamento", "oracao", "contato"]).toContain(o.tipo);
+    }
+  });
+
+  it("⚠️ MUTATION GUARD · conversa com pastor NÃO exige texto", () => {
+    // Quem procura um pastor muitas vezes não sabe (ou não quer) escrever o
+    // motivo num campo. Exigir texto criaria barreira onde não havia — hoje é
+    // um botão só.
+    expect(podeEnviar("aconselhamento", "")).toBe(true);
+    expect(podeEnviar("aconselhamento", null)).toBe(true);
+  });
+
+  it("oração e dúvida exigem texto — e espaço não conta", () => {
+    expect(podeEnviar("oracao", "")).toBe(false);
+    expect(podeEnviar("oracao", "   ")).toBe(false);
+    expect(podeEnviar("oracao", "ore pela minha mãe")).toBe(true);
+    expect(podeEnviar("contato", "  ")).toBe(false);
+    expect(podeEnviar("contato", "sugestão")).toBe(true);
+  });
+
+  it("tipo de fora da porta nunca envia", () => {
+    for (const v of ["sos", "grupos", "batismo", "", null, undefined]) {
+      expect(podeEnviar(v, "texto qualquer")).toBe(false);
     }
   });
 });

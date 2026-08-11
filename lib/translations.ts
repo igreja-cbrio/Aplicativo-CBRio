@@ -464,6 +464,24 @@ export const TRANSLATIONS: Record<string, Traducao> = {
 
   // ───────── Tarja de culto ao vivo na Home (11/08) ─────────
   "Culto ao vivo agora": { en: "Service live now", es: "Culto en vivo ahora" },
+
+  // ───────── Porta única · falar com a CBRio (11/08) ─────────
+  "Falar com a CBRio": { en: "Talk to CBRio", es: "Hablar con CBRio" },
+  "O que você precisa hoje?": { en: "What do you need today?", es: "¿Qué necesitas hoy?" },
+  "Conversa com pastor, pedido de oração, dúvida ou sugestão — num lugar só.": { en: "Talk to a pastor, prayer request, question or suggestion — all in one place.", es: "Hablar con un pastor, pedido de oración, duda o sugerencia — en un solo lugar." },
+  "Marcar conversa com um pastor": { en: "Schedule a talk with a pastor", es: "Agendar una conversación con un pastor" },
+  "Um pastor ou líder entra em contato com você.": { en: "A pastor or leader will get in touch with you.", es: "Un pastor o líder se pondrá en contacto contigo." },
+  "Pedir oração": { en: "Ask for prayer", es: "Pedir oración" },
+  "Sua equipe de cuidado ora por você.": { en: "Your care team prays for you.", es: "Tu equipo de cuidado ora por ti." },
+  "Dúvida, sugestão, pedido ou feedback": { en: "Question, suggestion, request or feedback", es: "Duda, sugerencia, pedido o comentario" },
+  "A equipe lê e responde.": { en: "The team reads and replies.", es: "El equipo lee y responde." },
+  "Conte o que você precisa…": { en: "Tell us what you need…", es: "Cuéntanos qué necesitas…" },
+  "Quer adiantar algo? (opcional)": { en: "Want to add something? (optional)", es: "¿Quieres adelantar algo? (opcional)" },
+  "Escreva sua mensagem antes de enviar.": { en: "Write your message before sending.", es: "Escribe tu mensaje antes de enviar." },
+  "Não foi possível enviar agora.": { en: "Could not send right now.", es: "No se pudo enviar ahora." },
+  "Recebemos sua mensagem": { en: "We got your message", es: "Recibimos tu mensaje" },
+  "Você acompanha em Cuidados, na sua lista de pedidos.": { en: "You can follow it in Care, in your list of requests.", es: "Puedes seguirlo en Cuidados, en tu lista de pedidos." },
+  "Preciso de ajuda agora — falar com alguém imediatamente": { en: "I need help now — talk to someone immediately", es: "Necesito ayuda ahora — hablar con alguien de inmediato" },
   "Culto ao vivo agora — abrir": { en: "Service live now — open", es: "Culto en vivo ahora — abrir" },
   "Ninguém com esse nome no grupo.": { en: "No one with that name in the group.", es: "Nadie con ese nombre en el grupo." },
   "Grupos que você é supervisor": { en: "Groups you supervise", es: "Grupos que supervisas" },
