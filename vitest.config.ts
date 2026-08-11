@@ -16,6 +16,20 @@
 // navegar, e o que a gente testa ali é o MAPA da árvore (função pura). Importar
 // o módulo real puxaria o runtime nativo do Expo pra dentro do Node.
 // ============================================================================
+// ⚠️⚠️ O PORTÃO RODA NO FUSO DA IGREJA (11/08/2026 · o CI estava vermelho na
+// main por causa disto). O runner do GitHub roda em **UTC**, e há régua cuja
+// guarda só consegue existir em fuso negativo: `lib/homeCultos.ts` lê a data
+// como `new Date("AAAA-MM-DDT12:00:00")` (meio-dia LOCAL) justamente porque
+// `new Date("AAAA-MM-DD")` é meia-noite UTC e, em UTC-3, devolve o dia
+// ANTERIOR — domingo vira sábado e a âncora da Home nunca acontece. Em UTC as
+// duas formas dão o MESMO dia ⇒ o mutante que troca uma pela outra vira no-op,
+// o teste não tem como pegá-lo, e o `test:mutantes` acusava "53/54 · há régua
+// sem guarda de verdade". Reproduzido: nesta máquina 54/54, com `TZ=UTC` 53/54.
+// Ou seja, era defeito do AMBIENTE do teste, não da régua.
+// ⚠️ Não afrouxa as réguas de BRT (`lib/dataBRT.ts`): elas convertem o fuso
+// explicitamente e seguem cobradas pelo mutante que troca a conversão por UTC.
+process.env.TZ = "America/Sao_Paulo";
+
 import { defineConfig } from "vitest/config";
 import path from "node:path";
 
