@@ -302,6 +302,8 @@ export function criarInscricaoApi(body: InscricaoQualquer): Promise<{ ok: boolea
   return apiPost<{ ok: boolean; message?: string }>("/app/inscricoes", body);
 }
 
+import { normalizarVoluntariadoMe } from "./voluntariadoMe";
+
 // ===== /app/voluntariado/me (fonte da verdade do status do voluntário) =====
 export type VoluntariadoStatus = "inscrito" | "enviado_ministerio" | "integrado" | string;
 
@@ -324,12 +326,10 @@ export type VoluntariadoMe = {
 };
 
 export async function getVoluntariadoMe(): Promise<VoluntariadoMe> {
-  // Aceita resposta com ou sem envelope ({ data: {...} } ou raw)
-  const raw = await apiGet<unknown>("/app/voluntariado/me");
-  const obj = (raw && typeof raw === "object" && "data" in (raw as object))
-    ? (raw as { data: unknown }).data
-    : raw;
-  return obj as VoluntariadoMe;
+  // ⚠️ O `as VoluntariadoMe` que morava aqui era um CAST: `voluntario_ativo`
+  // ausente chegava `undefined` e a tela de Servir mandava quem serve pro
+  // formulário. A conferência vive em `lib/voluntariadoMe.ts` (pura, no portão).
+  return normalizarVoluntariadoMe(await apiGet<unknown>("/app/voluntariado/me"));
 }
 
 // ===== /app/grupos/* (líder/supervisor aprova inscrições do grupo) =====

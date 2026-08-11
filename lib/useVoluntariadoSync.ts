@@ -3,12 +3,41 @@ import { AppState } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { supabase } from "./supabase";
 import { canaisObsoletos, topicoVoluntariado } from "./canalRealtime";
-import { type VoluntariadoMe } from "./api";
+import { getVoluntariadoMe, type VoluntariadoMe } from "./api";
 
 /**
- * Mantém a tela de Voluntariado sincronizada com a fonte da verdade
- * (vol_inscricoes + mem_membros.voluntario), consultando direto pelo
- * Supabase. Combina foco da tela, AppState, polling leve e realtime.
+ * Mantém a tela de Voluntariado sincronizada com a fonte da verdade:
+ * **`GET /app/voluntariado/me`**.
+ *
+ * ⚠⚠ ANTES ELE LIA AS TABELAS DIRETO, E ISSO ERA O BUG (11/08/2026).
+ *
+ * Relato do Marcos: *"Pedro Fernandes, nosso responsável da produção que está
+ * escalado em todos os cultos, ao abrir o app e entrar em servir apareceu as
+ * áreas para ele escolher e o pedido de quero ser voluntário."*
+ *
+ * A causa: `voluntario_ativo` vinha de **`mem_membros.voluntario`**, lida aqui
+ * direto da tabela — e essa coluna é `true` em **0 de 4.072** membros vivos
+ * (medido). Ou seja, o único sinal de "esta pessoa está no time" era
+ * **sempre false pra todo mundo**, e quem não tinha linha em `vol_inscricoes`
+ * caia no formulário. O Pedro tem **57 escalas** e **zero inscrição** — ele
+ * nunca precisou se inscrever, já servia.
+ *
+ * ⚠️ O servidor SEMPRE soube a resposta: `resolverVolProfile` (`app.js`, do
+ * Matheus · 25/06) resolve o perfil por auth_user_id → CPF → membresia_id →
+ * e-mail e já devolve `voluntario_ativo` em `/app/voluntariado/me`. O perfil do
+ * Pedro está vinculado e não arquivado. **A tela só nunca perguntou.**
+ *
+ * ⚠⚠ E ERAM DUAS VERDADES NO MESMO APP: `lib/jornada.ts` e
+ * `lib/inscricoesStatus.ts` já chamavam `getVoluntariadoMe()` — então a Jornada
+ * e o hub de Inscrições mostravam o Pedro como quem serve, enquanto a aba Servir
+ * oferecia a ele "quero ser voluntário". É a mesma divergencia que a régua
+ * `lib/volStatus.ts` matou em 05/08 — a RÉGUA foi unificada, a FONTE não.
+ *
+ * ⇒ LEI DA CASA, de novo: quem decide o que é válido é o BACKEND. O app lê
+ * tabela direto só pro que é dado DELE; régua de negócio vem de endpoint.
+ *
+ * Combina foco da tela, AppState e realtime em `vol_inscricoes` (o realtime
+ * segue útil: aceitar o voluntário no web dispara o refetch **do endpoint**).
  */
 export function useVoluntariadoSync(membroId: string | null | undefined) {
   const [me, setMe] = useState<VoluntariadoMe | null>(null);
@@ -21,52 +50,30 @@ export function useVoluntariadoSync(membroId: string | null | undefined) {
     if (membroId === undefined) {
       return;
     }
-    // null = membro carregado mas sem vínculo -> sem inscrição
-    if (membroId === null) {
-      setMe({ inscricao: null, voluntario_ativo: false });
-      setLoading(false);
-      return;
-    }
+    // ⚠⚠ AQUI TINHA UM CURTO-CIRCUITO: conta sem `membro_id` respondia
+    // `voluntario_ativo: false` SEM PERGUNTAR ao servidor. Mas o servidor resolve
+    // o perfil de voluntário por **auth_user_id e e-mail** também — ele não
+    // precisa do `membro_id`. Medido: 21 das 125 contas não têm `membro_id`, e
+    // **1 delas tem perfil de voluntário vivo com 5 escalas**. Essa pessoa via o
+    // formulário por uma decisão tomada no cliente, sobre um dado que o cliente
+    // não tem. Agora sempre pergunta; só `undefined` (pai ainda carregando)
+    // segura, pra não piscar o formulário antes da resposta.
     try {
-      // 1) Inscrição mais recente (ativa) do membro em vol_inscricoes.
-      const { data: insRow } = await supabase
-        .from("vol_inscricoes")
-        .select("id, status, area, ministerios_interesse, integrado_em")
-        .eq("membro_id", membroId)
-        // Soft-delete de `vol_inscricoes` foi criado em 28/07 (M6a) e LIBERADO
-        // em M6b — inscrição apagada pela equipe não pode continuar valendo
-        // como ativa no app (e bloqueando nova inscrição).
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      // 2) Flag voluntario do membro (sinaliza ativo mesmo sem inscrição
-      //    recente, ex.: voluntário antigo importado via backfill).
-      const { data: m } = await supabase
-        .from("mem_membros")
-        .select("voluntario")
-        .eq("id", membroId)
-        .is("deleted_at", null)
-        .maybeSingle();
-
+      // ⚠️ UMA chamada, e ela já traz `inscricao` E `voluntario_ativo` — o
+      // servidor resolve o perfil de voluntário (auth_user_id → CPF →
+      // membresia_id → e-mail) e filtra o soft-delete da inscrição. As duas
+      // consultas que moravam aqui reproduziam metade dessa régua e erravam a
+      // outra metade.
+      const resp = await getVoluntariadoMe();
       if (ativo.current) {
-        setMe({
-          inscricao: insRow
-            ? {
-                id: insRow.id as string,
-                status: insRow.status as string,
-                area: (insRow.area as string) ?? null,
-                ministerios_interesse:
-                  (insRow.ministerios_interesse as string[] | null) ?? null,
-                integrado_em: (insRow.integrado_em as string | null) ?? null,
-              }
-            : null,
-          voluntario_ativo: !!(m as { voluntario?: boolean } | null)?.voluntario,
-        });
+        setMe(resp);
         setErro(null);
       }
     } catch (e) {
+      // ⚠️ Falha de rede NÃO pode virar "você não é voluntário": isso mostraria
+      // o formulário de inscrição a quem já serve, que é o estado enganoso que
+      // esta correção existe pra matar. `me` fica como estava (null na 1ª
+      // abertura) e a tela mostra o erro com "tentar de novo".
       if (ativo.current) setErro(e instanceof Error ? e.message : "Falha ao carregar.");
     } finally {
       if (ativo.current) setLoading(false);
