@@ -250,6 +250,19 @@ const MUTANTES = [
     de: "  if (!Number.isFinite(n)) return \"conexao\";",
     para: "  if (!Number.isFinite(n)) return \"servidor\";",
   },
+  // -- Outro responsavel: CPF obrigatorio (11/08) --
+  {
+    nome: "outro responsavel: CPF deixar de ser obrigatorio (o pai nunca reencontra o cadastro)",
+    arq: "lib/apresentacaoCrianca.ts",
+    de: '    if (!cpfPareceValido(outro.cpf)) falta.push("CPF do outro responsável");',
+    para: '    if (false) falta.push("CPF do outro responsável");',
+  },
+  {
+    nome: "outro responsavel: aceitar 111.111.111-11 como CPF de gente",
+    arq: "lib/apresentacaoCrianca.ts",
+    de: "  if (d.length !== 11 || /^(\\d)\\1{10}$/.test(d)) return false;",
+    para: "  if (d.length !== 11) return false;",
+  },
   // ── Apresentacao de crianca (11/08) ──
   {
     nome: "crianca: aceitar 31/02 (data que nao existe iria pro banco)",

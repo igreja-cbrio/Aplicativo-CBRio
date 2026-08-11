@@ -24,14 +24,17 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { apiGet, apiPost } from "@/lib/api";
-import { maskDateBR } from "@/lib/validators";
+import { maskCPF, maskDateBR } from "@/lib/validators";
 import { acaoAoFechar } from "@/lib/descartarRascunho";
 import {
   avisoDoVinculo,
   faltaNoPedido,
   nascimentoParaISO,
   podeEnviarPedido,
+  outroEmBranco,
+  VAZIO_OUTRO,
   type CriancaForm,
+  type OutroResponsavelForm,
   type QuemApresenta,
   type ResponsavelForm,
 } from "@/lib/apresentacaoCrianca";
@@ -66,10 +69,17 @@ export default function ApresentacaoCriancaScreen() {
   const [quem, setQuem] = useState<QuemApresenta | null>(null);
   const [crianca, setCrianca] = useState<CriancaForm>(VAZIA);
   const [resp, setResp] = useState<ResponsavelForm>(VAZIO_RESP);
+  const [outro, setOutro] = useState<OutroResponsavelForm>(VAZIO_OUTRO);
+  const [abriuOutro, setAbriuOutro] = useState(false);
   const [obs, setObs] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [pronto, setPronto] = useState<{ data: string; familia: string | null; propria: boolean } | null>(null);
+  const [pronto, setPronto] = useState<{
+    data: string;
+    familia: string | null;
+    propria: boolean;
+    extra: { entrou: boolean; em_outra_familia: boolean; falhou: boolean } | null;
+  } | null>(null);
 
   const carregar = useCallback(async () => {
     try {
@@ -87,12 +97,12 @@ export default function ApresentacaoCriancaScreen() {
 
   useFocusEffect(useCallback(() => { carregar(); }, [carregar]));
 
-  const falta = quem ? faltaNoPedido(quem, crianca, resp) : [];
-  const podeEnviar = !!quem && podeEnviarPedido(quem, crianca, resp);
+  const falta = quem ? faltaNoPedido(quem, crianca, resp, outro) : [];
+  const podeEnviar = !!quem && podeEnviarPedido(quem, crianca, resp, outro);
   const aviso = quem ? avisoDoVinculo(quem, dados?.familia?.nome ?? null) : null;
 
   function voltar() {
-    const campos = [crianca.nome, crianca.nascimento, resp.nome, resp.telefone, obs];
+    const campos = [crianca.nome, crianca.nascimento, resp.nome, resp.telefone, outro.nome, outro.cpf, obs];
     const acao = acaoAoFechar({ campos, salvando: enviando });
     if (acao === "aguardar") return;
     if (acao === "fechar") { quem ? setQuem(null) : subirUmNivel(); return; }
@@ -104,7 +114,10 @@ export default function ApresentacaoCriancaScreen() {
         {
           text: t("Descartar"),
           style: "destructive",
-          onPress: () => { setCrianca(VAZIA); setResp(VAZIO_RESP); setObs(""); setErro(null); setQuem(null); },
+          onPress: () => {
+            setCrianca(VAZIA); setResp(VAZIO_RESP); setOutro(VAZIO_OUTRO);
+            setAbriuOutro(false); setObs(""); setErro(null); setQuem(null);
+          },
         },
       ],
     );
@@ -115,7 +128,12 @@ export default function ApresentacaoCriancaScreen() {
     setErro(null);
     setEnviando(true);
     try {
-      const r = await apiPost<{ data_apresentacao: string; familia: string | null; ja_inscrito?: boolean }>(
+      const r = await apiPost<{
+        data_apresentacao: string;
+        familia: string | null;
+        ja_inscrito?: boolean;
+        responsavel_extra?: { entrou: boolean; em_outra_familia: boolean; falhou: boolean } | null;
+      }>(
         "/app/apresentacao-crianca",
         {
           propria: quem === "propria",
@@ -127,10 +145,26 @@ export default function ApresentacaoCriancaScreen() {
           ...(quem === "outra"
             ? { responsavel: { nome: resp.nome.trim(), telefone: resp.telefone, email: resp.email || null } }
             : {}),
+          // ⚠️ Só vai quando a pessoa preencheu de verdade — bloco em branco não
+          // pode virar `{nome:"",cpf:""}` no servidor (ele recusaria o pedido
+          // inteiro por causa de um campo que ninguém quis usar).
+          ...(quem === "propria" && !outroEmBranco(outro)
+            ? {
+                responsavel_extra: {
+                  nome: outro.nome.trim(),
+                  cpf: outro.cpf,
+                  telefone: outro.telefone || null,
+                  sexo: outro.sexo,
+                },
+              }
+            : {}),
           observacoes: obs.trim() || null,
         },
       );
-      setPronto({ data: r.data_apresentacao, familia: r.familia ?? null, propria: quem === "propria" });
+      setPronto({
+        data: r.data_apresentacao, familia: r.familia ?? null, propria: quem === "propria",
+        extra: r.responsavel_extra ?? null,
+      });
       carregar();
     } catch (e) {
       setErro(e instanceof Error ? e.message : t("Não foi possível registrar agora."));
@@ -166,6 +200,18 @@ export default function ApresentacaoCriancaScreen() {
                   {pronto.familia
                     ? `${t("A criança entrou na sua família")} (${pronto.familia}) — ${t("veja em Minha família")}.`
                     : t("A criança já aparece em Minha família.")}
+                </Text>
+              )}
+              {/* ⚠⚠ A tela DIZ o que aconteceu com o outro responsável. Fingir que
+                  entrou quando ele ficou na família dele (ou quando falhou) faria
+                  a pessoa esperar uma "família alinhada" que não vai aparecer. */}
+              {!!pronto.extra && (
+                <Text style={[styles.okTxt, !pronto.extra.entrou && styles.okAviso]}>
+                  {pronto.extra.entrou
+                    ? t("O outro responsável também entrou na família — quando ele baixar o app, já vai ver vocês lá.")
+                    : pronto.extra.em_outra_familia
+                      ? t("O outro responsável já está em outra família no sistema. Registramos o parentesco com a criança e a equipe vai alinhar.")
+                      : t("Não conseguimos incluir o outro responsável agora — a equipe vai completar.")}
                 </Text>
               )}
               <Text style={styles.okTxt}>{t("A equipe entra em contato pra combinar os detalhes.")}</Text>
@@ -316,6 +362,77 @@ export default function ApresentacaoCriancaScreen() {
                 </>
               )}
 
+              {quem === "propria" && (
+                <>
+                  {!abriuOutro ? (
+                    <Pressable
+                      style={styles.addResp}
+                      onPress={() => setAbriuOutro(true)}
+                      accessibilityRole="button"
+                    >
+                      <Ionicons name="person-add" size={18} color={colors.primary} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.addRespTxt}>{t("Adicionar o outro responsável")}</Text>
+                        <Text style={styles.addRespSub}>
+                          {t("A família fica montada no sistema e ele já vê vocês ao baixar o app.")}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  ) : (
+                    <>
+                      <View style={styles.secaoRow}>
+                        <Text style={styles.secao}>{t("Outro responsável")}</Text>
+                        <Pressable
+                          onPress={() => { setOutro(VAZIO_OUTRO); setAbriuOutro(false); }}
+                          hitSlop={8}
+                          accessibilityRole="button"
+                          accessibilityLabel={t("Remover o outro responsável")}
+                        >
+                          <Text style={styles.remover}>{t("Remover")}</Text>
+                        </Pressable>
+                      </View>
+                      <Input
+                        label={t("Nome completo")}
+                        value={outro.nome}
+                        onChangeText={(v) => setOutro((o) => ({ ...o, nome: v }))}
+                        autoCapitalize="words"
+                      />
+                      {/* ⚠⚠ O CPF AQUI É OBRIGATÓRIO, e é o oposto da criança de
+                          propósito: é ADULTO. É o CPF que faz o cadastro dele ser
+                          REENCONTRADO quando baixar o app, em vez de nascer um
+                          segundo — "tem que ter CPF" (Marcos · 11/08). */}
+                      <Input
+                        label={t("CPF")}
+                        value={outro.cpf}
+                        onChangeText={(v) => setOutro((o) => ({ ...o, cpf: maskCPF(v) }))}
+                        keyboardType="number-pad"
+                        placeholder="000.000.000-00"
+                      />
+                      <Input
+                        label={t("Telefone (opcional)")}
+                        value={outro.telefone}
+                        onChangeText={(v) => setOutro((o) => ({ ...o, telefone: v }))}
+                        keyboardType="phone-pad"
+                      />
+                      <View style={styles.sexoRow}>
+                        {(["F", "M"] as const).map((sx) => (
+                          <Pressable
+                            key={sx}
+                            onPress={() => setOutro((o) => ({ ...o, sexo: o.sexo === sx ? null : sx }))}
+                            style={[styles.sexoBtn, outro.sexo === sx && styles.sexoBtnOn]}
+                            accessibilityRole="button"
+                          >
+                            <Text style={[styles.sexoTxt, outro.sexo === sx && styles.sexoTxtOn]}>
+                              {sx === "F" ? t("Mãe") : t("Pai")}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </>
+                  )}
+                </>
+              )}
+
               <Input
                 label={t("Algo que a equipe precisa saber? (opcional)")}
                 value={obs}
@@ -392,6 +509,19 @@ const makeStyles = (c: Palette) =>
     sexoBtnOn: { borderColor: c.primary, backgroundColor: c.primary + "18" },
     sexoTxt: { color: c.textMuted, fontSize: font.size.md, fontWeight: "600" },
     sexoTxtOn: { color: c.text, fontWeight: "800" },
+    addResp: {
+      flexDirection: "row", alignItems: "center", gap: spacing.sm,
+      backgroundColor: c.primary + "0F", borderRadius: radius.lg, padding: spacing.md,
+      borderWidth: 1, borderColor: c.primary + "33", borderStyle: "dashed",
+    },
+    addRespTxt: { color: c.text, fontSize: font.size.md, fontWeight: "700" },
+    addRespSub: { color: c.textMuted, fontSize: font.size.sm, marginTop: 2 },
+    secaoRow: {
+      flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+      marginTop: spacing.sm,
+    },
+    remover: { color: c.danger, fontSize: font.size.sm, fontWeight: "700" },
+    okAviso: { color: c.text },
     faltaTxt: { color: c.textMuted, fontSize: font.size.sm },
     erroInline: { color: "#ef4444", fontSize: font.size.sm },
     erroCard: {
