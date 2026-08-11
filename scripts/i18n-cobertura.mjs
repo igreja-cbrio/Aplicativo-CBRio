@@ -26,6 +26,7 @@
 // crescimento — nunca como meta contratual de "i18n concluído".
 // ============================================================================
 import { readFileSync, readdirSync, statSync } from "node:fs";
+import { semComentarios } from "./semComentarios.mjs";
 import { join, relative } from "node:path";
 
 const RAIZ = process.cwd();
@@ -39,7 +40,7 @@ const RAIZ = process.cwd();
 // (Onda 2/3): **293 e 36**. O grosso do que sobra é `completar-cadastro.tsx`
 // (~40 chaves) e o resto espalhado — ver a listagem que este script imprime.
 const TETO_SEM_TRADUCAO = 273;
-const TETO_SOLTAS = 32;
+const TETO_SOLTAS = 31;   // 32 -> 31 em 11/08: o scanner parou de contar comentário
 
 function varrer(dir, saida = []) {
   for (const nome of readdirSync(dir)) {
@@ -92,7 +93,7 @@ const RE_ALERT = /Alert\.alert\(\s*"([^"]+)"(?:\s*,\s*"([^"]+)")?/g;
 
 for (const arq of arquivos) {
   const rel = relative(RAIZ, arq).replace(/\\/g, "/");
-  const src = readFileSync(arq, "utf8");
+  const src = semComentarios(readFileSync(arq, "utf8"));
 
   for (const m of src.matchAll(RE_T)) {
     const chave = m[1];

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Linking, StyleSheet, Text, View } from "react-native";
+import { Linking, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -12,6 +12,7 @@ import { useMembro } from "@/lib/useMembro";
 import { SeusDados, fichaCompleta } from "@/components/inscricoes/SeusDados";
 import { jaTemNaFicha } from "@/lib/ficha";
 import { useT } from "@/lib/i18n";
+import { useDialogo } from "@/components/ui/Dialogo";
 import { criarInscricao } from "@/lib/inscricoes";
 import { dateBRToISO, isValidDateBR, maskDateBR } from "@/lib/validators";
 import {
@@ -27,6 +28,7 @@ export default function InscricaoBatismoScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
+  const dlg = useDialogo();
   const proxDt = useMemo(() => proximoBatismo(), []);
   const diasFalta = useMemo(() => diasAteProximoBatismo(proxDt), [proxDt]);
   const [nome, setNome] = useState("");
@@ -77,14 +79,12 @@ export default function InscricaoBatismoScreen() {
     const quando = proxDt ? `
 
 ${t("Próximo batismo")}: ${formatProximoBatismo(proxDt)}` : "";
-    Alert.alert(
-      t("Confirmar sua inscrição no batismo?"),
-      `${t("A equipe vai falar com você sobre os próximos passos.")}${quando}`,
-      [
-        { text: t("Cancelar"), style: "cancel" },
-        { text: t("Confirmar inscrição"), onPress: () => { void enviar(); } },
-      ],
-    );
+    // Diálogo da casa (11/08).
+    void dlg.confirmar({
+      titulo: t("Confirmar sua inscrição no batismo?"),
+      mensagem: `${t("A equipe vai falar com você sobre os próximos passos.")}${quando}`,
+      acao: t("Confirmar inscrição"),
+    }).then((ok: boolean) => { if (ok) void enviar(); });
   }
 
   async function enviar() {
@@ -141,6 +141,9 @@ ${t("Próximo batismo")}: ${formatProximoBatismo(proxDt)}` : "";
         ) : undefined
       }
       error={error}
+    
+      // Diálogo da casa · FORA do ScrollView e de todos os ramos
+      overlay={<dlg.Dialogo />}
     >
       <View style={styles.banner}>
         <View style={styles.bannerIcon}>

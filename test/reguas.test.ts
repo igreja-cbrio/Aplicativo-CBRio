@@ -18,6 +18,10 @@ import { montarPayloadInscricao, extrasFaltando } from "@/lib/inscricaoPayload";
 import { tipoDaCapa, arquivoDaCapa, capaCabe, MAX_CAPA_BYTES } from "@/lib/capaGrupo";
 import { motivoDaFalhaPush, mensagemDoErro } from "@/lib/motivoPush";
 import { lotesDePush, tokenMorreu, MAX_POR_REQUEST } from "@/lib/pushLotes";
+import { ALERTAS_QUE_FICAM_NATIVOS } from "@/lib/dialogosNativos";
+import { semComentarios } from "../scripts/semComentarios.mjs";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { motivoDaFalha, podeVirarConteudo, ler } from "@/lib/falhaDeLeitura";
 import { estadoDoQr, podeDesenharQr, temCpf } from "@/lib/cartaoQr";
 import { linkDeInscricao, ehPorConvite, precisaEscolherNaLista } from "@/lib/convite";
@@ -1595,5 +1599,136 @@ describe("apresentação de criança · o outro responsável", () => {
     const ruim = { nome: "João", cpf: "", telefone: "", sexo: null };
     const respOk = { nome: "Joana Souza", telefone: "21999991111", email: "" };
     expect(faltaNoPedido("outra", CRI, respOk, ruim)).toEqual([]);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// DIÁLOGO DA CASA · e os alertas que FICAM nativos (11/08/2026)
+//
+// O Marcos reclamou DUAS vezes do "modal quadrado". Medido: 90 `Alert.alert` em
+// 27 arquivos, 90 de 90 nativos, e nenhum componente de diálogo no repo.
+// `components/ui/Dialogo.tsx` é a resposta — mas 3 casos NÃO migram, e este
+// bloco existe pra impedir que a próxima sessão bem-intencionada os "limpe".
+// ════════════════════════════════════════════════════════════════════════════
+describe("diálogos nativos que ficam", () => {
+  const raiz = process.cwd();
+  const ler = (rel: string): string => {
+    try { return readFileSync(join(raiz, rel), "utf8"); } catch { return ""; }
+  };
+  // ⚠️⚠️ Descontar COMENTÁRIO antes de procurar o código. Foi o que me pegou
+  // QUATRO vezes em 11/08 — o próprio arquivo do diálogo cita `Alert.alert` na
+  // explicação, e a contagem crua o lê como uso.
+  // ⚠️ A régua é ÚNICA (`scripts/semComentarios.mjs`), a mesma que o portão de
+  // i18n usa. Havia duas implementações divergentes, ambas por regex e nenhuma
+  // testada — e a do regex **apagava o resto de qualquer linha com `//` dentro
+  // de uma string** (caso vivo: `completar-cadastro.tsx:218`), escondendo dívida
+  // em silêncio. Duas réguas pro mesmo conceito é como uma delas passa a mentir.
+
+  it("⚠️⚠️ MUTATION GUARD · o SOS e os 2 pós-navegação seguem com Alert nativo", () => {
+    for (const { arquivo, porque } of ALERTAS_QUE_FICAM_NATIVOS) {
+      const src = semComentarios(ler(arquivo));
+      if (!src) continue; // arquivo ausente não vira falso negativo
+      expect(src, `${arquivo} perdeu o Alert nativo — leia o porquê: ${porque}`)
+        .toContain("Alert.alert");
+    }
+  });
+
+  it("cada alerta que fica tem um PORQUÊ escrito, não só uma lista", () => {
+    expect(ALERTAS_QUE_FICAM_NATIVOS.length).toBeGreaterThan(0);
+    for (const a of ALERTAS_QUE_FICAM_NATIVOS) {
+      expect(a.porque.length, `${a.arquivo} sem justificativa`).toBeGreaterThan(80);
+    }
+  });
+
+  it("⚠️ o diálogo é IRMÃO: quem usa o hook renderiza <dlg.Dialogo />", () => {
+    // Chamar `confirmar()` sem montar o componente devolve uma promise que nunca
+    // resolve — o fluxo trava em silêncio, sem erro nenhum na tela.
+    const telas = ["app/(app)/grupo-detalhe.tsx", "app/(app)/apresentacao-crianca.tsx",
+      "app/(app)/falar-com-a-igreja.tsx", "app/(app)/inscricao-batismo.tsx"];
+    for (const tela of telas) {
+      const src = ler(tela);
+      if (!src) continue;
+      if (src.includes("dlg.confirmar")) {
+        expect(src, `${tela} usa dlg.confirmar e não renderiza <dlg.Dialogo />`)
+          .toContain("<dlg.Dialogo />");
+      }
+    }
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// semComentarios · a régua que decide o que o portão de i18n ENXERGA
+//
+// ⚠️⚠️ Ela nasceu como regex e tinha um modo de falha PERVERSO: apagava o resto
+// de qualquer linha em que uma string contivesse `//` — e com isso REMOVIA
+// dívida real da contagem, em silêncio. Guarda que esconde o problema é pior que
+// guarda nenhuma. Caso vivo no repo: `completar-cadastro.tsx:218`.
+// ════════════════════════════════════════════════════════════════════════════
+describe("semComentarios", () => {
+  it("⚠️⚠️ MUTATION GUARD · string com `//` NÃO engole o resto da linha", () => {
+    const src = String.raw`if (!r.startsWith("//")) g(); t("REAL");`;
+    expect(semComentarios(src)).toContain("REAL");
+  });
+
+  it("URL dentro de string sobrevive", () => {
+    expect(semComentarios(`const u = "https://x"; t("URL");`)).toContain("URL");
+  });
+
+  it("comentário de linha e de bloco somem", () => {
+    expect(semComentarios(`t("A"); // t("SOME")`)).not.toContain("SOME");
+    expect(semComentarios(`/* t("SOME") */ t("B");`)).not.toContain("SOME");
+    expect(semComentarios(`/* t("SOME") */ t("B");`)).toContain(`t("B")`);
+  });
+
+  it("aspas escapada não desalinha o resto do arquivo", () => {
+    const src = String.raw`const s = "tem \" aspas"; t("DEPOIS");`;
+    expect(semComentarios(src)).toContain("DEPOIS");
+  });
+
+  it("crase (template literal) pode conter `//`", () => {
+    expect(semComentarios("const a = `cra // se`; t(\"CRASE\");")).toContain("CRASE");
+  });
+
+  // ⚠️ Comprimento e linhas preservados: é o que faz linha/coluna de qualquer
+  // relatório continuarem batendo com o arquivo real.
+  it("preserva comprimento e quebras de linha", () => {
+    const src = "a // b\nc";
+    expect(semComentarios(src)).toHaveLength(src.length);
+    expect(semComentarios("/* a\nb */\nc").split("\n")).toHaveLength(3);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// CONTRATO COM O ERP · o tipo do aviso de grupo (11/08/2026)
+//
+// ⚠️⚠️ O ERP emite `pedido_grupo` na tabela `notificacoes` (sino do web/staff) e
+// o app roteia `grupo_pedido` em `app_notificacoes`. São INVERTIDOS, e foi por
+// confiar nisso sem conferir que o aviso de grupo nunca chegou ao líder: 459
+// pedidos desde 01/07 e ZERO linhas de tipo grupo (medido em 11/08).
+//
+// ⚠️ Esta guarda mora AQUI, e não no ERP, por um motivo prático: lá ela lia
+// arquivo deste repo por caminho absoluto e no CI (ubuntu) devolvia vazio, então
+// passava sem asserção nenhuma — guarda que não guarda. Aqui roda de verdade.
+// ════════════════════════════════════════════════════════════════════════════
+describe("aviso de grupo · o app tem que rotear o tipo que o ERP manda", () => {
+  const TIPO = "grupo_pedido";
+  const ler = (rel: string) => {
+    try { return readFileSync(join(process.cwd(), rel), "utf8"); } catch { return ""; }
+  };
+
+  it("⚠️⚠️ MUTATION GUARD · os DOIS mapas entendem o tipo (eles divergem)", () => {
+    // notifTap = toque na PUSH · notificacoes.tsx = toque na LISTA. São mapas
+    // diferentes e já divergiram antes; um aviso que chega e não abre tela é o
+    // mesmo que não avisar.
+    expect(semComentarios(ler("lib/notifTap.ts")), "notifTap não roteia o tipo").toContain(`"${TIPO}"`);
+    expect(semComentarios(ler("app/(app)/notificacoes.tsx")), "a lista não trata o tipo").toContain(`"${TIPO}"`);
+  });
+
+  it("o aviso aparece com ícone e cai no chip certo — senão vira 'Outros'", () => {
+    const src = semComentarios(ler("app/(app)/notificacoes.tsx"));
+    // ⚠️ Sem regex de propósito: `\s` dentro de template literal vira `s` e o
+    // teste passa a procurar outra coisa (foi o que aconteceu na 1ª versão).
+    expect(src, "sem ícone, o aviso aparece sem símbolo na lista").toContain(`${TIPO}: "`);
+    expect(src, "sem categoria, o aviso não cai no chip Grupos").toContain('"Grupos"');
   });
 });
