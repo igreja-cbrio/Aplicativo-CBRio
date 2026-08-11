@@ -410,6 +410,53 @@ com `'M'` pra decidir quem entra como pai e quem entra como mãe — condição 
 falsa, então os dois campos saíam nulos. Conserto no ERP. **A tela segue mandando
 `M`/`F`** (é o formato do Kids); quem traduz é o servidor.
 
+## ⚠️ NAVEGAÇÃO · o peso não era o destino (11/08/2026 · PR #111)
+
+Relato do Marcos: *"melhore mais a navegação, tô achando meio travada; melhore
+a navegação de quando aperta para voltar"*. O DESTINO já estava certo (a seta é
+`cd ..` desde 05/08) — o peso vinha de duas outras coisas.
+
+**1 · Trocar de aba deslizava como se fosse ENTRAR num nível.** As 5 telas da
+barra são IRMÃS, e o Stack aplicava `ios_from_right` por 280 ms a cada toque na
+barra — inclusive na volta pra Home, que é justamente a seta. Agora as **6 telas
+de barra (as 5 + Home) têm `animation: "none"`** (`Stack.Screen` em
+`(app)/_layout.tsx`); o resto do Stack segue em `ios_from_right`, 260 ms.
+⚠️ Tela de PROFUNDIDADE (perfil, cartões, kids, evento…) **não** entra nessa
+lista: ali o deslizamento é a informação de que se desceu um nível.
+⚠️ A Home entra porque a seta VOLTA pra ela dessas telas — se ela animasse, a
+ida seria instantânea e a volta não, o que se lê como lentidão de novo.
+
+**2 · O toque não respondia NADA até a próxima tela desenhar.** Os `Pressable`
+da barra e da faixa não tinham estado de toque nem retorno tátil: ~300 ms de
+silêncio que se lê como "não registrou" — e leva a pessoa a tocar duas vezes,
+subindo dois níveis. Agora: opacidade no toque, `android_ripple` e
+`Haptics.selectionAsync()`.
+⚠️ **O tátil do VOLTAR mora dentro de `subirUmNivel` (`lib/hierarquia.ts`)**, não
+na TopBar: é o ÚNICO ponto por onde passam a seta da faixa, as ~35 telas com
+seta própria E o botão físico do Android. Repetir na tela vibra duas vezes.
+⚠️ `require("expo-haptics")` **lazy, dentro de try/catch**: é módulo nativo e o
+arquivo roda no portão (vitest, em Node) — import no topo derrubaria o CI, e
+aparelho sem motor de vibração não pode derrubar a navegação.
+
+**⚠️⚠️ O que foi CONSIDERADO e recusado: `replace` na barra.** Trocar o
+`navigate` por `replace` "pra não empilhar" **seria regressão**: `navigate`
+reaproveita a instância VIVA da aba (Grupos → Servir → Grupos volta com a
+rolagem e os dados no lugar), enquanto `replace` destruiria a tela a cada toque
+e toda volta pagaria montagem nova + a busca do `useFocusEffect` + o spinner.
+E a pilha **não cresce sem limite**: as 5 são irmãs, então o pior caso é
+Home + as 5 abas, e revisitar uma delas ENCOLHE a pilha. Régua e o porquê em
+`lib/nav.ts` (`acaoDaBarra`/`irParaBarra`), congelados num **mutante**.
+
+⚠️ **O portão cobre a RÉGUA, não a sensação.** 177 testes · 55/55 mutantes ·
+typecheck limpo. Fluidez se mede em aparelho: tocar as 5 abas em sequência,
+voltar de tela funda, e o back físico no Android.
+
+⚠️ **`.expo/types/router.d.ts` desatualizado derruba o `npm run ota`** (foi o
+que aconteceu aqui): ele é GERADO e gitignored, então o CI passa verde e a
+máquina local reprova, acusando rota nova como "não atribuível a `Href`". Não é
+caso de `CBRIO_OTA_SEM_PORTAO=1` — o conserto é regenerar (subir o
+`npx expo start` por ~40 s e matar).
+
 ## Visão geral
 
 App de membros da igreja **CBRio**. Está sendo **reconstruído do zero, módulo a
