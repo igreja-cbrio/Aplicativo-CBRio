@@ -224,7 +224,11 @@ export default function InscricoesScreen() {
                   valor_centavos: e.valor_centavos,
                   tem_sorteio: e.tem_sorteio,
                   statusInsc: e.inscrito ? "inscrita" : null,
-                  pagamentoPendente: false,
+                  // ⚠️ Vaga RESERVADA não é inscrição. Isto era `false` fixo, e
+                  // a aba mostrava "Inscrito" pra quem só reservou e não pagou —
+                  // em evento pago, a pessoa fechava o app achando que tinha
+                  // lugar. Quem decide é o backend (`pagamento_pendente`).
+                  pagamentoPendente: !!e.pagamento_pendente,
                 }))
             ).map((ev) => {
               const quando = formatarDataEvento(ev.data, ev.hora);

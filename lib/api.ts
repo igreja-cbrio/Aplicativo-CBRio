@@ -961,6 +961,10 @@ export type EventoAberto = {
   msg_sucesso_texto: string | null;
   /** Já tenho inscrição viva neste evento (alimenta o seletor "Meus eventos"). */
   inscrito: boolean;
+  /** ⚠️ Inscrito MAS sem pagamento: vaga reservada, lugar NÃO garantido. Vem do
+   *  backend de propósito — `inscrito` sozinho fazia a aba dizer "Inscrito" pra
+   *  quem só reservou. Opcional porque bundle novo fala com backend antigo. */
+  pagamento_pendente?: boolean;
   /** Form público — fallback quando o app não sabe renderizar (campo `imagem`). */
   url: string;
 };
@@ -986,7 +990,13 @@ export type MinhaInscricaoEvento = {
   bolsa_tipo: string | null;   // integral | parcial
   valor_cobrado_centavos: number | null;
   respostas: Record<string, unknown>;
-  comprovante_url: string;     // /i/c/<token> — o MESMO QR que a portaria lê
+  // /i/c/<token> — o MESMO QR que a portaria lê no check-in.
+  // ⚠️ NULO enquanto a inscrição não está `confirmada`: vaga reservada não é
+  // inscrição, e comprovante de quem não pagou é o que a portaria aceitaria na
+  // entrada. Quem decide é o servidor — o app não monta esse link sozinho.
+  comprovante_url: string | null;
+  // Por que não veio: 'aguardando_pagamento' | 'cancelada' (null = veio).
+  comprovante_bloqueado?: string | null;
   pagamento: {
     status: string | null;
     metodo: string | null;

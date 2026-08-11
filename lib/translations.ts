@@ -804,6 +804,18 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Nenhuma contribuição registrada em": { en: "No contributions recorded in", es: "Ninguna contribución registrada en" },
   "Total no ano": { en: "Total for the year", es: "Total del año" },
   "Gerar comprovante (PDF)": { en: "Generate statement (PDF)", es: "Generar comprobante (PDF)" },
+  // Comprovante de INSCRIÇÃO (o QR da portaria) — não confundir com o
+  // comprovante de doações acima, que é o informe de IR.
+  "Seu comprovante": { en: "Your ticket", es: "Tu comprobante" },
+  "Apresente este código na entrada. Ele também abre no navegador, se preferir.": {
+    en: "Show this code at the entrance. It also opens in your browser, if you prefer.",
+    es: "Muestra este código en la entrada. También se abre en el navegador, si prefieres.",
+  },
+  "Abrir comprovante": { en: "Open ticket", es: "Abrir comprobante" },
+  "O código de entrada aparece aqui assim que o seu pagamento for confirmado.": {
+    en: "Your entry code appears here as soon as your payment is confirmed.",
+    es: "Tu código de entrada aparece aquí en cuanto se confirme el pago.",
+  },
   "Falha ao gerar o comprovante.": { en: "Failed to generate the statement.", es: "No se pudo generar el comprobante." },
   "Doações a igrejas não são dedutíveis do IR, mas devem ser declaradas na ficha “Doações Efetuadas” (código 99). PIX feito direto no app do banco entra aqui quando o financeiro concilia o extrato.": {
     en: "Church donations are not tax-deductible in Brazil, but must be declared under “Donations Made” (code 99). PIX made directly in your bank app appears here once the finance team reconciles the statement.",

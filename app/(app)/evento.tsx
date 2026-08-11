@@ -504,21 +504,34 @@ function MinhaInscricao({
         ) : null}
       </GlassCard>
 
-      {/* Comprovante = o MESMO QR que a portaria lê no check-in. */}
-      <GlassCard style={styles.card}>
-        <Text style={styles.qrTitulo}>{t("Seu comprovante")}</Text>
-        <Text style={styles.desc}>
-          {t("Apresente este código na entrada. Ele também abre no navegador, se preferir.")}
-        </Text>
-        <View style={styles.qrBox}>
-          <QRCode value={insc.comprovante_url} size={168} backgroundColor="#fff" />
-        </View>
-        <Button
-          title={t("Abrir comprovante")}
-          variant="ghost"
-          onPress={() => abrirInscricaoEvento(insc.comprovante_url)}
-        />
-      </GlassCard>
+      {/* Comprovante = o MESMO QR que a portaria lê no check-in.
+          ⚠️ Quem decide se ele existe é o SERVIDOR (`comprovante_url` nulo até a
+          inscrição estar confirmada) — a tela nunca monta esse link sozinha.
+          Sem o QR a gente DIZ o motivo: card que some sem explicação se lê como
+          bug, e a pessoa procuraria o comprovante achando que perdeu. */}
+      {insc.comprovante_url ? (
+        <GlassCard style={styles.card}>
+          <Text style={styles.qrTitulo}>{t("Seu comprovante")}</Text>
+          <Text style={styles.desc}>
+            {t("Apresente este código na entrada. Ele também abre no navegador, se preferir.")}
+          </Text>
+          <View style={styles.qrBox}>
+            <QRCode value={insc.comprovante_url} size={168} backgroundColor="#fff" />
+          </View>
+          <Button
+            title={t("Abrir comprovante")}
+            variant="ghost"
+            onPress={() => abrirInscricaoEvento(insc.comprovante_url as string)}
+          />
+        </GlassCard>
+      ) : insc.comprovante_bloqueado === "cancelada" ? null : (
+        <GlassCard style={styles.card}>
+          <Text style={styles.qrTitulo}>{t("Seu comprovante")}</Text>
+          <Text style={styles.desc}>
+            {t("O código de entrada aparece aqui assim que o seu pagamento for confirmado.")}
+          </Text>
+        </GlassCard>
+      )}
 
       {Object.keys(insc.respostas || {}).length ? (
         <GlassCard style={styles.card}>
