@@ -86,6 +86,100 @@ somar ao seu trabalho, não duplicar.
 - **ERP #2354** (mover a função da API pra `pdx1`/Oregon) está **aberto de
   propósito** — é a API inteira, e o Marcos vai mergear numa janela calma.
 
+## ⚠️⚠️ CUIDADOS · DUAS PORTAS, não quatro (11/08/2026 · apontamento 14)
+
+Desenho do Marcos, depois de eu levantar as portas existentes: *"vamos separar em
+duas portas então, uma que é esse contato SOS, que tem que ser destacado como é
+hoje, e a outra é o fale com a CBRio: ao clicar, você teria 3 opções — marcar
+conversa com pastor, pedir oração, e a terceira opção de enviar mensagem de
+dúvida, sugestão, pedido ou feedback."* Aprovado por ele depois de testar:
+*"sobre cuidados, ficou ótimo o fale com a cbrio."*
+
+| antes | onde estava | agora |
+|---|---|---|
+| SOS | `/cuidados`, destacado | **intacto** |
+| Pedido de oração | `/cuidados`, cartão com textarea | opção 2 |
+| Conversar com pastor | `/cuidados`, cartão com botão | opção 1 |
+| Fale conosco | **4 toques**: Menu → Ajustes → Configurações → Ajuda | opção 3 |
+
+- **`lib/portaUnica.ts`** é a régua (`OPCOES_PORTA`, `podeEnviar`,
+  `ehDaPortaUnica`), no portão, com **2 mutantes**. Tela:
+  `app/(app)/falar-com-a-igreja.tsx`.
+- ⚠️⚠️ **O SOS NÃO É ITEM DESTA PORTA, e tem mutante impedindo.** É a única
+  dessas portas que pode salvar alguém em minuto zero, e oferece **CVV 188 / SAMU
+  192 ANTES de qualquer formulário**. Virar item de lista somaria **dois toques
+  entre a pessoa e o socorro**. A porta única mostra um atalho **visível** de
+  volta pra urgência — quem chegou na porta errada e está em sofrimento não pode
+  ter que voltar e procurar.
+- ⚠️ **NENHUM TIPO NOVO, NENHUMA MIGRATION**: as 3 opções mapeiam **1:1** em
+  `aconselhamento`, `oracao` e `contato`, que já existiam ⇒ a fila do Cuidados no
+  ERP continua entendendo tudo. Inventar categoria criaria um **terceiro
+  vocabulário** pra "o que você precisa" (`conversas_setores` e `cui_pedidos` já
+  têm o deles). Tem mutante.
+- ⚠️ **Conversa com pastor NÃO exige texto** (mutante): hoje é um botão só, e
+  quem procura um pastor muitas vezes não sabe (ou não quer) escrever o motivo.
+  Oração e dúvida exigem, e espaço em branco não conta.
+- ⚠️ A **ORDEM** não é estética: o pedido mais pesado vem primeiro, porque a
+  lista é lida de cima pra baixo por quem já está mal.
+- `fale-conosco.tsx` perdeu o formulário e ficou só com os **CANAIS** (WhatsApp,
+  Instagram, e-mail, mapa) — esses não são porta de preenchimento, são jeitos de
+  chegar na igreja.
+
+## ⚠️⚠️ KIDS NO APP · ARQUIVADO PELO MARCOS — e 3 achados que ficam (11/08/2026)
+
+Ele pediu mostrar no app o check-in que o totem já criou (sala, pager, e o código
+como substituto do papel perdido). Levantei, ele leu e **arquivou**: *"exclua esse
+pedido do kids, vou conversar com a Mari sobre integrações e vou trazer um plano
+definido."* ⇒ **NÃO retomar por conta própria.**
+
+✅ **O ÚNICO conserto feito é bug de hoje, não feature**: `kids-filho.tsx`
+renderizava **"Sala: X"** a partir de `sala_sugerida`, que o backend calcula pela
+**FAIXA ETÁRIA** (`app.js`) — a sala REAL é escolha do voluntário no totem
+(`kids_checkins.sala_id`; o servidor só valida). Divergem de propósito: irmão
+junto, sala cheia, aniversário na virada de faixa. O pai lia "POP! 1" e batia na
+porta errada no meio do culto. Rótulo agora: **"Sala prevista"**.
+
+⚠️⚠️ **TRÊS FATOS MEDIDOS QUE VALEM INDEPENDENTE DISSO** (não repetir leitura
+antiga sem olhar):
+
+1. **`codigo_digitado` é RÓTULO FALSO.** O botão "Mesma pessoa que entregou" no
+   check-out grava `metodo='codigo_digitado'` **sem ninguém digitar código** (o
+   front preenche do check-in já carregado na tela). ⇒ A leitura *"o código caiu
+   42→28→0, a equipe abandonou o fluxo"* pode estar simplesmente errada — o que
+   mudou foi qual botão o voluntário toca. Auditoria que leia essa coluna como
+   "apresentou o papel" **afirma um fato inventado**, e num incidente real de
+   criança isso vira prova falsa.
+2. **83% dos check-ins fecham pelo cron, não por retirada** (`checkout_forcado`:
+   855 de 1.027; 130 de 164 no domingo 09/08). Qualquer tela que diga "está na
+   sala X **agora**" mente pra ~80% — inclusive pra quem já está em casa com a
+   criança. E o sistema só sabe **quem levou** em 12 de 1.212 retiradas.
+3. **`autorizado_buscar` = true em 1.294 de 1.294 vínculos. ZERO false.** O totem
+   cria o vínculo autorizado pra quem ENTREGA a criança (542 desde 01/06) e a fila
+   com documento nunca rodou. ⇒ **"responsável autorizado" não filtra ninguém** —
+   qualquer régua de exibição baseada nisso é porta aberta, não portão.
+
+⚠️ **PORTA DE ESCRITA JÁ ABERTA, sem relação com feature nova:**
+`POST /app/kids/filho/:id/saude` aceita **1.000 chars de texto livre** de qualquer
+responsável autorizado, e esse texto é **impresso na etiqueta da criança** como
+alerta de saúde, lido pelo voluntário no atendimento. Dá pra escrever de casa
+"hoje quem busca é o pai X". E `tem_espectro`/`tem_limitacao_fisica`, graváveis
+pelo app, são a **régua do pager** no servidor.
+
+## ✅ NEW HEART · o "só homens" era INTENCIONAL (Marcos · 11/08/2026)
+
+A auditoria tratava como **bloqueio de dado** o grupo `categoria='Homens'` com 4
+mulheres no roster e 6 pedidos de mulheres aprovados. **Não é erro:** *"era um
+grupo de solteiros, misto, mas só se inscreveram mulheres e as líderes queriam que
+tivessem homens também, então colocaram assim para vetar novas inscrições de
+mulheres. Decisão local entre a líder e a Natasha."*
+
+⚠️⚠️ **LEI QUE FICA: gênero/categoria do grupo é TORNEIRA DE INSCRIÇÃO, não
+descrição do grupo.** Roster incompatível com a categoria pode ser exatamente a
+intenção da liderança. **Não "alinhar" categoria ao roster** — quebraria a
+alavanca que elas usam de propósito. A trava do `POST /app/inscricoes` (ERP
+#2361) está CERTA justamente porque barra inscrição NOVA e não expulsa quem já
+entrou.
+
 ## Visão geral
 
 App de membros da igreja **CBRio**. Está sendo **reconstruído do zero, módulo a
