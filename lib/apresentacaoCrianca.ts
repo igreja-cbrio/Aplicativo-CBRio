@@ -31,6 +31,26 @@ export type ResponsavelForm = {
 };
 
 /**
+ * O OUTRO responsável (o outro pai/mãe), pedido pelo Marcos em 11/08: *"preciso
+ * que esse formulário tenha a opção de adicionar responsável, e aí já vamos criar
+ * essa família no sistema e se esse pai baixar o app já aparece lá para ele a sua
+ * família alinhada, **tem que ter CPF**."*
+ */
+export type OutroResponsavelForm = {
+  nome: string;
+  cpf: string;
+  telefone: string;
+  sexo: "M" | "F" | null;
+};
+
+export const VAZIO_OUTRO: OutroResponsavelForm = { nome: "", cpf: "", telefone: "", sexo: null };
+
+/** O bloco está em branco? Aí é porque a pessoa não quis adicionar ninguém. */
+export function outroEmBranco(o: OutroResponsavelForm): boolean {
+  return !String(o?.nome ?? "").trim() && !String(o?.cpf ?? "").replace(/\D/g, "");
+}
+
+/**
  * ⚠️ CPF NÃO EXISTE NESTE FORMULÁRIO, e o teste garante isso.
  *
  * A régua do Marcos é "sem CPF, identificamos pelo pai". Um campo de CPF aqui —
@@ -68,6 +88,7 @@ export function faltaNoPedido(
   quem: QuemApresenta,
   crianca: CriancaForm,
   responsavel: ResponsavelForm,
+  outro?: OutroResponsavelForm,
 ): string[] {
   const falta: string[] = [];
   if (String(crianca.nome ?? "").trim().length < 2) falta.push("Nome da criança");
@@ -81,15 +102,54 @@ export function faltaNoPedido(
     const tel = String(responsavel.telefone ?? "").replace(/\D/g, "");
     if (tel.length < 10 || tel.length > 11) falta.push("Telefone do responsável");
   }
+
+  /**
+   * ⚠️⚠️ CPF É OBRIGATÓRIO AQUI — o oposto da criança, e é o ponto.
+   *
+   * "Tem que ter CPF" (Marcos). É ADULTO: o CPF é a chave mais forte do matcher do
+   * sistema, e é ele que faz o cadastro ser REENCONTRADO quando essa pessoa baixar
+   * o app, em vez de nascer um segundo. Sem CPF, o responsável entraria como um
+   * homônimo solto e a "família alinhada" nunca apareceria pra ele.
+   *
+   * ⚠️ Só cobra quando a pessoa começou a preencher o bloco: ele é OPCIONAL, e
+   * exigir num bloco em branco travaria quem só quer apresentar sozinha.
+   */
+  if (quem === "propria" && outro && !outroEmBranco(outro)) {
+    const nome = String(outro.nome ?? "").trim();
+    if (nome.length < 2) falta.push("Nome do outro responsável");
+    else if (!nome.includes(" ")) falta.push("Nome COMPLETO do outro responsável");
+    if (!cpfPareceValido(outro.cpf)) falta.push("CPF do outro responsável");
+  }
+
   return falta;
+}
+
+/**
+ * DV do CPF, espelho de `backend/utils/cpf.cpfValido`.
+ *
+ * ⚠️ Existe pra a tela dizer "esse CPF não confere" ANTES de gastar requisição —
+ * quem decide é o servidor. E recusa sequência repetida: `111.111.111-11` passa no
+ * algoritmo do DV e não é CPF de ninguém.
+ */
+export function cpfPareceValido(v: string): boolean {
+  const d = String(v ?? "").replace(/\D/g, "");
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+  for (const n of [9, 10]) {
+    let soma = 0;
+    for (let i = 0; i < n; i++) soma += Number(d[i]) * (n + 1 - i);
+    const dv = ((soma * 10) % 11) % 10;
+    if (dv !== Number(d[n])) return false;
+  }
+  return true;
 }
 
 export function podeEnviarPedido(
   quem: QuemApresenta,
   crianca: CriancaForm,
   responsavel: ResponsavelForm,
+  outro?: OutroResponsavelForm,
 ): boolean {
-  return faltaNoPedido(quem, crianca, responsavel).length === 0;
+  return faltaNoPedido(quem, crianca, responsavel, outro).length === 0;
 }
 
 /**

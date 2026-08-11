@@ -32,6 +32,9 @@ import {
   faltaNoPedido,
   nascimentoParaISO,
   podeEnviarPedido,
+  cpfPareceValido,
+  outroEmBranco,
+  VAZIO_OUTRO,
 } from "@/lib/apresentacaoCrianca";
 import {
   estadoDoEncontro, ultimaOcorrencia, proximaOcorrencia,
@@ -1536,5 +1539,61 @@ describe("apresentação de criança · a régua da tela", () => {
 
   it("nome de 1 letra não passa (typo, não nome)", () => {
     expect(podeEnviarPedido("propria", { ...CRI, nome: "A" }, RESP)).toBe(false);
+  });
+});
+
+// ── O OUTRO responsável · "tem que ter CPF" (Marcos · 11/08) ────────────────
+describe("apresentação de criança · o outro responsável", () => {
+  const CRI = { nome: "Ana Clara", nascimento: "10/03/2025", sexo: "F" as const };
+  const RESP = { nome: "", telefone: "", email: "" };
+  // CPFs com DV válido, gerados pro teste (não pertencem a ninguém do cadastro).
+  const CPF_OK = "529.982.247-25";
+
+  it("⚠️⚠️ MUTATION GUARD · CPF do outro responsável é OBRIGATÓRIO", () => {
+    // É o oposto da criança, e é o ponto: adulto entra pelo Contrato de porta, e o
+    // CPF é a chave mais forte do matcher — é ele que faz o cadastro ser
+    // REENCONTRADO quando essa pessoa baixar o app, em vez de nascer um segundo.
+    const semCpf = { nome: "João Silva", cpf: "", telefone: "", sexo: "M" as const };
+    expect(faltaNoPedido("propria", CRI, RESP, semCpf)).toContain("CPF do outro responsável");
+    expect(podeEnviarPedido("propria", CRI, RESP, semCpf)).toBe(false);
+  });
+
+  it("⚠️ MUTATION GUARD · bloco EM BRANCO não cobra nada (é opcional)", () => {
+    // Exigir num bloco que ninguém quis usar travaria quem só quer apresentar
+    // sozinha — que é o caso mais comum.
+    expect(outroEmBranco(VAZIO_OUTRO)).toBe(true);
+    expect(podeEnviarPedido("propria", CRI, RESP, VAZIO_OUTRO)).toBe(true);
+    expect(faltaNoPedido("propria", CRI, RESP, VAZIO_OUTRO)).toEqual([]);
+  });
+
+  it("preenchido e válido passa", () => {
+    const ok = { nome: "João Silva", cpf: CPF_OK, telefone: "", sexo: "M" as const };
+    expect(outroEmBranco(ok)).toBe(false);
+    expect(podeEnviarPedido("propria", CRI, RESP, ok)).toBe(true);
+  });
+
+  it("⚠️ nome sem sobrenome não passa (anti-abreviação do Contrato)", () => {
+    const so1 = { nome: "João", cpf: CPF_OK, telefone: "", sexo: null };
+    expect(faltaNoPedido("propria", CRI, RESP, so1)).toContain("Nome COMPLETO do outro responsável");
+  });
+
+  it("⚠️⚠️ MUTATION GUARD · DV do CPF é conferido, e repetido não passa", () => {
+    // `111.111.111-11` PASSA no algoritmo do DV e não é CPF de ninguém. Sem a
+    // guarda de sequência, ele entraria como identidade — e CPF é a chave mais
+    // forte do matcher, então o erro contamina todas as portas.
+    expect(cpfPareceValido("111.111.111-11")).toBe(false);
+    expect(cpfPareceValido("00000000000")).toBe(false);
+    expect(cpfPareceValido("529.982.247-24")).toBe(false); // DV trocado
+    expect(cpfPareceValido(CPF_OK)).toBe(true);
+    expect(cpfPareceValido("52998224725")).toBe(true); // só dígitos também
+    expect(cpfPareceValido("5299822472")).toBe(false); // 10 dígitos
+  });
+
+  it("⚠️ o outro responsável NÃO existe no caminho de terceiro", () => {
+    // "Se a pessoa que estiver pedindo não for a mãe ou pai, melhor não gerar
+    // família, mais seguro" — ela não monta a família de terceiros.
+    const ruim = { nome: "João", cpf: "", telefone: "", sexo: null };
+    const respOk = { nome: "Joana Souza", telefone: "21999991111", email: "" };
+    expect(faltaNoPedido("outra", CRI, respOk, ruim)).toEqual([]);
   });
 });
