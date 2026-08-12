@@ -166,9 +166,27 @@ export default function AppLayout() {
               screenOptions={{
                 headerShown: false,
                 animation: "ios_from_right",
-                animationDuration: 280,
+                animationDuration: 260,
               }}
-            />
+            >
+              {/* ⚠️ TROCA DE ABA NÃO DESLIZA (11/08/2026 · "a navegação tá
+                  travada"). `ios_from_right` significa "entrei um nível" — e
+                  entre as 5 telas da barra ninguém entra em nada: elas são
+                  IRMÃS. Deslizar 280 ms lateralmente a cada toque na barra é o
+                  que dava peso; barra de abas em qualquer app troca na hora.
+                  ⚠️ A Home entra na lista porque a seta VOLTA pra ela dessas
+                  telas — se ela animasse, a ida seria instantânea e a volta não,
+                  o que se lê como lentidão de novo.
+                  ⚠️ As telas de PROFUNDIDADE (perfil, cartões, kids, evento…)
+                  seguem com o `ios_from_right` do screenOptions: ali o
+                  deslizamento é a informação de que se desceu um nível. */}
+              <Stack.Screen name="index" options={{ animation: "none" }} />
+              <Stack.Screen name="meu-grupo" options={{ animation: "none" }} />
+              <Stack.Screen name="voluntariado" options={{ animation: "none" }} />
+              <Stack.Screen name="cuidados" options={{ animation: "none" }} />
+              <Stack.Screen name="devocional" options={{ animation: "none" }} />
+              <Stack.Screen name="menu" options={{ animation: "none" }} />
+            </Stack>
           </View>
 
           {!semBarra && <BottomBar />}

@@ -19,10 +19,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Keyboard, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { usePathname, useRouter } from "expo-router";
+import { usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Haptics from "expo-haptics";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { irParaBarra } from "@/lib/nav";
 import { font, spacing, type Palette } from "@/constants/theme";
 
 export const BOTTOMBAR_H = 58;
@@ -54,7 +56,6 @@ export function BottomBar() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const pathname = usePathname();
   const t = useT();
 
@@ -83,12 +84,19 @@ export function BottomBar() {
           <Pressable
             key={it.rota}
             onPress={() => {
-              // `navigate` reaproveita a tela quando ela já está na pilha (não
-              // empilha a mesma coisa duas vezes) — e a seta continua fazendo
-              // sentido depois.
-              if (pathname !== it.rota) router.navigate(it.rota as never);
+              // Régua em lib/nav.ts: entre irmãs da barra é `replace` (troca
+              // lateral, não empilha); da Home/profundidade é `navigate`.
+              if (pathname === it.rota) return;
+              // ⚠️ O toque tem que RESPONDER antes de a tela trocar. O retorno
+              // tátil sai na hora (thread nativa) e não depende de a próxima
+              // tela montar — era esse vazio de ~300 ms que se lia como
+              // "travado". Best-effort: aparelho sem motor não pode derrubar a
+              // navegação (por isso o catch vazio).
+              Haptics.selectionAsync().catch(() => {});
+              irParaBarra(pathname, it.rota);
             }}
-            style={styles.item}
+            android_ripple={{ color: colors.border, borderless: true }}
+            style={({ pressed }) => [styles.item, pressed && styles.itemPressionado]}
             accessibilityRole="button"
             accessibilityState={{ selected: ativo }}
             accessibilityLabel={t(it.label)}
@@ -129,6 +137,11 @@ const makeStyles = (colors: Palette) =>
       gap: 2,
       paddingHorizontal: spacing.xs,
     },
+    // ⚠️ O `android_ripple` cobre o Android; no iOS não existe ripple, e sem
+    // este estado o item ficava IDÊNTICO durante o toque — a pessoa não sabia
+    // se o app registrou o dedo. Não é enfeite: é a única resposta que aparece
+    // enquanto a próxima tela ainda não desenhou.
+    itemPressionado: { opacity: 0.55 },
     // 11px porque "Devocional" tem 10 letras — em 12px amassa em tela estreita
     // (foi o motivo de "Voluntariado" ter virado "Servir" na barra antiga).
     label: { color: colors.textMuted, fontSize: 11, fontWeight: "600" },

@@ -162,6 +162,12 @@ export default function EventoScreen() {
   );
 
   const temCampoImagem = (evento?.campos || []).some((c) => c.tipo === "imagem");
+  // ⚠️⚠️ Cartão cobrado numa plataforma externa (e-Inscrição): quem decide é o
+  // SERVIDOR (`so_web`). O app NÃO reimplementa a escolha "Pix aqui × cartão lá
+  // fora" — quem sabe perguntar isso é o formulário público. Inscrever por
+  // dentro levaria a pessoa a uma página de pagamento SEM cartão, sem ela nunca
+  // saber que a opção existia em outro lugar.
+  const soWeb = !!evento?.so_web;
 
   async function enviar() {
     if (!evento || !membro) return;
@@ -369,6 +375,13 @@ export default function EventoScreen() {
               />
             ) : null}
           </GlassCard>
+        ) : soWeb ? (
+          <GlassCard style={styles.card}>
+            <Text style={styles.desc}>
+              {t("Neste evento você escolhe como pagar antes de se inscrever: no Pix a inscrição é feita aqui mesmo; no cartão de crédito ela é feita em outro site.")}
+            </Text>
+            <Button title={t("Escolher forma de pagamento")} onPress={() => abrirInscricaoEvento(ev!.url)} />
+          </GlassCard>
         ) : temCampoImagem ? (
           /* Evento que pede FOTO: o app não sobe arquivo neste formulário —
              manda pro form público, que sabe. Honesto e sem campo morto. */
@@ -504,21 +517,34 @@ function MinhaInscricao({
         ) : null}
       </GlassCard>
 
-      {/* Comprovante = o MESMO QR que a portaria lê no check-in. */}
-      <GlassCard style={styles.card}>
-        <Text style={styles.qrTitulo}>{t("Seu comprovante")}</Text>
-        <Text style={styles.desc}>
-          {t("Apresente este código na entrada. Ele também abre no navegador, se preferir.")}
-        </Text>
-        <View style={styles.qrBox}>
-          <QRCode value={insc.comprovante_url} size={168} backgroundColor="#fff" />
-        </View>
-        <Button
-          title={t("Abrir comprovante")}
-          variant="ghost"
-          onPress={() => abrirInscricaoEvento(insc.comprovante_url)}
-        />
-      </GlassCard>
+      {/* Comprovante = o MESMO QR que a portaria lê no check-in.
+          ⚠️ Quem decide se ele existe é o SERVIDOR (`comprovante_url` nulo até a
+          inscrição estar confirmada) — a tela nunca monta esse link sozinha.
+          Sem o QR a gente DIZ o motivo: card que some sem explicação se lê como
+          bug, e a pessoa procuraria o comprovante achando que perdeu. */}
+      {insc.comprovante_url ? (
+        <GlassCard style={styles.card}>
+          <Text style={styles.qrTitulo}>{t("Seu comprovante")}</Text>
+          <Text style={styles.desc}>
+            {t("Apresente este código na entrada. Ele também abre no navegador, se preferir.")}
+          </Text>
+          <View style={styles.qrBox}>
+            <QRCode value={insc.comprovante_url} size={168} backgroundColor="#fff" />
+          </View>
+          <Button
+            title={t("Abrir comprovante")}
+            variant="ghost"
+            onPress={() => abrirInscricaoEvento(insc.comprovante_url as string)}
+          />
+        </GlassCard>
+      ) : insc.comprovante_bloqueado === "cancelada" ? null : (
+        <GlassCard style={styles.card}>
+          <Text style={styles.qrTitulo}>{t("Seu comprovante")}</Text>
+          <Text style={styles.desc}>
+            {t("O código de entrada aparece aqui assim que o seu pagamento for confirmado.")}
+          </Text>
+        </GlassCard>
+      )}
 
       {Object.keys(insc.respostas || {}).length ? (
         <GlassCard style={styles.card}>

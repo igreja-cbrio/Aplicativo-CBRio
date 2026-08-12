@@ -139,8 +139,27 @@ export function registrarRotaAtual(rota: string) {
   rotaAtual = rota || "/";
 }
 
+// ⚠️ RETORNO TÁTIL NO PONTO ÚNICO (11/08/2026 · "melhore a navegação de quando
+// aperta para voltar"). Ele vive AQUI, e não nas ~35 telas que desenham a
+// própria seta, porque aqui é o único lugar por onde TODAS passam — inclusive o
+// botão físico do Android. O toque passa a responder na hora, na thread nativa,
+// sem esperar a próxima tela montar; era esse vazio que fazia a pessoa tocar
+// duas vezes e subir dois níveis.
+// ⚠️ `require` LAZY dentro de try/catch de propósito: `expo-haptics` é módulo
+// nativo e este arquivo roda no portão (vitest, em Node). Import no topo
+// derrubaria o CI; e aparelho sem motor de vibração não pode derrubar a
+// navegação — se o tátil falhar, a seta continua funcionando.
+function tatil() {
+  try {
+    require("expo-haptics").selectionAsync?.().catch?.(() => {});
+  } catch {
+    /* sem haptics neste ambiente (teste/Web) — a navegação segue igual */
+  }
+}
+
 /** Sobe um nível na árvore — o `cd ..` do app. */
 export function subirUmNivel(rota?: string) {
+  tatil();
   const pai = rotaPai(rota ?? rotaAtual);
   router.navigate(pai as Href);
 }
