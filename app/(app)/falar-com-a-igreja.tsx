@@ -17,7 +17,7 @@
 // a pessoa diz o que precisa faz mais sentido."*
 // ============================================================================
 import { useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Stack } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -26,6 +26,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { criarInscricao } from "@/lib/inscricoes";
 import { useMembro } from "@/lib/useMembro";
 import { useT } from "@/lib/i18n";
+import { useDialogo } from "@/components/ui/Dialogo";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { OPCOES_PORTA, podeEnviar, type OpcaoPorta } from "@/lib/portaUnica";
 import { acaoAoFechar } from "@/lib/descartarRascunho";
@@ -36,6 +37,7 @@ export default function FalarComAIgrejaScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
+  const dlg = useDialogo();
   const { membro } = useMembro();
 
   const [escolhida, setEscolhida] = useState<OpcaoPorta | null>(null);
@@ -47,22 +49,20 @@ export default function FalarComAIgrejaScreen() {
   // ⚠️ Voltar da escolha PERGUNTA se há texto digitado — a mesma régua do item
   // 15 (`lib/descartarRascunho.ts`). Quem escreveu um pedido de oração e toca
   // errado não deveria perder o que escreveu.
-  function voltarDaEscolha() {
+  async function voltarDaEscolha() {
     const acao = acaoAoFechar({ campos: [mensagem], salvando: enviando });
     if (acao === "aguardar") return;
     if (acao === "fechar") { setEscolhida(null); setErro(null); return; }
-    Alert.alert(
-      t("Descartar sua mensagem?"),
-      t("O que você escreveu não foi enviado."),
-      [
-        { text: t("Continuar escrevendo"), style: "cancel" },
-        {
-          text: t("Descartar"),
-          style: "destructive",
-          onPress: () => { setEscolhida(null); setMensagem(""); setErro(null); },
-        },
-      ],
-    );
+    // Diálogo da casa (11/08).
+    const descartar = await dlg.confirmar({
+      titulo: t("Descartar sua mensagem?"),
+      mensagem: t("O que você escreveu não foi enviado."),
+      cancelar: t("Continuar escrevendo"),
+      acao: t("Descartar"),
+      perigo: true,
+    });
+    if (!descartar) return;
+    setEscolhida(null); setMensagem(""); setErro(null);
   }
 
   async function enviar() {
@@ -184,6 +184,8 @@ export default function FalarComAIgrejaScreen() {
           )}
         </ScrollView>
       </TecladoSeguro>
+          {/* Diálogo da casa · IRMÃO do conteúdo (ver components/ui/Dialogo.tsx) */}
+      <dlg.Dialogo />
     </SafeAreaView>
   );
 }

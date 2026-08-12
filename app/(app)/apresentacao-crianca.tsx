@@ -13,7 +13,7 @@
 // 0 linhas — ninguém nunca conseguiu se inscrever.
 // ============================================================================
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/Input";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { useDialogo } from "@/components/ui/Dialogo";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { apiGet, apiPost } from "@/lib/api";
 import { maskCPF, maskDateBR } from "@/lib/validators";
@@ -66,6 +67,7 @@ export default function ApresentacaoCriancaScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
+  const dlg = useDialogo();
 
   const [dados, setDados] = useState<Resp | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -107,26 +109,23 @@ export default function ApresentacaoCriancaScreen() {
   const podeEnviar = !!quem && podeEnviarPedido(quem, crianca, resp, outro);
   const aviso = quem ? avisoDoVinculo(quem, dados?.familia?.nome ?? null) : null;
 
-  function voltar() {
+  async function voltar() {
     const campos = [crianca.nome, crianca.nascimento, resp.nome, resp.telefone, outro.nome, outro.cpf, obs];
     const acao = acaoAoFechar({ campos, salvando: enviando });
     if (acao === "aguardar") return;
     if (acao === "fechar") { quem ? setQuem(null) : subirUmNivel(); return; }
-    Alert.alert(
-      t("Descartar o que você preencheu?"),
-      t("Os dados da criança não foram enviados."),
-      [
-        { text: t("Continuar preenchendo"), style: "cancel" },
-        {
-          text: t("Descartar"),
-          style: "destructive",
-          onPress: () => {
-            setCrianca(VAZIA); setResp(VAZIO_RESP); setOutro(VAZIO_OUTRO); setSaude(VAZIO_SAUDE);
-            setAbriuOutro(false); setObs(""); setErro(null); setQuem(null);
-          },
-        },
-      ],
-    );
+    // Diálogo da casa (11/08). A régua de QUANDO perguntar continua em
+    // `lib/descartarRascunho.ts` — só a caixa mudou.
+    const descartar = await dlg.confirmar({
+      titulo: t("Descartar o que você preencheu?"),
+      mensagem: t("Os dados da criança não foram enviados."),
+      cancelar: t("Continuar preenchendo"),
+      acao: t("Descartar"),
+      perigo: true,
+    });
+    if (!descartar) return;
+    setCrianca(VAZIA); setResp(VAZIO_RESP); setOutro(VAZIO_OUTRO); setSaude(VAZIO_SAUDE);
+    setAbriuOutro(false); setObs(""); setErro(null); setQuem(null);
   }
 
   async function enviar() {
@@ -529,6 +528,8 @@ export default function ApresentacaoCriancaScreen() {
           )}
         </ScrollView>
       </TecladoSeguro>
+          {/* Diálogo da casa · IRMÃO do conteúdo (ver components/ui/Dialogo.tsx) */}
+      <dlg.Dialogo />
     </SafeAreaView>
   );
 }

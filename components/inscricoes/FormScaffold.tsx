@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import {
   Pressable,
   ScrollView,
@@ -17,6 +17,13 @@ import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 type Props = {
+  /**
+   * ⚠️ Renderizado SEMPRE e FORA do ScrollView — é onde vai `<dlg.Dialogo />`.
+   * `children` só existe no ramo do FORMULÁRIO: com `enviado` ou
+   * `bloqueadoTexto` ele não é renderizado, e um diálogo montado ali devolveria
+   * promise que **nunca resolve** (o fluxo trava sem erro nenhum na tela).
+   */
+  overlay?: React.ReactNode;
   title: string;
   subtitle?: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
@@ -46,6 +53,7 @@ export function FormScaffold({
   bloqueadoTexto,
   error,
   children,
+  overlay,
 }: Props) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -99,6 +107,7 @@ export function FormScaffold({
           )}
         </ScrollView>
       </TecladoSeguro>
+      {overlay}
     </SafeAreaView>
   );
 }

@@ -456,6 +456,87 @@ que aconteceu aqui): ele é GERADO e gitignored, então o CI passa verde e a
 máquina local reprova, acusando rota nova como "não atribuível a `Href`". Não é
 caso de `CBRIO_OTA_SEM_PORTAO=1` — o conserto é regenerar (subir o
 `npx expo start` por ~40 s e matar).
+## ⚠️⚠️ DIÁLOGO DA CASA · o fim do "modal quadrado" (11/08/2026)
+
+Reclamação do Marcos, **duas vezes**: *"o modal não está na cara do sistema, está
+quadrado"*. Medido: **90 `Alert.alert` em 27 arquivos, 90 de 90 nativos** — não
+existia **nenhum** componente de diálogo neste repo.
+
+`components/ui/Dialogo.tsx` (hook `useDialogo`) é a resposta.
+
+### ⚠️⚠️ A premissa que eu carregava CAIU (e é o que decide o desenho)
+
+Eu registrava que *"`Alert.alert` é hoje o único que renderiza ACIMA de um
+`<Modal>` aberto"*. **Falso, e o contraexemplo já está no ar neste repo**:
+`components/voluntariado/Disponibilidade.tsx` e `app/(app)/grupo-visita.tsx`
+montam **dois `<Modal>` irmãos simultâneos** desde 07/08 (o teste em Android
+daquele dia gravou linha em `vol_availability`).
+
+O que é verdade é a metade estreita: `<Modal>` é container **nativo**,
+apresentado a partir do primeiro view controller da cadeia, então um diálogo
+montado por **provider na raiz** fica **ATRÁS** de qualquer modal aberto.
+
+⇒ Por isso o diálogo é renderizado **PELA TELA**, como **irmão** — o padrão que
+este repo já exercita 21 vezes. **Aninhamento tem zero precedente aqui; não é
+hora de estrear.**
+
+### O que migrou, e o que NÃO migra
+
+Migradas 4 telas de **nível de tela** (nenhuma tem `<Modal>`): `grupo-detalhe`
+(pedir entrada — o apontamento 8), `apresentacao-crianca` e `falar-com-a-igreja`
+(descartar rascunho), `inscricao-batismo` (confirmar).
+
+⚠️⚠️ **Três ficam nativos de propósito**, listados com o porquê em
+`lib/dialogosNativos.ts` e **guardados por teste**:
+- **SOS** (`cuidados.tsx`) — é a única tela que pode salvar alguém em minuto
+  zero (CVV 188 / SAMU 192 antes de qualquer formulário), e um dos alertas dela é
+  o **caminho de falha de rede**: diálogo que depende do render da tela é
+  estruturalmente pior justo quando algo já falhou.
+- **`trocar-senha` e `redefinir-senha`** — a navegação roda na LINHA SEGUINTE ao
+  alerta. Isso só funciona porque o `Alert` nativo tem janela própria e sobrevive
+  à tela sair por baixo; um diálogo da tela desmontaria junto e a pessoa trocaria
+  a senha sem ver confirmação nenhuma.
+
+⚠️ **Os 16 que disparam com um `<Modal>` já aberto NÃO foram migrados** — ali a
+sobreposição depende de comportamento que **só um aparelho responde** (o padrão
+irmão está provado em Android, não em iOS). Ficam pra depois do teste no celular.
+
+### Duas armadilhas que a revisão adversarial pegou
+
+- ⚠️⚠️ **`<dlg.Dialogo />` NÃO pode ir nos `children` do `FormScaffold`**: eles
+  só são renderizados no ramo do formulário — com `enviado` ou `bloqueadoTexto` a
+  tela mostra outra coisa e o diálogo **não existe**, então `confirmar()`
+  devolveria promise que **nunca resolve** e o fluxo travaria sem erro nenhum.
+  O scaffold ganhou a prop **`overlay`**, renderizada sempre e FORA do ScrollView.
+- ⚠️⚠️ **`accessible={false}` no fundo é obrigatório.** `Pressable` marca
+  `accessible` por padrão; no iOS isso vira `isAccessibilityElement` e o UIKit
+  **para de descer nos filhos** — com VoiceOver a única coisa alcançável seria o
+  fundo, cuja ação é CANCELAR. A pessoa cega não conseguiria confirmar nada, num
+  componente que substitui o `UIAlertController`, que é 100% acessível.
+
+## ⚠️ O portão de i18n parou de contar COMENTÁRIO (11/08/2026)
+
+`scripts/i18n-cobertura.mjs` contava `t("...")` dentro de comentário: o exemplo
+de uso no JSDoc do `Dialogo.tsx` fazia `npm run ota` **recusar publicar por causa
+da documentação do próprio componente**. A saída certa nunca é traduzir o
+exemplo — é o scanner ler só o código.
+
+⚠️⚠️ **E a primeira tentativa de conserto era pior que o problema.** O regex
+`(^|[^:])\/\/[^
+]*` apagava **o resto de qualquer linha em que uma STRING
+contivesse `//`** — caso vivo em `completar-cadastro.tsx:218`
+(`!retorno.startsWith("//")`). Testado: um `t("REAL")` na mesma linha **sumia da
+varredura**, ou seja o modo de falha era **remover dívida da contagem em
+silêncio**. Guarda que esconde o problema é pior que guarda nenhuma.
+
+⇒ **`scripts/semComentarios.mjs`** é um autômato de 1 caractere que respeita
+string (aspas, apóstrofo, crase e escape), **preserva comprimento e quebras de
+linha** (pra linha/coluna de relatório continuarem batendo) e é **régua ÚNICA**:
+o scanner e `test/reguas.test.ts` importam dela. Havia duas implementações
+divergentes, ambas por regex e **nenhuma testada** — agora tem 6 casos no portão.
+
+Efeito colateral bom: sem contar comentário, as **strings soltas caíram de 32
+para 31** e o teto desceu junto (neste repo o teto só desce).
 
 ## Visão geral
 

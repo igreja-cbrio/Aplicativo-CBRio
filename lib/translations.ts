@@ -60,6 +60,10 @@ export const TRANSLATIONS: Record<string, Traducao> = {
 
   // ───────────────── Comuns / botões ─────────────────
   "Cancelar": { en: "Cancel", es: "Cancelar" },
+  // ───── Diálogo da casa (11/08) · components/ui/Dialogo.tsx ─────
+  // ⚠️ Rótulos PADRÃO do diálogo: só aparecem quando quem chama não passa
+  // `acao`/`cancelar`. Quem chama deve dizer o VERBO ("Sair do grupo"), não "OK".
+  "OK": { en: "OK", es: "OK" },
   "Confirmar": { en: "Confirm", es: "Confirmar" },
   "Salvar": { en: "Save", es: "Guardar" },
   "Salvar alterações": { en: "Save changes", es: "Guardar cambios" },

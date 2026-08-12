@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -21,6 +20,7 @@ import { pedirEntrarGrupo } from "@/lib/grupos";
 import { getTemporadaGrupos } from "@/lib/temporadaGrupos";
 import { useAdminGrupo } from "@/lib/useAdminGrupo";
 import { useT } from "@/lib/i18n";
+import { useDialogo } from "@/components/ui/Dialogo";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { diaHorario } from "./grupos";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -53,6 +53,7 @@ export default function GrupoDetalheScreen() {
   const { membro } = useMembro();
   const { isAdmin } = useAdminGrupo(id);
   const t = useT();
+  const dlg = useDialogo();
 
   const [grupo, setGrupo] = useState<GrupoDetalhe | null>(null);
   const [estado, setEstado] = useState<Estado>("carregando");
@@ -145,15 +146,16 @@ export default function GrupoDetalheScreen() {
   // líder — e recusar um pedido custa conversa dos dois lados.
   // ⚠️ O nome do grupo entra na pergunta de propósito: o deep link e o mapa
   // levam direto pra esta tela, e a pessoa pode não saber em qual grupo está.
-  function confirmarParticipar() {
-    Alert.alert(
-      t("Pedir para entrar?"),
-      `${t("Vamos enviar seu pedido para o líder de")} ${grupo?.nome || t("Grupo")}.`,
-      [
-        { text: t("Cancelar"), style: "cancel" },
-        { text: t("Enviar pedido"), onPress: () => { void participar(); } },
-      ],
-    );
+  async function confirmarParticipar() {
+    // ⚠️ Diálogo DA CASA (11/08) — era o `Alert` nativo quadrado, a reclamação
+    // que o Marcos fez duas vezes. Esta tela não tem nenhum <Modal>, então o
+    // diálogo é o único container nativo em cena: caso sem risco de ordem.
+    const ok = await dlg.confirmar({
+      titulo: t("Pedir para entrar?"),
+      mensagem: `${t("Vamos enviar seu pedido para o líder de")} ${grupo?.nome || t("Grupo")}.`,
+      acao: t("Enviar pedido"),
+    });
+    if (ok) void participar();
   }
 
   async function participar() {
@@ -299,6 +301,8 @@ export default function GrupoDetalheScreen() {
           </>
         )}
       </ScrollView>
+          {/* Diálogo da casa · IRMÃO do conteúdo (ver components/ui/Dialogo.tsx) */}
+      <dlg.Dialogo />
     </SafeAreaView>
   );
 }
