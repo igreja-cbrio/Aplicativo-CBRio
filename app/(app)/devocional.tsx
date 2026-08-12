@@ -133,6 +133,14 @@ export default function DevocionalScreen() {
       setTimeout(() => setCelebra(false), 4000);
       await load(false);
     } catch (e) {
+      // ⚠️ O check-in grava DIRETO no Supabase (lib/devocional.ts), então não existe
+      // log de runtime na Vercel — sem esta linha, a falha só aparece quando alguém
+      // reporta (foi o que aconteceu em 12/08). `reason` é a mensagem do PostgREST
+      // (código + texto do banco), nunca dado da pessoa.
+      trackEvento("devocional_checkin_erro", {
+        screen: "devocional",
+        reason: e instanceof Error ? e.message : String(e),
+      });
       Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível registrar."));
     }
     setSalvando(false);
