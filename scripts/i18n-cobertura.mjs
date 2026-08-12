@@ -39,7 +39,7 @@ const RAIZ = process.cwd();
 // Depois de fechar perfil, escala-supervisor, grupo-visita e grupo-editar
 // (Onda 2/3): **293 e 36**. O grosso do que sobra é `completar-cadastro.tsx`
 // (~40 chaves) e o resto espalhado — ver a listagem que este script imprime.
-const TETO_SEM_TRADUCAO = 273;
+const TETO_SEM_TRADUCAO = 270;   // 273 -> 270 em 11/08 (o portao so desce)
 const TETO_SOLTAS = 31;   // 32 -> 31 em 11/08: o scanner parou de contar comentário
 
 function varrer(dir, saida = []) {
