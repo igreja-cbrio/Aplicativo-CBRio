@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Linking, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -22,6 +22,9 @@ import {
 } from "@/lib/proximoBatismo";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
+/** Espelho do que `GET /public/batismo/horarios` devolve (utils/batismoHorario no ERP). */
+type HorarioBatismo = { horario: string; label: string; vagas_restantes: number | null };
+
 export default function InscricaoBatismoScreen() {
   const { user } = useAuth();
   const { membro, loading } = useMembro();
@@ -43,10 +46,29 @@ export default function InscricaoBatismoScreen() {
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
   const [grupoUrl, setGrupoUrl] = useState<string | null>(null);
+  const [horarios, setHorarios] = useState<HorarioBatismo[]>([]);
+  const [horarioSel, setHorarioSel] = useState<string | null>(null);
 
+  // ⚠️ A lista de horários vem do SERVIDOR (`GET /public/batismo/horarios`, a
+  // MESMA que o formulário público consome). O app NÃO decide o que está aberto
+  // nem quanta vaga sobra — é a lei "quem decide o que é válido é o backend".
+  // A resposta já esconde fechado e lotado; se falhar, o seletor simplesmente
+  // não aparece e a inscrição segue sem horário (o campo é opcional no
+  // servidor), em vez de travar a pessoa.
   useEffect(() => {
-    apiGet<{ grupo_url?: string | null }>("/public/batismo/horarios", { auth: false })
-      .then((r) => setGrupoUrl(r?.grupo_url ?? null))
+    apiGet<{ grupo_url?: string | null; horarios?: HorarioBatismo[] }>(
+      "/public/batismo/horarios",
+      { auth: false }
+    )
+      .then((r) => {
+        setGrupoUrl(r?.grupo_url ?? null);
+        const lista = Array.isArray(r?.horarios) ? r.horarios : [];
+        setHorarios(lista);
+        // Se o horário escolhido saiu da lista (fechou ou lotou entre a abertura
+        // da tela e agora), a seleção some — senão a pessoa envia algo que o
+        // servidor vai recusar com 409.
+        setHorarioSel((sel) => (sel && lista.some((h) => h.horario === sel) ? sel : null));
+      })
       .catch(() => {});
   }, []);
 
@@ -112,6 +134,7 @@ ${t("Próximo batismo")}: ${formatProximoBatismo(proxDt)}` : "";
           possui_deficiencia: deficiencia,
           deficiencia_descricao: deficiencia ? deficienciaDesc.trim() || null : null,
           observacoes: obs.trim() || null,
+          horario_culto: horarioSel,
           cpf: membro?.cpf || null,
           membro_id: membro?.membroId ?? null,
         },
@@ -191,6 +214,35 @@ ${t("Próximo batismo")}: ${formatProximoBatismo(proxDt)}` : "";
           maxLength={10}
         />
       )}
+      {/* Horário do culto · só aparece quando o servidor devolveu opção aberta.
+          Lista vazia (tudo fechado/lotado, ou falha de rede) = sem seletor: a
+          inscrição continua valendo, e a equipe combina o horário depois. */}
+      {horarios.length > 0 && (
+        <View style={styles.horariosBox}>
+          <Text style={styles.horariosLabel}>{t("Horário do culto")}</Text>
+          <Text style={styles.horariosHint}>
+            {t("Escolha em qual culto você quer ser batizado(a).")}
+          </Text>
+          <View style={styles.horariosLista}>
+            {horarios.map((h) => {
+              const ativo = horarioSel === h.horario;
+              return (
+                <Pressable
+                  key={h.horario}
+                  onPress={() => setHorarioSel(ativo ? null : h.horario)}
+                  style={[styles.chip, ativo && styles.chipAtivo]}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: ativo }}
+                >
+                  <Text style={[styles.chipTexto, ativo && styles.chipTextoAtivo]}>
+                    {h.label || h.horario}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      )}
       <Input label={t("Tamanho da camisa (opcional)")} value={camisa} onChangeText={setCamisa} placeholder="P / M / G / GG" />
       <Checkbox
         checked={deficiencia}
@@ -236,6 +288,21 @@ const makeStyles = (colors: Palette) =>
     },
     bannerData: { color: "#fff", fontSize: font.size.lg, fontWeight: "900", marginTop: 2 },
     bannerSub: { color: "rgba(255,255,255,0.92)", fontSize: font.size.sm, marginTop: 2 },
+    horariosBox: { gap: spacing.xs },
+    horariosLabel: { color: colors.text, fontSize: font.size.sm, fontWeight: "700" },
+    horariosHint: { color: colors.textMuted, fontSize: font.size.sm },
+    horariosLista: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.xs },
+    chip: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      backgroundColor: colors.surface,
+    },
+    chipAtivo: { borderColor: colors.primary, backgroundColor: colors.primary },
+    chipTexto: { color: colors.text, fontSize: font.size.sm, fontWeight: "600" },
+    chipTextoAtivo: { color: "#fff" },
     jaBatizadoBox: {
       padding: spacing.md,
       borderRadius: radius.md,
