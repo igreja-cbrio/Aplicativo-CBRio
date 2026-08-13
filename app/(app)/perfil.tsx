@@ -174,10 +174,18 @@ export default function PerfilScreen() {
     }
     setSaving(true);
     try {
-      // 1) Atualiza a própria linha em profiles (nome + telefone)
+      // 1) Atualiza a própria linha em profiles (só o nome).
+      //
+      // ⚠️ TELEFONE NÃO VAI MAIS AQUI (13/08/2026): gravar o valor CRU aqui
+      // ("+55 21 99999-9999" · 13 dígitos com código de país) poluía a fonte
+      // canônica `profiles.telefone` e quebrava o dedup por telefone do
+      // sistema. Quem padroniza é o SERVIDOR: o PUT /membro/perfil sanea o
+      // cadastro (mem_membros em dígitos) e espelha `profiles.telefone` no
+      // formato canônico "(21) 99999-9999" — a mesma máscara do /perfil do
+      // sistema e do app Staff.
       const { error: pErr } = await supabase
         .from("profiles")
-        .update({ name: name.trim(), telefone: telefone.trim() || null })
+        .update({ name: name.trim() })
         .eq("id", user.id);
       if (pErr) throw pErr;
 
