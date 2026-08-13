@@ -1176,4 +1176,16 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Comece a digitar o nome": { en: "Start typing the name", es: "Empieza a escribir el nombre" },
   "Busque pelo nome do grupo ou do líder": { en: "Search by group or leader name", es: "Busca por el nombre del grupo o del líder" },
   "Usar": { en: "Use", es: "Usar" },
+
+  // ───────────────── Portão de atualização (11/08) ─────────────────
+  // TelaLoja (piso de versão) + TelaAplicacao (auto-aplicar do OTA · 13/08).
+  // "Tentar de novo" já está no bloco de comuns, acima.
+  "Atualize o app": { en: "Update the app", es: "Actualiza la app" },
+  "Esta versão do app ficou para trás e não recebe mais atualizações automáticas. Baixe a versão nova na loja para continuar.": { en: "This version of the app is outdated and no longer receives automatic updates. Download the new version from the store to continue.", es: "Esta versión de la app se quedó atrás y ya no recibe actualizaciones automáticas. Descarga la versión nueva en la tienda para continuar." },
+  "Abrir a loja": { en: "Open the store", es: "Abrir la tienda" },
+  "A atualização é obrigatória para manter o app funcionando com o sistema da igreja.": { en: "The update is required to keep the app working with the church system.", es: "La actualización es obligatoria para que la app siga funcionando con el sistema de la iglesia." },
+  "Atualizando…": { en: "Updating…", es: "Actualizando…" },
+  "Não foi possível aplicar": { en: "Could not apply the update", es: "No se pudo aplicar" },
+  "Uma versão nova do app já está no seu aparelho. O app reinicia em um segundo.": { en: "A new version of the app is already on your device. The app restarts in a second.", es: "Una versión nueva de la app ya está en tu dispositivo. La app se reinicia en un segundo." },
+  "Toque abaixo para tentar de novo.": { en: "Tap below to try again.", es: "Toca abajo para intentar de nuevo." },
 };

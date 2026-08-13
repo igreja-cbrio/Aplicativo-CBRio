@@ -17,8 +17,13 @@
 // quem está com internet ruim TRANCADO FORA do app — inclusive offline, onde o
 // app funciona hoje. É a diferença entre "obrigatório" e "inutilizável".
 //
-// ⚠️ Sem botão de "depois", por decisão dele. O único botão aplica; se aplicar
-// falhar, o botão vira "tentar de novo" (mesma ação, não é escape).
+// ⚠️ AUTO-APLICAR (13/08/2026) — ação obrigatória e sem custo não pede botão.
+// O bundle JÁ está no aparelho (`isUpdatePending`); aplicar é troca local (~1s).
+// O portão desmontava a árvore inteira a cada flip do estado nativo → "piscando"
+// (e o botão, disparado com o startup ainda rodando, reiniciava no MESMO bundle
+// → loop). Agora a aplicação roda num efeito reativo com guardas de transição e
+// o render fica preso numa SPLASH de marca até o reload (ou o fallback "tentar
+// de novo" em caso de falha). Sem botão não há como não atualizar.
 // ⚠️ No-op em desenvolvimento (`expo-updates` desligado) — senão a tela apareceria
 // em dev e no Expo Go, onde `reloadAsync` nem existe.
 // ============================================================================
@@ -206,7 +211,7 @@ export function PortaoAtualizacao({ children }: { children: React.ReactNode }) {
   const colors = useColors();
   const styles = makeStyles(colors);
   const t = useT();
-  const { isUpdatePending } = Updates.useUpdates();
+  const { isUpdatePending, isChecking, isDownloading, isStartupProcedureRunning } = Updates.useUpdates();
   const [aplicando, setAplicando] = useState(false);
   const [falhou, setFalhou] = useState(false);
   const baixouNestaSessao = useBuscaAtualizacao();
@@ -227,6 +232,36 @@ export function PortaoAtualizacao({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // ⚠️ AUTO-APLICAR (13/08/2026): ação obrigatória e sem custo não pede botão.
+  // Sempre que o bundle novo JÁ está no aparelho (`isUpdatePending`) e estamos
+  // num ponto seguro (abertura ou volta do background, fora de formulário e com
+  // o startup/check/download assentado), aplica sozinho. É o padrão canônico do
+  // expo-updates (`if (isUpdatePending) reloadAsync()`).
+  //
+  // ⚠️ POR QUE as guardas de transição:
+  //   · `!isChecking && !isDownloading && !isStartupProcedureRunning` — se o
+  //     startup procedure ainda roda (ou o download está em voo), `reloadAsync`
+  //     reinicia no MESMO bundle e o `isUpdatePending` acende de novo → o loop
+  //     do "clico e fica piscando". Esperar assentado fecha isso.
+  //   · `!baixouNestaSessao` — update baixado NESTA sessão de tela acesa espera
+  //     o próximo ciclo (não interrompe quem está usando).
+  //   · `!fichaAberta` — não apaga o `/completar-cadastro`.
+  // A aplicação fica num efeito reativo (nunca num handler), então não há janela
+  // em que o render alterne entre o portão e a árvore do app.
+  const prontoParaAplicar =
+    Updates.isEnabled &&
+    isUpdatePending &&
+    !baixouNestaSessao &&
+    !fichaAberta &&
+    !isChecking &&
+    !isDownloading &&
+    !isStartupProcedureRunning;
+
+  useEffect(() => {
+    if (prontoParaAplicar) aplicar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prontoParaAplicar]);
+
   // ⚠️ `Updates.isEnabled` é false em dev/Expo Go — ali o portão não existe.
   // ⚠️ ORDEM IMPORTA: o piso da LOJA vem primeiro. Quem está abaixo dele não
   // recebe OTA nenhum (o manifesto devolve 204 pra runtime que não existe mais),
@@ -234,38 +269,53 @@ export function PortaoAtualizacao({ children }: { children: React.ReactNode }) {
   if (piso.bloquear) return <TelaLoja piso={piso} colors={colors} styles={styles} t={t} />;
 
   // ⚠️ `Updates.isEnabled` é false em dev/Expo Go — ali o portão não existe.
-  if (!Updates.isEnabled || !isUpdatePending || baixouNestaSessao || fichaAberta) return <>{children}</>;
+  // Não há botão: com `isUpdatePending` e ponto seguro, o efeito acima já
+  // aplicou (aplicando=true) e a tela abaixo é uma SPLASH DE APLICAÇÃO, estável
+  // até o reload acontecer ou falhar (então vira "tentar de novo").
+  if (aplicando || falhou) return <TelaAplicacao aplicando={aplicando} onTentar={aplicar} colors={colors} styles={styles} t={t} />;
 
+  return <>{children}</>;
+}
+
+/** Splash de aplicação do bundle novo — estável enquanto `reloadAsync` roda. */
+function TelaAplicacao({
+  aplicando,
+  onTentar,
+  colors,
+  styles,
+  t,
+}: {
+  aplicando: boolean;
+  onTentar: () => void;
+  colors: Palette;
+  styles: ReturnType<typeof makeStyles>;
+  t: (s: string) => string;
+}) {
   return (
     <View style={styles.tela}>
       <View style={styles.miolo}>
         <CbrioHeart size={54} />
         <View style={styles.textos}>
-          <Text style={styles.titulo}>{t("Atualização pronta")}</Text>
+          <Text style={styles.titulo}>{aplicando ? t("Atualizando…") : t("Não foi possível aplicar")}</Text>
           <Text style={styles.corpo}>
-            {t("Uma versão nova do app já está no seu aparelho. Para continuar, aplique a atualização — o app reinicia em um segundo.")}
+            {aplicando
+              ? t("Uma versão nova do app já está no seu aparelho. O app reinicia em um segundo.")
+              : t("Toque abaixo para tentar de novo.")}
           </Text>
-          {falhou && (
-            <Text style={styles.erro}>
-              {t("Não conseguimos aplicar agora. Toque de novo.")}
-            </Text>
+          {!aplicando && (
+            <Pressable
+              style={styles.botao}
+              onPress={onTentar}
+              accessibilityRole="button"
+            >
+              <Text style={styles.botaoTxt}>{t("Tentar de novo")}</Text>
+            </Pressable>
           )}
         </View>
-        <Pressable
-          style={[styles.botao, aplicando && styles.botaoOcupado]}
-          onPress={aplicar}
-          disabled={aplicando}
-          accessibilityRole="button"
-        >
-          {aplicando ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.botaoTxt}>{falhou ? t("Tentar de novo") : t("Atualizar agora")}</Text>
-          )}
-        </Pressable>
-        {/* Sem "depois": decisão do Marcos — código antigo conversando com o
-            backend novo é o que quebra o sistema. */}
-        <Text style={styles.rodape}>{t("A atualização é obrigatória para manter o app funcionando com o sistema da igreja.")}</Text>
+        {aplicando && <ActivityIndicator color={colors.primary} />}
+        <Text style={styles.rodape}>
+          {t("A atualização é obrigatória para manter o app funcionando com o sistema da igreja.")}
+        </Text>
       </View>
     </View>
   );
@@ -278,12 +328,10 @@ function makeStyles(c: Palette) {
     textos: { alignItems: "center", gap: spacing.sm },
     titulo: { color: c.text, fontSize: 25, fontWeight: "800", letterSpacing: -0.5, textAlign: "center" },
     corpo: { color: c.textMuted, fontSize: font.size.md, textAlign: "center", lineHeight: 22 },
-    erro: { color: c.danger, fontSize: font.size.sm, textAlign: "center", marginTop: 2 },
     botao: {
       backgroundColor: c.primary, minHeight: 52, borderRadius: 16, alignSelf: "stretch",
       alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.lg,
     },
-    botaoOcupado: { opacity: 0.75 },
     botaoTxt: { color: "#fff", fontSize: 16, fontWeight: "700" },
     rodape: { color: c.textMuted, fontSize: 12.5, textAlign: "center", opacity: 0.8 },
   });
