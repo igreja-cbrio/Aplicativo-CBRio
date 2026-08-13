@@ -2166,6 +2166,27 @@ regra) — essas tres telas ainda mostram so a mensagem do servidor, sem botao.
 cadastro e continuar bloqueado na inscricao. Alinhar as duas reguas e decisao de
 produto pendente.
 
+## ⚠️ Batismo · seletor de HORÁRIO na inscrição (2026-08-13)
+
+Pedido do Marcos: *"na inscrição de batismo, tenha a mesma opção de escolher os
+horários abertos que tem no formulário de inscrição"*. A tela **já chamava**
+`GET /public/batismo/horarios` desde sempre — só usava o `grupo_url` e
+**descartava a lista**.
+
+- `inscricao-batismo.tsx` renderiza chips com o que o SERVIDOR mandou e envia
+  `horario_culto` no payload. **O app não decide nada**: o endpoint já esconde
+  fechado e lotado (régua `utils/batismoHorario.js` no ERP). É a lei "quem
+  decide o que é válido é o BACKEND" — não replicar `aberto`/`limite` aqui.
+- ⚠️ **Lista vazia = seletor não aparece**, e a inscrição segue valendo (o campo
+  é opcional no servidor). Falha de rede não pode virar tela travada num
+  formulário que a pessoa já preencheu.
+- ⚠️ **Seleção que sumiu da lista é limpa** no refetch: horário que fechou ou
+  lotou entre abrir a tela e enviar levaria **409** do servidor.
+- ⚠️ Do lado do ERP (mesma leva): o fan-out **não copiava** `horario_culto` pro
+  `batismo_inscricoes` — sem a migration `20260813120000` o horário era validado
+  e **descartado em silêncio**. Bundle antigo, que não manda o campo, continua
+  gravando NULL exatamente como hoje.
+
 ## Telas mortas e ambiguas · decisoes de 05/08/2026
 
 - **Mortas**: `/inscricao-grupos` apagada (acidental). **`/inscricao-next` FICA**

@@ -651,6 +651,11 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "dia": { en: "day", es: "día" },
   "Sempre no 4º domingo do mês.": { en: "Always on the 4th Sunday of the month.", es: "Siempre el 4º domingo del mes." },
   "Tamanho da camisa (opcional)": { en: "Shirt size (optional)", es: "Talla de camiseta (opcional)" },
+  "Horário do culto": { en: "Service time", es: "Horario del culto" },
+  "Escolha em qual culto você quer ser batizado(a).": {
+    en: "Choose which service you want to be baptized in.",
+    es: "Elige en qué culto quieres ser bautizado(a).",
+  },
   "Possui alguma deficiência ou limitação física?": { en: "Do you have any disability or physical limitation?", es: "¿Tienes alguna discapacidad o limitación física?" },
   "Descreva a limitação": { en: "Describe the limitation", es: "Describe la limitación" },
   "Conte como podemos te ajudar": { en: "Tell us how we can help you", es: "Cuéntanos cómo podemos ayudarte" },
