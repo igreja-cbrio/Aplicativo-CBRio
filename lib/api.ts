@@ -8,6 +8,7 @@
 // Use api.get / api.post sempre que precisar falar com o backend.
 
 import { supabase } from "./supabase";
+import type { Marcadores } from "./marcadoresJornada";
 
 // Usar `www.` direto: cbrio.org -> www.cbrio.org redireciona 307 e
 // alguns clients dropam o header Authorization na hora de seguir.
@@ -670,6 +671,13 @@ export type GrupoMembro = {
   funcao: string | null;
   entrou_em: string | null;
   presencas: number | null;
+  /**
+   * Marcadores de jornada (batismo · Next · servir · devocional). Quem decide
+   * o que entra aqui é o SERVIDOR — generosidade nunca chega por esta rota.
+   * Opcional: servidor antigo não manda, e a tela só deixa de desenhar.
+   * Ver `lib/marcadoresJornada.ts`.
+   */
+  marcadores?: Marcadores | null;
 };
 export type GrupoRoster = {
   grupo: {
