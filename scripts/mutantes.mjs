@@ -425,6 +425,14 @@ const MUTANTES = [
     para: "    if (!tok) continue;",
   },
   {
+    // O botao do cartao renderizava "Add to Apple Wallet" no ANDROID e baixava
+    // um .pkpass que o Google Wallet nem abre.
+    nome: "carteira: mandar o Android pra Apple Wallet",
+    arq: "lib/carteira.ts",
+    de: '  if (os === "android") return "google";',
+    para: '  if (os === "android") return "apple";',
+  },
+  {
     // Com a secao "Minhas escalas" RECOLHIDA por padrao, o cabecalho e a unica
     // coisa que a pessoa ve. Escala sem data legivel virando "nao pende" some
     // do aviso e a coordenacao fica sem resposta.
