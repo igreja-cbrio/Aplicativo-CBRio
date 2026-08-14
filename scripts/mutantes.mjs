@@ -424,6 +424,15 @@ const MUTANTES = [
     de: "    if (!tok || vistos.has(tok)) continue;",
     para: "    if (!tok) continue;",
   },
+  {
+    // Com a secao "Minhas escalas" RECOLHIDA por padrao, o cabecalho e a unica
+    // coisa que a pessoa ve. Escala sem data legivel virando "nao pende" some
+    // do aviso e a coordenacao fica sem resposta.
+    nome: "escalas: escala sem data deixar de contar como pendente",
+    arq: "lib/resumoEscalas.ts",
+    de: "  if (!e.data) return true;",
+    para: "  if (!e.data) return false;",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

@@ -33,6 +33,21 @@ const isoDe = (ano: number, mes: number, dia: number) =>
 
 type Props = {
   visivel: boolean;
+  /**
+   * ⚠️⚠️ Renderiza SÓ o cartão, sem `<Modal>` — é o que faz o calendário
+   * funcionar quando ele é aberto de dentro de outro modal (13/08/2026).
+   *
+   * O relato: no iPhone, tocar em "Escolher" no modal "Bloquear datas" **não
+   * abria calendário nenhum**. A causa: `<Modal>` é container NATIVO,
+   * apresentado a partir do view controller da tela — um segundo modal, irmão,
+   * pedido enquanto o primeiro está apresentado, nasce ATRÁS dele. (No Android
+   * a pilha de Dialog perdoava, e foi por isso que passou no teste de 07/08.)
+   *
+   * ⇒ Quem abre calendário de dentro de um modal usa `embutido` e o renderiza
+   * DENTRO da janela que já está aberta. Aninhar `<Modal>` em `<Modal>` seria a
+   * outra saída, e é justamente a que não tem precedente neste repo.
+   */
+  embutido?: boolean;
   titulo: string;
   /** Data já escolhida, em DD/MM/AAAA (abre o calendário no mês dela). */
   valor?: string | null;
@@ -46,6 +61,7 @@ type Props = {
 
 export function CalendarioBR({
   visivel,
+  embutido,
   titulo,
   valor,
   minimoISO,
@@ -103,17 +119,9 @@ export function CalendarioBR({
     onEscolher(`${pad(dia)}/${pad(cursor.mes + 1)}/${cursor.ano}`);
   }
 
-  return (
-    <Modal
-      visible={visivel}
-      transparent
-      animationType="fade"
-      onRequestClose={onFechar}
-      statusBarTranslucent
-    >
-      <Pressable style={styles.fundo} onPress={onFechar}>
-        {/* Toque dentro do cartão não fecha o modal. */}
-        <Pressable style={styles.cartao} onPress={() => {}}>
+  const cartao = (
+    /* Toque dentro do cartão não fecha o modal. */
+    <Pressable style={styles.cartao} onPress={() => {}}>
           <View style={styles.topo}>
             <Text style={styles.titulo}>{titulo}</Text>
             <Pressable onPress={onFechar} hitSlop={10} accessibilityLabel={t("Fechar")}>
@@ -187,8 +195,20 @@ export function CalendarioBR({
               );
             })}
           </View>
-        </Pressable>
-      </Pressable>
+    </Pressable>
+  );
+
+  if (embutido) return visivel ? cartao : null;
+
+  return (
+    <Modal
+      visible={visivel}
+      transparent
+      animationType="fade"
+      onRequestClose={onFechar}
+      statusBarTranslucent
+    >
+      <Pressable style={styles.fundo} onPress={onFechar}>{cartao}</Pressable>
     </Modal>
   );
 }

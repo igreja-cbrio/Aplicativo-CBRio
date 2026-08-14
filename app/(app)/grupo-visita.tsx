@@ -468,6 +468,21 @@ export default function GrupoVisitaScreen() {
           o Marcos encontrou foi justamente a menos óbvia (o voltar). */}
       <Modal visible={aberto} transparent animationType="fade" onRequestClose={fecharRegistro} statusBarTranslucent>
         <TecladoSeguro style={styles.modalFundo}>
+          {/* ⚠️⚠️ O calendário fica DENTRO desta janela (13/08/2026): como
+              <Modal> irmão ele nascia ATRÁS deste no iPhone e o toque em
+              "Data do encontro" não abria nada — o mesmo defeito medido no
+              modal de bloquear datas do voluntariado. */}
+          {calendario ? (
+            <CalendarioBR
+              embutido
+              visivel
+              titulo={t("Data do encontro")}
+              valor={dataBR}
+              hojeISO={hojeBRT()}
+              onFechar={() => setCalendario(false)}
+              onEscolher={(d) => { setDataBR(d); setErroForm(null); setCalendario(false); }}
+            />
+          ) : (
           <View style={styles.modalCartao}>
             <View style={styles.modalTopo}>
               <Text style={styles.titulo}>{t("Registrar encontro")}</Text>
@@ -575,6 +590,7 @@ export default function GrupoVisitaScreen() {
               <Button title={t("Salvar")} onPress={salvar} loading={salvando} />
             </View>
           </View>
+          )}
         </TecladoSeguro>
       </Modal>
 
@@ -670,14 +686,6 @@ export default function GrupoVisitaScreen() {
         </Pressable>
       </Modal>
 
-      <CalendarioBR
-        visivel={calendario}
-        titulo={t("Data do encontro")}
-        valor={dataBR}
-        hojeISO={hojeBRT()}
-        onFechar={() => setCalendario(false)}
-        onEscolher={(d) => { setDataBR(d); setErroForm(null); setCalendario(false); }}
-      />
     </SafeAreaView>
   );
 }
