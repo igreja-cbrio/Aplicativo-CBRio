@@ -601,6 +601,9 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Você não tem escalas futuras no momento.": { en: "You have no upcoming schedules right now.", es: "No tienes escalas futuras por el momento." },
   "Escala": { en: "Schedule", es: "Escala" },
   "Confirmada": { en: "Confirmed", es: "Confirmada" },
+  // Resumo do cabeçalho das seções recolhidas da aba Servir (13/08/2026).
+  "aguarda você": { en: "awaiting you", es: "te espera" },
+  "aguardam você": { en: "awaiting you", es: "te esperan" },
   "Inscrição enviada!": { en: "Registration sent!", es: "¡Inscripción enviada!" },
   "Recebemos sua inscrição de voluntariado. Em breve a equipe fala com você. 💙": { en: "We received your volunteer registration. The team will reach out soon. 💙", es: "Recibimos tu inscripción de voluntariado. El equipo te contactará pronto. 💙" },
   "Você já tem uma inscrição": { en: "You already have a registration", es: "Ya tienes una inscripción" },

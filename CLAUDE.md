@@ -2166,6 +2166,63 @@ regra) — essas tres telas ainda mostram so a mensagem do servidor, sem botao.
 cadastro e continuar bloqueado na inscricao. Alinhar as duas reguas e decisao de
 produto pendente.
 
+## ⚠️⚠️ SERVIR · seções recolhidas + o calendário que não abria (2026-08-14)
+
+Três apontamentos do Matheus na aba Servir, testando no iPhone.
+
+### 1 · "Minhas escalas" e "Histórico de check-in" abrem RECOLHIDAS
+
+Pedido dele: a aba abria com uma parede de cartões (ele tem 8 escalas
+confirmadas + histórico). `components/ui/SecaoRecolhivel.tsx` é o padrão —
+fechada por padrão, e os filhos **nem renderizam** enquanto está fechada.
+
+⚠️⚠️ **Recolher só é honesto se o cabeçalho disser o que ficou lá dentro.** O
+cabeçalho leva a contagem e, quando há escala esperando resposta, uma pastilha
+âmbar (`3 aguardam você`). Régua em **`lib/resumoEscalas.ts`** (pura, no portão,
+com mutante): pendente é o que a pessoa **ainda pode responder** —
+`confirmed`/`declined` não pendem (ela já respondeu) e escala que passou também
+não (a tela nem oferece confirmar depois do culto). ⚠️ Data ausente ou ilegível
+conta como **pendente**: abrir à toa é barato, perder a escala não.
+
+⚠️ O estado dura enquanto a tela vive (a barra reaproveita a instância, por
+`navigate`). Não é persistido: quem abre e volta na mesma sessão encontra aberto;
+quem entra do zero encontra fechado, que foi o pedido.
+
+### 2 · 🔴 O calendário do "Bloquear datas" NÃO ABRIA no iPhone
+
+Relato: *"não consigo clicar na data para adicionar o período indisponível;
+quando clico não abre calendário nenhum"*.
+
+**A causa é de camada nativa, não de toque.** `<Modal>` é container **nativo**,
+apresentado a partir do view controller da tela — e o `CalendarioBR` era um
+`<Modal>` **irmão** do modal do formulário. Pedir o segundo enquanto o primeiro
+está apresentado o faz nascer **atrás**: o toque funcionava, o calendário abria,
+e ninguém via.
+
+⚠️⚠️ **E este repo tinha registrado o oposto**: o CLAUDE.md dizia que dois
+`<Modal>` irmãos simultâneos funcionam "desde 07/08", citando este mesmo arquivo.
+O que provou aquilo foi um teste em **Android**, onde a pilha de `Dialog`
+perdoa. **A premissa valia pra uma plataforma só.**
+
+⇒ `CalendarioBR` ganhou a prop **`embutido`**: renderiza só o cartão, sem
+`<Modal>`. Quem abre calendário de dentro de um modal o desenha **na janela que
+já está aberta**, no lugar do formulário (o formulário não perde nada — as datas
+e o motivo moram no estado do componente pai). Aninhar `<Modal>` em `<Modal>`
+seria a outra saída, e é justamente a que não tem precedente aqui.
+
+⚠️ **O mesmo defeito estava em `/grupo-visita`** (a tela do supervisor), com o
+mesmo padrão — corrigido junto. Era o único outro consumidor do calendário.
+
+### 3 · O "Recusar" da escala confirmada era invisível
+
+Era um link cinza sublinhado ao lado do "Confirmada". Virou botão de verdade
+(borda e texto em `danger`, ícone, área de toque de botão), **embaixo** do
+status em vez de espremido ao lado. Quem não pode ir precisa avisar a
+coordenação — e avisar tarde custa a vaga do domingo.
+
+⚠️ Nada disto foi executado em aparelho por mim: o portão (193 testes · 56/56
+mutantes) cobre a RÉGUA do resumo, não a tela nem a camada de modal.
+
 ## ⚠️ Batismo · seletor de HORÁRIO na inscrição (2026-08-13)
 
 Pedido do Marcos: *"na inscrição de batismo, tenha a mesma opção de escolher os

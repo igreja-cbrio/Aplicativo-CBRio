@@ -29,6 +29,7 @@ import { linkDeInscricao, ehPorConvite, precisaEscolherNaLista } from "@/lib/con
 import { acaoAoFechar, temRascunho } from "@/lib/descartarRascunho";
 import { casaBusca, normalizarBusca, filtrarPorTexto } from "@/lib/buscaTexto";
 import { ehDomingo, indiceDoDestaque } from "@/lib/homeCultos";
+import { escalaPendeResposta, resumoEscalas } from "@/lib/resumoEscalas";
 import { OPCOES_PORTA, opcaoPorTipo, podeEnviar, ehDaPortaUnica } from "@/lib/portaUnica";
 import { normalizarVoluntariadoMe } from "@/lib/voluntariadoMe";
 import {
@@ -1773,5 +1774,55 @@ describe("aviso de grupo · o app tem que rotear o tipo que o ERP manda", () => 
     // teste passa a procurar outra coisa (foi o que aconteceu na 1ª versão).
     expect(src, "sem ícone, o aviso aparece sem símbolo na lista").toContain(`${TIPO}: "`);
     expect(src, "sem categoria, o aviso não cai no chip Grupos").toContain('"Grupos"');
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// RESUMO DAS ESCALAS · o cabeçalho da seção RECOLHIDA (13/08/2026)
+//
+// ⚠️⚠️ A aba Servir passou a abrir com "Minhas escalas" e "Histórico de
+// check-in" FECHADAS (pedido do Matheus). Recolher só é honesto se o cabeçalho
+// disser o que ficou lá dentro — a escala que espera resposta é justamente a
+// que não pode sumir atrás do triângulo.
+// ════════════════════════════════════════════════════════════════════════════
+describe("resumo das escalas · o que o cabeçalho recolhido anuncia", () => {
+  const AGORA = new Date("2026-08-14T12:00:00-03:00");
+  const futura = "2026-08-16T11:30:00";
+  const passada = "2026-08-01T11:30:00";
+
+  it("⚠️ pendente é só o que a pessoa AINDA pode responder", () => {
+    expect(escalaPendeResposta({ confirmation_status: null, data: futura }, AGORA)).toBe(true);
+    expect(escalaPendeResposta({ confirmation_status: "pending", data: futura }, AGORA)).toBe(true);
+    // Já respondeu — ninguém está esperando por ela (nem no "recusada", que a
+    // tela deixa reconfirmar).
+    expect(escalaPendeResposta({ confirmation_status: "confirmed", data: futura }, AGORA)).toBe(false);
+    expect(escalaPendeResposta({ confirmation_status: "declined", data: futura }, AGORA)).toBe(false);
+  });
+
+  it("⚠️ escala que já passou NÃO pede ação — a tela nem oferece confirmar", () => {
+    expect(escalaPendeResposta({ confirmation_status: null, data: passada }, AGORA)).toBe(false);
+  });
+
+  it("⚠️ MUTATION GUARD · sem data (ou data ilegível) conta como pendente", () => {
+    // Na dúvida a pessoa vê o aviso e abre. Abrir à toa é barato; perder a
+    // escala, não.
+    expect(escalaPendeResposta({ confirmation_status: null, data: null }, AGORA)).toBe(true);
+    expect(escalaPendeResposta({ confirmation_status: null, data: "amanhã" }, AGORA)).toBe(true);
+  });
+
+  it("o resumo conta o total e quantas esperam resposta", () => {
+    const r = resumoEscalas(
+      [
+        { confirmation_status: "confirmed", data: futura },
+        { confirmation_status: null, data: futura },
+        { confirmation_status: null, data: passada },
+      ],
+      AGORA
+    );
+    expect(r).toEqual({ total: 3, pendentes: 1 });
+  });
+
+  it("lista vazia não inventa número", () => {
+    expect(resumoEscalas([], AGORA)).toEqual({ total: 0, pendentes: 0 });
   });
 });

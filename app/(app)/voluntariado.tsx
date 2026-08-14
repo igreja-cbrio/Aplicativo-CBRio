@@ -36,6 +36,8 @@ import { isValidCPF, maskCPF, onlyDigits } from "@/lib/validators";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
+import { SecaoRecolhivel } from "@/components/ui/SecaoRecolhivel";
+import { resumoEscalas } from "@/lib/resumoEscalas";
 
 const MAX_AREAS = 3;
 
@@ -113,6 +115,9 @@ export default function VoluntariadoScreen() {
   useEffect(() => {
     carregarEscalas();
   }, [carregarEscalas]);
+
+  // O que o cabeçalho da seção recolhida diz (régua em lib/resumoEscalas.ts).
+  const resumoEsc = resumoEscalas(escalas, new Date());
 
   const [recusaId, setRecusaId] = useState<string | null>(null); // escala abrindo o modal de motivo
   const [recusandoId, setRecusandoId] = useState<string | null>(null); // em envio
@@ -325,7 +330,20 @@ export default function VoluntariadoScreen() {
             </View>
           ) : integrado ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t("Minhas escalas")}</Text>
+              {/* ⚠️ Recolhida por padrão (pedido do Matheus · 13/08/2026). O
+                  cabeçalho avisa quantas esperam resposta — escala que pede ação
+                  não pode ficar escondida atrás do triângulo. */}
+              <SecaoRecolhivel
+                titulo={t("Minhas escalas")}
+                resumo={
+                  carregandoEscalas
+                    ? null
+                    : resumoEsc.pendentes > 0
+                      ? `${resumoEsc.pendentes} ${resumoEsc.pendentes === 1 ? t("aguarda você") : t("aguardam você")}`
+                      : String(resumoEsc.total)
+                }
+                destaque={resumoEsc.pendentes > 0}
+              >
               {carregandoEscalas ? (
                 <Text style={styles.muted}>{t("Carregando…")}</Text>
               ) : escalas.length === 0 ? (
@@ -367,13 +385,26 @@ export default function VoluntariadoScreen() {
                           <Text style={styles.encerradoTxt}>{t("Encerrado")}</Text>
                         )
                       ) : confirmado ? (
-                        <View style={styles.escalaAcoes}>
+                        // ⚠️ "Recusar" era um link cinza sublinhado ao lado do
+                        // "Confirmada" e ninguém achava (relato do Matheus ·
+                        // 13/08/2026). Virou botão de verdade, embaixo do
+                        // status: quem não pode ir precisa avisar a coordenação,
+                        // e avisar tarde custa a vaga do domingo.
+                        <View style={styles.escalaAcoesCol}>
                           <View style={styles.confirmado}>
                             <Ionicons name="checkmark-circle" size={18} color={colors.success} />
                             <Text style={styles.confirmadoTxt}>{t("Confirmada")}</Text>
                           </View>
-                          <Pressable onPress={() => setRecusaId(e.id)} hitSlop={8} disabled={recusandoId === e.id} accessibilityRole="button" accessibilityLabel={t("Recusar")}>
-                            <Text style={styles.recusarLink}>{t("Recusar")}</Text>
+                          <Pressable
+                            onPress={() => setRecusaId(e.id)}
+                            hitSlop={8}
+                            disabled={recusandoId === e.id}
+                            accessibilityRole="button"
+                            accessibilityLabel={t("Recusar")}
+                            style={({ pressed }) => [styles.recusarBtn, pressed && { opacity: 0.6 }]}
+                          >
+                            <Ionicons name="close-circle-outline" size={15} color={colors.danger} />
+                            <Text style={styles.recusarTxt}>{t("Recusar")}</Text>
                           </Pressable>
                         </View>
                       ) : e.confirmation_status === "declined" ? (
@@ -383,7 +414,13 @@ export default function VoluntariadoScreen() {
                         </Pressable>
                       ) : (
                         <View style={styles.escalaAcoes}>
-                          <Pressable style={styles.recusarBtn} onPress={() => setRecusaId(e.id)} disabled={recusandoId === e.id}>
+                          <Pressable
+                            style={({ pressed }) => [styles.recusarBtn, pressed && { opacity: 0.6 }]}
+                            onPress={() => setRecusaId(e.id)}
+                            disabled={recusandoId === e.id}
+                            accessibilityRole="button"
+                          >
+                            <Ionicons name="close-circle-outline" size={15} color={colors.danger} />
                             <Text style={styles.recusarTxt}>{t("Recusar")}</Text>
                           </Pressable>
                           <Pressable style={styles.confirmarBtn} onPress={() => confirmar(e.id)} disabled={confirmandoId === e.id}>
@@ -395,11 +432,12 @@ export default function VoluntariadoScreen() {
                   );
                 })
               )}
+              </SecaoRecolhivel>
+
               {volProfileId && <Disponibilidade volProfileId={volProfileId} />}
 
               {historico.length > 0 && (
-                <View style={{ marginTop: spacing.lg }}>
-                  <Text style={styles.sectionTitle}>{t("Histórico de check-in")}</Text>
+                <SecaoRecolhivel titulo={t("Histórico de check-in")} resumo={String(historico.length)}>
                   {historico.map((h) => {
                     const det = [h.servico, h.data ? fmtDataIso(h.data) : null].filter(Boolean).join(" · ");
                     return (
@@ -415,7 +453,7 @@ export default function VoluntariadoScreen() {
                       </View>
                     );
                   })}
-                </View>
+                </SecaoRecolhivel>
               )}
             </View>
           ) : enviado ? (
@@ -684,11 +722,23 @@ const makeStyles = (colors: Palette) =>
     confirmado: { flexDirection: "row", alignItems: "center", gap: 4 },
     confirmadoTxt: { color: colors.success, fontSize: font.size.sm, fontWeight: "600" },
     escalaAcoes: { flexDirection: "row", alignItems: "center", gap: 8 },
-    recusarBtn: { borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.border },
-    recusarTxt: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "700" },
+    // Escala confirmada: status em cima, botão de recusar embaixo (o link
+    // discreto ao lado do "Confirmada" passava despercebido).
+    escalaAcoesCol: { alignItems: "flex-end", gap: 8 },
+    recusarBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      borderRadius: radius.full,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.danger,
+      backgroundColor: colors.danger + "14",
+    },
+    recusarTxt: { color: colors.danger, fontSize: font.size.sm, fontWeight: "700" },
     recusadaTag: { flexDirection: "row", alignItems: "center", gap: 4 },
     recusadaTxt: { color: colors.danger, fontSize: font.size.sm, fontWeight: "600" },
-    recusarLink: { color: colors.textMuted, fontSize: font.size.sm - 1, textDecorationLine: "underline" },
     encerradoTxt: { color: colors.textMuted, fontSize: font.size.sm, fontStyle: "italic" },
     modalWrap: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" },
     sheet: { backgroundColor: colors.background, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.lg, gap: spacing.md },

@@ -218,6 +218,28 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
         statusBarTranslucent
       >
         <TecladoSeguro          style={styles.modalFundo}>
+          {/*
+            ⚠️⚠️ O calendário vive DENTRO desta janela, no lugar do formulário —
+            não como um segundo <Modal> irmão (13/08/2026). Relato do Matheus no
+            iPhone: tocar em "Escolher" **não abria calendário nenhum**, porque o
+            modal do calendário nascia ATRÁS deste, que já estava apresentado.
+            O formulário não é desmontado: as datas e o motivo já digitados
+            continuam lá quando a pessoa volta.
+          */}
+          {calendario !== null ? (
+            <CalendarioBR
+              embutido
+              visivel
+              titulo={calendario === "ate" ? t("Até que dia?") : t("A partir de que dia?")}
+              valor={calendario === "ate" ? ate : de}
+              // Só a data FINAL tem piso: bloqueio que começou ontem e termina
+              // semana que vem é legítimo, e é o fim dele que protege a escala.
+              minimoISO={calendario === "ate" ? minimoAte : null}
+              hojeISO={hoje}
+              onFechar={() => setCalendario(null)}
+              onEscolher={escolherData}
+            />
+          ) : (
           <View style={styles.modalCartao}>
             <View style={styles.topo}>
               <Text style={styles.titulo}>{t("Bloquear datas")}</Text>
@@ -264,20 +286,9 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
               <Button title={t("Salvar")} onPress={salvar} loading={salvando} />
             </View>
           </View>
+          )}
         </TecladoSeguro>
       </Modal>
-
-      <CalendarioBR
-        visivel={calendario !== null}
-        titulo={calendario === "ate" ? t("Até que dia?") : t("A partir de que dia?")}
-        valor={calendario === "ate" ? ate : de}
-        // Só a data FINAL tem piso: bloqueio que começou ontem e termina semana
-        // que vem é legítimo, e é o fim dele que protege a escala.
-        minimoISO={calendario === "ate" ? minimoAte : null}
-        hojeISO={hoje}
-        onFechar={() => setCalendario(null)}
-        onEscolher={escolherData}
-      />
     </View>
   );
 }
