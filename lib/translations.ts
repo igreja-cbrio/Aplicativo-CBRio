@@ -601,6 +601,10 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Você não tem escalas futuras no momento.": { en: "You have no upcoming schedules right now.", es: "No tienes escalas futuras por el momento." },
   "Escala": { en: "Schedule", es: "Escala" },
   "Confirmada": { en: "Confirmed", es: "Confirmada" },
+  // Botão do cartão de membro no Android (14/08/2026).
+  "Salvar na": { en: "Save to", es: "Guardar en" },
+  "Carteira do Google": { en: "Google Wallet", es: "Google Wallet" },
+  "Salvar na Carteira do Google": { en: "Save to Google Wallet", es: "Guardar en Google Wallet" },
   // Resumo do cabeçalho das seções recolhidas da aba Servir (13/08/2026).
   "aguarda você": { en: "awaiting you", es: "te espera" },
   "aguardam você": { en: "awaiting you", es: "te esperan" },

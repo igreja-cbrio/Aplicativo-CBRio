@@ -2166,6 +2166,46 @@ regra) — essas tres telas ainda mostram so a mensagem do servidor, sem botao.
 cadastro e continuar bloqueado na inscricao. Alinhar as duas reguas e decisao de
 produto pendente.
 
+## ⚠️⚠️ CARTÃO · o Android via "Add to Apple Wallet" (2026-08-14)
+
+Pergunta do Matheus: *"o cartão de membro no Android tem a opção de adicionar à
+wallet do Google?"*. Não tinha — e o que havia era pior que a ausência.
+
+`cartoes.tsx` renderizava o `AddToWalletButton` **sem checar plataforma**. No
+Android o botão dizia literalmente **"Add to Apple Wallet"** (o fallback
+estilizado, porque o módulo nativo da Apple não existe lá) e o toque caía no
+ramo `Platform.OS !== "ios"` do `lib/wallet.ts`: gravava o `.pkpass` no cache e
+abria o **compartilhar** do sistema. **`.pkpass` é formato da Apple — o Google
+Wallet não o abre.** Beco sem saída, com o nome da carteira de outra plataforma.
+
+⚠️⚠️ **E o backend já tinha a porta certa há tempo, sem chamador no app:**
+`POST /api/public/membresia/wallet/google` (`backend/routes/publicMembresia.js`)
+devolve o link assinado `pay.google.com/gp/v/save/<jwt>` e recebe **o mesmo par
+CPF + data de nascimento** que o caminho da Apple. Medido em 14/08: o endpoint
+responde `400 CPF invalido` a um corpo inválido — ou seja, passa da checagem que
+devolveria `503 Google Wallet não configurado`, então **issuer, conta de serviço
+e chave estão configurados em produção**. A página pública de cartão do ERP
+(`MemberWalletPass.tsx`) já usa esse mesmo caminho.
+
+- **`lib/carteira.ts`** (pura, no portão, com mutante): `carteiraDe(os)` —
+  ios→apple, android→google, resto→`null` (plataforma sem carteira não ganha
+  botão) — e `motivoFalhaCarteira(status)`. ⚠️ **503 é da IGREJA, não do cadastro
+  da pessoa**: mandar alguém conferir o próprio CPF por causa de credencial que
+  falta no servidor é fazê-la procurar erro onde não há.
+- **`adicionarCartaoNaCarteira`** (`lib/wallet.ts`) é a porta única da tela.
+- ⚠️ **Sai por OTA**: o passe do Google é criado pelo SERVIDOR e entregue como
+  link — o app só abre. Nenhum módulo nativo no caminho (ao contrário da Apple,
+  que precisa do PassKit compilado).
+- ⚠️ **`Linking.openURL`, não navegador in-app**: o Android entrega o link ao app
+  da Carteira quando ele está instalado; num navegador embutido a pessoa salvaria
+  o passe numa sessão que não é a do aparelho dela.
+- ⚠️ O link tem ~1.6 mil caracteres (medido montando o mesmo `genericObject`),
+  dentro do limite prático do save link. Se o passe ganhar campos, conferir de
+  novo — acima de ~1,8 mil o Google recusa a URL.
+- ⏳ **O que só o teste real responde**: se o emissor no Google Console está
+  aprovado para PRODUÇÃO ou ainda em modo demo (em demo o passe salva, com aviso
+  de demonstração, e só pra quem está na lista de testadores).
+
 ## ⚠️⚠️ SERVIR · seções recolhidas + o calendário que não abria (2026-08-14)
 
 Três apontamentos do Matheus na aba Servir, testando no iPhone.

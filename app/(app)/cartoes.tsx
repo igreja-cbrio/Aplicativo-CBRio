@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -22,7 +23,8 @@ import { AddToWalletButton } from "@/components/cartao/AddToWalletButton";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { supabase } from "@/lib/supabase";
-import { adicionarWalletMembresia } from "@/lib/wallet";
+import { adicionarCartaoNaCarteira } from "@/lib/wallet";
+import { carteiraDe } from "@/lib/carteira";
 import { onlyDigits } from "@/lib/validators";
 import { brand, font, radius, spacing, type Palette } from "@/constants/theme";
 import { useT } from "@/lib/i18n";
@@ -124,8 +126,10 @@ export default function CartoesScreen() {
       return;
     }
     setWalletLoading(true);
+    // Rótulo de enum NOSSO (apple/google) — nunca texto digitado por ninguém.
+    trackEvento("cartao_wallet", { label: carteiraDe(Platform.OS) ?? "nenhuma" });
     try {
-      await adicionarWalletMembresia(onlyDigits(cpf), nascimento);
+      await adicionarCartaoNaCarteira(onlyDigits(cpf), nascimento);
     } catch (e) {
       setErro(e instanceof Error ? e.message : t("Não foi possível abrir a Wallet."));
     } finally {

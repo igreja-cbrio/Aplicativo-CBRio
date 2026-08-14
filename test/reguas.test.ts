@@ -30,6 +30,7 @@ import { acaoAoFechar, temRascunho } from "@/lib/descartarRascunho";
 import { casaBusca, normalizarBusca, filtrarPorTexto } from "@/lib/buscaTexto";
 import { ehDomingo, indiceDoDestaque } from "@/lib/homeCultos";
 import { escalaPendeResposta, resumoEscalas } from "@/lib/resumoEscalas";
+import { carteiraDe, motivoFalhaCarteira } from "@/lib/carteira";
 import { OPCOES_PORTA, opcaoPorTipo, podeEnviar, ehDaPortaUnica } from "@/lib/portaUnica";
 import { normalizarVoluntariadoMe } from "@/lib/voluntariadoMe";
 import {
@@ -1824,5 +1825,35 @@ describe("resumo das escalas · o que o cabeçalho recolhido anuncia", () => {
 
   it("lista vazia não inventa número", () => {
     expect(resumoEscalas([], AGORA)).toEqual({ total: 0, pendentes: 0 });
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// CARTEIRA DIGITAL · cada plataforma na SUA (14/08/2026)
+//
+// ⚠️⚠️ O botão do cartão de membro era renderizado sem checar plataforma: o
+// ANDROID via "Add to Apple Wallet" e o toque baixava um `.pkpass` — formato da
+// Apple, que o Google Wallet nem abre. O destino do Android é o link assinado
+// que o backend já emitia (`POST /public/membresia/wallet/google`) e que
+// ninguém chamava.
+// ════════════════════════════════════════════════════════════════════════════
+describe("carteira digital · plataforma e falha", () => {
+  it("⚠️ MUTATION GUARD · Android vai pra Carteira do Google, nunca pra Apple", () => {
+    expect(carteiraDe("android")).toBe("google");
+    expect(carteiraDe("ios")).toBe("apple");
+  });
+
+  it("plataforma sem carteira conhecida não promete botão", () => {
+    expect(carteiraDe("web")).toBeNull();
+    expect(carteiraDe("windows")).toBeNull();
+  });
+
+  it("⚠️ 503 é da IGREJA, não do cadastro da pessoa", () => {
+    // Mandar alguém conferir o próprio CPF por causa de credencial que falta no
+    // servidor é fazê-la procurar erro onde não há.
+    expect(motivoFalhaCarteira(503)).toBe("nao_configurado");
+    expect(motivoFalhaCarteira(404)).toBe("sem_cadastro");
+    expect(motivoFalhaCarteira(400)).toBe("dado_invalido");
+    expect(motivoFalhaCarteira(500)).toBe("outro");
   });
 });

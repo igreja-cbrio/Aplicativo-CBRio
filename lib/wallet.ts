@@ -1,7 +1,8 @@
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
-import { Platform } from "react-native";
+import { Linking, Platform } from "react-native";
 import ApplePay from "../modules/apple-pay";
+import { carteiraDe, motivoFalhaCarteira } from "./carteira";
 
 // API do ERP CBRio (mesma app). O .pkpass é gerado on-demand e devolvido binário.
 // Usa o host canônico (www) direto: o apex cbrio.org responde 307 e o fetch do
@@ -96,6 +97,59 @@ export async function adicionarWalletMembresia(
     body: JSON.stringify({ cpf, data_nascimento: dataNascimentoISO }),
   });
   await abrirPkpass(resp, "cbrio-cartao");
+}
+
+/**
+ * Cartão único na **Carteira do Google** (Android) — mesmo par CPF + nascimento
+ * do caminho da Apple.
+ *
+ * ⚠️ O `.pkpass` NÃO serve aqui: é formato da Apple, e o Google Wallet nem o
+ * abre. O passe do Google é criado pelo SERVIDOR e entregue como um link
+ * assinado (`pay.google.com/gp/v/save/<jwt>`) — a única coisa que o app faz é
+ * abrir esse link, e é por isso que isto sai por OTA: nenhum módulo nativo no
+ * caminho.
+ *
+ * ⚠️ `Linking.openURL` (e não o navegador in-app) de propósito: o Android
+ * entrega o link ao app da Carteira quando ele está instalado. Num navegador
+ * embutido a pessoa acabaria salvando o passe numa sessão que não é a do
+ * aparelho dela.
+ */
+export async function salvarNaCarteiraGoogle(
+  cpf: string,
+  dataNascimentoISO: string | null
+) {
+  const resp = await fetchComTimeout(`${API}/public/membresia/wallet/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ cpf, data_nascimento: dataNascimentoISO }),
+  });
+
+  if (!resp.ok) {
+    const MENSAGENS: Record<ReturnType<typeof motivoFalhaCarteira>, string> = {
+      nao_configurado: "A Carteira do Google ainda não está disponível para o cartão. Fale com a secretaria.",
+      sem_cadastro: "Não achamos seu cadastro com esse CPF e data de nascimento.",
+      dado_invalido: "Confira o CPF e a data de nascimento no seu perfil.",
+      outro: "Não foi possível gerar o cartão agora.",
+    };
+    throw new Error(MENSAGENS[motivoFalhaCarteira(resp.status)]);
+  }
+
+  const dados = (await resp.json().catch(() => null)) as { url?: string } | null;
+  // ⚠️ Resposta sem `url` não pode virar toque em nada: melhor dizer que falhou
+  // do que abrir uma tela em branco do navegador.
+  if (!dados?.url) throw new Error("Não foi possível gerar o cartão agora.");
+  await Linking.openURL(dados.url);
+}
+
+/** A porta única da tela: cada plataforma vai pra carteira que ela tem. */
+export async function adicionarCartaoNaCarteira(
+  cpf: string,
+  dataNascimentoISO: string | null
+) {
+  if (carteiraDe(Platform.OS) === "google") {
+    return salvarNaCarteiraGoogle(cpf, dataNascimentoISO);
+  }
+  return adicionarWalletMembresia(cpf, dataNascimentoISO);
 }
 
 /** Passe de voluntário (autenticado) — caso precise separado no futuro. */

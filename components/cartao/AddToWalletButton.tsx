@@ -1,5 +1,6 @@
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -7,6 +8,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AddPassButton, addPassButtonNativo } from "@/modules/apple-pay";
+import { carteiraDe } from "@/lib/carteira";
+import { useT } from "@/lib/i18n";
 
 type Props = {
   onPress: () => void;
@@ -27,6 +30,39 @@ type Props = {
  * sem o módulo nativo, cai num botão estilizado com o ícone da carteira.
  */
 export function AddToWalletButton({ onPress, loading, disabled }: Props) {
+  const t = useT();
+
+  // ⚠️⚠️ ANDROID NÃO VÊ MAIS "Apple Wallet" (14/08/2026). Este componente era
+  // renderizado sem checar plataforma: no Android aparecia o nome da carteira de
+  // outra plataforma e o toque baixava um `.pkpass`, que o Google Wallet nem
+  // abre. Lá o destino é a Carteira do Google (`lib/wallet.ts`).
+  if (carteiraDe(Platform.OS) === "google") {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t("Salvar na Carteira do Google")}
+        onPress={onPress}
+        disabled={disabled || loading}
+        style={({ pressed }) => [
+          styles.button,
+          (pressed || disabled || loading) && styles.pressed,
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <View style={styles.content}>
+            <Ionicons name="wallet" size={24} color="#FFFFFF" style={styles.icon} />
+            <View>
+              <Text style={styles.addTo}>{t("Salvar na")}</Text>
+              <Text style={styles.wallet}>{t("Carteira do Google")}</Text>
+            </View>
+          </View>
+        )}
+      </Pressable>
+    );
+  }
+
   if (addPassButtonNativo && !loading) {
     return <AddPassButton onPress={onPress} disabled={disabled} />;
   }
