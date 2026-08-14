@@ -61,6 +61,7 @@ import {
   type GrupoEncontro, type GrupoMaterial, type FuncaoApp,
 } from "@/lib/api";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
+import { chavesVisiveis, MARCADOR_INFO } from "@/lib/marcadoresJornada";
 
 type Aba = "membros" | "frequencia" | "pedidos" | "estudos";
 // ⚠️ SEM ÍCONE e com rótulo curto: 4 abas em 328 dp dão ~80 dp cada, e ícone
@@ -695,6 +696,28 @@ export default function GrupoMembrosScreen() {
                             <View style={{ flex: 1, minWidth: 0 }}>
                               <Text style={styles.nome} numberOfLines={1}>{m.nome}</Text>
                               {!!detalhe && <Text style={styles.pequeno} numberOfLines={1}>{detalhe}</Text>}
+                              {/* Jornada · o pedido do Pr. Nélio (13/08/2026).
+                                  Chips DISCRETOS de propósito: o comentário do
+                                  avatar acima vale aqui também — o olho tem que
+                                  ler NOMES. Cor só no texto, fundo neutro.
+                                  ⚠️ Sem chip NÃO significa "não fez" — significa
+                                  que o sistema não tem registro. Por isso a tela
+                                  não escreve nada quando a lista está vazia. */}
+                              {(() => {
+                                const chaves = chavesVisiveis(m.marcadores);
+                                if (!chaves.length) return null;
+                                return (
+                                  <View style={styles.marcLinha}>
+                                    {chaves.map((c) => (
+                                      <View key={c} style={styles.marcChip}>
+                                        <Text style={[styles.marcTxt, { color: MARCADOR_INFO[c].cor }]}>
+                                          {t(MARCADOR_INFO[c].curto)}
+                                        </Text>
+                                      </View>
+                                    ))}
+                                  </View>
+                                );
+                              })()}
                             </View>
                             {ehPrincipal && (
                               <View style={styles.papelBadge}><Text style={styles.papelTxt}>{t("Principal")}</Text></View>
@@ -1125,6 +1148,16 @@ function makeStyles(c: Palette) {
       borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border,
     },
     nome: { color: c.text, fontSize: font.size.md, fontWeight: "600" },
+
+    // marcadores de jornada · fundo neutro, cor só no texto (ver o comentário
+    // do avatar logo abaixo: a linha é pra ler NOME, não enfeite)
+    marcLinha: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 4 },
+    marcChip: {
+      borderWidth: StyleSheet.hairlineWidth, borderColor: c.border,
+      borderRadius: radius.full, paddingHorizontal: 6, paddingVertical: 1.5,
+    },
+    marcTxt: { fontSize: 10, fontWeight: "700" },
+
     // avatar NEUTRO de propósito: 5 círculos teal eram 5 chamarizes.
     avatarSm: {
       height: 36, width: 36, borderRadius: 18, alignItems: "center", justifyContent: "center",
