@@ -24,10 +24,14 @@ type Props = {
   enviando: boolean;
   erroEnvio?: string | null;
   onEnviar: (respostas: Respostas, consentimento: boolean) => void;
+  /** Inset de baixo do aparelho (barra de gestos). Vem de quem monta, porque
+   *  dentro de um `<Modal>` o SafeAreaView não recebe inset nenhum. */
+  folgaAbaixo?: number;
 };
 
 export default function FormCenso({
   perguntas, consentimentoTexto, valoresIniciais, enviando, erroEnvio, onEnviar,
+  folgaAbaixo = 0,
 }: Props) {
   const colors = useColors();
   const s = useMemo(() => makeStyles(colors), [colors]);
@@ -107,25 +111,36 @@ export default function FormCenso({
   }
 
   return (
-    <ScrollView
-      ref={rolagem}
-      style={{ flex: 1 }}
-      contentContainerStyle={s.conteudo}
-      keyboardShouldPersistTaps="handled"
-    >
-      {/* progresso */}
-      <View style={s.progressoLinha}>
-        <Text style={s.progressoTexto}>
-          {t("Parte")} {idx + 1} {t("de")} {blocos.length}
-        </Text>
-        <Text style={s.progressoTexto}>
-          {prog.feitas} {t("de")} {prog.total} {t("respondidas")}
-        </Text>
-      </View>
-      <View style={s.barra}>
-        <View style={[s.barraCheia, { width: `${prog.pct}%` }]} />
+    <View style={{ flex: 1 }}>
+      {/* ⚠️ O progresso fica FORA da rolagem (17/08/2026). Dentro dela ele subia
+          junto com o conteúdo, então num bloco de 6 perguntas a pessoa perdia de
+          vista em que parte está — que é justamente o que segura alguém num
+          questionário de 31 perguntas. Aqui ele fica sempre à vista, e a barra
+          de progresso vira a única coisa que se move sozinha na tela. */}
+      <View style={s.topoFixo}>
+        <View style={s.progressoLinha}>
+          <Text style={s.progressoTexto}>
+            {t("Parte")} {idx + 1} {t("de")} {blocos.length}
+          </Text>
+          <Text style={s.progressoTexto}>
+            {prog.feitas} {t("de")} {prog.total} {t("respondidas")}
+          </Text>
+        </View>
+        <View style={s.barra}>
+          <View style={[s.barraCheia, { width: `${prog.pct}%` }]} />
+        </View>
       </View>
 
+      <ScrollView
+        ref={rolagem}
+        style={{ flex: 1 }}
+        contentContainerStyle={[s.conteudo, { paddingBottom: spacing.xl * 2 + folgaAbaixo }]}
+        keyboardShouldPersistTaps="handled"
+        // iOS-only (no-op no Android): rola até o campo que recebeu o foco — é o
+        // que o padding do TecladoSeguro não faz sozinho.
+        automaticallyAdjustKeyboardInsets
+        keyboardDismissMode="interactive"
+      >
       {!!bloco.titulo && <Text style={s.blocoTitulo}>{bloco.titulo}</Text>}
 
       {bloco.perguntas.map((p) => (
@@ -205,20 +220,28 @@ export default function FormCenso({
       </View>
 
       {enviando && <ActivityIndicator style={{ marginTop: spacing.md }} color={colors.primary} />}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 function makeStyles(c: Palette) {
   return StyleSheet.create({
-    conteudo: { padding: spacing.lg, paddingBottom: spacing.xl * 2, gap: spacing.md },
+    conteudo: { padding: spacing.lg, gap: spacing.md },
     centro: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.lg },
     texto: { color: c.textMuted, fontSize: font.size.md, textAlign: "center" },
+    topoFixo: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.sm,
+      gap: spacing.xs,
+      backgroundColor: c.background,
+    },
     progressoLinha: { flexDirection: "row", justifyContent: "space-between" },
     progressoTexto: { color: c.textMuted, fontSize: font.size.sm },
     barra: { height: 6, borderRadius: radius.full, backgroundColor: c.surfaceAlt, overflow: "hidden" },
     barraCheia: { height: 6, borderRadius: radius.full, backgroundColor: c.primary },
-    blocoTitulo: { color: c.text, fontSize: font.size.lg, fontWeight: "700", marginTop: spacing.sm },
+    blocoTitulo: { color: c.text, fontSize: font.size.lg, fontWeight: "700" },
     campo: { gap: spacing.xs },
     label: { color: c.text, fontSize: font.size.md, lineHeight: 21 },
     obrigatoria: { color: c.textMuted },
