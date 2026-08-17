@@ -83,6 +83,7 @@ export default function EscalaSupervisorScreen() {
 
   const [servicoSel, setServicoSel] = useState<EscalaServico | null>(null);
   const [escala, setEscala] = useState<EscalaItem[]>([]);
+  const [equipesDoCulto, setEquipesDoCulto] = useState<string[]>([]);
   const [carregandoEscala, setCarregandoEscala] = useState(false);
   const [refrescando, setRefrescando] = useState(false);
   const [recolhidos, setRecolhidos] = useState<Set<string>>(new Set());
@@ -167,7 +168,11 @@ export default function EscalaSupervisorScreen() {
 
   const carregarEscala = useCallback(async (serviceId: string) => {
     setCarregandoEscala(true);
-    try { setEscala(await getEscala(serviceId)); }
+    try {
+      const resposta = await getEscala(serviceId);
+      setEscala(resposta.escalas || []);
+      setEquipesDoCulto(resposta.equipes || []);
+    }
     catch (e: any) { Alert.alert(t("Erro"), e?.message || t("Erro ao carregar a escala")); }
     finally { setCarregandoEscala(false); }
   }, []);
@@ -181,13 +186,21 @@ export default function EscalaSupervisorScreen() {
   async function refrescar() {
     if (!servicoSel) return;
     setRefrescando(true);
-    try { setEscala(await getEscala(servicoSel.id)); await carregarServicos(); }
+    try {
+      const resposta = await getEscala(servicoSel.id);
+      setEscala(resposta.escalas || []);
+      setEquipesDoCulto(resposta.equipes || []);
+      await carregarServicos();
+    }
     catch { /* silencioso no pull */ }
     finally { setRefrescando(false); }
   }
 
   const grupos = useMemo(() => {
     const m = new Map<string, EscalaItem[]>();
+    // A composição do culto vem antes das escalas existentes: uma área vazia
+    // continua visível e o supervisor pode adicionar a primeira pessoa nela.
+    for (const equipe of equipesDoCulto) m.set(equipe, []);
     for (const e of escala) {
       const k = e.team_name || SEM_EQUIPE;
       const arr = m.get(k) || [];
@@ -197,7 +210,7 @@ export default function EscalaSupervisorScreen() {
     for (const [, lista] of arr) lista.sort((a, b) => a.volunteer_name.localeCompare(b.volunteer_name, "pt-BR"));
     arr.sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
     return arr;
-  }, [escala]);
+  }, [escala, equipesDoCulto]);
 
   const equipes = useMemo(() => grupos.map(([t]) => t).filter(t => t !== SEM_EQUIPE), [grupos]);
   const resumo = useMemo(() => ({

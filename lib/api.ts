@@ -184,6 +184,7 @@ export type EscalaItem = {
   confirmation_status: string | null;
   recusa_motivo?: string | null;
 };
+export type EscalaResposta = { escalas: EscalaItem[]; equipes: string[] };
 export type PoolVoluntario = { id: string; full_name: string; planning_center_id: string | null };
 
 export function getSupervisorInfo() {
@@ -193,7 +194,7 @@ export function getEscalaServicos() {
   return apiGet<{ areas: string[]; servicos: EscalaServico[] }>("/app/voluntariado/escala/servicos");
 }
 export function getEscala(serviceId: string) {
-  return apiGet<EscalaItem[]>(`/app/voluntariado/escala/${serviceId}`);
+  return apiGet<EscalaResposta>(`/app/voluntariado/escala/${serviceId}`);
 }
 export function buscarEscalaPool(q: string) {
   return apiGet<PoolVoluntario[]>(`/app/voluntariado/escala-pool?q=${encodeURIComponent(q)}`);
