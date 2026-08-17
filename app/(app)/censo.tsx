@@ -21,7 +21,6 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -33,6 +32,7 @@ import { Stack, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
@@ -68,12 +68,21 @@ function dataCurta(iso: string | null | undefined) {
 export default function CensoScreen() {
   const colors = useColors();
   const t = useT();
-  // ⚠️ Insets lidos AQUI, no corpo da tela — de propósito. Dentro de um `Modal`
+  // ⚠️⚠️ Insets lidos AQUI, no corpo da tela — de propósito. Dentro de um `Modal`
   // do React Native o SafeAreaView do safe-area-context não recebe inset nenhum
   // (o modal é outra hierarquia nativa, e o provider vive na raiz do app), então
   // `edges={["top"]}` não aplicava NADA: o cabeçalho com o X ficava por trás da
   // Dynamic Island. O hook, chamado fora do modal, devolve o valor certo e a
   // gente aplica na mão.
+  //
+  // ⚠️⚠️ E VALE NAS DUAS PLATAFORMAS (17/08/2026). Antes era
+  // `Platform.OS === "ios" ? insets.top : 0`, apostando que o Android desenharia
+  // o modal ABAIXO da barra de status. Com **edge-to-edge ligado** (default do
+  // SDK 54 · medido e registrado no CLAUDE.md) essa aposta é falsa: o modal
+  // desenha de ponta a ponta e o cabeçalho com o X ficava por baixo do relógio
+  // e da bateria — foi o "topo quase saindo da tela" que o Matheus reportou.
+  // Com `statusBarTranslucent` o comportamento deixa de ser aposta: o modal
+  // SEMPRE começa em y=0, e o inset é sempre a compensação correta.
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -234,11 +243,13 @@ export default function CensoScreen() {
             {!!dataCurta(p.fecha_em) && (
               <Text style={styles.rodape}>{t("Aberto até")} {dataCurta(p.fecha_em)}.</Text>
             )}
-            <Button
-              title={t("Responder o censo")}
-              onPress={abrirFormulario}
-              disabled={!status.url}
-            />
+            <View style={styles.acaoLarga}>
+              <Button
+                title={t("Responder o censo")}
+                onPress={abrirFormulario}
+                disabled={!status.url}
+              />
+            </View>
           </GlassCard>
         )}
       </ScrollView>
@@ -253,14 +264,38 @@ export default function CensoScreen() {
           app NÃO tenta improvisar nem esconde a pergunta — manda para a web.
           Esconder faria a pessoa enviar o censo sem responder algo que existe,
           e o gráfico daquela pergunta ficaria vazio sem ninguém entender. */}
-      <Modal visible={abrindo} animationType="slide" onRequestClose={() => setAbrindo(false)}>
-        <View style={[styles.modalSafe, { paddingTop: Platform.OS === "ios" ? insets.top : 0 }]}>
-          <View style={styles.header}>
-            <Pressable onPress={() => setAbrindo(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
-              <Ionicons name="close" size={26} color={colors.text} />
+      <Modal
+        visible={abrindo}
+        animationType="slide"
+        onRequestClose={() => setAbrindo(false)}
+        statusBarTranslucent
+        navigationBarTranslucent
+      >
+        {/* ⚠️ `Math.max` com um piso: se por qualquer razão o inset vier 0 (modal
+            apresentado como sheet, aparelho sem notch, provider fora do ar), o
+            X ficaria encostado na borda de cima. Piso pequeno não estraga o
+            aparelho com notch (59 > 8) e salva o caso em que a medida falha. */}
+        <TecladoSeguro
+          style={[styles.modalSafe, { paddingTop: Math.max(insets.top, spacing.sm) }]}
+        >
+          {/* ⚠️ O título vem do servidor e é longo ("Censo CBRio 2026 · …"): sem
+              `flex: 1` + `numberOfLines` ele empurrava o X pra fora e quebrava a
+              barra em duas linhas. O X ganhou área de toque própria (44 dp) em
+              vez de depender só do hitSlop. */}
+          <View style={styles.modalHeader}>
+            <Pressable
+              onPress={() => setAbrindo(false)}
+              hitSlop={12}
+              style={styles.iconeToque}
+              accessibilityRole="button"
+              accessibilityLabel={t("Fechar")}
+            >
+              <Ionicons name="close" size={24} color={colors.text} />
             </Pressable>
-            <Text style={styles.headerTitle}>{p?.titulo ?? t("Censo")}</Text>
-            <View style={{ width: 26 }} />
+            <Text style={styles.modalTitulo} numberOfLines={1}>
+              {p?.titulo ?? t("Censo")}
+            </Text>
+            <View style={styles.iconeToque} />
           </View>
 
           {carregandoForm ? (
@@ -297,9 +332,10 @@ export default function CensoScreen() {
               enviando={enviando}
               erroEnvio={erroEnvio}
               onEnviar={enviarRespostas}
+              folgaAbaixo={insets.bottom}
             />
           ) : null}
-        </View>
+        </TecladoSeguro>
       </Modal>
     </SafeAreaView>
   );
@@ -318,10 +354,40 @@ function makeStyles(colors: Palette) {
     },
     headerTitle: { color: colors.text, fontSize: font.size.lg, fontWeight: "600" },
     scroll: { padding: spacing.lg, gap: spacing.md },
-    centro: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
+    centro: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: spacing.xl,
+      gap: spacing.sm,
+    },
     card: { padding: spacing.lg, gap: spacing.sm, borderRadius: radius.lg, alignItems: "flex-start" },
     titulo: { color: colors.text, fontSize: font.size.lg, fontWeight: "700" },
     texto: { color: colors.textMuted, fontSize: font.size.md, lineHeight: 21 },
     rodape: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 19, opacity: 0.85 },
+
+    // ── cabeçalho do modal do formulário ────────────────────────────────────
+    // Barra própria, com borda embaixo: o formulário rola por baixo dela, e sem
+    // a linha o título parecia flutuar no meio do conteúdo.
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: spacing.sm,
+      paddingBottom: spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    modalTitulo: {
+      flex: 1,
+      textAlign: "center",
+      color: colors.text,
+      fontSize: font.size.md,
+      fontWeight: "600",
+    },
+    iconeToque: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+
+    // Botão do cartão ocupa a largura toda: o card é `alignItems: flex-start`,
+    // então sem isto ele encolhia até o tamanho do texto.
+    acaoLarga: { alignSelf: "stretch", marginTop: spacing.xs },
   });
 }
