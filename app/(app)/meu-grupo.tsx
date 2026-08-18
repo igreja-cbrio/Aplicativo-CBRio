@@ -20,6 +20,7 @@ import { rotaDoGrupo, ehSupervisao } from "@/lib/papelGrupo";
 import { trackEvento } from "@/lib/telemetria";
 import { abrirRota } from "@/lib/navegacao";
 import { BuscadorGrupos } from "./grupos";
+import { ModalAgendaEncontro, type Ocorrencia } from "@/components/grupos/ModalAgendaEncontro";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Material = { id: string; nome: string; comentario: string | null; url: string | null };
@@ -38,6 +39,7 @@ type Grupo = {
   funcao: string | null;
   lider: { nome: string; telefone: string | null } | null;
   proximo_encontro: string | null;
+  proximas_ocorrencias?: Ocorrencia[];
   materiais: Material[];
 };
 
@@ -123,6 +125,14 @@ export default function MeuGrupoScreen() {
   // Papel de GESTÃO no grupo (vem de /app/meu-grupo: 'lider' quando o
   // mem_grupos.lider_id é o membro logado, mesmo sem linha no roster).
   const gerencia = (g: Grupo) => g.funcao === "lider" || g.funcao === "co_lider";
+
+  // Modal de remarcar/cancelar UMA ocorrencia (Nana . 18/08). Guarda o grupo
+  // junto: o alvo e sempre "esta ocorrencia deste grupo".
+  const [agenda, setAgenda] = useState<{ grupo: Grupo; oc: Ocorrencia } | null>(null);
+  const proximaOcorrencia = (g: Grupo): Ocorrencia | null => {
+    const l = g.proximas_ocorrencias || [];
+    return l.find((x) => x.status !== "cancelado") || l[0] || null;
+  };
 
   // Grupos que ele gerencia e que NÃO viraram card acima — na prática, os
   // SUPERVISIONADOS (os liderados já vêm do /app/meu-grupo por `lider_id`).
@@ -254,12 +264,48 @@ export default function MeuGrupoScreen() {
 
                 <Linha icon="calendar-outline" texto={quandoEncontro(g)} colors={colors} styles={styles} />
                 {g.local ? <Linha icon="location-outline" texto={g.local} colors={colors} styles={styles} /> : null}
-                {proximoLabel(g.proximo_encontro) ? (
-                  <View style={styles.proximo}>
-                    <Text style={styles.proximoLabel}>{t("Próximo encontro")}</Text>
-                    <Text style={styles.proximoData}>{proximoLabel(g.proximo_encontro)}</Text>
-                  </View>
-                ) : null}
+                {/* Box do próximo encontro. Pra quem GERENCIA vira botão:
+                    abre o modal de remarcar/cancelar aquela ocorrência
+                    (Naná · 18/08). Pra participante segue só informativo —
+                    ele não decide a agenda do grupo.
+                    ⚠️ Sem `proximo_encontro` mas COM ocorrências, todas as
+                    próximas estão canceladas: dizer isso é melhor que sumir
+                    com o box (o líder precisa poder desfazer). */}
+                {(() => {
+                  const oc = proximaOcorrencia(g);
+                  const label = proximoLabel(g.proximo_encontro);
+                  if (!label && !oc) return null;
+                  const conteudo = (
+                    <>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.proximoLabel}>{t("Próximo encontro")}</Text>
+                        <Text style={styles.proximoData}>
+                          {label || t("Sem encontro marcado — os próximos foram cancelados")}
+                        </Text>
+                        {oc && oc.status === "remarcado" ? (
+                          <Text style={styles.proximoTag}>{t("remarcado")}</Text>
+                        ) : null}
+                      </View>
+                      {gerencia(g) ? (
+                        <Ionicons name="create-outline" size={18} color={colors.textMuted} />
+                      ) : null}
+                    </>
+                  );
+                  if (!gerencia(g) || !oc) {
+                    return <View style={styles.proximo}>{conteudo}</View>;
+                  }
+                  return (
+                    <Pressable
+                      style={[styles.proximo, styles.proximoTocavel]}
+                      onPress={() => {
+                        trackEvento("grupo_agenda_abrir", { entity_id: g.id });
+                        setAgenda({ grupo: g, oc });
+                      }}
+                    >
+                      {conteudo}
+                    </Pressable>
+                  );
+                })()}
 
                 {/* ⚠️ Quem LIDERA o grupo não recebe "Falar com <ele mesmo>"
                     (o Marcos criou um grupo pra testar e viu "Falar com
@@ -388,6 +434,20 @@ export default function MeuGrupoScreen() {
         )}
       </ScrollView>
       )}
+
+      {/* ⚠️ Fica FORA do ScrollView: Modal aqui é container nativo e precisa
+          ser irmão do conteúdo, não filho da lista que rola. */}
+      <ModalAgendaEncontro
+        visivel={!!agenda}
+        grupoId={agenda?.grupo.id || ""}
+        grupoNome={agenda?.grupo.nome || ""}
+        ocorrencia={agenda?.oc || null}
+        onFechar={() => setAgenda(null)}
+        onSalvo={() => {
+          setAgenda(null);
+          carregar();
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -428,6 +488,8 @@ const makeStyles = (colors: Palette) =>
     linha: { flexDirection: "row", alignItems: "center", gap: 8 },
     linhaTxt: { color: colors.textMuted, fontSize: font.size.md },
     proximo: { backgroundColor: colors.glass, borderRadius: radius.md, padding: spacing.md, marginTop: 2 },
+    proximoTocavel: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+    proximoTag: { fontSize: font.size.sm, color: colors.warning, marginTop: 2, fontWeight: "600" },
     proximoLabel: { color: colors.brandMid, fontSize: font.size.sm, fontWeight: "700" },
     proximoData: { color: colors.text, fontSize: font.size.md, fontWeight: "600", marginTop: 2, textTransform: "capitalize" },
     liderInfo: { color: colors.textMuted, fontSize: font.size.sm },
