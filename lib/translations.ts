@@ -1220,4 +1220,5 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "remarcado": { en: "rescheduled", es: "reprogramado" },
   "às": { en: "at", es: "a las" },
   "Motivo": { en: "Reason", es: "Motivo" },
+  "Alterar data": { en: "Change date", es: "Cambiar fecha" },
 };

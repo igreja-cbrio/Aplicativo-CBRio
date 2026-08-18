@@ -275,7 +275,7 @@ export default function MeuGrupoScreen() {
                   const oc = proximaOcorrencia(g);
                   const label = proximoLabel(g.proximo_encontro);
                   if (!label && !oc) return null;
-                  const conteudo = (
+                  const conteudo = (tocavel: boolean) => (
                     <>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.proximoLabel}>{t("Próximo encontro")}</Text>
@@ -286,13 +286,21 @@ export default function MeuGrupoScreen() {
                           <Text style={styles.proximoTag}>{t("remarcado")}</Text>
                         ) : null}
                       </View>
-                      {gerencia(g) ? (
-                        <Ionicons name="create-outline" size={18} color={colors.textMuted} />
+                      {/* ⚠️ RÓTULO ESCRITO, não só o lápis. A 1ª versão (18/08)
+                          punha um `create-outline` cinza de 18px sozinho no
+                          canto: nem quem PEDIU a funcionalidade achou o
+                          caminho. Afordância que só quem escreveu enxerga não
+                          é afordância. */}
+                      {tocavel ? (
+                        <View style={styles.proximoAcao}>
+                          <Ionicons name="create-outline" size={16} color={colors.brandMid} />
+                          <Text style={styles.proximoAcaoTxt}>{t("Alterar data")}</Text>
+                        </View>
                       ) : null}
                     </>
                   );
                   if (!gerencia(g) || !oc) {
-                    return <View style={styles.proximo}>{conteudo}</View>;
+                    return <View style={styles.proximo}>{conteudo(false)}</View>;
                   }
                   return (
                     <Pressable
@@ -302,7 +310,7 @@ export default function MeuGrupoScreen() {
                         setAgenda({ grupo: g, oc });
                       }}
                     >
-                      {conteudo}
+                      {conteudo(true)}
                     </Pressable>
                   );
                 })()}
@@ -489,6 +497,8 @@ const makeStyles = (colors: Palette) =>
     linhaTxt: { color: colors.textMuted, fontSize: font.size.md },
     proximo: { backgroundColor: colors.glass, borderRadius: radius.md, padding: spacing.md, marginTop: 2 },
     proximoTocavel: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+    proximoAcao: { flexDirection: "row", alignItems: "center", gap: 4 },
+    proximoAcaoTxt: { color: colors.brandMid, fontSize: font.size.sm, fontWeight: "700" },
     proximoTag: { fontSize: font.size.sm, color: colors.warning, marginTop: 2, fontWeight: "600" },
     proximoLabel: { color: colors.brandMid, fontSize: font.size.sm, fontWeight: "700" },
     proximoData: { color: colors.text, fontSize: font.size.md, fontWeight: "600", marginTop: 2, textTransform: "capitalize" },
