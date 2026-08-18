@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "455103615384",
+    "project_id": "crm-cbrio",
+    "storage_bucket": "crm-cbrio.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:455103615384:android:ab3cb21b3af48f368d5bed",
+        "android_client_info": {
+          "package_name": "br.com.cbrio.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "455103615384-b6e4ubvj02pi7pgb0n8pu87505bfp3fs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBghicef9_w7_x-KchK30hoSbuT0G_8X9I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "455103615384-b6e4ubvj02pi7pgb0n8pu87505bfp3fs.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
