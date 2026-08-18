@@ -590,6 +590,37 @@ export function getEncontrosGrupo(grupoId: string): Promise<{ encontros: GrupoEn
 }
 
 /**
+ * A AGENDA do grupo até o fim da temporada (recorrência + exceções).
+ *
+ * ⚠️ Nenhuma destas datas é linha no banco: o encontro é DERIVADO de
+ * `dia_semana` + `horario` + `recorrencia`. O que se guarda é a EXCEÇÃO
+ * (remarcado/cancelado). O app não recalcula nada — inclusive a JANELA de
+ * remarcação (`remarcar_de`/`remarcar_ate`) vem pronta, pra não existirem duas
+ * réguas discordando sobre o que pode.
+ */
+export type OcorrenciaAgenda = {
+  data_original: string;
+  data: string;
+  horario: string;
+  inicio: string;
+  status: "normal" | "cancelado" | "remarcado";
+  motivo: string | null;
+  dia_semana: number;
+  pode_remarcar: boolean;
+  remarcar_de: string | null;
+  remarcar_ate: string | null;
+  ancora_incerta: boolean;
+};
+
+export function getAgendaGrupo(grupoId: string): Promise<{
+  grupo?: { id: string; nome: string; dia_semana: number | null; horario: string | null; recorrencia?: string };
+  ocorrencias: OcorrenciaAgenda[];
+  aviso?: string;
+}> {
+  return apiGet(`/app/grupos/${grupoId}/agenda`);
+}
+
+/**
  * O encontro ABERTO: quem esteve presente, com NOME.
  *
  * ⚠️ Sob demanda (ao tocar no card), não na lista: seriam 24 encontros × N

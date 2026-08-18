@@ -15,12 +15,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import type { Ocorrencia } from "@/components/grupos/ModalAgendaEncontro";
 import { apiGet, listarMeusGruposLider, type GrupoMeu } from "@/lib/api";
 import { rotaDoGrupo, ehSupervisao } from "@/lib/papelGrupo";
 import { trackEvento } from "@/lib/telemetria";
 import { abrirRota } from "@/lib/navegacao";
 import { BuscadorGrupos } from "./grupos";
-import { ModalAgendaEncontro, type Ocorrencia } from "@/components/grupos/ModalAgendaEncontro";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Material = { id: string; nome: string; comentario: string | null; url: string | null };
@@ -128,7 +128,6 @@ export default function MeuGrupoScreen() {
 
   // Modal de remarcar/cancelar UMA ocorrencia (Nana . 18/08). Guarda o grupo
   // junto: o alvo e sempre "esta ocorrencia deste grupo".
-  const [agenda, setAgenda] = useState<{ grupo: Grupo; oc: Ocorrencia } | null>(null);
   const proximaOcorrencia = (g: Grupo): Ocorrencia | null => {
     const l = g.proximas_ocorrencias || [];
     return l.find((x) => x.status !== "cancelado") || l[0] || null;
@@ -271,12 +270,17 @@ export default function MeuGrupoScreen() {
                     ⚠️ Sem `proximo_encontro` mas COM ocorrências, todas as
                     próximas estão canceladas: dizer isso é melhor que sumir
                     com o box (o líder precisa poder desfazer). */}
+                {/* ⚠️ Box INFORMATIVO. Gerenciar a agenda mudou pra tela de
+                    "Gerenciar grupo" (pedido do Marcos · 18/08): tudo o que o
+                    líder decide sobre o grupo fica numa tela só, em vez de
+                    espalhado entre esta e aquela. Aqui o participante só
+                    precisa saber QUANDO é o próximo. */}
                 {(() => {
                   const oc = proximaOcorrencia(g);
                   const label = proximoLabel(g.proximo_encontro);
                   if (!label && !oc) return null;
-                  const conteudo = (tocavel: boolean) => (
-                    <>
+                  return (
+                    <View style={styles.proximo}>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.proximoLabel}>{t("Próximo encontro")}</Text>
                         <Text style={styles.proximoData}>
@@ -286,32 +290,7 @@ export default function MeuGrupoScreen() {
                           <Text style={styles.proximoTag}>{t("remarcado")}</Text>
                         ) : null}
                       </View>
-                      {/* ⚠️ RÓTULO ESCRITO, não só o lápis. A 1ª versão (18/08)
-                          punha um `create-outline` cinza de 18px sozinho no
-                          canto: nem quem PEDIU a funcionalidade achou o
-                          caminho. Afordância que só quem escreveu enxerga não
-                          é afordância. */}
-                      {tocavel ? (
-                        <View style={styles.proximoAcao}>
-                          <Ionicons name="create-outline" size={16} color={colors.brandMid} />
-                          <Text style={styles.proximoAcaoTxt}>{t("Alterar data")}</Text>
-                        </View>
-                      ) : null}
-                    </>
-                  );
-                  if (!gerencia(g) || !oc) {
-                    return <View style={styles.proximo}>{conteudo(false)}</View>;
-                  }
-                  return (
-                    <Pressable
-                      style={[styles.proximo, styles.proximoTocavel]}
-                      onPress={() => {
-                        trackEvento("grupo_agenda_abrir", { entity_id: g.id });
-                        setAgenda({ grupo: g, oc });
-                      }}
-                    >
-                      {conteudo(true)}
-                    </Pressable>
+                    </View>
                   );
                 })()}
 
@@ -445,17 +424,6 @@ export default function MeuGrupoScreen() {
 
       {/* ⚠️ Fica FORA do ScrollView: Modal aqui é container nativo e precisa
           ser irmão do conteúdo, não filho da lista que rola. */}
-      <ModalAgendaEncontro
-        visivel={!!agenda}
-        grupoId={agenda?.grupo.id || ""}
-        grupoNome={agenda?.grupo.nome || ""}
-        ocorrencia={agenda?.oc || null}
-        onFechar={() => setAgenda(null)}
-        onSalvo={() => {
-          setAgenda(null);
-          carregar();
-        }}
-      />
     </SafeAreaView>
   );
 }
@@ -496,9 +464,6 @@ const makeStyles = (colors: Palette) =>
     linha: { flexDirection: "row", alignItems: "center", gap: 8 },
     linhaTxt: { color: colors.textMuted, fontSize: font.size.md },
     proximo: { backgroundColor: colors.glass, borderRadius: radius.md, padding: spacing.md, marginTop: 2 },
-    proximoTocavel: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-    proximoAcao: { flexDirection: "row", alignItems: "center", gap: 4 },
-    proximoAcaoTxt: { color: colors.brandMid, fontSize: font.size.sm, fontWeight: "700" },
     proximoTag: { fontSize: font.size.sm, color: colors.warning, marginTop: 2, fontWeight: "600" },
     proximoLabel: { color: colors.brandMid, fontSize: font.size.sm, fontWeight: "700" },
     proximoData: { color: colors.text, fontSize: font.size.md, fontWeight: "600", marginTop: 2, textTransform: "capitalize" },

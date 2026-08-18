@@ -53,6 +53,11 @@ type Props = {
   valor?: string | null;
   /** `YYYY-MM-DD` — dias ANTES deste ficam desabilitados. */
   minimoISO?: string | null;
+  /** `YYYY-MM-DD` — dias DEPOIS deste ficam desabilitados.
+   * ⚠️ Existe porque remarcar encontro de grupo tem teto (não pode alcançar o
+   * encontro seguinte). Sem o máximo, o calendário oferecia datas que o
+   * servidor recusa — e a pessoa só descobre depois de escolher. */
+  maximoISO?: string | null;
   /** `YYYY-MM-DD` em BRT: marca o "hoje" e é o mês inicial quando não há valor. */
   hojeISO: string;
   onFechar: () => void;
@@ -65,6 +70,7 @@ export function CalendarioBR({
   titulo,
   valor,
   minimoISO,
+  maximoISO,
   hojeISO,
   onFechar,
   onEscolher,
@@ -161,7 +167,7 @@ export function CalendarioBR({
             {celulas.map((dia, i) => {
               if (dia === null) return <View key={`v${i}`} style={styles.celula} />;
               const iso = isoDe(cursor.ano, cursor.mes, dia);
-              const bloqueado = !!minimoISO && iso < minimoISO;
+              const bloqueado = (!!minimoISO && iso < minimoISO) || (!!maximoISO && iso > maximoISO);
               const selecionado = iso === selecionadoISO;
               const ehHoje = iso === hojeISO;
               return (

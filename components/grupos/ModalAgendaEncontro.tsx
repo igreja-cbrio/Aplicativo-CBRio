@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/ui/Button";
 import { CalendarioBR } from "@/components/ui/CalendarioBR";
@@ -38,6 +38,14 @@ export type Ocorrencia = {
   horario: string;
   status: "normal" | "cancelado" | "remarcado";
   motivo?: string | null;
+  /** ⚠️ A JANELA vem do SERVIDOR (`min(7 dias, véspera do próximo encontro)`).
+   * O app NÃO recalcula: duas cópias da régua divergiriam, e a divergência
+   * apareceria como "o calendário deixou escolher e o servidor recusou". */
+  pode_remarcar?: boolean;
+  remarcar_de?: string | null;
+  remarcar_ate?: string | null;
+  /** Cadência quinzenal/mensal sem encontro registrado: a data é palpite. */
+  ancora_incerta?: boolean;
 };
 
 export function ModalAgendaEncontro({
@@ -68,6 +76,13 @@ export function ModalAgendaEncontro({
   const [confirmando, setConfirmando] = useState(false);
 
   if (!ocorrencia) return null;
+
+  // ⚠️ A janela é DO SERVIDOR. `pode_remarcar` ausente (bundle novo × backend
+  // antigo) não trava a tela: cai no comportamento de antes e quem recusa é o
+  // POST, com a mensagem certa.
+  const podeRemarcar = ocorrencia.pode_remarcar !== false;
+  const deISO = ocorrencia.remarcar_de || null;
+  const ateISO = ocorrencia.remarcar_ate || null;
 
   const jaCancelado = ocorrencia.status === "cancelado";
   const jaRemarcado = ocorrencia.status === "remarcado";
@@ -122,10 +137,23 @@ export function ModalAgendaEncontro({
   };
 
   return (
-    <Modal visible={visivel} transparent animationType="slide" onRequestClose={fechar}>
-      <Pressable style={styles.fundo} onPress={fechar}>
-        <Pressable style={styles.cartao} onPress={(e) => e.stopPropagation()}>
-          <ScrollView keyboardShouldPersistTaps="handled">
+    <Modal visible={visivel} transparent animationType="fade" onRequestClose={fechar}>
+      {/* ⚠️⚠️ CENTRADO, não bottom sheet (relato do Marcos · 18/08): subindo de
+          baixo, o botão de cancelar encontro ficava POR CIMA da barra de
+          navegação do Android e não dava pra tocar. E o teclado, ao abrir no
+          campo de motivo, cobria justamente o campo — daí o KeyboardAvoidingView
+          + `automaticallyAdjustKeyboardInsets` na rolagem. */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <Pressable style={styles.fundo} onPress={fechar}>
+          <Pressable style={styles.cartao} onPress={(e) => e.stopPropagation()}>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets
+              contentContainerStyle={{ paddingBottom: spacing.md }}
+            >
             <View style={styles.cabecalho}>
               <Text style={styles.titulo}>
                 {t("Encontro de")} {isoParaBR(ocorrencia.data_original)}
@@ -163,9 +191,32 @@ export function ModalAgendaEncontro({
               />
             ) : null}
 
-            {!jaCancelado ? (
+            {ocorrencia.ancora_incerta ? (
+              <View style={styles.avisoBox}>
+                <Text style={styles.avisoTxt}>
+                  {t("Registre a presença de um encontro para o app acertar as próximas datas deste grupo.")}
+                </Text>
+              </View>
+            ) : null}
+
+            {!jaCancelado && !podeRemarcar ? (
+              <View style={styles.avisoBox}>
+                <Text style={styles.avisoTxt}>
+                  {t("Este encontro está colado no seguinte — não dá para mudar a data. Se ele não vai acontecer, cancele abaixo.")}
+                </Text>
+              </View>
+            ) : null}
+
+            {!jaCancelado && podeRemarcar ? (
               <>
                 <Text style={styles.secao}>{t("Alterar a data deste encontro")}</Text>
+                {/* ⚠️ O limite é DITO, não só imposto no calendário: dia cinza
+                    sem explicação lê-se como app quebrado. */}
+                {ateISO ? (
+                  <Text style={styles.dica}>
+                    {t("Você pode mover até")} {isoParaBR(ateISO)}. {t("Para mais que isso, cancele este encontro.")}
+                  </Text>
+                ) : null}
                 <Pressable style={styles.campo} onPress={() => setCalendario((v) => !v)}>
                   <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
                   <Text style={[styles.campoTxt, !novaData ? { color: colors.textMuted } : null]}>
@@ -179,7 +230,8 @@ export function ModalAgendaEncontro({
                     embutido
                     titulo={t("Nova data do encontro")}
                     valor={novaData}
-                    minimoISO={hojeBRT()}
+                    minimoISO={deISO || hojeBRT()}
+                    maximoISO={ateISO}
                     hojeISO={hojeBRT()}
                     onFechar={() => setCalendario(false)}
                     onEscolher={(d) => {
@@ -263,22 +315,27 @@ export function ModalAgendaEncontro({
             ) : null}
 
             {erro ? <Text style={styles.erro}>{erro}</Text> : null}
-          </ScrollView>
+            </ScrollView>
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const criarEstilos = (c: Palette) =>
   StyleSheet.create({
-    fundo: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+    fundo: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "center",
+      padding: spacing.lg,
+    },
     cartao: {
       backgroundColor: c.surface,
-      borderTopLeftRadius: radius.xl,
-      borderTopRightRadius: radius.xl,
+      borderRadius: radius.xl,
       padding: spacing.lg,
-      maxHeight: "88%",
+      maxHeight: "82%",
     },
     cabecalho: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
     titulo: { fontSize: font.size.lg, fontWeight: "700", color: c.text, flex: 1 },
