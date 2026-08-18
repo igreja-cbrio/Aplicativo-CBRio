@@ -130,7 +130,6 @@ export default function GrupoMembrosScreen() {
   // não fica vazia). `null` = chegou e NÃO há anterior pendente.
   const [agendaAnterior, setAgendaAnterior] = useState<string | null | undefined>(undefined);
   const [agendaAlvo, setAgendaAlvo] = useState<OcorrenciaAgenda | null>(null);
-  const [verAgenda, setVerAgenda] = useState(false);
   // Frequência
   const [encontros, setEncontros] = useState<GrupoEncontro[] | null>(null);
   const [chamadaAberta, setChamadaAberta] = useState(false);
@@ -402,7 +401,8 @@ export default function GrupoMembrosScreen() {
   // continuava cobrando a chamada de um encontro que o líder já tinha
   // remarcado (relato do Marcos · 18/08). Duas contas para "quando é o
   // encontro" sempre divergem — esta tela passa a ter uma só.
-  const proximoDaAgenda = agenda?.find((o) => o.status !== "cancelado")?.data;
+  const proximoDaAgendaOc = agenda?.find((o) => o.status !== "cancelado") || null;
+  const proximoDaAgenda = proximoDaAgendaOc?.data;
   const estado = estadoDoEncontro({
     diaSemana: grupo?.dia_semana,
     encontros: (encontros || []).map((e) => ({ data: e.data, presentes: e.presentes })),
@@ -545,21 +545,39 @@ export default function GrupoMembrosScreen() {
                 const h = heroi();
                 return (
                   <View style={[styles.hero, h.variante === "atencao" && styles.heroAtencao, h.variante === "feito" && styles.heroFeito]}>
-                    <View style={styles.heroRot}>
-                      <Ionicons
-                        name={h.icone}
-                        size={14}
-                        color={h.variante === "atencao" ? colors.warning : h.variante === "feito" ? colors.success : colors.brandMid}
-                      />
-                      <Text
-                        style={[
-                          styles.heroRotTxt,
-                          h.variante === "atencao" && { color: colors.warning },
-                          h.variante === "feito" && { color: colors.success },
-                        ]}
-                      >
-                        {h.rotulo}
-                      </Text>
+                    <View style={styles.heroRotLinha}>
+                      <View style={styles.heroRot}>
+                        <Ionicons
+                          name={h.icone}
+                          size={14}
+                          color={h.variante === "atencao" ? colors.warning : h.variante === "feito" ? colors.success : colors.brandMid}
+                        />
+                        <Text
+                          style={[
+                            styles.heroRotTxt,
+                            h.variante === "atencao" && { color: colors.warning },
+                            h.variante === "feito" && { color: colors.success },
+                          ]}
+                        >
+                          {h.rotulo}
+                        </Text>
+                      </View>
+                      {/* ⚠️ A agenda mora AQUI, no canto do herói (pedido do
+                          Marcos · 18/08): o box separado embaixo REPETIA a data
+                          que o herói já diz em corpo 28 — "deixa muita
+                          informação". Ação secundária no canto, e a agenda da
+                          temporada foi pra DENTRO do modal. */}
+                      {proximoDaAgendaOc ? (
+                        <Pressable
+                          style={styles.heroAcao}
+                          onPress={() => setAgendaAlvo(proximoDaAgendaOc)}
+                          accessibilityRole="button"
+                          hitSlop={8}
+                        >
+                          <Ionicons name="create-outline" size={15} color={colors.textMuted} />
+                          <Text style={styles.heroAcaoTxt}>{t("Alterar data")}</Text>
+                        </Pressable>
+                      ) : null}
                     </View>
                     <View>
                       <Text style={styles.heroGrande}>{h.grande}</Text>
@@ -592,99 +610,16 @@ export default function GrupoMembrosScreen() {
                 );
               })()}
 
-              {/* ═══ AGENDA · o líder gerencia a temporada inteira aqui ═══
-                  Pedido do Marcos (18/08): isto morava na tela ANTERIOR ("Meu
-                  grupo") e ele pediu pra trazer, porque gerenciar grupo é uma
-                  tela só. Lá o box ficou informativo.
-                  ⚠️ Fica DEPOIS do herói de propósito: o protagonista da tela
-                  continua sendo registrar a presença. Agenda é a 2ª pergunta. */}
-              {(() => {
-                if (agendaAviso) {
-                  return (
-                    <View style={[styles.agendaBox, styles.agendaBoxAviso]}>
-                      <Text style={styles.agendaAvisoTxt}>{agendaAviso}</Text>
-                    </View>
-                  );
-                }
-                if (!agenda) return null;
-                const futuras = agenda;
-                const prox = futuras.find((o) => o.status !== "cancelado") || null;
-                if (!futuras.length) return null;
-                return (
-                  <View style={styles.agendaBox}>
-                    <View style={styles.agendaTopo}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.agendaRot}>{t("Próximo encontro")}</Text>
-                        <Text style={styles.agendaData}>
-                          {prox ? `${dataLonga(prox.data)}${prox.horario ? `, ${horaCurta(prox.horario)}` : ""}` : t("Sem encontro marcado — os próximos foram cancelados")}
-                        </Text>
-                      </View>
-                      {prox ? (
-                        <Pressable
-                          style={styles.agendaBtn}
-                          onPress={() => setAgendaAlvo(prox)}
-                          accessibilityRole="button"
-                        >
-                          <Ionicons name="create-outline" size={16} color={colors.brandMid} />
-                          <Text style={styles.agendaBtnTxt}>{t("Alterar data")}</Text>
-                        </Pressable>
-                      ) : null}
-                    </View>
-
-                    {futuras[0]?.ancora_incerta ? (
-                      <Text style={styles.agendaNota}>
-                        {t("Registre a presença de um encontro para o app acertar as próximas datas deste grupo.")}
-                      </Text>
-                    ) : null}
-
-                    {/* ⚠️ A agenda inteira fica RECOLHIDA: são até 19 datas até
-                        o fim da temporada, e despejá-las no topo enterraria o
-                        herói da tela. */}
-                    {futuras.length > 1 ? (
-                      <Pressable
-                        style={styles.agendaVerTodas}
-                        onPress={() => setVerAgenda((v) => !v)}
-                        accessibilityRole="button"
-                      >
-                        <Text style={styles.agendaVerTodasTxt}>
-                          {verAgenda ? t("Esconder a agenda") : `${t("Ver a agenda da temporada")} (${futuras.length})`}
-                        </Text>
-                        <Ionicons name={verAgenda ? "chevron-up" : "chevron-down"} size={16} color={colors.textMuted} />
-                      </Pressable>
-                    ) : null}
-
-                    {verAgenda ? (
-                      <View style={styles.agendaLista}>
-                        {futuras.map((o) => (
-                          <Pressable
-                            key={o.data_original}
-                            style={styles.agendaItem}
-                            onPress={() => setAgendaAlvo(o)}
-                            accessibilityRole="button"
-                          >
-                            <View style={{ flex: 1 }}>
-                              <Text
-                                style={[
-                                  styles.agendaItemData,
-                                  o.status === "cancelado" && styles.agendaItemCancelado,
-                                ]}
-                              >
-                                {dataLonga(o.data)}{o.horario ? `, ${horaCurta(o.horario)}` : ""}
-                              </Text>
-                              {o.status !== "normal" ? (
-                                <Text style={styles.agendaItemTag}>
-                                  {o.status === "cancelado" ? t("cancelado") : t("remarcado")}
-                                </Text>
-                              ) : null}
-                            </View>
-                            <Ionicons name="create-outline" size={16} color={colors.textMuted} />
-                          </Pressable>
-                        ))}
-                      </View>
-                    ) : null}
-                  </View>
-                );
-              })()}
+              {/* ⚠️ O box da agenda MORREU (18/08): repetia a data que o
+                  herói já mostra em corpo 28, com um dropdown embaixo — "deixa
+                  muita informação". A ação foi pro canto do herói e a agenda da
+                  temporada, pra dentro do modal.
+                  ⚠️ Só o AVISO sobrevive, e como uma linha fina: erro de
+                  carregamento não pode virar silêncio — "sem encontro marcado"
+                  e "a consulta falhou" levam a decisões opostas. */}
+              {agendaAviso ? (
+                <Text style={styles.agendaAvisoLinha}>{agendaAviso}</Text>
+              ) : null}
 
               {/* ═══════════ ZONA 2 · APOIO (era 3 × 25/800) ═══════════ */}
               <View style={styles.apoio}>
@@ -1208,6 +1143,7 @@ export default function GrupoMembrosScreen() {
         grupoId={grupoId}
         grupoNome={data?.grupo?.nome || String(params.nome || "")}
         ocorrencia={agendaAlvo}
+        ocorrencias={agenda || []}
         onFechar={() => setAgendaAlvo(null)}
         onSalvo={() => {
           setAgendaAlvo(null);
@@ -1258,33 +1194,11 @@ function makeStyles(c: Palette) {
     heroBtnTxt: { color: "#fff", fontSize: 15.5, fontWeight: "700" },
 
     // ═══ ZONA 2 · os números como linha de apoio (eram 3 × 25/800) ════════
-    // ── Agenda (topo da tela) ──────────────────────────────────────────────
-    agendaBox: {
-      backgroundColor: c.glass, borderRadius: radius.md,
-      padding: spacing.md, marginTop: spacing.sm, gap: spacing.xs,
-    },
-    agendaBoxAviso: { borderLeftWidth: 3, borderLeftColor: c.warning },
-    agendaAvisoTxt: { fontSize: font.size.sm, color: c.text },
-    agendaTopo: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-    agendaRot: { fontSize: font.size.sm, fontWeight: "700", color: c.brandMid },
-    agendaData: { fontSize: font.size.md, fontWeight: "600", color: c.text, marginTop: 2, textTransform: "capitalize" },
-    agendaBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 6, paddingHorizontal: 8 },
-    agendaBtnTxt: { fontSize: font.size.sm, fontWeight: "700", color: c.brandMid },
-    agendaNota: { fontSize: font.size.sm, color: c.textMuted },
-    agendaVerTodas: {
-      flexDirection: "row", alignItems: "center", justifyContent: "center",
-      gap: 4, paddingVertical: 8, marginTop: 2,
-      borderTopWidth: 1, borderTopColor: c.border,
-    },
-    agendaVerTodasTxt: { fontSize: font.size.sm, color: c.textMuted, fontWeight: "600" },
-    agendaLista: { gap: 2 },
-    agendaItem: {
-      flexDirection: "row", alignItems: "center", gap: spacing.sm,
-      paddingVertical: 10, borderTopWidth: 1, borderTopColor: c.border,
-    },
-    agendaItemData: { fontSize: font.size.sm, color: c.text, textTransform: "capitalize" },
-    agendaItemCancelado: { textDecorationLine: "line-through", color: c.textMuted },
-    agendaItemTag: { fontSize: font.size.sm, color: c.warning, fontWeight: "600", marginTop: 2 },
+    // ── Agenda ────────────────────────────────────────────────────────────
+    heroRotLinha: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+    heroAcao: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 2, paddingLeft: 8 },
+    heroAcaoTxt: { fontSize: font.size.sm, color: c.textMuted, fontWeight: "600" },
+    agendaAvisoLinha: { fontSize: font.size.sm, color: c.warning, marginTop: spacing.sm },
     apoio: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingTop: 13, paddingHorizontal: 4 },
     apoioTxt: { flex: 1, color: c.textMuted, fontSize: 13.5 },
     apoioNum: { color: c.text, fontWeight: "700" },

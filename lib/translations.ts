@@ -1231,4 +1231,5 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Este encontro está colado no seguinte — não dá para mudar a data. Se ele não vai acontecer, cancele abaixo.": { en: "This meeting is right before the next one — the date cannot change. If it will not happen, cancel it below.", es: "Este encuentro está pegado al siguiente — no se puede cambiar la fecha. Si no va a ocurrir, cancélalo abajo." },
   "Registre a presença de um encontro para o app acertar as próximas datas deste grupo.": { en: "Record attendance for one meeting so the app can get this group's next dates right.", es: "Registra la asistencia de un encuentro para que la app acierte las próximas fechas de este grupo." },
   "Não consegui carregar a agenda agora.": { en: "Could not load the schedule right now.", es: "No pude cargar la agenda ahora." },
+  "Escolher outro encontro": { en: "Choose another meeting", es: "Elegir otro encuentro" },
 };
