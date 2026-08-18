@@ -53,13 +53,18 @@ export function ModalAgendaEncontro({
   grupoId,
   grupoNome,
   ocorrencia,
+  ocorrencias = [],
   onFechar,
   onSalvo,
 }: {
   visivel: boolean;
   grupoId: string;
   grupoNome: string;
+  /** A ocorrência com que o modal ABRE (a próxima, normalmente). */
   ocorrencia: Ocorrencia | null;
+  /** ⚠️ A agenda da temporada mora AQUI dentro desde 18/08: fora, ela era um
+   *  dropdown embaixo do herói repetindo a data que ele já mostrava. */
+  ocorrencias?: Ocorrencia[];
   onFechar: () => void;
   onSalvo: () => void;
 }) {
@@ -74,20 +79,30 @@ export function ModalAgendaEncontro({
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
   const [confirmando, setConfirmando] = useState(false);
+  // Qual ocorrência está sendo editada. `null` = a que o modal abriu.
+  const [trocaKey, setTrocaKey] = useState<string | null>(null);
+  const [verAgenda, setVerAgenda] = useState(false);
 
   if (!ocorrencia) return null;
+
+  // ⚠️ O alvo efetivo: a escolhida na lista, ou a que abriu o modal. Se a
+  // troca apontar para algo que sumiu da agenda (recarregou), volta pra origem
+  // em vez de renderizar vazio.
+  const oc = (trocaKey && ocorrencias.find((x) => x.data_original === trocaKey)) || ocorrencia;
 
   // ⚠️ A janela é DO SERVIDOR. `pode_remarcar` ausente (bundle novo × backend
   // antigo) não trava a tela: cai no comportamento de antes e quem recusa é o
   // POST, com a mensagem certa.
-  const podeRemarcar = ocorrencia.pode_remarcar !== false;
-  const deISO = ocorrencia.remarcar_de || null;
-  const ateISO = ocorrencia.remarcar_ate || null;
+  const podeRemarcar = oc.pode_remarcar !== false;
+  const deISO = oc.remarcar_de || null;
+  const ateISO = oc.remarcar_ate || null;
 
-  const jaCancelado = ocorrencia.status === "cancelado";
-  const jaRemarcado = ocorrencia.status === "remarcado";
+  const jaCancelado = oc.status === "cancelado";
+  const jaRemarcado = oc.status === "remarcado";
 
   const limpar = () => {
+    setTrocaKey(null);
+    setVerAgenda(false);
     setNovaData(null);
     setHora("");
     setMotivo("");
@@ -105,7 +120,7 @@ export function ModalAgendaEncontro({
     setSalvando(true);
     try {
       const corpo: Record<string, unknown> = {
-        data_original: ocorrencia.data_original,
+        data_original: oc.data_original,
         acao,
       };
       if (acao === "remarcar") {
@@ -156,7 +171,7 @@ export function ModalAgendaEncontro({
             >
             <View style={styles.cabecalho}>
               <Text style={styles.titulo}>
-                {t("Encontro de")} {isoParaBR(ocorrencia.data_original)}
+                {t("Encontro de")} {isoParaBR(oc.data_original)}
               </Text>
               <Pressable onPress={fechar} hitSlop={12}>
                 <Ionicons name="close" size={22} color={colors.textMuted} />
@@ -164,18 +179,82 @@ export function ModalAgendaEncontro({
             </View>
             <Text style={styles.sub}>{grupoNome}</Text>
 
+            {/* ⚠️ A AGENDA DA TEMPORADA veio pra dentro do modal (18/08): fora,
+                era um dropdown embaixo do herói repetindo a data que ele já
+                mostrava. Aqui ela serve pra ESCOLHER qual encontro editar, que
+                é a única coisa que a lista precisa fazer. Nasce recolhida. */}
+            {ocorrencias.length > 1 ? (
+              <>
+                <Pressable
+                  style={styles.trocar}
+                  onPress={() => setVerAgenda((v) => !v)}
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
+                  <Text style={styles.trocarTxt}>
+                    {verAgenda ? t("Esconder a agenda") : `${t("Escolher outro encontro")} (${ocorrencias.length})`}
+                  </Text>
+                  <Ionicons name={verAgenda ? "chevron-up" : "chevron-down"} size={16} color={colors.textMuted} />
+                </Pressable>
+
+                {verAgenda ? (
+                  <View style={styles.agendaLista}>
+                    {ocorrencias.map((o) => {
+                      const sel = o.data_original === oc.data_original;
+                      return (
+                        <Pressable
+                          key={o.data_original}
+                          style={[styles.agendaItem, sel && styles.agendaItemSel]}
+                          onPress={() => {
+                            // ⚠️ Trocar de encontro LIMPA o formulário: manter a
+                            // data digitada para outro dia seria remarcar o
+                            // encontro errado com o que a pessoa escreveu antes.
+                            setTrocaKey(o.data_original);
+                            setNovaData(null);
+                            setHora("");
+                            setMotivo("");
+                            setCalendario(false);
+                            setConfirmando(false);
+                            setErro("");
+                            setVerAgenda(false);
+                          }}
+                          accessibilityRole="button"
+                        >
+                          <Text
+                            style={[
+                              styles.agendaItemTxt,
+                              o.status === "cancelado" && styles.agendaItemCancelado,
+                              sel && styles.agendaItemTxtSel,
+                            ]}
+                          >
+                            {isoParaBR(o.data)}
+                            {o.horario ? ` · ${o.horario}` : ""}
+                          </Text>
+                          {o.status !== "normal" ? (
+                            <Text style={styles.agendaItemTag}>
+                              {o.status === "cancelado" ? t("cancelado") : t("remarcado")}
+                            </Text>
+                          ) : null}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : null}
+              </>
+            ) : null}
+
             {jaCancelado ? (
               <View style={styles.avisoBox}>
                 <Text style={styles.avisoTxt}>
                   {t("Este encontro está cancelado.")}
-                  {ocorrencia.motivo ? " " + t("Motivo") + ": " + ocorrencia.motivo : ""}
+                  {oc.motivo ? " " + t("Motivo") + ": " + oc.motivo : ""}
                 </Text>
               </View>
             ) : null}
             {jaRemarcado ? (
               <View style={styles.avisoBox}>
                 <Text style={styles.avisoTxt}>
-                  {t("Já remarcado para")} {isoParaBR(ocorrencia.data)} {t("às")} {ocorrencia.horario}.
+                  {t("Já remarcado para")} {isoParaBR(oc.data)} {t("às")} {oc.horario}.
                 </Text>
               </View>
             ) : null}
@@ -191,7 +270,7 @@ export function ModalAgendaEncontro({
               />
             ) : null}
 
-            {ocorrencia.ancora_incerta ? (
+            {oc.ancora_incerta ? (
               <View style={styles.avisoBox}>
                 <Text style={styles.avisoTxt}>
                   {t("Registre a presença de um encontro para o app acertar as próximas datas deste grupo.")}
@@ -245,7 +324,7 @@ export function ModalAgendaEncontro({
                 <TextInput
                   value={hora}
                   onChangeText={setHora}
-                  placeholder={ocorrencia.horario || "19:00"}
+                  placeholder={oc.horario || "19:00"}
                   placeholderTextColor={colors.textMuted}
                   keyboardType="numbers-and-punctuation"
                   maxLength={5}
@@ -275,7 +354,7 @@ export function ModalAgendaEncontro({
                         fala com o grupo é o líder, no WhatsApp dele — e é ele
                         que tem o contexto ("adiamos por causa do feriado"). */}
                     <Text style={styles.confirmaTxt}>
-                      {t("Cancelar o encontro de")} {isoParaBR(ocorrencia.data_original)}?{" "}
+                      {t("Cancelar o encontro de")} {isoParaBR(oc.data_original)}?{" "}
                       {t("Avise o grupo — o app não manda mensagem para os participantes.")}
                     </Text>
                     <View style={styles.linhaBotoes}>
@@ -386,6 +465,23 @@ const criarEstilos = (c: Palette) =>
       marginBottom: spacing.md,
     },
     avisoTxt: { fontSize: font.size.sm, color: c.text },
+    trocar: {
+      flexDirection: "row", alignItems: "center", gap: 6,
+      paddingVertical: 10, marginBottom: spacing.xs,
+      borderTopWidth: 1, borderBottomWidth: 1, borderColor: c.border,
+    },
+    trocarTxt: { flex: 1, fontSize: font.size.sm, color: c.textMuted, fontWeight: "600" },
+    agendaLista: { marginBottom: spacing.md, maxHeight: 220 },
+    agendaItem: {
+      paddingVertical: 10, paddingHorizontal: spacing.sm,
+      borderRadius: radius.sm, flexDirection: "row",
+      alignItems: "center", justifyContent: "space-between", gap: spacing.sm,
+    },
+    agendaItemSel: { backgroundColor: c.glass },
+    agendaItemTxt: { fontSize: font.size.sm, color: c.text },
+    agendaItemTxtSel: { fontWeight: "700", color: c.brandMid },
+    agendaItemCancelado: { textDecorationLine: "line-through", color: c.textMuted },
+    agendaItemTag: { fontSize: font.size.sm, color: c.warning, fontWeight: "600" },
     zonaAcoes: {
       marginTop: spacing.lg,
       borderTopWidth: 1,
