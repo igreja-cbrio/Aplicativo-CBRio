@@ -20,6 +20,7 @@ export function Button({
   loading,
   variant = "primary",
   disabled,
+  style,
   ...rest
 }: Props) {
   const colors = useColors();
@@ -29,10 +30,19 @@ export function Button({
     <Pressable
       accessibilityRole="button"
       disabled={isDisabled}
-      style={({ pressed }) => [
+      // ⚠️⚠️ O `style` de quem chama entra AQUI, no fim do array — e essa é a
+      // correção (18/08). Antes ele vinha no `{...rest}`, que é espalhado
+      // DEPOIS de `style=` e portanto SUBSTITUÍA o array inteiro: o botão
+      // perdia fundo, altura 52, borda arredondada e centralização, virando
+      // texto solto. Sintoma relatado: "salvar nova data não está centralizado,
+      // fica deslocado e quero que tenha esse quadrado em volta".
+      // ⚠️ Atingia 6 pontos, 3 deles VIVOS em produção (telas de senha), que
+      // passavam só `marginTop` e ficavam sem botão nenhum.
+      style={(estado) => [
         styles.base,
         variant === "primary" ? styles.primary : styles.ghost,
-        (pressed || isDisabled) && styles.dimmed,
+        (estado.pressed || isDisabled) && styles.dimmed,
+        typeof style === "function" ? style(estado) : style,
       ]}
       {...rest}
     >

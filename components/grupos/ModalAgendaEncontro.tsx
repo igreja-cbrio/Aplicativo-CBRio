@@ -184,7 +184,7 @@ export function ModalAgendaEncontro({
                 mostrava. Aqui ela serve pra ESCOLHER qual encontro editar, que
                 é a única coisa que a lista precisa fazer. Nasce recolhida. */}
             {ocorrencias.length > 1 ? (
-              <>
+              <View style={styles.trocarWrap}>
                 <Pressable
                   style={styles.trocar}
                   onPress={() => setVerAgenda((v) => !v)}
@@ -197,8 +197,16 @@ export function ModalAgendaEncontro({
                   <Ionicons name={verAgenda ? "chevron-up" : "chevron-down"} size={16} color={colors.textMuted} />
                 </Pressable>
 
+                {/* ⚠️⚠️ DROPDOWN de verdade: posicionado por cima, com FUNDO
+                    sólido e rolagem própria. Antes era um View com `maxHeight`
+                    — e no Android `overflow` é `visible` por padrão, então o
+                    excesso VAZAVA por cima do formulário e os textos ficavam um
+                    sobre o outro (relato do Marcos · 18/08).
+                    ⚠️ `elevation` além do `zIndex`: no Android, irmão declarado
+                    depois pinta por cima mesmo com zIndex maior. */}
                 {verAgenda ? (
-                  <View style={styles.agendaLista}>
+                  <View style={styles.agendaDrop}>
+                    <ScrollView nestedScrollEnabled style={styles.agendaLista}>
                     {ocorrencias.map((o) => {
                       const sel = o.data_original === oc.data_original;
                       return (
@@ -238,9 +246,10 @@ export function ModalAgendaEncontro({
                         </Pressable>
                       );
                     })}
+                    </ScrollView>
                   </View>
                 ) : null}
-              </>
+              </View>
             ) : null}
 
             {jaCancelado ? (
@@ -467,11 +476,23 @@ const criarEstilos = (c: Palette) =>
     avisoTxt: { fontSize: font.size.sm, color: c.text },
     trocar: {
       flexDirection: "row", alignItems: "center", gap: 6,
-      paddingVertical: 10, marginBottom: spacing.xs,
+      paddingVertical: 10,
       borderTopWidth: 1, borderBottomWidth: 1, borderColor: c.border,
     },
     trocarTxt: { flex: 1, fontSize: font.size.sm, color: c.textMuted, fontWeight: "600" },
-    agendaLista: { marginBottom: spacing.md, maxHeight: 220 },
+    trocarWrap: { position: "relative", zIndex: 20, elevation: 20, marginBottom: spacing.md },
+    agendaDrop: {
+      position: "absolute",
+      top: "100%", left: 0, right: 0,
+      backgroundColor: c.surface,
+      borderWidth: 1, borderColor: c.border,
+      borderRadius: radius.md,
+      overflow: "hidden",
+      zIndex: 21, elevation: 21,
+      shadowColor: "#000", shadowOpacity: 0.35,
+      shadowRadius: 12, shadowOffset: { width: 0, height: 6 },
+    },
+    agendaLista: { maxHeight: 240 },
     agendaItem: {
       paddingVertical: 10, paddingHorizontal: spacing.sm,
       borderRadius: radius.sm, flexDirection: "row",
@@ -492,12 +513,15 @@ const criarEstilos = (c: Palette) =>
     confirmaTxt: { fontSize: font.size.sm, color: c.text, marginBottom: spacing.sm, lineHeight: 20 },
     linhaBotoes: { flexDirection: "row", gap: spacing.sm },
     erro: { fontSize: font.size.sm, color: c.danger, marginTop: spacing.md },
+    // ⚠️ Espelha o `base` do Button da casa (altura 52 · raio full) pra os dois
+    // ficarem do MESMO tamanho lado a lado. Com paddingVertical 14 este saía
+    // mais baixo que o primário e a linha ficava desalinhada.
     btnPerigo: {
       flex: 1,
+      height: 52,
       borderWidth: 1,
       borderColor: c.danger,
-      borderRadius: radius.md,
-      paddingVertical: 14,
+      borderRadius: radius.full,
       alignItems: "center",
       justifyContent: "center",
     },
