@@ -1221,4 +1221,14 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "às": { en: "at", es: "a las" },
   "Motivo": { en: "Reason", es: "Motivo" },
   "Alterar data": { en: "Change date", es: "Cambiar fecha" },
+
+  // ─────── Grupos · agenda da temporada (Marcos · 18/08) ───────
+  "Ver a agenda da temporada": { en: "See the season schedule", es: "Ver la agenda de la temporada" },
+  "Esconder a agenda": { en: "Hide schedule", es: "Ocultar la agenda" },
+  "cancelado": { en: "cancelled", es: "cancelado" },
+  "Você pode mover até": { en: "You can move it until", es: "Puedes moverlo hasta" },
+  "Para mais que isso, cancele este encontro.": { en: "To move it further, cancel this meeting.", es: "Para más que eso, cancela este encuentro." },
+  "Este encontro está colado no seguinte — não dá para mudar a data. Se ele não vai acontecer, cancele abaixo.": { en: "This meeting is right before the next one — the date cannot change. If it will not happen, cancel it below.", es: "Este encuentro está pegado al siguiente — no se puede cambiar la fecha. Si no va a ocurrir, cancélalo abajo." },
+  "Registre a presença de um encontro para o app acertar as próximas datas deste grupo.": { en: "Record attendance for one meeting so the app can get this group's next dates right.", es: "Registra la asistencia de un encuentro para que la app acierte las próximas fechas de este grupo." },
+  "Não consegui carregar a agenda agora.": { en: "Could not load the schedule right now.", es: "No pude cargar la agenda ahora." },
 };
