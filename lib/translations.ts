@@ -1233,4 +1233,9 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Não consegui carregar a agenda agora.": { en: "Could not load the schedule right now.", es: "No pude cargar la agenda ahora." },
   "Escolher outro encontro": { en: "Choose another meeting", es: "Elegir otro encuentro" },
   "Salvar data": { en: "Save date", es: "Guardar fecha" },
+  "Sair do grupo": { en: "Leave group", es: "Salir del grupo" },
+  "Você sai de": { en: "You will leave", es: "Sales de" },
+  "O líder é avisado. Você pode se inscrever de novo depois.": { en: "The leader is notified. You can sign up again later.", es: "El líder es avisado. Puedes inscribirte de nuevo después." },
+  "Saindo...": { en: "Leaving...", es: "Saliendo..." },
+  "Não deu para sair agora. Tente de novo.": { en: "Could not leave right now. Try again.", es: "No se pudo salir ahora. Inténtalo de nuevo." },
 };

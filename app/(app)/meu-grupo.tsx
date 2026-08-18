@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Image,
   Linking,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,7 +17,7 @@ import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import type { Ocorrencia } from "@/components/grupos/ModalAgendaEncontro";
-import { apiGet, listarMeusGruposLider, type GrupoMeu } from "@/lib/api";
+import { apiGet, listarMeusGruposLider, sairDoGrupo, type GrupoMeu } from "@/lib/api";
 import { rotaDoGrupo, ehSupervisao } from "@/lib/papelGrupo";
 import { trackEvento } from "@/lib/telemetria";
 import { abrirRota } from "@/lib/navegacao";
@@ -74,6 +75,9 @@ export default function MeuGrupoScreen() {
    * O fluxo de inscrição não muda: tocar num grupo do buscador abre
    * `/grupo-detalhe`, que é quem tem o "Quero participar".
    */
+  const [sairAlvo, setSairAlvo] = useState<Grupo | null>(null);
+  const [saindo, setSaindo] = useState(false);
+  const [erroSair, setErroSair] = useState("");
   const [aba, setAba] = useState<"meus" | "encontrar">("meus");
   const [grupos, setGrupos] = useState<Grupo[] | null>(null);
   /**
@@ -329,6 +333,22 @@ export default function MeuGrupoScreen() {
                   />
                 ) : null}
 
+                {/* ⚠️ SAIR só aparece pra quem NÃO gerencia. O servidor recusa
+                    líder e co-líder (o grupo ficaria sem destinatário de aviso
+                    e sumiria da busca pelo nome deles), então oferecer o botão
+                    a eles seria oferecer um 409. */}
+                {!gerencia(g) ? (
+                  <Pressable
+                    style={styles.sair}
+                    onPress={() => setSairAlvo(g)}
+                    accessibilityRole="button"
+                    hitSlop={6}
+                  >
+                    <Ionicons name="exit-outline" size={16} color={colors.textMuted} />
+                    <Text style={styles.sairTxt}>{t("Sair do grupo")}</Text>
+                  </Pressable>
+                ) : null}
+
                 {g.materiais.length > 0 && (
                   <View style={styles.materiais}>
                     <Text style={styles.materiaisTitulo}>{t("Materiais")}</Text>
@@ -424,6 +444,52 @@ export default function MeuGrupoScreen() {
 
       {/* ⚠️ Fica FORA do ScrollView: Modal aqui é container nativo e precisa
           ser irmão do conteúdo, não filho da lista que rola. */}
+    {/* ⚠️ CONFIRMAÇÃO EXPLÍCITA (pedido da Naná · 18/08). Sair é reversível —
+        a pessoa pode se inscrever de novo —, mas some com o grupo da tela dela
+        e avisa o líder, então não pode acontecer por toque acidental.
+        ⚠️ Centrado, não bottom sheet: no Android o botão de baixo encosta na
+        barra de navegação (relato do Marcos · 18/08). */}
+    <Modal visible={!!sairAlvo} transparent animationType="fade" onRequestClose={() => setSairAlvo(null)}>
+      <Pressable style={styles.sairFundo} onPress={() => setSairAlvo(null)}>
+        <Pressable style={styles.sairCartao} onPress={(e) => e.stopPropagation()}>
+          <Text style={styles.sairTitulo}>{t("Sair do grupo")}</Text>
+          <Text style={styles.sairTexto}>
+            {t("Você sai de")} {sairAlvo?.nome}. {t("O líder é avisado. Você pode se inscrever de novo depois.")}
+          </Text>
+          {erroSair ? <Text style={styles.sairErro}>{erroSair}</Text> : null}
+          <View style={styles.sairBotoes}>
+            <Button
+              title={t("Voltar")}
+              variant="ghost"
+              onPress={() => { setSairAlvo(null); setErroSair(""); }}
+              style={{ flex: 1, paddingHorizontal: spacing.sm }}
+            />
+            <Pressable
+              style={styles.sairConfirma}
+              disabled={saindo}
+              accessibilityRole="button"
+              onPress={async () => {
+                if (!sairAlvo) return;
+                setSaindo(true); setErroSair("");
+                try {
+                  await sairDoGrupo(sairAlvo.id);
+                  trackEvento("grupo_saiu", { entity_id: sairAlvo.id });
+                  setSairAlvo(null);
+                  carregar();
+                } catch (e: any) {
+                  setErroSair(e?.message || t("Não deu para sair agora. Tente de novo."));
+                } finally { setSaindo(false); }
+              }}
+            >
+              <Text numberOfLines={1} style={styles.sairConfirmaTxt}>
+                {saindo ? t("Saindo...") : t("Sair")}
+              </Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+
     </SafeAreaView>
   );
 }
@@ -467,6 +533,20 @@ const makeStyles = (colors: Palette) =>
     proximoTag: { fontSize: font.size.sm, color: colors.warning, marginTop: 2, fontWeight: "600" },
     proximoLabel: { color: colors.brandMid, fontSize: font.size.sm, fontWeight: "700" },
     proximoData: { color: colors.text, fontSize: font.size.md, fontWeight: "600", marginTop: 2, textTransform: "capitalize" },
+    sair: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10 },
+    sairTxt: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "600" },
+    sairFundo: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: spacing.lg },
+    sairCartao: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg, gap: spacing.sm },
+    sairTitulo: { fontSize: font.size.lg, fontWeight: "700", color: colors.text },
+    sairTexto: { fontSize: font.size.sm, color: colors.textMuted, lineHeight: 20 },
+    sairErro: { fontSize: font.size.sm, color: colors.danger },
+    sairBotoes: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
+    sairConfirma: {
+      flex: 1, height: 52, borderWidth: 1, borderColor: colors.danger,
+      borderRadius: radius.full, alignItems: "center", justifyContent: "center",
+      paddingHorizontal: spacing.sm,
+    },
+    sairConfirmaTxt: { fontSize: font.size.md, fontWeight: "700", color: colors.danger, textAlign: "center" },
     liderInfo: { color: colors.textMuted, fontSize: font.size.sm },
     materiais: { gap: spacing.xs, marginTop: spacing.xs },
     materiaisTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },

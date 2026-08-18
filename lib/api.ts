@@ -612,6 +612,17 @@ export type OcorrenciaAgenda = {
   ancora_incerta: boolean;
 };
 
+/**
+ * A PRÓPRIA pessoa sai do grupo (pedido da Naná · 18/08).
+ *
+ * ⚠️ Não é o mesmo endpoint do líder registrando a saída de um participante —
+ * aquele exige gate de gestão. Este é a pessoa saindo de si mesma.
+ * O servidor recusa (409) se ela liderar ou co-liderar o grupo.
+ */
+export function sairDoGrupo(grupoId: string, motivo?: string): Promise<{ ok: boolean; saiu: number }> {
+  return apiPost(`/app/meu-grupo/${grupoId}/sair`, motivo ? { motivo } : {});
+}
+
 export function getAgendaGrupo(grupoId: string): Promise<{
   grupo?: { id: string; nome: string; dia_semana: number | null; horario: string | null; recorrencia?: string };
   ocorrencias: OcorrenciaAgenda[];
