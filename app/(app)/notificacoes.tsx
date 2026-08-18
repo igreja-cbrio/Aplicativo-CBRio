@@ -25,6 +25,7 @@ const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
   sos: "alert-circle",
   cuidado: "heart",
   grupo_pedido: "people",
+  grupo_saida: "exit-outline",
   batismo: "water",
   culto: "videocam",
   next: "sparkles",
@@ -40,6 +41,7 @@ const CATEGORIA: Record<string, string> = {
   sos: "Cuidados",
   cuidado: "Cuidados",
   grupo_pedido: "Grupos",
+  grupo_saida: "Grupos",
   batismo: "Batismo",
   culto: "Cultos",
   next: "NEXT",
@@ -120,6 +122,10 @@ export default function NotificacoesScreen() {
         irPara("/cuidados"); return;
       case "grupo_pedido":
         router.navigate("/grupo-inscricoes"); return;
+      // ⚠️ Os DOIS mapas ensinados na mesma leva: tipo que só um conhece cai em
+      // "Outros" e o toque não leva a lugar nenhum (lição de 11/08).
+      case "grupo_saida":
+        router.navigate("/meu-grupo"); return;
       case "batismo":
         router.navigate("/batismo"); return;
       case "devocional":

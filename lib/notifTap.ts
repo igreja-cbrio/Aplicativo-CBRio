@@ -86,6 +86,8 @@ export function attachNotifTapListener(): () => void {
       // dela naquele grupo, que a push não carrega).
       case "grupo_encontro_registrado":
       case "grupo_visita_registrada":
+      // Saída de participante (18/08): o líder cai na lista de grupos dele.
+      case "grupo_saida":
         router.navigate("/meu-grupo");
         return;
       case "batismo":
