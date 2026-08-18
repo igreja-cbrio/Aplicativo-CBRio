@@ -17,6 +17,7 @@ import {
   REMEMBER_PREF_KEY,
 } from "@/lib/supabase";
 import { limparCache } from "@/lib/cache";
+import { trackEvento } from "@/lib/telemetria";
 import { definirBiometriaAtiva } from "@/lib/biometria";
 import { unregisterPush } from "@/lib/push";
 
@@ -191,19 +192,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data.url,
           redirectTo
         );
-        if (result.type !== "success") return; // usuário cancelou
 
-        const params = new URL(result.url).hash.replace(/^#/, "");
-        const search = new URLSearchParams(params);
-        const access_token = search.get("access_token");
-        const refresh_token = search.get("refresh_token");
+        // ⚠️⚠️ AQUI ESTAVAM DUAS SAÍDAS MUDAS (relato do Marcos · 18/08: "cliquei
+        // em logar pelo Google, carregou e voltou para a página inicial, não me
+        // colocou nenhum dado pra preencher, só travou meu acesso").
+        //
+        //  1. `if (result.type !== "success") return;` — comentado como "usuário
+        //     cancelou", mas o `dismiss` do Android também acontece quando o
+        //     retorno não casa com o `redirectTo`. Quem não cancelou nada só via
+        //     a tela de login de volta.
+        //  2. Sem token no hash, o `if` simplesmente não entrava: nenhuma
+        //     sessão, nenhum erro, nenhuma pista.
+        //
+        // Medido na telemetria: a sessão do aparelho dele registrou `/` e
+        // `/login` 16× cada com `user_id` VAZIO — nunca houve sessão. É raro
+        // (3 sessões em 14 dias contra 42 aparelhos que entraram), mas quando
+        // acontece a pessoa fica sem nenhuma informação.
+        if (result.type !== "success") {
+          trackEvento("login_provider_sem_retorno", { label: result.type });
+          throw new Error(
+            "O login não foi concluído. Se você fechou a janela do Google, tente de novo; se ela fechou sozinha, avise a equipe."
+          );
+        }
+
+        // ⚠️ Lê hash E query: o fluxo implícito devolve no hash, o PKCE devolve
+        // `?code=` na query, e o provedor devolve `error_description` em
+        // qualquer um dos dois. Ler só o hash era o que engolia o motivo.
+        const devolvido = new URL(result.url);
+        const doHash = new URLSearchParams(devolvido.hash.replace(/^#/, ""));
+        const pega = (k: string) => doHash.get(k) ?? devolvido.searchParams.get(k);
+
+        const erroProvedor = pega("error_description") || pega("error");
+        if (erroProvedor) {
+          trackEvento("login_provider_recusou", { label: pega("error") || "erro" });
+          throw new Error(decodeURIComponent(erroProvedor).replace(/[+]/g, " "));
+        }
+
+        const access_token = pega("access_token");
+        const refresh_token = pega("refresh_token");
         if (access_token && refresh_token) {
           const { error: sessErr } = await supabase.auth.setSession({
             access_token,
             refresh_token,
           });
           if (sessErr) throw sessErr;
+          return;
         }
+
+        // Defensivo: se um dia o cliente passar a usar PKCE, o retorno vira
+        // `?code=` e o caminho de cima não acharia token nenhum.
+        const code = pega("code");
+        if (code) {
+          const { error: codeErr } = await supabase.auth.exchangeCodeForSession(code);
+          if (codeErr) throw codeErr;
+          return;
+        }
+
+        trackEvento("login_provider_sem_sessao", { label: "sem_token" });
+        throw new Error(
+          "O Google respondeu, mas o aplicativo não recebeu a sessão. Tente de novo; se persistir, avise a equipe."
+        );
       },
       async signInWithApple() {
         if (Platform.OS !== "ios") {
