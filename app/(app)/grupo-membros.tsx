@@ -126,6 +126,9 @@ export default function GrupoMembrosScreen() {
   // Agenda (recorrência + exceções) — o líder gerencia a temporada inteira aqui.
   const [agenda, setAgenda] = useState<OcorrenciaAgenda[] | null>(null);
   const [agendaAviso, setAgendaAviso] = useState<string | null>(null);
+  // ⚠️ `undefined` = agenda ainda não chegou (o herói calcula local e a tela
+  // não fica vazia). `null` = chegou e NÃO há anterior pendente.
+  const [agendaAnterior, setAgendaAnterior] = useState<string | null | undefined>(undefined);
   const [agendaAlvo, setAgendaAlvo] = useState<OcorrenciaAgenda | null>(null);
   const [verAgenda, setVerAgenda] = useState(false);
   // Frequência
@@ -178,7 +181,12 @@ export default function GrupoMembrosScreen() {
     // "não há encontro marcado" e "a consulta falhou" levam a decisões opostas.
     if (agenda === null) {
       getAgendaGrupo(grupoId)
-        .then((r) => { setAgenda(r.ocorrencias || []); setAgendaAviso(r.aviso || null); })
+        .then((r) => {
+          setAgenda(r.ocorrencias || []);
+          setAgendaAviso(r.aviso || null);
+          // `anterior` ausente no payload (backend antigo) = não sei ⇒ undefined.
+          setAgendaAnterior(r.anterior === undefined ? undefined : (r.anterior?.data ?? null));
+        })
         .catch((e: any) => { setAgenda([]); setAgendaAviso(e?.message || t("Não consegui carregar a agenda agora.")); });
     }
     if (aba === "estudos" && materiais === null) {
@@ -390,10 +398,17 @@ export default function GrupoMembrosScreen() {
   // instante (afirmar "faltou registrar" sem ter lido os encontros seria mentir
   // com confiança). Enquanto isso, mostra o próximo encontro.
   const heroPronto = encontros !== null;
+  // ⚠️⚠️ O herói bebe da AGENDA DO SERVIDOR quando ela chega: era ele que
+  // continuava cobrando a chamada de um encontro que o líder já tinha
+  // remarcado (relato do Marcos · 18/08). Duas contas para "quando é o
+  // encontro" sempre divergem — esta tela passa a ter uma só.
+  const proximoDaAgenda = agenda?.find((o) => o.status !== "cancelado")?.data;
   const estado = estadoDoEncontro({
     diaSemana: grupo?.dia_semana,
     encontros: (encontros || []).map((e) => ({ data: e.data, presentes: e.presentes })),
     hoje: hojeBRT(),
+    ultimaISO: agendaAnterior,
+    proximaISO: proximoDaAgenda,
   });
   const semGente = membros.length === 0;
 
@@ -1196,7 +1211,9 @@ export default function GrupoMembrosScreen() {
         onFechar={() => setAgendaAlvo(null)}
         onSalvo={() => {
           setAgendaAlvo(null);
-          setAgenda(null); // recarrega a agenda inteira: uma exceção muda a lista
+          // recarrega a agenda INTEIRA: uma exceção muda a lista e o herói
+          setAgenda(null);
+          setAgendaAnterior(undefined);
         }}
       />
 

@@ -264,23 +264,12 @@ export function ModalAgendaEncontro({
                   maxLength={300}
                   style={styles.input}
                 />
-
-                <Button
-                  title={t("Salvar nova data")}
-                  loading={salvando}
-                  onPress={() => enviar("remarcar")}
-                  style={{ marginTop: spacing.md }}
-                />
               </>
             ) : null}
 
             {!jaCancelado ? (
-              <View style={styles.zonaCancelar}>
-                {!confirmando ? (
-                  <Pressable onPress={() => setConfirmando(true)} hitSlop={8}>
-                    <Text style={styles.linkCancelar}>{t("Cancelar este encontro")}</Text>
-                  </Pressable>
-                ) : (
+              <View style={styles.zonaAcoes}>
+                {confirmando ? (
                   <>
                     {/* ⚠️ Honestidade: o app NÃO avisa os participantes. Quem
                         fala com o grupo é o líder, no WhatsApp dele — e é ele
@@ -296,13 +285,11 @@ export function ModalAgendaEncontro({
                         onPress={() => setConfirmando(false)}
                         style={{ flex: 1 }}
                       />
-                      {/* ⚠️ O Button da casa só tem primary|ghost — ação
-                          destrutiva usa Pressable com `danger`, como as outras
-                          telas do app já fazem. */}
                       <Pressable
                         style={styles.btnPerigo}
                         disabled={salvando}
                         onPress={() => enviar("cancelar")}
+                        accessibilityRole="button"
                       >
                         <Text style={styles.btnPerigoTxt}>
                           {salvando ? t("Cancelando...") : t("Cancelar encontro")}
@@ -310,6 +297,31 @@ export function ModalAgendaEncontro({
                       </Pressable>
                     </View>
                   </>
+                ) : (
+                  /* ⚠️ AS DUAS AÇÕES LADO A LADO (pedido do Marcos · 18/08):
+                     salvar era um botão perdido no meio do formulário e
+                     cancelar era um link solto embaixo — "fica ruim a
+                     visualização". Agora é uma linha de rodapé.
+                     ⚠️ Cancelar continua sendo CONTORNO, nunca preenchido: a
+                     hierarquia tem que dizer qual é a ação esperada. E ele não
+                     cancela no toque — abre a confirmação acima. */
+                  <View style={styles.linhaBotoes}>
+                    {podeRemarcar ? (
+                      <Button
+                        title={t("Salvar nova data")}
+                        loading={salvando}
+                        onPress={() => enviar("remarcar")}
+                        style={{ flex: 1 }}
+                      />
+                    ) : null}
+                    <Pressable
+                      style={[styles.btnPerigo, !podeRemarcar && { flex: 1 }]}
+                      onPress={() => setConfirmando(true)}
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.btnPerigoTxt}>{t("Cancelar encontro")}</Text>
+                    </Pressable>
+                  </View>
                 )}
               </View>
             ) : null}
@@ -374,13 +386,13 @@ const criarEstilos = (c: Palette) =>
       marginBottom: spacing.md,
     },
     avisoTxt: { fontSize: font.size.sm, color: c.text },
-    zonaCancelar: {
+    zonaAcoes: {
       marginTop: spacing.lg,
       borderTopWidth: 1,
       borderTopColor: c.border,
       paddingTop: spacing.md,
+      gap: spacing.sm,
     },
-    linkCancelar: { fontSize: font.size.sm, color: c.danger, fontWeight: "600", textAlign: "center" },
     confirmaTxt: { fontSize: font.size.sm, color: c.text, marginBottom: spacing.sm, lineHeight: 20 },
     linhaBotoes: { flexDirection: "row", gap: spacing.sm },
     erro: { fontSize: font.size.sm, color: c.danger, marginTop: spacing.md },

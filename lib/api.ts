@@ -615,6 +615,9 @@ export type OcorrenciaAgenda = {
 export function getAgendaGrupo(grupoId: string): Promise<{
   grupo?: { id: string; nome: string; dia_semana: number | null; horario: string | null; recorrencia?: string };
   ocorrencias: OcorrenciaAgenda[];
+  /** O encontro ANTERIOR (mais recente até hoje) já com a exceção aplicada.
+   *  `null` = não há, ou foi cancelado (sem pendência de chamada). */
+  anterior?: { data_original: string; data: string; status: string } | null;
   aviso?: string;
 }> {
   return apiGet(`/app/grupos/${grupoId}/agenda`);

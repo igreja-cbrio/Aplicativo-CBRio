@@ -102,14 +102,36 @@ export function estadoDoEncontro(args: {
   diaSemana: number | null | undefined;
   encontros: EncontroRegistrado[];
   hoje: string;
+  /**
+   * ⚠️⚠️ A AGENDA DO SERVIDOR vence o cálculo local, quando ela chega.
+   *
+   * Este módulo deriva a ocorrência de `dia_semana` + `hoje` — ou seja, assume
+   * SEMANAL e não sabe das exceções. O líder remarcava o encontro de 18 para
+   * 20 e o herói continuava cobrando a chamada do dia 18 (relato do Marcos ·
+   * 18/08). Quem sabe da recorrência real (quinzenal/mensal) e das exceções é
+   * o backend, e é ele que manda estes dois.
+   *
+   * `undefined` = ainda não chegou, calcula local (é o que mantém a tela viva
+   * enquanto a agenda carrega). `null` em `ultimaISO` = NÃO HÁ ocorrência
+   * anterior pendente (foi cancelada) — diferente de "não sei".
+   */
+  ultimaISO?: string | null;
+  proximaISO?: string | null;
 }): EstadoEncontro {
-  const { diaSemana, encontros, hoje } = args;
+  const { diaSemana, encontros, hoje, ultimaISO, proximaISO } = args;
 
   // ⚠️ `== null`, NUNCA `!diaSemana` — domingo é 0.
   if (diaSemana == null || diaSemana < 0 || diaSemana > 6) return { tipo: "sem_dia" };
 
-  const ultima = ultimaOcorrencia(hoje, diaSemana);
-  const proxima = proximaOcorrencia(hoje, diaSemana);
+  // ⚠️ `ultimaISO === null` é resposta, não ausência: encontro cancelado não
+  // gera pendência de chamada, então o herói olha só o próximo.
+  if (ultimaISO === null) {
+    const prox = proximaISO || proximaOcorrencia(hoje, diaSemana);
+    return { tipo: "proximo", data: prox, dias: diasEntre(hoje, prox) };
+  }
+
+  const ultima = ultimaISO ?? ultimaOcorrencia(hoje, diaSemana);
+  const proxima = proximaISO ?? proximaOcorrencia(hoje, diaSemana);
   const registro = registroDaOcorrencia(encontros, ultima);
 
   // Hoje é o dia do grupo e ainda não registrou: é o PRÓXIMO (hoje), não
