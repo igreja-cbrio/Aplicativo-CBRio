@@ -184,7 +184,7 @@ export function ModalAgendaEncontro({
                 mostrava. Aqui ela serve pra ESCOLHER qual encontro editar, que
                 é a única coisa que a lista precisa fazer. Nasce recolhida. */}
             {ocorrencias.length > 1 ? (
-              <View style={styles.trocarWrap}>
+              <View>
                 <Pressable
                   style={styles.trocar}
                   onPress={() => setVerAgenda((v) => !v)}
@@ -197,58 +197,6 @@ export function ModalAgendaEncontro({
                   <Ionicons name={verAgenda ? "chevron-up" : "chevron-down"} size={16} color={colors.textMuted} />
                 </Pressable>
 
-                {/* ⚠️⚠️ DROPDOWN de verdade: posicionado por cima, com FUNDO
-                    sólido e rolagem própria. Antes era um View com `maxHeight`
-                    — e no Android `overflow` é `visible` por padrão, então o
-                    excesso VAZAVA por cima do formulário e os textos ficavam um
-                    sobre o outro (relato do Marcos · 18/08).
-                    ⚠️ `elevation` além do `zIndex`: no Android, irmão declarado
-                    depois pinta por cima mesmo com zIndex maior. */}
-                {verAgenda ? (
-                  <View style={styles.agendaDrop}>
-                    <ScrollView nestedScrollEnabled style={styles.agendaLista}>
-                    {ocorrencias.map((o) => {
-                      const sel = o.data_original === oc.data_original;
-                      return (
-                        <Pressable
-                          key={o.data_original}
-                          style={[styles.agendaItem, sel && styles.agendaItemSel]}
-                          onPress={() => {
-                            // ⚠️ Trocar de encontro LIMPA o formulário: manter a
-                            // data digitada para outro dia seria remarcar o
-                            // encontro errado com o que a pessoa escreveu antes.
-                            setTrocaKey(o.data_original);
-                            setNovaData(null);
-                            setHora("");
-                            setMotivo("");
-                            setCalendario(false);
-                            setConfirmando(false);
-                            setErro("");
-                            setVerAgenda(false);
-                          }}
-                          accessibilityRole="button"
-                        >
-                          <Text
-                            style={[
-                              styles.agendaItemTxt,
-                              o.status === "cancelado" && styles.agendaItemCancelado,
-                              sel && styles.agendaItemTxtSel,
-                            ]}
-                          >
-                            {isoParaBR(o.data)}
-                            {o.horario ? ` · ${o.horario}` : ""}
-                          </Text>
-                          {o.status !== "normal" ? (
-                            <Text style={styles.agendaItemTag}>
-                              {o.status === "cancelado" ? t("cancelado") : t("remarcado")}
-                            </Text>
-                          ) : null}
-                        </Pressable>
-                      );
-                    })}
-                    </ScrollView>
-                  </View>
-                ) : null}
               </View>
             ) : null}
 
@@ -379,7 +327,7 @@ export function ModalAgendaEncontro({
                         onPress={() => enviar("cancelar")}
                         accessibilityRole="button"
                       >
-                        <Text style={styles.btnPerigoTxt}>
+                        <Text numberOfLines={1} style={styles.btnPerigoTxt}>
                           {salvando ? t("Cancelando...") : t("Cancelar encontro")}
                         </Text>
                       </Pressable>
@@ -395,11 +343,15 @@ export function ModalAgendaEncontro({
                      cancela no toque — abre a confirmação acima. */
                   <View style={styles.linhaBotoes}>
                     {podeRemarcar ? (
+                      /* ⚠️ "Salvar nova data" NÃO cabe em meia largura com o
+                         padding de 24 de cada lado do Button — vira duas linhas
+                         dentro de uma caixa de altura fixa. Rótulo curto +
+                         padding menor resolvem sem encolher fonte. */
                       <Button
-                        title={t("Salvar nova data")}
+                        title={t("Salvar data")}
                         loading={salvando}
                         onPress={() => enviar("remarcar")}
-                        style={{ flex: 1 }}
+                        style={{ flex: 1, paddingHorizontal: spacing.sm }}
                       />
                     ) : null}
                     <Pressable
@@ -407,7 +359,7 @@ export function ModalAgendaEncontro({
                       onPress={() => setConfirmando(true)}
                       accessibilityRole="button"
                     >
-                      <Text style={styles.btnPerigoTxt}>{t("Cancelar encontro")}</Text>
+                      <Text numberOfLines={1} style={styles.btnPerigoTxt}>{t("Cancelar encontro")}</Text>
                     </Pressable>
                   </View>
                 )}
@@ -416,6 +368,68 @@ export function ModalAgendaEncontro({
 
             {erro ? <Text style={styles.erro}>{erro}</Text> : null}
             </ScrollView>
+
+            {/* ⚠️⚠️ PAINEL, não dropdown flutuante (18/08). A versão anterior
+                era `position: absolute` num wrapper de ~42px, então ela
+                renderizava FORA dos limites do pai — e no Android view que
+                desenha fora do pai **não recebe toque**: dava pra ver a lista e
+                não dava pra rolar nem escolher. Aqui ele é filho do CARTÃO,
+                cujos limites o contêm, então toque e rolagem funcionam.
+                ⚠️ Um único ScrollView, sem aninhar: `nestedScrollEnabled` é só
+                Android e briga com o gesto do pai. */}
+            {verAgenda ? (
+              <View style={styles.painelAgenda}>
+                <View style={styles.painelTopo}>
+                  <Text style={styles.painelTitulo}>{t("Escolher outro encontro")}</Text>
+                  <Pressable onPress={() => setVerAgenda(false)} hitSlop={12} accessibilityRole="button">
+                    <Ionicons name="close" size={22} color={colors.textMuted} />
+                  </Pressable>
+                </View>
+                <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
+                  <View style={styles.agendaLista}>
+                    {ocorrencias.map((o) => {
+                      const sel = o.data_original === oc.data_original;
+                      return (
+                        <Pressable
+                          key={o.data_original}
+                          style={[styles.agendaItem, sel && styles.agendaItemSel]}
+                          onPress={() => {
+                            // ⚠️ Trocar de encontro LIMPA o formulário: manter a
+                            // data digitada para outro dia seria remarcar o
+                            // encontro errado com o que a pessoa escreveu antes.
+                            setTrocaKey(o.data_original);
+                            setNovaData(null);
+                            setHora("");
+                            setMotivo("");
+                            setCalendario(false);
+                            setConfirmando(false);
+                            setErro("");
+                            setVerAgenda(false);
+                          }}
+                          accessibilityRole="button"
+                        >
+                          <Text
+                            style={[
+                              styles.agendaItemTxt,
+                              o.status === "cancelado" && styles.agendaItemCancelado,
+                              sel && styles.agendaItemTxtSel,
+                            ]}
+                          >
+                            {isoParaBR(o.data)}
+                            {o.horario ? ` · ${o.horario}` : ""}
+                          </Text>
+                          {o.status !== "normal" ? (
+                            <Text style={styles.agendaItemTag}>
+                              {o.status === "cancelado" ? t("cancelado") : t("remarcado")}
+                            </Text>
+                          ) : null}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+              </View>
+            ) : null}
           </Pressable>
         </Pressable>
       </KeyboardAvoidingView>
@@ -480,19 +494,23 @@ const criarEstilos = (c: Palette) =>
       borderTopWidth: 1, borderBottomWidth: 1, borderColor: c.border,
     },
     trocarTxt: { flex: 1, fontSize: font.size.sm, color: c.textMuted, fontWeight: "600" },
-    trocarWrap: { position: "relative", zIndex: 20, elevation: 20, marginBottom: spacing.md },
-    agendaDrop: {
+    // ⚠️ O painel é filho do CARTÃO (limites o contêm ⇒ recebe toque no
+    // Android) e cobre o conteúdo — é o "fundo que sobrepõe" pedido.
+    painelAgenda: {
       position: "absolute",
-      top: "100%", left: 0, right: 0,
+      top: 0, left: 0, right: 0, bottom: 0,
       backgroundColor: c.surface,
-      borderWidth: 1, borderColor: c.border,
-      borderRadius: radius.md,
-      overflow: "hidden",
-      zIndex: 21, elevation: 21,
-      shadowColor: "#000", shadowOpacity: 0.35,
-      shadowRadius: 12, shadowOffset: { width: 0, height: 6 },
+      borderRadius: radius.xl,
+      padding: spacing.lg,
+      zIndex: 30, elevation: 30,
     },
-    agendaLista: { maxHeight: 240 },
+    painelTopo: {
+      flexDirection: "row", alignItems: "center",
+      justifyContent: "space-between", gap: spacing.sm,
+      marginBottom: spacing.sm,
+    },
+    painelTitulo: { flex: 1, fontSize: font.size.md, fontWeight: "700", color: c.text },
+    agendaLista: { gap: 2 },
     agendaItem: {
       paddingVertical: 10, paddingHorizontal: spacing.sm,
       borderRadius: radius.sm, flexDirection: "row",
@@ -524,6 +542,7 @@ const criarEstilos = (c: Palette) =>
       borderRadius: radius.full,
       alignItems: "center",
       justifyContent: "center",
+      paddingHorizontal: spacing.sm,
     },
-    btnPerigoTxt: { fontSize: font.size.md, fontWeight: "700", color: c.danger },
+    btnPerigoTxt: { fontSize: font.size.md, fontWeight: "700", color: c.danger, textAlign: "center" },
   });

@@ -50,6 +50,10 @@ export function Button({
         <ActivityIndicator color={variant === "ghost" ? colors.primary : "#fff"} />
       ) : (
         <Text
+          // ⚠️ O botão tem ALTURA FIXA (52): rótulo que quebra em duas linhas
+          // transborda a caixa e some pela borda. Aconteceu quando dois botões
+          // passaram a dividir a largura (18/08).
+          numberOfLines={1}
           style={[
             styles.label,
             variant === "ghost" && { color: colors.primary },

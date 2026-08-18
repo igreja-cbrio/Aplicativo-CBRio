@@ -1232,4 +1232,5 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Registre a presença de um encontro para o app acertar as próximas datas deste grupo.": { en: "Record attendance for one meeting so the app can get this group's next dates right.", es: "Registra la asistencia de un encuentro para que la app acierte las próximas fechas de este grupo." },
   "Não consegui carregar a agenda agora.": { en: "Could not load the schedule right now.", es: "No pude cargar la agenda ahora." },
   "Escolher outro encontro": { en: "Choose another meeting", es: "Elegir otro encuentro" },
+  "Salvar data": { en: "Save date", es: "Guardar fecha" },
 };
