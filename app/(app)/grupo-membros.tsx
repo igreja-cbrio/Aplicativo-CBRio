@@ -49,7 +49,7 @@ import { linkDeInscricao, precisaEscolherNaLista } from "@/lib/convite";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { hojeBRT } from "@/lib/dataBRT";
 import {
-  estadoDoEncontro, dataLonga, quandoCurto, distanciaEmTexto,
+  estadoDoEncontro, dataLonga, quandoCurto, distanciaEmTexto, horaCurta,
 } from "@/lib/proximoEncontro";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { ModalAgendaEncontro } from "@/components/grupos/ModalAgendaEncontro";
@@ -601,7 +601,7 @@ export default function GrupoMembrosScreen() {
                       <View style={{ flex: 1 }}>
                         <Text style={styles.agendaRot}>{t("Próximo encontro")}</Text>
                         <Text style={styles.agendaData}>
-                          {prox ? dataLonga(prox.inicio) : t("Sem encontro marcado — os próximos foram cancelados")}
+                          {prox ? `${dataLonga(prox.data)}${prox.horario ? `, ${horaCurta(prox.horario)}` : ""}` : t("Sem encontro marcado — os próximos foram cancelados")}
                         </Text>
                       </View>
                       {prox ? (
@@ -654,7 +654,7 @@ export default function GrupoMembrosScreen() {
                                   o.status === "cancelado" && styles.agendaItemCancelado,
                                 ]}
                               >
-                                {dataLonga(o.inicio)}
+                                {dataLonga(o.data)}{o.horario ? `, ${horaCurta(o.horario)}` : ""}
                               </Text>
                               {o.status !== "normal" ? (
                                 <Text style={styles.agendaItemTag}>

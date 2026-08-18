@@ -141,7 +141,19 @@ const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho",
 
 /** "Terça, 12 de agosto" — o texto grande do herói. */
 export function dataLonga(iso: string): string {
+  // ⚠️⚠️ SÓ 'YYYY-MM-DD'. Passar um INSTANTE ('2026-08-25T23:00:00.000Z')
+  // montava '…ZT12:00:00Z' = Invalid Date, e a tela escrevia
+  // "undefined, NaN de undefined" — foi o que apareceu na agenda do grupo
+  // (18/08). O typecheck não pega: os dois são `string`.
+  // ⚠️ NÃO fatiar o instante em 10 caracteres pra "consertar sozinho": às 22h
+  // BRT o dia UTC já virou, e o corte devolveria o dia SEGUINTE. Converter
+  // instante→dia é decisão de quem tem o fuso, não deste formatador.
+  // ⚠️ UMA guarda só, e é esta: qualquer entrada que não seja dia puro produz
+  // Invalid Date ao concatenar. Escrevi antes um regex de formato POR CIMA
+  // dela e o mutante sobreviveu — guarda que nenhum teste consegue derrubar
+  // sozinha é código que finge proteger. Ficou a que sustenta.
   const d = doDia(iso);
+  if (Number.isNaN(d.getTime())) return "";
   return `${DIAS_NOME[d.getUTCDay()]}, ${d.getUTCDate()} de ${MESES[d.getUTCMonth()]}`;
 }
 

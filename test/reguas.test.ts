@@ -1857,3 +1857,49 @@ describe("carteira digital · plataforma e falha", () => {
     expect(motivoFalhaCarteira(500)).toBe("outro");
   });
 });
+
+// ============================================================================
+// dataLonga · DATA não é INSTANTE (18/08/2026)
+//
+// Relato do Marcos: "nos próximos encontros está escrito undefined, NaN de
+// undefined, em todas as datas". A agenda estava CERTA — 20 ocorrências
+// corretas até o fim da temporada. Quem quebrava era o formatador: ele monta
+// `new Date(iso + "T12:00:00Z")`, e recebendo um INSTANTE
+// ('2026-08-25T23:00:00.000Z') isso vira '…ZT12:00:00Z' = Invalid Date, com
+// `DIAS_NOME[NaN]` = undefined e `getUTCDate()` = NaN.
+//
+// ⚠️ O typecheck NÃO pega: `data` e `inicio` são os dois `string`.
+// ⚠️ E o formatador NÃO fatia o instante em 10 caracteres pra "se virar": às
+// 22h BRT o dia UTC já virou e o corte devolveria o dia SEGUINTE. Converter
+// instante → dia é decisão de quem tem o fuso.
+// ============================================================================
+describe("dataLonga · recebe DIA, nunca instante", () => {
+  it("formata um 'YYYY-MM-DD'", async () => {
+    const { dataLonga } = await import("../lib/proximoEncontro");
+    expect(dataLonga("2026-08-25")).toBe("Terça, 25 de agosto");
+  });
+
+  it("⚠️ MUTATION GUARD · instante devolve vazio, NUNCA 'undefined, NaN de undefined'", async () => {
+    const { dataLonga } = await import("../lib/proximoEncontro");
+    const saida = dataLonga("2026-08-25T23:00:00.000Z");
+    expect(saida).toBe("");
+    expect(saida).not.toContain("undefined");
+    expect(saida).not.toContain("NaN");
+  });
+
+  it("lixo e vazio também não viram texto quebrado", async () => {
+    const { dataLonga } = await import("../lib/proximoEncontro");
+    for (const v of ["", "25/08/2026", "2026-8-5", "amanhã"]) {
+      expect(dataLonga(v as string)).toBe("");
+    }
+  });
+
+  it("⚠️ data inexistente (30 de fevereiro) não vira data válida silenciosa", async () => {
+    const { dataLonga } = await import("../lib/proximoEncontro");
+    // O JS rola 30/02 para 02/03 — aqui isso apareceria como "Segunda, 2 de
+    // março" num campo que a pessoa leria como 30 de fevereiro. Formato é
+    // válido, então passa: fica REGISTRADO como limite conhecido, não como
+    // promessa de validação de calendário.
+    expect(dataLonga("2026-02-30")).toBe("Segunda, 2 de março");
+  });
+});
