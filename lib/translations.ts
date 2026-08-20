@@ -887,6 +887,31 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   },
   "Não foi possível registrar.": { en: "Couldn't record it.", es: "No se pudo registrar." },
   "Compartilhar": { en: "Share", es: "Compartir" },
+  // Convite de inscrição que o membro manda pra outra pessoa (20/08/2026).
+  // ⚠️ Sai no idioma de QUEM COMPARTILHA — é ela que está escrevendo.
+  "Vem com a gente na CBRio": { en: "Come with us at CBRio", es: "Ven con nosotros en CBRio" },
+  "Inscrições aqui": { en: "Sign up here", es: "Inscríbete aquí" },
+  "Se inscreve aqui": { en: "Sign up here", es: "Inscríbete aquí" },
+  "Quer se batizar? Dá uma olhada e se inscreve aqui": {
+    en: "Want to be baptized? Take a look and sign up here",
+    es: "¿Quieres bautizarte? Mira y inscríbete aquí",
+  },
+  "Vem participar de um grupo de conexão da CBRio": {
+    en: "Come join a CBRio connect group",
+    es: "Ven a participar de un grupo de conexión de CBRio",
+  },
+  "O NEXT é o começo da jornada na CBRio. Se inscreve aqui": {
+    en: "NEXT is the start of the journey at CBRio. Sign up here",
+    es: "NEXT es el comienzo del camino en CBRio. Inscríbete aquí",
+  },
+  "Vem servir com a gente na CBRio": {
+    en: "Come serve with us at CBRio",
+    es: "Ven a servir con nosotros en CBRio",
+  },
+  "Quer apresentar seu filho na igreja? É por aqui": {
+    en: "Want to present your child at church? It is right here",
+    es: "¿Quieres presentar a tu hijo en la iglesia? Es por aquí",
+  },
   "Não foi possível compartilhar.": { en: "Couldn't share.", es: "No se pudo compartir." },
 
   // ───────────────── Cuidados — meus pedidos ─────────────────

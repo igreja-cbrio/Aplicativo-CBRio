@@ -8,10 +8,14 @@ import { useMembro } from "@/lib/useMembro";
 import { carregarStatusInscricoes, type InscricoesStatus, type StatusInscricao } from "@/lib/inscricoesStatus";
 import {
   buscarEventosAbertos,
+  buscarPortasInscricao,
   minhasInscricoesEventos,
   type EventoAberto,
   type MinhaInscricaoEvento,
+  type PortaInscricaoLink,
 } from "@/lib/api";
+import BotaoCompartilhar from "@/components/inscricoes/BotaoCompartilhar";
+import { mensagemEvento, mensagemPorta } from "@/lib/compartilharInscricao";
 import { abrirInscricaoEvento } from "@/lib/eventos";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
@@ -42,16 +46,20 @@ type Item = {
   /** Porta PÚBLICA do sistema, aberta no navegador in-app. */
   url?: string;
   chave?: Chave;
+  /** Chave da porta no catálogo do servidor (`GET /app/inscricoes/portas`) —
+   *  é o que liga esta linha ao LINK público pra compartilhar. Ausente = a
+   *  porta não é compartilhável (não tem endereço público próprio). */
+  porta?: string;
 };
 
 const ITENS: Item[] = [
-  { label: "Batismo", desc: "Acompanhe seu batismo na CBRio", icon: "water", href: "/batismo", chave: "batismo" },
-  { label: "Grupos", desc: "Participe de um grupo", icon: "people", href: "/grupos", chave: "grupos" },
-  { label: "NEXT", desc: "O começo da jornada", icon: "sparkles", href: "/next", chave: "next" },
+  { label: "Batismo", desc: "Acompanhe seu batismo na CBRio", icon: "water", href: "/batismo", chave: "batismo", porta: "batismo" },
+  { label: "Grupos", desc: "Participe de um grupo", icon: "people", href: "/grupos", chave: "grupos", porta: "grupos" },
+  { label: "NEXT", desc: "O começo da jornada", icon: "sparkles", href: "/next", chave: "next", porta: "next" },
   // ⚠️ "Quero servir" e não "Voluntariado": a barra de baixo já tem "Servir"
   // (a ÁREA). Aqui é a PORTA de inscrição — rótulos iguais em dois lugares
   // faziam parecer duas coisas (05/08/2026).
-  { label: "Quero servir", desc: "Sirva na CBRio", icon: "hand-left", href: "/voluntariado", chave: "voluntariado" },
+  { label: "Quero servir", desc: "Sirva na CBRio", icon: "hand-left", href: "/voluntariado", chave: "voluntariado", porta: "voluntariado" },
   // ⚠⚠ ERA UM LINK MORTO, e isso foi MEDIDO (11/08/2026): a URL
   // `cbrio.org/apresentacao-criancas` **não tem rota no ERP** (0 referências em
   // `src/`) e devolvia HTTP 200 só pelo catch-all do SPA da Vercel — parecia
@@ -71,6 +79,7 @@ const ITENS: Item[] = [
     desc: "Apresente seu filho na igreja",
     icon: "happy",
     href: "/apresentacao-crianca",
+    porta: "apresentacao",
   },
 ];
 
@@ -111,6 +120,11 @@ export default function InscricoesScreen() {
   // finalmente aparece no app.
   const [minhas, setMinhas] = useState<MinhaInscricaoEvento[] | null>(null);
   const [verMeus, setVerMeus] = useState(false);
+  // Links públicos pra CONVIDAR alguém. ⚠️ Vêm do servidor (o app não monta
+  // URL) e a falha é silenciosa DE PROPÓSITO: sem eles o botão de compartilhar
+  // não aparece, e o resto da tela funciona igual. Compartilhar é um extra —
+  // não pode derrubar a tela de inscrição de quem quer se inscrever.
+  const [portas, setPortas] = useState<Record<string, PortaInscricaoLink>>({});
 
   useFocusEffect(
     useCallback(() => {
@@ -119,6 +133,9 @@ export default function InscricoesScreen() {
       minhasInscricoesEventos()
         .then((r) => setMinhas(r.inscricoes || []))
         .catch(() => setMinhas([]));
+      buscarPortasInscricao()
+        .then((r) => setPortas(Object.fromEntries((r.portas || []).map((p) => [p.chave, p]))))
+        .catch(() => setPortas({}));
     }, [membro?.membroId])
   );
 
@@ -152,6 +169,14 @@ export default function InscricoesScreen() {
                 <Text style={styles.rowDesc}>{t(it.desc)}</Text>
               </View>
               <StatusBadge status={st} styles={styles} colors={colors} t={t} />
+              <BotaoCompartilhar
+                // ⚠️ Só há convite quando o SERVIDOR mandou a porta (é ele que
+                // tem o link). Sem ela, `null` ⇒ o botão não aparece.
+                mensagem={it.porta && portas[it.porta] ? mensagemPorta(portas[it.porta], t) : null}
+                oQue={t(it.label)}
+                tipo="porta"
+                refId={it.porta}
+              />
               <Ionicons
                 name={it.url ? "open-outline" : "chevron-forward"}
                 size={18}
@@ -210,6 +235,7 @@ export default function InscricoesScreen() {
                   pago: i.evento.pago,
                   valor_centavos: i.valor_cobrado_centavos ?? null,
                   tem_sorteio: i.evento.tem_sorteio,
+                  url: i.evento.url ?? null,
                   statusInsc: i.status,
                   pagamentoPendente: i.status === "recebida" && i.pagamento?.status !== "pago",
                 }))
@@ -223,6 +249,7 @@ export default function InscricoesScreen() {
                   pago: e.pago,
                   valor_centavos: e.valor_centavos,
                   tem_sorteio: e.tem_sorteio,
+                  url: e.url ?? null,
                   statusInsc: e.inscrito ? "inscrita" : null,
                   // ⚠️ Vaga RESERVADA não é inscrição. Isto era `false` fixo, e
                   // a aba mostrava "Inscrito" pra quem só reservou e não pagou —
@@ -292,6 +319,12 @@ export default function InscricoesScreen() {
                       ) : null}
                     </View>
                   </View>
+                  <BotaoCompartilhar
+                    mensagem={mensagemEvento({ nome: ev.nome, quando, local: ev.local, url: ev.url }, t)}
+                    oQue={ev.nome}
+                    tipo="evento"
+                    refId={ev.id}
+                  />
                   <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
                 </Pressable>
               );

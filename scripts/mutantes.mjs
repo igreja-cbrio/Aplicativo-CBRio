@@ -441,6 +441,23 @@ const MUTANTES = [
     de: "  if (!e.data) return true;",
     para: "  if (!e.data) return false;",
   },
+  {
+    // ⚠️ Mensagem SEM LINK é lixo no WhatsApp de quem recebeu — e quem recebeu
+    // não é da igreja, então ninguém do lado de dentro descobre. A régua tem
+    // que devolver null pra a tela ESCONDER o botão.
+    nome: "compartilhar: montar convite mesmo sem link",
+    arq: "lib/compartilharInscricao.ts",
+    de: "  if (!url || !nome) return null;",
+    para: "  if (!nome) return null;",
+  },
+  {
+    // Porta nova vinda do servidor não pode desaparecer da tela só porque a
+    // copy dela ainda não existe neste bundle.
+    nome: "compartilhar: porta sem copy propria deixa de ter convite",
+    arq: "lib/compartilharInscricao.ts",
+    de: "  const texto = copy ? t(copy) : `${t('Se inscreve aqui')} \u2014 ${porta.nome}`;",
+    para: "  if (!copy) return null;\n  const texto = t(copy);",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a
