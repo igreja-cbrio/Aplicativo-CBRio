@@ -887,6 +887,11 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   },
   "Não foi possível registrar.": { en: "Couldn't record it.", es: "No se pudo registrar." },
   "Compartilhar": { en: "Share", es: "Compartir" },
+  "Você já apresentou": { en: "You have presented", es: "Ya presentaste" },
+  "Pode faltar alguma — não conseguimos conferir tudo agora.": {
+    en: "Some may be missing — we could not check everything right now.",
+    es: "Puede faltar alguna — no pudimos verificar todo ahora.",
+  },
   // Convite de inscrição que o membro manda pra outra pessoa (20/08/2026).
   // ⚠️ Sai no idioma de QUEM COMPARTILHA — é ela que está escrevendo.
   "Vem com a gente na CBRio": { en: "Come with us at CBRio", es: "Ven con nosotros en CBRio" },

@@ -230,14 +230,34 @@ describe("barra de baixo · reaproveita a aba viva", () => {
   });
 
   it("toque no item já aceso não navega", () => {
-    expect(acaoDaBarra("/menu", "/menu")).toBe("nada");
-    irParaBarra("/menu", "/menu");
+    // ⚠️ As 4 abas de DESTINO: tocar na aba acesa não faz nada. Jogar pra Home
+    // seria perder a tela por um toque acidental.
+    for (const r of ["/meu-grupo", "/voluntariado", "/cuidados", "/devocional"]) {
+      expect(acaoDaBarra(r, r)).toBe("nada");
+      irParaBarra(r, r);
+    }
     expect(navegacoes).toEqual([]);
   });
 
+  // ⚠️⚠️ MUDANÇA DE COMPORTAMENTO (20/08/2026 · pedido do Matheus): este teste
+  // dizia que `/menu` → `/menu` era "nada". O menu é uma GAVETA e a Home NÃO
+  // está na barra, então de dentro dele não havia caminho de 1 toque de volta.
+  it("tocar em Menu estando no menu volta pra Home", () => {
+    expect(acaoDaBarra("/menu", "/menu")).toBe("home");
+    irParaBarra("/menu", "/menu");
+    expect(navegacoes).toEqual(["/"]);
+  });
+
+  it("a volta pra Home é navigate, nunca replace (reaproveita a Home da pilha)", () => {
+    irParaBarra("/menu", "/menu");
+    expect(navegacoes.some((n) => n.startsWith("(replace)"))).toBe(false);
+  });
+
   it("query string não muda a decisão (deep link com ?aba= é a mesma tela)", () => {
-    expect(acaoDaBarra("/menu?x=1", "/menu")).toBe("nada");
+    // /menu?x=1 continua sendo /menu — logo, volta pra Home também.
+    expect(acaoDaBarra("/menu?x=1", "/menu")).toBe("home");
     expect(acaoDaBarra("/meu-grupo?aba=encontrar", "/cuidados")).toBe("ir");
+    expect(acaoDaBarra("/cuidados?x=1", "/cuidados")).toBe("nada");
   });
 
   it("as 5 rotas da barra são as mesmas que a barra desenha", () => {

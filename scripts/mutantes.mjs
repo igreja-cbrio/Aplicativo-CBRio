@@ -28,8 +28,11 @@ const MUTANTES = [
     // `useFocusEffect` + o spinner. `navigate` volta pra instância viva.
     nome: "barra: trocar navigate por replace (recarrega a aba a cada toque)",
     arq: "lib/nav.ts",
-    de: "  router.navigate(destino as Href);",
-    para: "  router.replace(destino as Href);",
+    // ⚠️ Âncora atualizada em 20/08/2026: `irParaBarra` passou a decidir entre
+    // o destino e a Home (tocar em Menu no menu volta pra Home). O que este
+    // mutante prova continua sendo o mesmo — a barra NUNCA usa `replace`.
+    de: '  router.navigate((acao === "home" ? ROTA_HOME : destino) as Href);',
+    para: '  router.replace((acao === "home" ? ROTA_HOME : destino) as Href);',
   },
   {
     nome: "volStatus: tratar status terminal como pendente",
@@ -458,6 +461,30 @@ const MUTANTES = [
     de: "  const texto = copy ? t(copy) : `${t('Se inscreve aqui')} \u2014 ${porta.nome}`;",
     para: "  if (!copy) return null;\n  const texto = t(copy);",
   },
+  {
+    // ⚠️ Sem o ramo `home`, o menu volta a ser beco sem saída: a Home NÃO está
+    // na barra, então de dentro do menu não há caminho de 1 toque de volta.
+    nome: "barra: tocar em Menu no menu deixa de voltar pra Home",
+    arq: "lib/nav.ts",
+    de: '  return VOLTA_PRA_HOME.has(d) ? "home" : "nada";',
+    para: '  return "nada";',
+  },
+  {
+    // ⚠️ O oposto: TODA aba acesa jogando pra Home faz a pessoa perder a tela
+    // num toque acidental.
+    nome: "barra: qualquer aba acesa passa a voltar pra Home",
+    arq: "lib/nav.ts",
+    de: 'const VOLTA_PRA_HOME = new Set<string>(["/menu"]);',
+    para: 'const VOLTA_PRA_HOME = new Set<string>(ROTAS_BARRA);',
+  },
+  // ⚠️ NÃO entra aqui um mutante pro `crianca_nome` da tela de apresentação
+  // (o campo que estava lido como `bebe_nome` e mostrava `undefined` em
+  // produção): o escopo deste harness é código PURO de `lib/`, e o vitest não
+  // monta tela. O mutante foi escrito, RODADO e sobreviveu — por escopo, não
+  // por régua fraca. A classe de bug real é "o app lê um campo que o backend
+  // não manda", e ela só se pega cruzando os dois repos, que é coisa que nem o
+  // `tsc` faz (o tipo é declarado na própria tela, e a resposta da API não é
+  // validada em runtime). Fica registrado pra ninguém achar que está coberto.
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

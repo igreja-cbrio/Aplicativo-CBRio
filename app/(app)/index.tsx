@@ -14,7 +14,6 @@ import { useMembro } from "@/lib/useMembro";
 import { useT } from "@/lib/i18n";
 import { destaquesAtivos, type Destaque } from "@/lib/destaques";
 import { proximosCultos, cultoAoVivo, type CultoUpcoming, type CultoAoVivo } from "@/lib/cultos";
-import { FEATURES } from "@/lib/features";
 import { Carrossel } from "@/components/home/Carrossel";
 import { ProximosCultos } from "@/components/home/ProximosCultos";
 import { AnimatedShortcut } from "@/components/anim/AnimatedShortcut";
@@ -35,7 +34,9 @@ function primeiroNome(nomeCompleto?: string, email?: string | null) {
 type Atalho = {
   label: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
-  href: "/generosidade" | "/batismo" | "/kids" | "/jornada" | "/next" | "/inscricoes" | "/videos";
+  href:
+    | "/generosidade" | "/batismo" | "/kids" | "/jornada" | "/next" | "/inscricoes"
+    | "/videos" | "/grupos" | "/voluntariado" | "/apresentacao-crianca";
 };
 
 /**
@@ -57,20 +58,46 @@ type Atalho = {
  * "No culto" saiu por outro motivo: virou o CARD DE AO VIVO no topo, que só
  * aparece enquanto o culto acontece.
  *
- * ⚠️ A grade é de 3 colunas. Hoje são 6 itens (2 linhas cheias), mas a
- * Generosidade é filtrada por FEATURES: com ela desligada ficam 5 e a última
- * linha fica com 2. Quem acrescentar um 7º deixa 3+3+1 — decidir o que sai
- * junto, não empurrar.
+ * ⚠️ A grade é de 3 colunas. Quem acrescentar um 7º deixa 3+3+1 — decidir o que
+ * sai junto, não empurrar.
+ */
+/**
+ * ⚠️⚠️ ATUALIZAÇÃO DE 20/08/2026 · a lista virou a que o Matheus pediu:
+ * *"gostaria que os atalhos da página principal fossem: grupos, next,
+ * voluntariado, batismo, apresentação de crianças e inscrições"*.
+ *
+ * ⚠️⚠️ ISSO CONTRARIA A REGRA REGISTRADA ACIMA, e de propósito: **Grupos** e
+ * **Voluntariado** ESTÃO na barra de baixo (como "Grupos" e "Servir"), então
+ * agora aparecem em dois lugares na mesma tela. A regra "não repetir a barra"
+ * era do Marcos (10/08); este pedido é do Matheus (20/08) e é explícito. Quem
+ * mexer aqui de novo precisa saber que a duplicação foi PEDIDA, não descuido —
+ * e que a decisão entre as duas é dos dois, não de quem está editando.
+ *
+ * Saíram: **Sua jornada**, **Pregações** e **Generosidade** (as três seguem no
+ * `/menu`) e **Kids**.
+ *
+ * ⚠️ **Kids é o único que NÃO tem item no `/menu`** — ele virou cartão dentro
+ * de "Minha família" (decisão do Marcos, 05/08). Então o check-in do Kids passou
+ * de 1 toque pra 3 (Menu → Minha família → cartão), e é uma tela usada NO
+ * DOMINGO, com criança no colo. Fica declarado como consequência a decidir; não
+ * inventei um 7º atalho pra compensar, porque a grade é de 3 colunas e o pedido
+ * listou 6.
+ *
+ * ⚠️ 6 itens = 2 linhas cheias. Generosidade saiu da lista, então o filtro de
+ * FEATURES não afeta mais o desenho da grade.
  */
 const ATALHOS: Atalho[] = [
-  { label: "Sua jornada", icon: "trail-sign", href: "/jornada" },
+  // ⚠️ `/grupos` (ENCONTRAR um grupo), não `/meu-grupo`. O pedido dizia só
+  // "grupos", e a barra de baixo já leva a `/meu-grupo` — apontar pra lá faria
+  // o atalho ser o MESMO destino, duplicação sem nenhum ganho. Além disso a
+  // lista pedida é toda de PORTAS de entrada (next, voluntariado, batismo,
+  // apresentação, inscrições), e a porta dos grupos é o buscador.
+  { label: "Grupos", icon: "people", href: "/grupos" },
   { label: "NEXT", icon: "sparkles", href: "/next" },
+  { label: "Voluntariado", icon: "hand-left", href: "/voluntariado" },
   { label: "Batismo", icon: "water", href: "/batismo" },
-  { label: "Kids", icon: "happy", href: "/kids" },
+  { label: "Apresentação de crianças", icon: "happy", href: "/apresentacao-crianca" },
   { label: "Inscrições", icon: "clipboard", href: "/inscricoes" },
-  // ⚠️ A tela de pregações é `/videos` — não existe rota `/pregacoes`.
-  { label: "Pregações", icon: "videocam", href: "/videos" },
-  { label: "Generosidade", icon: "gift", href: "/generosidade" },
 ];
 
 export default function InicioScreen() {
@@ -173,7 +200,7 @@ export default function InicioScreen() {
         {/* Atalhos para os módulos */}
         <Text style={styles.sectionTitle}>{t("Atalhos")}</Text>
         <View style={styles.grid}>
-          {ATALHOS.filter((a) => FEATURES.generosidade || a.href !== "/generosidade").map((a, i) => (
+          {ATALHOS.map((a, i) => (
             <AnimatedShortcut
               key={a.href}
               index={i}

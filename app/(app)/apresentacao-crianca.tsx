@@ -46,10 +46,30 @@ import {
 } from "@/lib/apresentacaoCrianca";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
+// ⚠️⚠️ `crianca_nome`, NÃO `bebe_nome`. Este tipo dizia `bebe_nome` — coluna da
+// tabela ANTIGA (`apresentacao_bebes`) — e a porta passou a escrever em
+// `apresentacao_criancas` em 11/08/2026. O card "Você já pediu" vinha mostrando
+// **`undefined · 13 de setembro`** em produção, e o TypeScript não pega: a
+// resposta da API não é validada em runtime. Conferido no catálogo do banco.
+type PedidoApresentacao = {
+  id: string;
+  crianca_nome: string;
+  data_apresentacao: string;
+  status: string | null;
+  /** Como a apresentação foi atribuída a mim: vinculo | cpf | ficha_kids. */
+  via?: string | null;
+};
+
 type Resp = {
   proxima_data: string;
   familia: { nome: string | null; membros: string[] } | null;
-  pedidos: { id: string; bebe_nome: string; data_apresentacao: string; status: string | null }[];
+  pedidos: PedidoApresentacao[];
+  /** Apresentações que JÁ aconteceram (mais recente primeiro). Opcional: bundle
+   *  novo pode falar com backend antigo, e aí simplesmente não há histórico. */
+  historico?: PedidoApresentacao[];
+  /** true = alguma consulta da cadeia falhou. A tela DIZ que a lista pode estar
+   *  incompleta — "não consegui perguntar" nunca vira "você nunca apresentou". */
+  historico_incompleto?: boolean;
   pode_indicar_vinculo: boolean;
 };
 
@@ -246,9 +266,34 @@ export default function ApresentacaoCriancaScreen() {
                   <Text style={styles.jaTitulo}>{t("Você já pediu")}</Text>
                   {dados.pedidos.map((p) => (
                     <Text key={p.id} style={styles.jaTxt}>
-                      {p.bebe_nome} · {dataBonita(p.data_apresentacao)}
+                      {p.crianca_nome} · {dataBonita(p.data_apresentacao)}
                     </Text>
                   ))}
+                </View>
+              )}
+
+              {/* Histórico — pedido do Matheus (20/08/2026): quem já apresentou
+                  um filho vê aqui. ⚠️ O bloco só existe quando HÁ histórico:
+                  "nenhuma apresentação anterior" ocuparia espaço afirmando algo
+                  sobre quem nunca apresentou, que é a maioria. */}
+              {!!dados?.historico?.length && (
+                <View style={styles.histCard}>
+                  <Text style={styles.jaTitulo}>{t("Você já apresentou")}</Text>
+                  {dados.historico.map((p) => (
+                    <View key={p.id} style={styles.histLinha}>
+                      <Ionicons name="checkmark-circle" size={15} color={colors.primary} />
+                      <Text style={styles.jaTxt}>
+                        {p.crianca_nome} · {dataBonita(p.data_apresentacao)}
+                      </Text>
+                    </View>
+                  ))}
+                  {/* ⚠️ Lista possivelmente incompleta é DECLARADA. Sem isto, uma
+                      consulta que falhou se leria como "só apresentei esses". */}
+                  {dados.historico_incompleto ? (
+                    <Text style={styles.histAviso}>
+                      {t("Pode faltar alguma — não conseguimos conferir tudo agora.")}
+                    </Text>
+                  ) : null}
                 </View>
               )}
 
@@ -556,6 +601,14 @@ const makeStyles = (c: Palette) =>
     },
     jaTitulo: { color: c.text, fontSize: font.size.sm, fontWeight: "700" },
     jaTxt: { color: c.textMuted, fontSize: font.size.sm },
+    // Histórico: mesma caixa do "já pediu", com um fundo levemente distinto —
+    // são coisas diferentes (o que VEM × o que já ACONTECEU) e ficam vizinhas.
+    histCard: {
+      backgroundColor: c.surfaceAlt, borderRadius: radius.lg, padding: spacing.md,
+      borderWidth: 1, borderColor: c.glassBorder, gap: 6,
+    },
+    histLinha: { flexDirection: "row", alignItems: "center", gap: 6 },
+    histAviso: { color: c.textMuted, fontSize: 11, fontStyle: "italic", marginTop: 2 },
     opcao: {
       flexDirection: "row", alignItems: "center", gap: spacing.md,
       backgroundColor: c.surface, borderRadius: radius.lg, padding: spacing.md,
