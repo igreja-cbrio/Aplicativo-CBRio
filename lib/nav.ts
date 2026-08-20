@@ -58,18 +58,41 @@ export function ehRotaDeBarra(rota: string): boolean {
 /**
  * `nada` → já está nessa tela (toque no item aceso não navega)
  * `ir`   → `navigate`, que reaproveita a aba viva quando ela já está na pilha
+ * `home` → volta pra tela principal (só do `/menu` · ver abaixo)
  */
-export type AcaoBarra = "nada" | "ir";
+export type AcaoBarra = "nada" | "ir" | "home";
+
+/**
+ * ⚠️⚠️ TOCAR EM "MENU" ESTANDO NO MENU VOLTA PRA HOME (20/08/2026).
+ *
+ * Pedido do Matheus: *"o botão de menu na parte de baixo... voltasse para a
+ * tela principal caso eu clique nele, estando na tela de menu. pois estamos sem
+ * botão para voltar pra home"*. E é verdade: a Home **não está na barra** (a
+ * barra tem Grupos · Servir · Cuidados · Devocional · Menu), então de dentro do
+ * menu não havia caminho de 1 toque de volta.
+ *
+ * ⚠️ Vale SÓ pro `/menu`, de propósito. O menu é uma GAVETA — fechá-la é voltar
+ * pra onde se estava. As outras quatro são DESTINOS: tocar em "Grupos" estando
+ * em Grupos jogar a pessoa pra Home seria perder a tela por um toque acidental,
+ * que é o oposto do que se espera de uma barra de abas.
+ */
+const ROTA_HOME = "/";
+const VOLTA_PRA_HOME = new Set<string>(["/menu"]);
 
 export function acaoDaBarra(atual: string, destino: string): AcaoBarra {
   // Query string não muda a tela: /meu-grupo?aba=encontrar é /meu-grupo.
   const a = (atual || "/").split("?")[0];
   const d = (destino || "/").split("?")[0];
-  return a === d ? "nada" : "ir";
+  if (a !== d) return "ir";
+  return VOLTA_PRA_HOME.has(d) ? "home" : "nada";
 }
 
 /** Executa o toque num item da barra. */
 export function irParaBarra(atual: string, destino: string) {
-  if (acaoDaBarra(atual, destino) === "nada") return;
-  router.navigate(destino as Href);
+  const acao = acaoDaBarra(atual, destino);
+  if (acao === "nada") return;
+  // ⚠️ `navigate` também na volta pra Home: ela já está no fundo da pilha, e
+  // `navigate` a REAPROVEITA em vez de empilhar uma segunda Home — que é o que
+  // faria o botão de voltar do Android sair do app em vez de subir a árvore.
+  router.navigate((acao === "home" ? ROTA_HOME : destino) as Href);
 }

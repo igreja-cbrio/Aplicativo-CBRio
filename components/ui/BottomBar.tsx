@@ -24,7 +24,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
-import { irParaBarra } from "@/lib/nav";
+import { acaoDaBarra, irParaBarra } from "@/lib/nav";
 import { font, spacing, type Palette } from "@/constants/theme";
 
 export const BOTTOMBAR_H = 58;
@@ -86,7 +86,11 @@ export function BottomBar() {
             onPress={() => {
               // Régua em lib/nav.ts: entre irmãs da barra é `replace` (troca
               // lateral, não empilha); da Home/profundidade é `navigate`.
-              if (pathname === it.rota) return;
+              // ⚠️ NÃO abortar aqui quando já está na rota: desde 20/08 tocar
+              // em "Menu" estando no menu volta pra Home, e quem decide isso é
+              // `acaoDaBarra` (`lib/nav.ts`). Este `return` engolia o toque
+              // antes de a régua ser consultada.
+              if (acaoDaBarra(pathname, it.rota) === "nada") return;
               // ⚠️ O toque tem que RESPONDER antes de a tela trocar. O retorno
               // tátil sai na hora (thread nativa) e não depende de a próxima
               // tela montar — era esse vazio de ~300 ms que se lia como
