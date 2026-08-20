@@ -51,6 +51,8 @@ import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { trackEvento } from "@/lib/telemetria";
 import { abrirInscricaoEvento } from "@/lib/eventos";
+import BotaoCompartilhar from "@/components/inscricoes/BotaoCompartilhar";
+import { mensagemEvento } from "@/lib/compartilharInscricao";
 import {
   buscarEventosAbertos,
   inscreverEmEvento,
@@ -212,6 +214,21 @@ export default function EventoScreen() {
     }
   }
 
+  // ⚠️ Derivado de `evento`/`minha` e NÃO de `ev`/`quando`: aquelas duas const
+  // só existem ~55 linhas abaixo, e `const` usada antes da declaração estoura
+  // TDZ no render (o bug do array de deps de hook, PR #2113 do ERP).
+  const conviteDesteEvento = mensagemEvento(
+    {
+      nome: evento?.nome ?? minha?.evento.nome ?? "",
+      quando: fmtData(evento?.data ?? minha?.evento.data, evento?.hora ?? minha?.evento.hora),
+      local: evento?.local ?? minha?.evento.local,
+      // Link SEMPRE do servidor. Sem ele, `mensagemEvento` devolve null e o
+      // botão não aparece — nunca um convite sem endereço.
+      url: evento?.url ?? minha?.evento.url ?? null,
+    },
+    t,
+  );
+
   const cabecalho = (
     <View style={styles.topRow}>
       <Pressable
@@ -226,7 +243,18 @@ export default function EventoScreen() {
       <Text style={styles.title} numberOfLines={1}>
         {evento?.nome || t("Evento")}
       </Text>
-      <View style={{ width: 24 }} />
+      {/* Espelha a largura do "voltar" pra o título ficar centrado — quando não
+          há convite (evento sem link), volta a ser espaçador. */}
+      {conviteDesteEvento ? (
+        <BotaoCompartilhar
+          mensagem={conviteDesteEvento}
+          oQue={evento?.nome ?? minha?.evento.nome ?? t("Evento")}
+          tipo="evento"
+          refId={String(id ?? "")}
+        />
+      ) : (
+        <View style={{ width: 24 }} />
+      )}
     </View>
   );
 

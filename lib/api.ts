@@ -1030,6 +1030,16 @@ export type EventoAberto = {
 
 export type TextosInscricao = { termos_lgpd: string; aviso_optin: string };
 
+// ===== Links públicos das portas de inscrição (compartilhar) =====
+// ⚠️ A URL vem do SERVIDOR, derivada do registro canônico de portas. O app NÃO
+// monta link: `/apresentacao-criancas` já ficou meses no ar como link MORTO
+// (11/08/2026), e bundle só se conserta por OTA.
+export type PortaInscricaoLink = { chave: string; nome: string; url: string };
+
+export function buscarPortasInscricao(): Promise<{ portas: PortaInscricaoLink[] }> {
+  return apiGet<{ portas: PortaInscricaoLink[] }>("/app/inscricoes/portas");
+}
+
 export function buscarEventosAbertos(): Promise<{
   eventos: EventoAberto[];
   textos?: TextosInscricao;
@@ -1075,6 +1085,9 @@ export type MinhaInscricaoEvento = {
     tem_sorteio: boolean;
     pago: boolean;
     checkin_ativo: boolean;
+    /** Link público do evento — pro botão de compartilhar. Opcional porque
+     *  bundle novo fala com backend antigo (aí o botão simplesmente não aparece). */
+    url?: string | null;
   };
 };
 
