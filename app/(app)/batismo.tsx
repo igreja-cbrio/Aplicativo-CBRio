@@ -509,7 +509,7 @@ function BatismoConteudo({
 
 function JaBatizado({ igreja, onCorrigir, colors, styles }: {
   igreja: string | null;
-  onCorrigir: () => Promise<void>;
+  onCorrigir(): Promise<void>;
   colors: ReturnType<typeof useColors>;
   styles: ReturnType<typeof makeStyles>;
 }) {
