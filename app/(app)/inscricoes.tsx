@@ -22,6 +22,8 @@ import { subirUmNivel } from "@/lib/hierarquia";
 import { irPara } from "@/lib/nav";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
+import { getBatismoPapel } from '@/lib/batismoGestao';
+
 function formatarDataEvento(data: string | null, hora: string | null): string | null {
   if (!data) return null;
   const d = new Date(`${data}T${(hora || "00:00").slice(0, 5)}:00`);
@@ -113,6 +115,10 @@ export default function InscricoesScreen() {
   const t = useT();
   const { membro } = useMembro();
   const [status, setStatus] = useState<InscricoesStatus | null>(null);
+  const [gerenciaBatismo, setGerenciaBatismo] = useState(false);
+  const itens = useMemo(() => ITENS.map(it => it.porta === 'batismo' && gerenciaBatismo
+    ? { ...it, desc: 'Datas, aprovações, pessoas e check-in', chave: undefined }
+    : it), [gerenciaBatismo]);
   const [eventos, setEventos] = useState<EventoAberto[] | null>(null);
   // ⚠️ Seletor "Todos | Meus eventos" (pedido do Marcos · 05/08/2026): NÃO é aba
   // nova — é recorte da MESMA lista. "Meus" abre a inscrição da pessoa naquele
@@ -129,6 +135,7 @@ export default function InscricoesScreen() {
   useFocusEffect(
     useCallback(() => {
       carregarStatusInscricoes(membro?.membroId ?? null).then(setStatus).catch(() => {});
+      getBatismoPapel().then(r => setGerenciaBatismo(!!r.pode_gerenciar)).catch(() => setGerenciaBatismo(false));
       buscarEventosAbertos().then((r) => setEventos(r.eventos || [])).catch(() => setEventos([]));
       minhasInscricoesEventos()
         .then((r) => setMinhas(r.inscricoes || []))
@@ -151,7 +158,7 @@ export default function InscricoesScreen() {
           <View style={{ width: 24 }} />
         </View>
 
-        {ITENS.map((it) => {
+        {itens.map((it) => {
           const st = it.chave ? status?.[it.chave] ?? "nenhum" : "nenhum";
           return (
             <Pressable

@@ -45,6 +45,9 @@ import ConfettiCannon from "react-native-confetti-cannon";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 
+import { BatismoGestaoScreen } from '@/components/batismo/BatismoGestao';
+import { getBatismoPapel } from '@/lib/batismoGestao';
+
 function diasAte(dataIso: string): number {
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
@@ -61,6 +64,7 @@ export default function BatismoScreen() {
   const { membro, loading: loadingMembro } = useMembro();
 
   const [batismo, setBatismo] = useState<MeuBatismo | null>(null);
+  const [podeGerenciar, setPodeGerenciar] = useState<boolean | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [fotos, setFotos] = useState<FotoBatismo[]>([]);
   const [fotosLoading, setFotosLoading] = useState(false);
@@ -73,6 +77,12 @@ export default function BatismoScreen() {
   const [salvandoIgreja, setSalvandoIgreja] = useState(false);
 
   const carregar = useCallback(async () => {
+    const papel = await getBatismoPapel().catch(() => ({ pode_gerenciar: false }));
+    setPodeGerenciar(!!papel.pode_gerenciar);
+    if (papel.pode_gerenciar) {
+      setCarregando(false);
+      return;
+    }
     if (!membro?.membroId) {
       setCarregando(false);
       return;
@@ -122,6 +132,25 @@ export default function BatismoScreen() {
     }
   }
 
+  if (podeGerenciar) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.headerGestao}>
+          <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
+            <Ionicons name='chevron-back' size={24} color={colors.text} />
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.title}>{t('Batismo')}</Text>
+            <Text style={styles.gestaoSub}>{t('Gestão da equipe')}</Text>
+          </View>
+          <View style={{ width: 24 }} />
+        </View>
+        <BatismoGestaoScreen />
+      </SafeAreaView>
+    );
+  }
+
   async function baixarFoto(f: FotoBatismo) {
     try {
       const destino = (FileSystem.documentDirectory ?? "") + f.nome;
@@ -148,7 +177,7 @@ export default function BatismoScreen() {
           <View style={{ width: 24 }} />
         </View>
 
-        {loadingMembro || carregando ? (
+        {loadingMembro || carregando || podeGerenciar === null ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />
         ) : !membro?.membroId ? (
           <Vazio
@@ -157,6 +186,17 @@ export default function BatismoScreen() {
             txt={t("Pra acompanhar seu batismo, complete o cadastro do membro (CPF) no perfil.")}
             cta={t("Ir para o perfil")}
             onPress={() => router.navigate("/perfil")}
+            colors={colors}
+            styles={styles}
+          />
+        ) : !batismo && batismoAnt?.batizado_outra_igreja ? (
+          <JaBatizado
+            igreja={batismoAnt.igreja_batismo_anterior}
+            onCorrigir={async () => {
+              await desmarcarBatismoAnterior();
+              setBatismoAnt({ batizado_outra_igreja: false, igreja_batismo_anterior: null });
+              setIgrejaTxt('');
+            }}
             colors={colors}
             styles={styles}
           />
@@ -467,6 +507,32 @@ function BatismoConteudo({
   );
 }
 
+function JaBatizado({ igreja, onCorrigir, colors, styles }: {
+  igreja: string | null;
+  onCorrigir: () => Promise<void>;
+  colors: ReturnType<typeof useColors>;
+  styles: ReturnType<typeof makeStyles>;
+}) {
+  const t = useT();
+  return (
+    <View style={styles.jaBatizado}>
+      <View style={styles.jaBatizadoIcon}>
+        <Ionicons name='checkmark' size={31} color='#fff' />
+      </View>
+      <Text style={styles.jaBatizadoEyebrow}>{t('Uma decisão para celebrar')}</Text>
+      <Text style={styles.jaBatizadoTitle}>{t('Você já foi batizado(a)')}</Text>
+      <Text style={styles.jaBatizadoTxt}>
+        {igreja
+          ? `${t('Registramos esse passo em')} ${igreja}. ${t('Que alegria ter você caminhando com a gente.')}`
+          : t('Que alegria celebrar esse passo da sua caminhada com Jesus.')}
+      </Text>
+      <Pressable onPress={onCorrigir} hitSlop={8} style={styles.corrigirRegistro}>
+        <Text style={{ color: colors.textMuted, fontSize: 12 }}>{t('Esse registro não está correto')}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function Vazio({
   icon,
   titulo,
@@ -517,6 +583,14 @@ const THUMB = Math.floor((SCREEN_W - spacing.lg * 2 - spacing.md * 2 - 12) / 3);
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
+    jaBatizado: { alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.glassBorder, padding: spacing.xl, marginTop: spacing.md },
+    jaBatizadoIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.success, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
+    jaBatizadoEyebrow: { color: colors.success, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
+    jaBatizadoTitle: { color: colors.text, fontFamily: BRAND_FONT, fontSize: font.size.xl, textAlign: 'center', marginTop: 5 },
+    jaBatizadoTxt: { color: colors.textMuted, fontSize: font.size.sm, textAlign: 'center', lineHeight: 21, marginTop: spacing.sm },
+    corrigirRegistro: { marginTop: spacing.lg, paddingVertical: 7, paddingHorizontal: 10 },
+    headerGestao: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
+    gestaoSub: { color: colors.textMuted, fontSize: 11, marginTop: 1 },
     content: { padding: spacing.lg, paddingBottom: 140, gap: spacing.md },
     header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
     back: { width: 24 },
