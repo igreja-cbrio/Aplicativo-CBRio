@@ -17,7 +17,7 @@ import { Linking } from "react-native";
 import {
   getEscalaServicos, getEscala, buscarEscalaPool, adicionarNaEscala, removerDaEscala, moverNaEscala,
   getVoluntarioDetalhe,
-  type EscalaServico, type EscalaItem, type PoolVoluntario, type VoluntarioDetalhe,
+  type EscalaServico, type EscalaItem, type EscalaComposicaoItem, type PoolVoluntario, type VoluntarioDetalhe,
 } from "@/lib/api";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { useT } from "@/lib/i18n";
@@ -83,7 +83,7 @@ export default function EscalaSupervisorScreen() {
 
   const [servicoSel, setServicoSel] = useState<EscalaServico | null>(null);
   const [escala, setEscala] = useState<EscalaItem[]>([]);
-  const [equipesDoCulto, setEquipesDoCulto] = useState<string[]>([]);
+  const [composicao, setComposicao] = useState<EscalaComposicaoItem[]>([]);
   const [carregandoEscala, setCarregandoEscala] = useState(false);
   const [refrescando, setRefrescando] = useState(false);
   const [recolhidos, setRecolhidos] = useState<Set<string>>(new Set());
@@ -171,7 +171,7 @@ export default function EscalaSupervisorScreen() {
     try {
       const resposta = await getEscala(serviceId);
       setEscala(resposta.escalas || []);
-      setEquipesDoCulto(resposta.equipes || []);
+      setComposicao(resposta.composicao || []);
     }
     catch (e: any) { Alert.alert(t("Erro"), e?.message || t("Erro ao carregar a escala")); }
     finally { setCarregandoEscala(false); }
@@ -189,7 +189,7 @@ export default function EscalaSupervisorScreen() {
     try {
       const resposta = await getEscala(servicoSel.id);
       setEscala(resposta.escalas || []);
-      setEquipesDoCulto(resposta.equipes || []);
+      setComposicao(resposta.composicao || []);
       await carregarServicos();
     }
     catch { /* silencioso no pull */ }
@@ -197,22 +197,41 @@ export default function EscalaSupervisorScreen() {
   }
 
   const grupos = useMemo(() => {
-    const m = new Map<string, EscalaItem[]>();
-    // A composição do culto vem antes das escalas existentes: uma área vazia
-    // continua visível e o supervisor pode adicionar a primeira pessoa nela.
-    for (const equipe of equipesDoCulto) m.set(equipe, []);
-    for (const e of escala) {
-      const k = e.team_name || SEM_EQUIPE;
-      const arr = m.get(k) || [];
-      arr.push(e); m.set(k, arr);
+    type Posicao = { nome: string; alvo: number; pessoas: EscalaItem[] };
+    type Subarea = { nome: string; posicoes: Map<string, Posicao> };
+    const areas = new Map<string, Map<string, Subarea>>();
+    const garantir = (area: string, team: string) => {
+      if (!areas.has(area)) areas.set(area, new Map());
+      const subareas = areas.get(area)!;
+      if (!subareas.has(team)) subareas.set(team, { nome: team, posicoes: new Map() });
+      return subareas.get(team)!;
+    };
+    // A composição é a fonte da árvore, preservando área, subárea e posição
+    // mesmo quando a primeira pessoa ainda não foi escalada.
+    for (const item of composicao) {
+      const subarea = garantir(item.area || 'Sem área', item.team_name || SEM_EQUIPE);
+      const chave = item.position_name || 'Equipe toda';
+      if (!subarea.posicoes.has(chave)) subarea.posicoes.set(chave, { nome: chave, alvo: item.quantidade || 1, pessoas: [] });
     }
-    const arr = [...m.entries()];
-    for (const [, lista] of arr) lista.sort((a, b) => a.volunteer_name.localeCompare(b.volunteer_name, "pt-BR"));
-    arr.sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
-    return arr;
-  }, [escala, equipesDoCulto]);
+    for (const pessoa of escala) {
+      const team = pessoa.team_name || SEM_EQUIPE;
+      let encontrada: { area: string; subarea: Subarea } | null = null;
+      for (const [area, subareas] of areas) {
+        const subarea = subareas.get(team);
+        if (subarea) { encontrada = { area, subarea }; break; }
+      }
+      const subarea = encontrada?.subarea || garantir('Sem área', team);
+      const chave = pessoa.position_name || 'Equipe toda';
+      if (!subarea.posicoes.has(chave)) subarea.posicoes.set(chave, { nome: chave, alvo: 0, pessoas: [] });
+      subarea.posicoes.get(chave)!.pessoas.push(pessoa);
+    }
+    return [...areas.entries()].map(([area, subareas]) => ({
+      area,
+      subareas: [...subareas.values()].map(subarea => ({ ...subarea, posicoes: [...subarea.posicoes.values()] })),
+    })).sort((a, b) => a.area.localeCompare(b.area, 'pt-BR'));
+  }, [escala, composicao]);
 
-  const equipes = useMemo(() => grupos.map(([t]) => t).filter(t => t !== SEM_EQUIPE), [grupos]);
+  const equipes = useMemo(() => grupos.flatMap(g => g.subareas.map(s => s.nome)).filter(t => t !== SEM_EQUIPE), [grupos]);
   const resumo = useMemo(() => ({
     total: escala.length,
     conf: escala.filter(e => e.confirmation_status === "confirmed").length,
@@ -254,9 +273,9 @@ export default function EscalaSupervisorScreen() {
     }, 300);
   }
 
-  function abrirAdd(team?: string) {
+  function abrirAdd(team?: string, position?: string) {
     setAddTeam(team || SEM_EQUIPE);
-    setNovaEquipe(""); setPosicao(""); setBusca(""); setResultados([]); setBuscaErro(false);
+    setNovaEquipe(""); setPosicao(position || ""); setBusca(""); setResultados([]); setBuscaErro(false);
     setAddOpen(true);
   }
 
@@ -377,12 +396,16 @@ export default function EscalaSupervisorScreen() {
 
               {grupos.length === 0 ? (
                 <Text style={styles.muted}>{t("Ninguém escalado ainda. Toque em “Adicionar” pra começar.")}</Text>
-              ) : grupos.map(([team, lista]) => {
-                const aberto = !recolhidos.has(team);
-                const conf = lista.filter(x => x.confirmation_status === "confirmed").length;
-                const alvoDrop = !!dragItem && hoverTeam === team && (dragItem.team_name || SEM_EQUIPE) !== team;
-                return (
-                  <View key={team}
+              ) : grupos.map(grupo => (
+                <View key={grupo.area} style={styles.areaBlock}>
+                  <Text style={styles.areaNome}>{grupo.area}</Text>
+                  {grupo.subareas.map(subarea => {
+                    const team = subarea.nome;
+                    const lista = subarea.posicoes.flatMap(p => p.pessoas);
+                    const aberto = !recolhidos.has(team);
+                    const conf = lista.filter(x => x.confirmation_status === "confirmed").length;
+                    const alvoDrop = !!dragItem && hoverTeam === team && (dragItem.team_name || SEM_EQUIPE) !== team;
+                    return <View key={team}
                     onLayout={e => { teamLayoutRef.current[team] = { y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height }; }}
                     style={[styles.teamCard, alvoDrop && { borderColor: colors.primary, borderWidth: 2, backgroundColor: colors.primary + "12" }]}>
                     <Pressable style={styles.teamHead} onPress={() => toggle(team)} accessibilityRole="button" accessibilityLabel={`${t("Equipe")} ${rotuloEquipe(team)}, ${aberto ? t("recolher") : t("expandir")}`}>
@@ -392,7 +415,12 @@ export default function EscalaSupervisorScreen() {
                     </Pressable>
                     {aberto && (
                       <View>
-                        {lista.map(item => {
+                        {subarea.posicoes.map(pos => <View key={pos.nome}>
+                          <View style={styles.posicaoHead}>
+                            <Text style={styles.posicaoNome}>{pos.nome}</Text>
+                            <Text style={styles.posicaoMeta}>{pos.pessoas.length}/{pos.alvo || pos.pessoas.length}</Text>
+                          </View>
+                        {pos.pessoas.map(item => {
                           const si = statusInfo(item.confirmation_status);
                           const pan = Gesture.Pan().activateAfterLongPress(250)
                             .onStart(e => { runOnJS(iniciarDrag)(item, e.absoluteX, e.absoluteY); })
@@ -419,15 +447,17 @@ export default function EscalaSupervisorScreen() {
                             </GestureDetector>
                           );
                         })}
-                        <Pressable onPress={() => abrirAdd(team)} style={styles.addInline} accessibilityRole="button">
+                        <Pressable onPress={() => abrirAdd(team, pos.nome === 'Equipe toda' ? '' : pos.nome)} style={styles.addInline} accessibilityRole="button">
                           <Ionicons name="add" size={16} color={colors.primary} />
-                          <Text style={[styles.pequeno, { color: colors.primary }]}>{t("Adicionar a")} {rotuloEquipe(team)}</Text>
+                          <Text style={[styles.pequeno, { color: colors.primary }]}>{t("Adicionar a")} {pos.nome}</Text>
                         </Pressable>
+                        </View>)}
                       </View>
                     )}
                   </View>
-                );
-              })}
+                  })}
+                </View>
+              ))}
             </ScrollView>
             </View>
           )}
@@ -588,11 +618,16 @@ function makeStyles(c: Palette) {
     cultoChipData: { color: c.textMuted, fontSize: font.size.sm - 1, marginTop: 2 },
     resumo: { flexDirection: "row", flexWrap: "wrap", gap: 12, paddingHorizontal: 4, paddingBottom: 2 },
     resumoTxt: { color: c.textMuted, fontSize: font.size.sm, fontWeight: "600" },
+    areaBlock: { gap: 6 },
+    areaNome: { color: c.text, fontSize: font.size.md, fontWeight: "800", paddingHorizontal: 4, marginTop: spacing.sm },
     teamCard: { backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, overflow: "hidden" },
     teamHead: { flexDirection: "row", alignItems: "center", gap: 8, padding: spacing.md },
     teamNome: { color: c.text, fontSize: font.size.md, fontWeight: "700", flex: 1 },
     badge: { backgroundColor: c.surfaceAlt, borderRadius: radius.full, paddingHorizontal: 8, paddingVertical: 2 },
     badgeTxt: { color: c.textMuted, fontSize: font.size.sm - 1, fontWeight: "600" },
+    posicaoHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: 4, backgroundColor: c.surfaceAlt },
+    posicaoNome: { color: c.textMuted, fontSize: font.size.sm - 1, fontWeight: "700" },
+    posicaoMeta: { color: c.textMuted, fontSize: font.size.sm - 1, fontWeight: "600" },
     pessoa: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: spacing.md, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
     avatar: { height: 34, width: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
     avatarTxt: { fontSize: font.size.sm - 1, fontWeight: "700" },
