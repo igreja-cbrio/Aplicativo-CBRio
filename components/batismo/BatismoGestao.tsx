@@ -415,7 +415,7 @@ function PessoaModal({ alvo, dataPadrao, horarios, onClose, onSaved, colors, sty
   dataPadrao: string;
   horarios: { horario: string; label: string }[];
   onClose: () => void;
-  onSaved: () => Promise<void>;
+  onSaved(): Promise<void>;
   colors: Palette;
   styles: ReturnType<typeof makeStyles>;
 }) {
