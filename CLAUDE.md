@@ -2593,3 +2593,52 @@ contas do app apontavam pra cadastro sem CPF.
 - ⚠️ `perfil.tsx` ainda salva por `app_salvar_membro` (RPC antiga que cruza por
   CPF/telefone/**nome**) — porta velha, fora do contrato. Migrar pro
   `/app/identidade/completar` num próximo passo.
+
+## ⚠️⚠️ CHECK-IN DOS VOLUNTÁRIOS PELO SUPERVISOR (25/08/2026)
+
+Pedido do Matheus: *"no app de membros os supervisores devem ter a funcionalidade
+de fazer check-in também dos voluntários das suas respectivas áreas. E só podem
+mexer nessa funcionalidade nos dias de culto. Isso ajuda a gente não ficar refém
+de apenas um local de check-in (que hoje é na sala de voluntários)."*
+
+**Onde:** card na **aba Servir** (`/voluntariado`, ao lado de "Montar escala") →
+tela `/checkin-voluntarios`. Ele escolheu que a entrada fica na aba, não em menu
+próprio. Registrado em `lib/hierarquia.ts` (pai = `/voluntariado`), senão a seta
+de voltar não leva a lugar nenhum — invariante do portão.
+
+⚠️⚠️ **QUEM MANDA É O SERVIDOR.** O ERP decide a **janela** (dia do culto em BRT)
+e o **escopo** (área + subárea da concessão) e responde **403**
+(`backend/routes/app.js` + `backend/utils/janelaCulto.js`). A régua local
+(`lib/janelaCheckin.ts`) existe pra o **card não aparecer** fora da janela — nunca
+pra substituir a checagem. Se as duas discordarem, o toque falha, e **botão que
+falha é pior que botão que não existe**.
+
+⚠️ **A lista NÃO é refiltrada no cliente.** `getEscala` já vem recortada pelo
+escopo do supervisor (o backend filtra composição e escalas). Refiltrar aqui
+criaria uma segunda régua pra divergir da primeira.
+
+⚠️⚠️ **A ARMADILHA DE FUSO — é o mutante 62.** Culto de domingo 19h é **22h UTC**;
+das 21h BRT em diante `toISOString().slice(0,10)` já devolve o dia seguinte e a
+janela **FECHA NO MEIO DO CULTO DA NOITE**, com o supervisor de mão na massa e
+gente na porta. Mesma classe do bug de 05/08 que criou o `dataBRT.ts` ("21h no
+Rio ainda é hoje") — e reapareceu num arquivo novo. Régua pura em
+`lib/janelaCheckin.ts`, 7 casos em `test/reguas.test.ts`, 2 mutantes (UTC e
+"janela sempre aberta"). **63/63.**
+
+⚠️ `janelaCheckin` usa **`Intl` (timeZone)**, não o offset fixo de −3h do
+`hojeBRT()` vizinho. O comentário do `dataBRT.ts` já registra o offset como dívida
+("se o horário de verão voltar, isto tem que virar Intl") — código NOVO não entra
+aumentando essa dívida, e o backend também usa `Intl`, então os dois lados
+calculam pelo mesmo mecanismo.
+
+**Presença é resolvida por ESCALA *e* por PESSOA**: o backend deduplica por BLOCO
+de culto (a manhã inteira cobre com 1 check-in), então a mesma pessoa pode estar
+marcada sem ter linha de check-in NESTE `service_id`. A tela olha os dois mapas —
+com um só, a mesma pessoa apareceria "não marcada" e o toque levaria 409.
+
+**Desfazer** existe (decisão dele: "sim, dentro da janela"), com confirmação
+mostrando a hora do check-in. Fora do dia, o servidor recusa.
+
+⚠️ Quem apareceu **sem estar na escala** não aparece na lista — e a tela **declara
+isso** no pé, em vez de esconder. O endpoint aceita check-in avulso, mas oferecer
+busca de pessoa aqui abriria uma segunda porta de escalação sem a régua da escala.

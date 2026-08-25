@@ -16,7 +16,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { SeusDados, fichaCompleta } from "@/components/inscricoes/SeusDados";
-import { apiGet, apiPost, criarInscricaoApi, getVoluntariadoOpcoes, getSupervisorInfo, type VoluntariadoOpcao } from "@/lib/api";
+import { apiGet, apiPost, criarInscricaoApi, getVoluntariadoOpcoes, getSupervisorInfo, getEscalaServicos, type VoluntariadoOpcao } from "@/lib/api";
+import { cultosDeHoje } from "@/lib/janelaCheckin";
 import { useRouter } from "expo-router";
 import { useVoluntariadoSync } from "@/lib/useVoluntariadoSync";
 import { estadoVoluntariado, volEncerrado } from "@/lib/volStatus";
@@ -55,8 +56,27 @@ export default function VoluntariadoScreen() {
   const { membro, loading } = useMembro();
   const router = useRouter();
   const [ehSupervisor, setEhSupervisor] = useState(false);
+  // ⚠️ O card de check-in só existe se HOJE tem culto — a régua é a MESMA do
+  // servidor (`lib/janelaCheckin`, no portão), porque o backend responde 403
+  // fora da janela. Mostrar o card sempre faria o supervisor tocar e levar erro.
+  const [temCultoHoje, setTemCultoHoje] = useState(false);
   useEffect(() => {
-    getSupervisorInfo().then((r) => setEhSupervisor(!!r?.supervisor)).catch(() => {});
+    getSupervisorInfo()
+      .then(async (r) => {
+        const sup = !!r?.supervisor;
+        setEhSupervisor(sup);
+        if (!sup) return;
+        // Só pergunta os cultos se a pessoa é supervisora — pra não gastar
+        // requisição na abertura da aba de quem não usa isso.
+        try {
+          const s = await getEscalaServicos();
+          setTemCultoHoje(cultosDeHoje(s.servicos || []).length > 0);
+        } catch {
+          // Sem a lista, o card não aparece: melhor faltar botão do que
+          // oferecer um que o servidor vai recusar.
+        }
+      })
+      .catch(() => {});
   }, []);
   const colors = useColors();
   const t = useT();
@@ -296,6 +316,21 @@ export default function VoluntariadoScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.supervisorTitulo}>{t("Montar escala")}</Text>
                 <Text style={styles.supervisorTxt}>{t("Você é supervisor · monte e veja as escalas da sua área.")}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </Pressable>
+          )}
+
+          {/* ⚠️ Aparece SÓ no dia do culto (pedido do Matheus, 25/08: "só podem
+              mexer nessa funcionalidade nos dias de culto"). Fora da janela o
+              card não existe — e o servidor recusa de todo jeito, então isto é
+              cortesia, não a trava. */}
+          {ehSupervisor && temCultoHoje && (
+            <Pressable style={styles.supervisorCard} onPress={() => router.push("/checkin-voluntarios" as any)}>
+              <Ionicons name="checkmark-done" size={22} color={colors.brandPale} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.supervisorTitulo}>{t("Check-in dos voluntários")}</Text>
+                <Text style={styles.supervisorTxt}>{t("Hoje tem culto · marque quem chegou, da sua área.")}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
             </Pressable>
