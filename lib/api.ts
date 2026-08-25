@@ -611,9 +611,20 @@ export function transferirMembroGrupo(grupoId: string, rowId: string, motivo?: s
 export function cadastrarPessoaGrupo(
   grupoId: string,
   dados: {
-    nome: string; telefone: string; email?: string;
-    data_nascimento?: string; genero?: "masculino" | "feminino" | "";
-    cpf?: string; funcao?: "frequentador" | "visitante";
+    // ⚠️⚠️ OBRIGATÓRIOS — os MESMOS do formulário público de grupos (Marcos ·
+    // 25/08: *"queremos cadastro completo, os mesmos campos que solicitam a
+    // inscrição de grupos"*). Quem valida é o servidor, pelo
+    // `inscricaoContrato.validarCamposPadrao`; se algum faltar ele devolve 400
+    // com o campo, e a tela aponta.
+    nome: string; telefone: string; email: string;
+    data_nascimento: string; cpf: string;
+    genero?: "masculino" | "feminino" | "";
+    /** Fixo-OPCIONAL (Contrato de Inscrição · 28/07). */
+    endereco?: string;
+    /** ⚠️ Opt-in EXPLÍCITO, default false. O líder está declarando por outra
+     *  pessoa, e o servidor grava isso como declaração de terceiro. */
+    whatsapp_optin?: boolean;
+    funcao?: "frequentador" | "visitante";
   },
 ) {
   return apiPost<{
@@ -655,6 +666,12 @@ export type OcorrenciaEncontro = {
   motivo: string | null;
   dia_semana: number | null;
   registrado: boolean;
+  /** ⚠️ Campos PRÓPRIOS porque `status` responde outra pergunta ("a chamada foi
+   *  feita?") e colapsa os dois. Sem eles a tela não sabe que há exceção a
+   *  DESFAZER, e o botão "voltar ao normal" nunca apareceria depois de uma
+   *  correção — o líder ficaria preso com a data que acabou de mudar. */
+  remarcado?: boolean;
+  cancelado?: boolean;
   /** Chamada gravada num dia FORA da recorrência (inclusive as que nasceram com
    *  a data errada antes deste conserto). Nunca é escondida. */
   avulso?: boolean;
@@ -663,6 +680,17 @@ export type OcorrenciaEncontro = {
   tema: string | null;
   observacoes: string | null;
   registrado_por_nome: string | null;
+  /** ⚠️ A cadência foi derivada do INÍCIO da temporada porque o grupo nunca
+   *  registrou encontro (34 dos 35 não-semanais ativos, medido em 25/08): a data
+   *  é PROPOSTA, não fato. A tela DIZ isso e oferece corrigir — e a correção vira
+   *  âncora real, então na próxima leitura as datas param de ser estimadas. */
+  data_estimada?: boolean;
+  /** ⚠️ Janela de CORREÇÃO do passado, decidida no SERVIDOR. É régua DIFERENTE
+   *  da remarcação do futuro (aquela proíbe data no passado); o app não
+   *  recalcula nenhuma das duas. */
+  pode_corrigir?: boolean;
+  corrigir_de?: string | null;
+  corrigir_ate?: string | null;
 };
 
 export function getEncontrosGrupo(grupoId: string): Promise<{

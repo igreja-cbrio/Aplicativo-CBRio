@@ -2712,9 +2712,85 @@ têm nada a ver com esta leva. Em especial `"Encontros"` continua `"Gatherings"`
 inglês. E `"Co-líder"` **fica no dicionário**: bundle antigo em cache ainda pode
 pedir a chave, e sem ela o app mostra a chave crua a quem usa en/es.
 
+### ⚠️⚠️ 2ª rodada no MESMO dia (25/08) · ele corrigiu duas decisões minhas
+
+#### "Adicionar pessoa" agora pede CADASTRO COMPLETO
+
+*"Queremos cadastro completo, os mesmos campos que solicitam a inscrição de
+grupos."* A 1ª versão pedia nome + telefone; agora pede o que o formulário
+público pede: **nome completo sem abreviar · celular · CPF · e-mail ·
+nascimento · sexo** (+ endereço opcional) e **dois consentimentos**.
+
+- ⚠️⚠️ **Quem valida é o SERVIDOR** (`inscricaoContrato.validarCamposPadrao`).
+  `addPodeEnviar` só decide quando o botão acende, pra a pessoa não tocar e levar
+  erro — as duas réguas podem discordar em borda (DV do CPF, nome abreviado) e aí
+  **manda o 400 do servidor**, que devolve o campo.
+- ⚠️⚠️ **LGPD · o texto do aceite DIZ que você está declarando por outra
+  pessoa** ("Confirmo que a pessoa está aqui comigo e autorizou…"). O servidor
+  grava o consentimento com o prefixo `DECLARADO PRESENCIALMENTE POR <líder>`.
+  O opt-in de WhatsApp é opt-in de verdade: default **false**.
+- ⚠️ **`lib/cpf.ts` é NOVO e é a fonte única da máscara de CPF** — ela era função
+  local em `completar-cadastro.tsx`, e uma 3ª cópia é exatamente o que a lei do
+  Contrato de Inscrição proíbe. `completar-cadastro` passou a delegar (zero-diff,
+  o corpo é byte a byte o que estava lá).
+- ⚠️ `chipTxtQuebra` (`flex: 1`) existe porque o texto do consentimento é longo
+  DE PROPÓSITO (é prova legal, não rótulo) e sem isso ele estoura o chip.
+
+#### ⚠️⚠️ O ENCONTRO PASSADO virou gerenciável — e a aba mostra TODAS as datas
+
+*"Sobre os encontros de grupos quinzenais ou mensais, devem aparecer na aba de
+encontros todas as datas que os grupos deveriam ter feito o encontro, e deve ser
+gerenciável: a pessoa clica em um encontro passado, altera data ou registra que
+encontro não aconteceu, registra presença e fica naquele encontro. Isso também
+para encontros semanais."*
+
+Eu havia feito o histórico do quinzenal/mensal ficar VAZIO sem âncora real (pra
+não cobrar chamada de encontro que talvez não tenha existido). **Medido: dos 108
+grupos ativos, 35 são não-semanais e só 1 tem encontro registrado** — "sem
+âncora" era o caso NORMAL, então aqueles 34 grupos tinham a aba permanentemente
+vazia. Sem lista não há o que corrigir.
+
+- **Cada linha da timeline é TOCÁVEL** e abre o **MESMO** `ModalAgendaEncontro`
+  do box "Próximo encontro", em `modo="passado"`. Um modal, dois modos: as duas
+  escrevem no MESMO endpoint, e duas telas divergiriam no primeiro ajuste ("no
+  futuro deu, no passado não").
+- Dentro dele: **Registrar presença deste dia** (abre a chamada NAQUELA data) ·
+  **Corrigir a data** · **Não aconteceu** · e **Voltar ao normal** quando há
+  exceção.
+- ⚠️⚠️ **Data ESTIMADA é dita na LINHA, não só no modal**: em grupo quinzenal/
+  mensal sem encontro registrado ela foi calculada pelo início da temporada, e
+  apresentá-la como fato seria afirmar o que não se sabe. O texto da linha muda
+  ("Data estimada — toque para corrigir ou registrar").
+- ⚠️ **Ocorrência `avulso` NÃO abre o modal**: ela não vem da recorrência, então
+  não existe `data_original` pra escrever exceção — o POST recusaria.
+- ⚠️ **Afordância ESCRITA** ("Gerenciar" + chevron), não um ícone cinza sozinho:
+  a lição de 18/08 é que *"nem quem pediu achou"* o lápis de 18 px.
+- ⚠️ **`as any` MORREU no mapeamento pro modal.** Os dois vocabulários de
+  `status` são diferentes (aqui é "a chamada foi feita?"; no modal é "há exceção
+  de agenda?"). O cast compilava e escondia o efeito real: o modal **nunca veria
+  `remarcado`** e o botão de DESFAZER a correção não apareceria. Virou mapeamento
+  campo a campo, com `remarcado`/`cancelado` vindos do servidor em campos
+  próprios.
+- ⚠️ No modo passado o calendário **não tem piso em hoje** — seria o mês inteiro
+  cinza.
+
+#### Traduções
+
+⚠️ Das 26 chaves novas, **2 já existiam** (`Data de nascimento`, `E-mail`) e
+ficaram como estavam — sobrescrever mudaria texto de outras telas. O script de
+acréscimo agora **pula chave existente** em vez de duplicar (o `tsc` pegou 6
+duplicatas na 1ª rodada, com TS1117).
+
+#### Verificação
+
+`npx tsc --noEmit` limpo · `npm test` (**210 verdes**). No ERP: build, **2.374**
+testes e os 16 scripts do gate; **11 mutantes** rodados e mortos na régua de
+agenda; e o caminho de ESCRITA da agenda exercitado contra produção com resíduo
+zero.
+
 ### Verificação
 
-`npx tsc --noEmit` limpo · `npm test` (**210 verdes**). No ERP: build, 2.366
+`npx tsc --noEmit` limpo · `npm test` (**210 verdes**). No ERP: build, 2.374
 testes do vitest e os 16 scripts do gate.
 
 ⏳ **PENDENTE: publicar o OTA** (`npm run ota -- "msg"` — **NUNCA `eas update`

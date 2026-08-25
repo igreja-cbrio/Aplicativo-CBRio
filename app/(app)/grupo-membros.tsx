@@ -69,6 +69,7 @@ import { hojeBRT } from "@/lib/dataBRT";
 // campo aceitar 20 dígitos e o servidor recusar lá na frente sem a pessoa saber
 // por quê.
 import { mascararTelefoneBR } from "@/lib/telefone";
+import { mascararCpf } from "@/lib/cpf";
 import {
   estadoDoEncontro, dataLonga, quandoCurto, distanciaEmTexto, horaCurta,
 } from "@/lib/proximoEncontro";
@@ -169,7 +170,14 @@ export default function GrupoMembrosScreen() {
   const [addEmail, setAddEmail] = useState("");
   const [addNasc, setAddNasc] = useState("");
   const [addSexo, setAddSexo] = useState<"" | "masculino" | "feminino">("");
+  const [addCpf, setAddCpf] = useState("");
+  const [addEndereco, setAddEndereco] = useState("");
   const [addVisitante, setAddVisitante] = useState(false);
+  // ⚠️⚠️ LGPD · o líder está DECLARANDO por outra pessoa. O aceite é obrigatório
+  // (é a base legal do tratamento) e o opt-in de WhatsApp é opt-in de verdade —
+  // default false, como manda o Contrato de Inscrição (D4).
+  const [addTermos, setAddTermos] = useState(false);
+  const [addOptin, setAddOptin] = useState(false);
   const [addSalvando, setAddSalvando] = useState(false);
   // Agenda (recorrência + exceções) — o líder gerencia a temporada inteira aqui.
   const [agenda, setAgenda] = useState<OcorrenciaAgenda[] | null>(null);
@@ -189,6 +197,11 @@ export default function GrupoMembrosScreen() {
   // é registrar o encontro de agora). Preenchida = o líder tocou numa semana
   // atrasada da timeline — e é o que impede a chamada do dia 18 nascer no 24.
   const [chamadaData, setChamadaData] = useState<string | null>(null);
+  // ⚠️ A ocorrência PASSADA que o líder tocou (Marcos · 25/08): *"a pessoa clica
+  // em um encontro passado, altera data ou registra que encontro não aconteceu,
+  // registra presença e fica naquele encontro."* Abre o MESMO modal da agenda,
+  // em `modo="passado"` — um modal, dois modos.
+  const [ocorrenciaAlvo, setOcorrenciaAlvo] = useState<OcorrenciaEncontro | null>(null);
   const [chamadaAberta, setChamadaAberta] = useState(false);
   const [presentes, setPresentes] = useState<Set<string>>(new Set());
   const [tema, setTema] = useState("");
@@ -413,8 +426,25 @@ export default function GrupoMembrosScreen() {
 
   function limparAdd() {
     setAddNome(""); setAddTel(""); setAddEmail(""); setAddNasc("");
-    setAddSexo(""); setAddVisitante(false);
+    setAddSexo(""); setAddCpf(""); setAddEndereco("");
+    setAddVisitante(false); setAddTermos(false); setAddOptin(false);
   }
+
+  // ⚠️⚠️ O MESMO conjunto do formulário público de grupos (Marcos · 25/08:
+  // *"queremos cadastro completo, os mesmos campos que solicitam a inscrição de
+  // grupos"*): nome completo · celular · nascimento · sexo · CPF · e-mail. Quem
+  // valida DE VERDADE é o servidor (`inscricaoContrato.validarCamposPadrao`) —
+  // isto aqui só decide quando o botão acende, pra a pessoa não tocar e levar
+  // erro. As duas réguas podem discordar em casos de borda (DV do CPF, nome
+  // abreviado), e nesse caso quem manda é o servidor, que devolve o campo.
+  const addPodeEnviar = addNome.trim().split(/\s+/).filter(Boolean).length >= 2
+    && addNome.trim().length >= 5
+    && addTel.replace(/\D/g, "").length >= 10
+    && /^\d{4}-\d{2}-\d{2}$/.test(addNasc.trim())
+    && !!addSexo
+    && addCpf.replace(/\D/g, "").length === 11
+    && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addEmail.trim())
+    && addTermos;
 
   async function salvarPessoaNova() {
     setAddSalvando(true);
@@ -422,9 +452,12 @@ export default function GrupoMembrosScreen() {
       const r = await cadastrarPessoaGrupo(grupoId, {
         nome: addNome.trim(),
         telefone: addTel.trim(),
-        email: addEmail.trim() || undefined,
-        data_nascimento: addNasc.trim() || undefined,
+        email: addEmail.trim(),
+        data_nascimento: addNasc.trim(),
         genero: addSexo || undefined,
+        cpf: addCpf.trim(),
+        endereco: addEndereco.trim() || undefined,
+        whatsapp_optin: addOptin,
         funcao: addVisitante ? "visitante" : "frequentador",
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -997,9 +1030,15 @@ export default function GrupoMembrosScreen() {
                             const pendente = o.status === "nao_registrado";
                             const cancelado = o.status === "cancelado";
                             return (
-                              <View
+                              <Pressable
                                 key={`${o.data}_${o.encontro_id || o.data_original}`}
-                                style={[styles.evento, pendente && styles.eventoPendente]}>
+                                style={[styles.evento, pendente && styles.eventoPendente]}
+                                // ⚠️ Avulso NÃO abre o modal: ele não vem da
+                                // recorrência, então não existe `data_original`
+                                // pra escrever exceção — o POST recusaria.
+                                onPress={o.avulso ? undefined : () => setOcorrenciaAlvo(o)}
+                                accessibilityRole={o.avulso ? undefined : "button"}
+                                accessibilityLabel={o.avulso ? undefined : `${t("Gerenciar o encontro de")} ${o.data.split("-").reverse().join("/")}`}>
                                 <View style={[styles.eventoData, pendente && styles.eventoDataPendente]}>
                                   <Text style={[styles.eventoDia, pendente && styles.eventoDiaPendente]}>{dia}</Text>
                                   <Text style={[styles.eventoMes, pendente && styles.eventoDiaPendente]}>
@@ -1018,7 +1057,17 @@ export default function GrupoMembrosScreen() {
                                   ) : pendente ? (
                                     <>
                                       <Text style={styles.eventoPendenteTxt}>{t("Presença não registrada")}</Text>
-                                      <Text style={styles.pequeno}>{t("Você ainda pode registrar")}</Text>
+                                      {/* ⚠️⚠️ A data ESTIMADA é DITA na linha, não
+                                          só dentro do modal: em grupo quinzenal/
+                                          mensal sem encontro registrado ela foi
+                                          calculada pelo início da temporada, e
+                                          apresentá-la como fato seria afirmar o
+                                          que não se sabe. */}
+                                      <Text style={styles.pequeno}>
+                                        {o.data_estimada
+                                          ? t("Data estimada — toque para corrigir ou registrar")
+                                          : t("Toque para registrar ou marcar que não aconteceu")}
+                                      </Text>
                                     </>
                                   ) : (
                                     <>
@@ -1039,7 +1088,7 @@ export default function GrupoMembrosScreen() {
                                     </>
                                   )}
                                 </View>
-                                {pendente && (
+                                {pendente ? (
                                   <Pressable
                                     style={styles.registrarBtn}
                                     onPress={() => abrirChamada(o.data)}
@@ -1049,8 +1098,16 @@ export default function GrupoMembrosScreen() {
                                     <Ionicons name="checkmark-circle-outline" size={16} color={colors.primary} />
                                     <Text style={styles.registrarBtnTxt}>{t("Registrar")}</Text>
                                   </Pressable>
+                                ) : o.avulso ? null : (
+                                  /* ⚠️ Afordância ESCRITA, não só um chevron: a
+                                     lição de 18/08 é que "nem quem pediu achou"
+                                     um lápis cinza de 18px sozinho. */
+                                  <View style={styles.gerenciarDica}>
+                                    <Text style={styles.gerenciarDicaTxt}>{t("Gerenciar")}</Text>
+                                    <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+                                  </View>
                                 )}
-                              </View>
+                              </Pressable>
                             );
                           })}
                         </>
@@ -1239,6 +1296,48 @@ export default function GrupoMembrosScreen() {
         </TecladoSeguro>
       </Modal>
 
+      {/* ═══ Gerenciar um encontro que JÁ PASSOU (25/08) ═══ */}
+      {/* ⚠️⚠️ É o MESMO modal do box "Próximo encontro", em `modo="passado"`.
+          As duas telas escrevem no MESMO endpoint (`/agenda`) e a única
+          diferença é a janela de datas e o vocabulário — duas telas divergiriam
+          no primeiro ajuste, e a divergência apareceria como "no futuro deu, no
+          passado não". */}
+      <ModalAgendaEncontro
+        visivel={!!ocorrenciaAlvo}
+        modo="passado"
+        grupoId={grupoId}
+        grupoNome={nome}
+        /* ⚠️⚠️ MAPEAMENTO EXPLÍCITO, nunca `as any`: os dois vocabulários de
+           `status` são DIFERENTES (aqui é "a chamada foi feita?"; no modal é "há
+           exceção de agenda?"). O cast compilava e escondia o efeito real — o
+           modal nunca veria `remarcado` e o botão de DESFAZER a correção não
+           apareceria. */
+        ocorrencia={ocorrenciaAlvo ? {
+          data_original: ocorrenciaAlvo.data_original,
+          data: ocorrenciaAlvo.data,
+          horario: ocorrenciaAlvo.horario || "",
+          status: ocorrenciaAlvo.cancelado
+            ? "cancelado"
+            : ocorrenciaAlvo.remarcado ? "remarcado" : "normal",
+          motivo: ocorrenciaAlvo.motivo,
+          data_estimada: ocorrenciaAlvo.data_estimada,
+          registrado: ocorrenciaAlvo.registrado,
+          pode_corrigir: ocorrenciaAlvo.pode_corrigir,
+          corrigir_de: ocorrenciaAlvo.corrigir_de,
+          corrigir_ate: ocorrenciaAlvo.corrigir_ate,
+        } : null}
+        onFechar={() => setOcorrenciaAlvo(null)}
+        onRegistrarPresenca={(dataISO) => { setOcorrenciaAlvo(null); abrirChamada(dataISO); }}
+        onSalvo={() => {
+          setOcorrenciaAlvo(null);
+          // ⚠️ Recarrega a timeline E o histórico: corrigir a data move a
+          // chamada junto no servidor, então os dois mudaram.
+          setEncontros(null);
+          setOcorrencias(null);
+          setAgenda(null);
+        }}
+      />
+
       {/* ═══ Adicionar pessoa · item 6 (25/08) ═══ */}
       {/* ⚠️⚠️ ELA NASCE APROVADA: sem pedido, sem WhatsApp, sem confirmação
           (*"se for criado ali, ela não passa por whatsapp e confirmação
@@ -1264,10 +1363,13 @@ export default function GrupoMembrosScreen() {
                 {t("A pessoa entra no grupo na hora. Ela não recebe mensagem nem precisa confirmar.")}
               </Text>
 
-              <Text style={styles.sheetLabel}>{t("Nome completo")}</Text>
+              <Text style={styles.sheetLabel}>{t("Nome completo")} *</Text>
+              {/* ⚠️ Nome COMPLETO e SEM ABREVIAÇÃO é exigência do Contrato de
+                  Inscrição (28/07) e o servidor recusa "Ana P." — por isso o
+                  placeholder pede os dois nomes em vez de só "Nome". */}
               <TextInput
                 style={styles.inputLinha}
-                placeholder={t("Nome e sobrenome")}
+                placeholder={t("Nome e sobrenome, sem abreviar")}
                 placeholderTextColor={colors.textMuted}
                 value={addNome}
                 onChangeText={setAddNome}
@@ -1275,7 +1377,7 @@ export default function GrupoMembrosScreen() {
                 autoCorrect={false}
               />
 
-              <Text style={styles.sheetLabel}>{t("Celular com DDD")}</Text>
+              <Text style={styles.sheetLabel}>{t("Celular com DDD")} *</Text>
               <TextInput
                 style={styles.inputLinha}
                 placeholder="(21) 99999-9999"
@@ -1285,7 +1387,7 @@ export default function GrupoMembrosScreen() {
                 keyboardType="phone-pad"
               />
 
-              <Text style={styles.sheetLabel}>{t("E-mail (opcional)")}</Text>
+              <Text style={styles.sheetLabel}>{t("E-mail")} *</Text>
               <TextInput
                 style={styles.inputLinha}
                 placeholder="email@exemplo.com"
@@ -1297,13 +1399,29 @@ export default function GrupoMembrosScreen() {
                 autoCorrect={false}
               />
 
-              <Text style={styles.sheetLabel}>{t("Nascimento (opcional)")}</Text>
+              <Text style={styles.sheetLabel}>{t("CPF")} *</Text>
+              {/* ⚠️ O CPF é a chave FORTE do matcher: é ele que faz o cadastro
+                  novo LIGAR na pessoa que já está na base em vez de duplicar. É
+                  por isso que ele é obrigatório aqui, e não enfeite. */}
+              <TextInput
+                style={styles.inputLinha}
+                placeholder="000.000.000-00"
+                placeholderTextColor={colors.textMuted}
+                value={addCpf}
+                onChangeText={(v) => setAddCpf(mascararCpf(v))}
+                keyboardType="number-pad"
+                maxLength={14}
+              />
+
+              <Text style={styles.sheetLabel}>{t("Data de nascimento")} *</Text>
               <TextInput
                 style={styles.inputLinha}
                 placeholder="AAAA-MM-DD"
                 placeholderTextColor={colors.textMuted}
                 value={addNasc}
                 onChangeText={setAddNasc}
+                keyboardType="numbers-and-punctuation"
+                maxLength={10}
                 autoCorrect={false}
               />
 
@@ -1311,7 +1429,7 @@ export default function GrupoMembrosScreen() {
                   lei de 10/08 proíbe gravar sexo por palpite, e é ele que decide
                   em qual grupo a pessoa pode entrar). E só masculino/feminino:
                   é o vocabulário da coluna (Contrato de Inscrição · 28/07). */}
-              <Text style={styles.sheetLabel}>{t("Sexo (opcional)")}</Text>
+              <Text style={styles.sheetLabel}>{t("Sexo")} *</Text>
               <View style={styles.chips}>
                 {([["masculino", "Masculino"], ["feminino", "Feminino"]] as const).map(([v, l]) => (
                   <Pressable
@@ -1323,6 +1441,50 @@ export default function GrupoMembrosScreen() {
                   </Pressable>
                 ))}
               </View>
+
+              <Text style={styles.sheetLabel}>{t("Endereço (opcional)")}</Text>
+              <TextInput
+                style={styles.inputLinha}
+                placeholder={t("Rua, número, bairro")}
+                placeholderTextColor={colors.textMuted}
+                value={addEndereco}
+                onChangeText={setAddEndereco}
+                autoCapitalize="words"
+              />
+
+              {/* ⚠️⚠️ LGPD · VOCÊ ESTÁ DECLARANDO POR OUTRA PESSOA, e o texto diz
+                  isso. No formulário público quem marca a caixa é a própria
+                  pessoa; aqui é o líder. O servidor grava o consentimento com o
+                  prefixo "DECLARADO PRESENCIALMENTE POR <líder>" — gravar como
+                  aceite do titular seria fabricar prova legal (mesma decisão do
+                  link do voluntário · 14/08). */}
+              <Pressable
+                style={[styles.chip, styles.chipLargo, addTermos && styles.chipAtivo]}
+                onPress={() => setAddTermos(v => !v)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: addTermos }}>
+                <Ionicons
+                  name={addTermos ? "checkbox" : "square-outline"}
+                  size={18}
+                  color={addTermos ? colors.primary : colors.textMuted} />
+                <Text style={[styles.chipTxt, styles.chipTxtQuebra, addTermos && styles.chipTxtAtivo]}>
+                  {t("Confirmo que a pessoa está aqui comigo e autorizou o cadastro dos dados dela na igreja (LGPD)")} *
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={[styles.chip, styles.chipLargo, addOptin && styles.chipAtivo]}
+                onPress={() => setAddOptin(v => !v)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: addOptin }}>
+                <Ionicons
+                  name={addOptin ? "checkbox" : "square-outline"}
+                  size={18}
+                  color={addOptin ? colors.primary : colors.textMuted} />
+                <Text style={[styles.chipTxt, styles.chipTxtQuebra, addOptin && styles.chipTxtAtivo]}>
+                  {t("Ela autorizou receber mensagens da igreja no WhatsApp")}
+                </Text>
+              </Pressable>
 
               {/* ⚠️ Adicionar alguém DE PROPÓSITO é participação, não visita — daí
                   o default. `visitante` só quando o líder DECLARA (lei de 14/08:
@@ -1344,7 +1506,7 @@ export default function GrupoMembrosScreen() {
             </ScrollView>
             <Pressable
               style={[styles.btn, styles.btnAceitar, { marginTop: spacing.sm, flexGrow: 0 }]}
-              disabled={addSalvando || addNome.trim().length < 3 || addTel.replace(/\D/g, "").length < 10}
+              disabled={addSalvando || !addPodeEnviar}
               onPress={salvarPessoaNova}
               accessibilityRole="button">
               {addSalvando
@@ -1700,6 +1862,8 @@ function makeStyles(c: Palette) {
       borderRadius: radius.full, borderWidth: 1, borderColor: c.primary,
     },
     registrarBtnTxt: { color: c.primary, fontSize: font.size.sm, fontWeight: "700" },
+    gerenciarDica: { flexDirection: "row", alignItems: "center", gap: 2 },
+    gerenciarDicaTxt: { color: c.textMuted, fontSize: font.size.sm - 1 },
     // ── Adicionar pessoa (item 6) ─────────────────────────────────────────
     avatarAdd: { backgroundColor: c.primary + "1c", borderWidth: 1, borderColor: c.primary + "55" },
     // ⚠️ Input de UMA LINHA: o `styles.input` da tela é multiline (minHeight 70,
@@ -1720,6 +1884,9 @@ function makeStyles(c: Palette) {
     chipAtivo: { borderColor: c.primary, backgroundColor: c.primary + "14" },
     chipTxt: { color: c.text, fontSize: font.size.sm },
     chipTxtAtivo: { color: c.primary, fontWeight: "700" },
+    // ⚠️ O texto do consentimento é longo de propósito (é prova legal, não
+    // rótulo): sem `flex: 1` ele estoura a linha do chip e sai da folha.
+    chipTxtQuebra: { flex: 1, lineHeight: 18 },
     sheet: { backgroundColor: c.background, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.md },
     sheetHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.sm },
     sheetTitle: { color: c.text, fontSize: font.size.lg, fontWeight: "800" },

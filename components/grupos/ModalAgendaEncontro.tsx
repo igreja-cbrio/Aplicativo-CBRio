@@ -46,6 +46,19 @@ export type Ocorrencia = {
   remarcar_ate?: string | null;
   /** Cadência quinzenal/mensal sem encontro registrado: a data é palpite. */
   ancora_incerta?: boolean;
+  // ── Campos do modo PASSADO (Marcos · 25/08/2026) ─────────────────────────
+  /** ⚠️ Janela de CORREÇÃO, que é régua DIFERENTE da de remarcação: aquela
+   *  protege o futuro (não alcançar o próximo encontro, teto de 7 dias); esta
+   *  cerca a correção pelos vizinhos e proíbe data futura. Vem do servidor
+   *  igual — o app não recalcula nenhuma das duas. */
+  pode_corrigir?: boolean;
+  corrigir_de?: string | null;
+  corrigir_ate?: string | null;
+  /** A cadência foi derivada do início da temporada porque o grupo nunca
+   *  registrou encontro: a data é PROPOSTA, e a tela tem que dizer isso. */
+  data_estimada?: boolean;
+  /** Já tem chamada lançada neste dia. */
+  registrado?: boolean;
 };
 
 export function ModalAgendaEncontro({
@@ -56,6 +69,8 @@ export function ModalAgendaEncontro({
   ocorrencias = [],
   onFechar,
   onSalvo,
+  modo = "futuro",
+  onRegistrarPresenca,
 }: {
   visivel: boolean;
   grupoId: string;
@@ -67,6 +82,20 @@ export function ModalAgendaEncontro({
   ocorrencias?: Ocorrencia[];
   onFechar: () => void;
   onSalvo: () => void;
+  /**
+   * `futuro` = o box "Próximo encontro" (remarcar/cancelar o que vai acontecer).
+   * `passado` = a aba Encontros (Marcos · 25/08): *"a pessoa clica em um
+   * encontro passado, altera data ou registra que encontro não aconteceu,
+   * registra presença e fica naquele encontro."*
+   *
+   * ⚠️⚠️ UM modal, dois modos — não duas telas. As duas fazem a MESMA coisa
+   * (escrever exceção de agenda pelo MESMO endpoint); o que muda é a janela de
+   * datas e o vocabulário. Duas telas divergiriam no primeiro ajuste, e a
+   * divergência apareceria como "no futuro deu, no passado não".
+   */
+  modo?: "futuro" | "passado";
+  /** Só no modo passado: abre a chamada NAQUELA data. */
+  onRegistrarPresenca?: (dataISO: string) => void;
 }) {
   const colors = useColors();
   const t = useT();
@@ -90,12 +119,15 @@ export function ModalAgendaEncontro({
   // em vez de renderizar vazio.
   const oc = (trocaKey && ocorrencias.find((x) => x.data_original === trocaKey)) || ocorrencia;
 
-  // ⚠️ A janela é DO SERVIDOR. `pode_remarcar` ausente (bundle novo × backend
-  // antigo) não trava a tela: cai no comportamento de antes e quem recusa é o
-  // POST, com a mensagem certa.
-  const podeRemarcar = oc.pode_remarcar !== false;
-  const deISO = oc.remarcar_de || null;
-  const ateISO = oc.remarcar_ate || null;
+  // ⚠️ A janela é DO SERVIDOR. Campo ausente (bundle novo × backend antigo) não
+  // trava a tela: cai no comportamento de antes e quem recusa é o POST, com a
+  // mensagem certa.
+  // ⚠️⚠️ No modo PASSADO a janela é outra (`corrigir_*`) porque a régua é outra.
+  // Usar a do futuro aqui recusaria toda correção — ela proíbe data no passado.
+  const noPassado = modo === "passado";
+  const podeRemarcar = noPassado ? oc.pode_corrigir !== false : oc.pode_remarcar !== false;
+  const deISO = (noPassado ? oc.corrigir_de : oc.remarcar_de) || null;
+  const ateISO = (noPassado ? oc.corrigir_ate : oc.remarcar_ate) || null;
 
   const jaCancelado = oc.status === "cancelado";
   const jaRemarcado = oc.status === "remarcado";
@@ -227,10 +259,37 @@ export function ModalAgendaEncontro({
               />
             ) : null}
 
-            {oc.ancora_incerta ? (
+            {oc.ancora_incerta || oc.data_estimada ? (
               <View style={styles.avisoBox}>
                 <Text style={styles.avisoTxt}>
-                  {t("Registre a presença de um encontro para o app acertar as próximas datas deste grupo.")}
+                  {oc.data_estimada
+                    ? t("Esta data é uma estimativa: o app calculou pelo início da temporada porque este grupo ainda não registrou nenhum encontro. Corrija se foi outro dia.")
+                    : t("Registre a presença de um encontro para o app acertar as próximas datas deste grupo.")}
+                </Text>
+              </View>
+            ) : null}
+
+            {/* ⚠️ A ação PRINCIPAL de um encontro passado é registrar a chamada
+                — foi o que ele pediu ("registra presença e fica naquele
+                encontro"). Ela abre a chamada COM a data desta ocorrência, que é
+                o conserto do defeito relatado. */}
+            {noPassado && !oc.registrado && !jaCancelado && onRegistrarPresenca ? (
+              <Button
+                title={t("Registrar presença deste dia")}
+                onPress={() => {
+                  const alvo = oc.data;
+                  limpar();
+                  onFechar();
+                  onRegistrarPresenca(alvo);
+                }}
+                style={{ marginBottom: spacing.md }}
+              />
+            ) : null}
+
+            {noPassado && oc.registrado ? (
+              <View style={styles.avisoBox}>
+                <Text style={styles.avisoTxt}>
+                  {t("Este encontro já tem presença registrada. Se a data estiver errada, corrija abaixo — a chamada vai junto.")}
                 </Text>
               </View>
             ) : null}
@@ -238,19 +297,25 @@ export function ModalAgendaEncontro({
             {!jaCancelado && !podeRemarcar ? (
               <View style={styles.avisoBox}>
                 <Text style={styles.avisoTxt}>
-                  {t("Este encontro está colado no seguinte — não dá para mudar a data. Se ele não vai acontecer, cancele abaixo.")}
+                  {noPassado
+                    ? t("Este encontro está colado nos vizinhos — não sobra data para corrigir.")
+                    : t("Este encontro está colado no seguinte — não dá para mudar a data. Se ele não vai acontecer, cancele abaixo.")}
                 </Text>
               </View>
             ) : null}
 
             {!jaCancelado && podeRemarcar ? (
               <>
-                <Text style={styles.secao}>{t("Alterar a data deste encontro")}</Text>
+                <Text style={styles.secao}>
+                  {noPassado ? t("Corrigir a data deste encontro") : t("Alterar a data deste encontro")}
+                </Text>
                 {/* ⚠️ O limite é DITO, não só imposto no calendário: dia cinza
                     sem explicação lê-se como app quebrado. */}
                 {ateISO ? (
                   <Text style={styles.dica}>
-                    {t("Você pode mover até")} {isoParaBR(ateISO)}. {t("Para mais que isso, cancele este encontro.")}
+                    {noPassado
+                      ? `${t("Escolha entre")} ${deISO ? isoParaBR(deISO) : "—"} ${t("e")} ${isoParaBR(ateISO)} — ${t("fora disso o encontro passaria por cima do anterior ou do seguinte.")}`
+                      : `${t("Você pode mover até")} ${isoParaBR(ateISO)}. ${t("Para mais que isso, cancele este encontro.")}`}
                   </Text>
                 ) : null}
                 <Pressable style={styles.campo} onPress={() => setCalendario((v) => !v)}>
@@ -266,7 +331,10 @@ export function ModalAgendaEncontro({
                     embutido
                     titulo={t("Nova data do encontro")}
                     valor={novaData}
-                    minimoISO={deISO || hojeBRT()}
+                    /* ⚠️ No passado o piso NÃO pode ser hoje — seria o
+                       calendário inteiro cinza. Sem janela do servidor, fica
+                       sem piso e quem recusa é o POST. */
+                    minimoISO={deISO || (noPassado ? undefined : hojeBRT())}
                     maximoISO={ateISO}
                     hojeISO={hojeBRT()}
                     onFechar={() => setCalendario(false)}
@@ -311,8 +379,9 @@ export function ModalAgendaEncontro({
                         fala com o grupo é o líder, no WhatsApp dele — e é ele
                         que tem o contexto ("adiamos por causa do feriado"). */}
                     <Text style={styles.confirmaTxt}>
-                      {t("Cancelar o encontro de")} {isoParaBR(oc.data_original)}?{" "}
-                      {t("Avise o grupo — o app não manda mensagem para os participantes.")}
+                      {noPassado
+                        ? `${t("Registrar que o encontro de")} ${isoParaBR(oc.data_original)} ${t("não aconteceu? Ele sai da cobrança de chamada e a coordenação passa a ver isso.")}`
+                        : `${t("Cancelar o encontro de")} ${isoParaBR(oc.data_original)}? ${t("Avise o grupo — o app não manda mensagem para os participantes.")}`}
                     </Text>
                     <View style={styles.linhaBotoes}>
                       <Button
@@ -328,7 +397,9 @@ export function ModalAgendaEncontro({
                         accessibilityRole="button"
                       >
                         <Text numberOfLines={1} style={styles.btnPerigoTxt}>
-                          {salvando ? t("Cancelando...") : t("Cancelar encontro")}
+                          {salvando
+                            ? t("Salvando...")
+                            : (noPassado ? t("Não aconteceu") : t("Cancelar encontro"))}
                         </Text>
                       </Pressable>
                     </View>
@@ -348,7 +419,7 @@ export function ModalAgendaEncontro({
                          dentro de uma caixa de altura fixa. Rótulo curto +
                          padding menor resolvem sem encolher fonte. */
                       <Button
-                        title={t("Salvar data")}
+                        title={noPassado ? t("Salvar correção") : t("Salvar data")}
                         loading={salvando}
                         onPress={() => enviar("remarcar")}
                         style={{ flex: 1, paddingHorizontal: spacing.sm }}
@@ -359,7 +430,9 @@ export function ModalAgendaEncontro({
                       onPress={() => setConfirmando(true)}
                       accessibilityRole="button"
                     >
-                      <Text numberOfLines={1} style={styles.btnPerigoTxt}>{t("Cancelar encontro")}</Text>
+                      <Text numberOfLines={1} style={styles.btnPerigoTxt}>
+                        {noPassado ? t("Não aconteceu") : t("Cancelar encontro")}
+                      </Text>
                     </Pressable>
                   </View>
                 )}

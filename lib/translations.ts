@@ -252,6 +252,34 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Registrar presença de": { en: "Record attendance for", es: "Registrar asistencia de" },
   em: { en: "on", es: "el" },
   // ── Adicionar pessoa (item 6) ───────────────────────────────────────────
+  // ── 2ª rodada de 25/08 (cadastro completo + encontro passado
+  //    gerenciável). Chaves que JÁ existiam ficaram como estavam: as
+  //    traduções delas atendem outras telas, e sobrescrever mudaria texto
+  //    que não tem nada a ver com esta leva.
+  "Nome e sobrenome, sem abreviar": { en: "Full name, no abbreviations", es: "Nombre y apellido, sin abreviar" },
+  CPF: { en: "CPF", es: "CPF" },
+  Sexo: { en: "Sex", es: "Sexo" },
+  "Endereço (opcional)": { en: "Address (optional)", es: "Dirección (opcional)" },
+  "Rua, número, bairro": { en: "Street, number, neighborhood", es: "Calle, número, barrio" },
+  "Confirmo que a pessoa está aqui comigo e autorizou o cadastro dos dados dela na igreja (LGPD)": { en: "I confirm the person is here with me and authorized registering their data with the church (LGPD)", es: "Confirmo que la persona está aquí conmigo y autorizó registrar sus datos en la iglesia (LGPD)" },
+  "Ela autorizou receber mensagens da igreja no WhatsApp": { en: "They authorized receiving church messages on WhatsApp", es: "Autorizó recibir mensajes de la iglesia por WhatsApp" },
+  Gerenciar: { en: "Manage", es: "Gestionar" },
+  "Gerenciar o encontro de": { en: "Manage the meeting of", es: "Gestionar el encuentro del" },
+  "Data estimada — toque para corrigir ou registrar": { en: "Estimated date — tap to correct or record", es: "Fecha estimada — toca para corregir o registrar" },
+  "Toque para registrar ou marcar que não aconteceu": { en: "Tap to record it or mark that it did not happen", es: "Toca para registrar o marcar que no ocurrió" },
+  "Corrigir a data deste encontro": { en: "Correct this meeting date", es: "Corregir la fecha de este encuentro" },
+  "Registrar presença deste dia": { en: "Record attendance for this day", es: "Registrar asistencia de este día" },
+  "Não aconteceu": { en: "Did not happen", es: "No ocurrió" },
+  "Salvar correção": { en: "Save correction", es: "Guardar corrección" },
+  "Salvando...": { en: "Saving...", es: "Guardando..." },
+  "Este encontro está colado nos vizinhos — não sobra data para corrigir.": { en: "This meeting is squeezed between its neighbors — no date left to correct.", es: "Este encuentro está pegado a los vecinos — no queda fecha para corregir." },
+  "Esta data é uma estimativa: o app calculou pelo início da temporada porque este grupo ainda não registrou nenhum encontro. Corrija se foi outro dia.": { en: "This date is an estimate: the app calculated it from the season start because this group has not recorded any meeting yet. Correct it if it was another day.", es: "Esta fecha es una estimación: la app la calculó desde el inicio de la temporada porque este grupo aún no registró ningún encuentro. Corrígela si fue otro día." },
+  "Este encontro já tem presença registrada. Se a data estiver errada, corrija abaixo — a chamada vai junto.": { en: "This meeting already has attendance recorded. If the date is wrong, correct it below — the attendance moves with it.", es: "Este encuentro ya tiene asistencia registrada. Si la fecha está mal, corrígela abajo — la asistencia va con ella." },
+  "Registrar que o encontro de": { en: "Record that the meeting of", es: "Registrar que el encuentro del" },
+  "não aconteceu? Ele sai da cobrança de chamada e a coordenação passa a ver isso.": { en: "did not happen? It stops being charged as pending and the coordination team gets to see that.", es: "no ocurrió? Deja de contar como pendiente y la coordinación pasa a verlo." },
+  "Escolha entre": { en: "Choose between", es: "Elige entre" },
+  "fora disso o encontro passaria por cima do anterior ou do seguinte.": { en: "outside that the meeting would overlap the previous or the next one.", es: "fuera de eso el encuentro pasaría por encima del anterior o del siguiente." },
+  e: { en: "and", es: "y" },
   "Adicionar pessoa": { en: "Add person", es: "Añadir persona" },
   "Entra no grupo na hora, sem esperar aprovação": {
     en: "Joins the group right away, no approval needed",
