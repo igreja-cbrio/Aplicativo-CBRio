@@ -195,7 +195,98 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Próximo encontro": { en: "Next meeting", es: "Próximo encuentro" },
   "Falar com": { en: "Message", es: "Hablar con" },
   "Líder": { en: "Leader", es: "Líder" },
+  // ⚠️ O termo "co-líder" saiu da interface em 25/08/2026 (virou "líder em
+  // treinamento"). A entrada FICA: bundle antigo em cache ainda pode pedir esta
+  // chave, e sem ela o app mostra a chave crua a quem usa en/es.
   "Co-líder": { en: "Co-leader", es: "Co-líder" },
+  "Líder em treinamento": { en: "Leader in training", es: "Líder en formación" },
+  "Você é líder em treinamento deste grupo e pode gerenciá-lo.": {
+    en: "You are a leader in training for this group and can manage it.",
+    es: "Eres líder en formación de este grupo y puedes gestionarlo.",
+  },
+  "Remover do grupo": { en: "Remove from group", es: "Quitar del grupo" },
+  Remover: { en: "Remove", es: "Quitar" },
+  "deste grupo?": { en: "from this group?", es: "de este grupo?" },
+  "Solicitar transferência": { en: "Request transfer", es: "Solicitar traslado" },
+  "Transferência solicitada": { en: "Transfer requested", es: "Traslado solicitado" },
+  "Já estava solicitado": { en: "Already requested", es: "Ya estaba solicitado" },
+  "A coordenação já tem este pedido na fila.": {
+    en: "The coordination team already has this request in the queue.",
+    es: "La coordinación ya tiene esta solicitud en la fila.",
+  },
+  "A coordenação vai escolher o grupo e falar com a pessoa. Ela continua no seu grupo até lá.": {
+    en: "The coordination team will choose the group and talk to the person. They stay in your group until then.",
+    es: "La coordinación elegirá el grupo y hablará con la persona. Sigue en tu grupo hasta entonces.",
+  },
+  "vai para a fila da coordenação, que escolhe o grupo novo. Ela continua no seu grupo até isso ser resolvido.": {
+    en: "goes to the coordination queue, which picks the new group. They stay in your group until this is resolved.",
+    es: "va a la fila de coordinación, que elige el grupo nuevo. Sigue en tu grupo hasta que se resuelva.",
+  },
+  "Por quê? (opcional, ajuda a escolher o grupo)": {
+    en: "Why? (optional, helps pick the group)",
+    es: "¿Por qué? (opcional, ayuda a elegir el grupo)",
+  },
+  "Ninguém recebe mensagem automática — a coordenação fala com a pessoa.": {
+    en: "Nobody gets an automatic message — the coordination team talks to the person.",
+    es: "Nadie recibe mensaje automático — la coordinación habla con la persona.",
+  },
+  "Não foi possível solicitar a transferência.": {
+    en: "Could not request the transfer.",
+    es: "No se pudo solicitar el traslado.",
+  },
+  // ── Encontros à vista (item 3) ──────────────────────────────────────────
+  Encontros: { en: "Gatherings", es: "Encuentros" },
+  "Nenhum encontro ainda": { en: "No meetings yet", es: "Aún no hay encuentros" },
+  "Quando o grupo se reunir, registre a presença aqui.": {
+    en: "When the group meets, record attendance here.",
+    es: "Cuando el grupo se reúna, registra la asistencia aquí.",
+  },
+  "Presença não registrada": { en: "Attendance not recorded", es: "Asistencia no registrada" },
+  "Você ainda pode registrar": { en: "You can still record it", es: "Todavía puedes registrarla" },
+  "Encontro cancelado": { en: "Meeting cancelled", es: "Encuentro cancelado" },
+  "fora do dia habitual do grupo": {
+    en: "outside the group's usual day",
+    es: "fuera del día habitual del grupo",
+  },
+  Registrar: { en: "Record", es: "Registrar" },
+  "Registrar presença de": { en: "Record attendance for", es: "Registrar asistencia de" },
+  em: { en: "on", es: "el" },
+  // ── Adicionar pessoa (item 6) ───────────────────────────────────────────
+  "Adicionar pessoa": { en: "Add person", es: "Añadir persona" },
+  "Entra no grupo na hora, sem esperar aprovação": {
+    en: "Joins the group right away, no approval needed",
+    es: "Entra al grupo de inmediato, sin esperar aprobación",
+  },
+  "A pessoa entra no grupo na hora. Ela não recebe mensagem nem precisa confirmar.": {
+    en: "The person joins right away. They get no message and do not need to confirm.",
+    es: "La persona entra de inmediato. No recibe mensaje ni necesita confirmar.",
+  },
+  "Nome e sobrenome": { en: "First and last name", es: "Nombre y apellido" },
+  "Celular com DDD": { en: "Mobile with area code", es: "Celular con código de área" },
+  "E-mail (opcional)": { en: "Email (optional)", es: "Correo (opcional)" },
+  "Nascimento (opcional)": { en: "Date of birth (optional)", es: "Nacimiento (opcional)" },
+  "Sexo (opcional)": { en: "Sex (optional)", es: "Sexo (opcional)" },
+  Masculino: { en: "Male", es: "Masculino" },
+  Feminino: { en: "Female", es: "Femenino" },
+  "É visitante (veio conhecer)": {
+    en: "Is a visitor (came to check it out)",
+    es: "Es visitante (vino a conocer)",
+  },
+  "Adicionar ao grupo": { en: "Add to group", es: "Añadir al grupo" },
+  "Pronto!": { en: "Done!", es: "¡Listo!" },
+  "Já estava no grupo": { en: "Already in the group", es: "Ya estaba en el grupo" },
+  "já faz parte deste grupo.": { en: "is already part of this group.", es: "ya forma parte de este grupo." },
+  "já tinha cadastro na igreja e entrou no grupo.": {
+    en: "already had a church record and joined the group.",
+    es: "ya tenía registro en la iglesia y entró al grupo.",
+  },
+  "entrou no grupo.": { en: "joined the group.", es: "entró al grupo." },
+  "A pessoa": { en: "The person", es: "La persona" },
+  "Não foi possível cadastrar.": { en: "Could not register.", es: "No se pudo registrar." },
+  "Líder e líder em treinamento podem gerenciar este grupo. As mensagens do grupo no WhatsApp continuam indo só pra líder principal — trocar quem é a principal é com a coordenação.": {
+    en: "Leaders and leaders in training can manage this group. WhatsApp messages still go only to the main leader — changing who that is goes through the coordination team.",
+    es: "Líder y líder en formación pueden gestionar este grupo. Los mensajes de WhatsApp siguen yendo solo a la líder principal — cambiarla es cosa de la coordinación.",
+  },
   "Materiais": { en: "Materials", es: "Materiales" },
   "Nenhum aviso por enquanto.": { en: "No announcements yet.", es: "Ningún aviso por ahora." },
   "Receber mensagens no WhatsApp": { en: "Receive WhatsApp messages", es: "Recibir mensajes por WhatsApp" },
@@ -504,7 +595,6 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Registrar apresentação": { en: "Register dedication", es: "Registrar presentación" },
   "Data de nascimento da criança": { en: "Child's date of birth", es: "Fecha de nacimiento del niño" },
   "Nome do responsável": { en: "Guardian's name", es: "Nombre del responsable" },
-  "E-mail (opcional)": { en: "Email (optional)", es: "Correo (opcional)" },
 
   // ───── Saúde e inclusão da criança na apresentação (11/08) ─────
   // ⚠️ As MESMAS 3 perguntas do formulário do Kids — o desalinhamento que o
@@ -627,7 +717,6 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Quero ser voluntário": { en: "I want to volunteer", es: "Quiero ser voluntario" },
   "Remover indisponibilidade": { en: "Remove unavailability", es: "Quitar indisponibilidad" },
   "Liberar": { en: "Free up", es: "Liberar" },
-  "Remover": { en: "Remove", es: "Quitar" },
   "Disponibilidade": { en: "Availability", es: "Disponibilidad" },
   "+ Bloquear datas": { en: "+ Block dates", es: "+ Bloquear fechas" },
   "Por padrão você está disponível. Bloqueie as datas em que não pode servir (viagem, prova, etc.) — a coordenação não vai te escalar nesse período.": { en: "By default you're available. Block the dates you can't serve (travel, exams, etc.) — coordination won't schedule you during that time.", es: "Por defecto estás disponible. Bloquea las fechas en que no puedes servir (viaje, examen, etc.) — la coordinación no te asignará en ese período." },
@@ -678,7 +767,6 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Pra acompanhar seu batismo, complete o cadastro do membro (CPF) no perfil.": { en: "To track your baptism, complete your member registration (CPF) in your profile.", es: "Para seguir tu bautismo, completa el registro de miembro (CPF) en tu perfil." },
   "Já é batizado(a)": { en: "Already baptized", es: "Ya está bautizado(a)" },
   "Registramos seu batismo": { en: "We recorded your baptism", es: "Registramos tu bautismo" },
-  "em": { en: "on", es: "el" },
   "Você ainda pode se batizar na CBRio se quiser.": { en: "You can still be baptized at CBRio if you want.", es: "Aún puedes bautizarte en CBRio si quieres." },
   "Remover este registro": { en: "Remove this record", es: "Quitar este registro" },
   "Quer se batizar na CBRio?": { en: "Want to be baptized at CBRio?", es: "¿Quieres bautizarte en CBRio?" },
@@ -1123,9 +1211,7 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Sua última visita": { en: "Your last visit", es: "Tu última visita" },
   "Não carregou": { en: "Did not load", es: "No cargó" },
   "Ainda não registrada": { en: "Not recorded yet", es: "Aún no registrada" },
-  "Registrar": { en: "Record", es: "Registrar" },
   "Registrar encontro": { en: "Record gathering", es: "Registrar encuentro" },
-  "Encontros": { en: "Gatherings", es: "Encuentros" },
   "Pessoas": { en: "People", es: "Personas" },
   "Nenhum encontro registrado ainda.": { en: "No gathering recorded yet.", es: "Ningún encuentro registrado todavía." },
   "Abrir encontro de": { en: "Open gathering of", es: "Abrir encuentro del" },

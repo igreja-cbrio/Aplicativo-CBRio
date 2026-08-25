@@ -552,8 +552,19 @@ export function recusarPedidoGrupo(id: string, motivo: string): Promise<{ ok: bo
  * PESSOA que é `lider_id` (o servidor recusa mudar função/saída dela).
  * ⚠️ `supervisor` e `coordenador` seguem fora: são papéis da hierarquia de
  * supervisão, não do roster do grupo.
+ *
+ * ⚠️⚠️ `co_lider` SAIU (Marcos · 25/08/2026): *"nós não usamos o termo
+ * co-líder, pode excluir esse termo, se alguém estiver com essa categoria,
+ * coloque para líder em treinamento e exclua."* Quem tinha virou
+ * `lider_treinamento` na migration 20260825170000, e o CHECK do banco recusa
+ * gravá-lo de novo — mandar o valor daqui só produziria erro na tela.
+ *
+ * ⚠️⚠️ E `lider_treinamento` passou a GERENCIAR o grupo, no mesmo pedido:
+ * *"quero que quem for líder em treinamento também possa gerenciar grupo."* Quem
+ * decide isso é o SERVIDOR (`gruposPapelApp`) — esta lista é só o que a tela
+ * oferece pra marcar.
  */
-export const FUNCOES_QUE_O_APP_DA = ["frequentador", "lider_treinamento", "co_lider", "lider"] as const;
+export const FUNCOES_QUE_O_APP_DA = ["frequentador", "lider_treinamento", "lider"] as const;
 export type FuncaoApp = (typeof FUNCOES_QUE_O_APP_DA)[number];
 
 export function mudarFuncaoMembroGrupo(grupoId: string, rowId: string, funcao: FuncaoApp) {
@@ -568,12 +579,48 @@ export function registrarSaidaGrupo(grupoId: string, rowId: string, motivo?: str
   );
 }
 
-/** ⚠️ Transferir NÃO põe a pessoa no outro grupo: cria um PEDIDO pro líder de lá
- *  aprovar. A saída do grupo atual é um passo separado (o líder decide). */
-export function transferirMembroGrupo(grupoId: string, rowId: string, destinoGrupoId: string) {
-  return apiPost<{ ok: boolean; destino?: string; ja_no_destino?: boolean; ja_pedido?: boolean }>(
-    `/app/grupos/${grupoId}/membros/${rowId}/transferir`, { destino_grupo_id: destinoGrupoId }
+/**
+ * SOLICITAR transferência — sem escolher destino.
+ *
+ * ⚠️⚠️ MUDOU EM 25/08/2026 (Marcos): *"eu quero que o líder de grupo não escolha
+ * para onde ele está transferindo, eu quero que ele aperte e solicite
+ * transferência, isso vai para caixa de entradas como pendente para Naná
+ * gerenciar."* O parâmetro `destinoGrupoId` MORREU — o líder só oferecia os
+ * grupos que ele mesmo gerencia, e o destino certo raramente é um deles.
+ *
+ * ⚠️ A pessoa NÃO sai do grupo agora: ela continua onde está até a coordenação
+ * resolver. Tirar aqui a deixaria sem grupo nenhum no meio do caminho.
+ */
+export function transferirMembroGrupo(grupoId: string, rowId: string, motivo?: string) {
+  return apiPost<{ ok: boolean; transferencia_id?: string | null; ja_pedido?: boolean }>(
+    `/app/grupos/${grupoId}/membros/${rowId}/transferir`, motivo ? { motivo } : {}
   );
+}
+
+/**
+ * Cadastrar pessoa NOVA já dentro do grupo (Pr. Nélio e Natasha · 25/08/2026).
+ *
+ * ⚠️ Ela nasce APROVADA: nenhum WhatsApp, nenhuma confirmação. Quem decide é o
+ * líder, com a pessoa na frente dele.
+ * ⚠️ Obrigatórios só `nome` e `telefone` — o resto o servidor valida quando vem,
+ * e cadastro incompleto aparece na fila de "faltam dados" da coordenação.
+ * ⚠️ `pessoa_nova: false` significa que o matcher LIGOU num cadastro que já
+ * existia. A tela tem que dizer isso, senão o líder acha que não funcionou e
+ * tenta de novo com outro nome — que é o comportamento que fabrica duplicata.
+ */
+export function cadastrarPessoaGrupo(
+  grupoId: string,
+  dados: {
+    nome: string; telefone: string; email?: string;
+    data_nascimento?: string; genero?: "masculino" | "feminino" | "";
+    cpf?: string; funcao?: "frequentador" | "visitante";
+  },
+) {
+  return apiPost<{
+    ok: boolean; membro_id: string; vinculo_id: string | null; nome: string;
+    funcao: string; pessoa_nova: boolean; ligada_por: string | null;
+    ja_no_grupo?: boolean; sem_cpf?: boolean;
+  }>(`/app/grupos/${encodeURIComponent(grupoId)}/pessoas`, dados);
 }
 
 export type GrupoEncontro = {
@@ -585,8 +632,48 @@ export type GrupoEncontro = {
   presentes: number;
 };
 
-export function getEncontrosGrupo(grupoId: string): Promise<{ encontros: GrupoEncontro[] }> {
-  return apiGet<{ encontros: GrupoEncontro[] }>(`/app/grupos/${grupoId}/encontros`);
+/**
+ * Uma OCORRÊNCIA que já passou: o encontro que a recorrência do grupo produziu,
+ * registrado ou não.
+ *
+ * ⚠️⚠️ É o conserto do defeito que o Marcos relatou em 25/08: *"quando eu não
+ * preencho uma semana e preencho a outra ele dá meio que um bug — ele
+ * provavelmente ficou em dúvida se eu estava registrando a presença do dia 18,
+ * aí ele marcou que o encontro foi dia 24."* Não havia dúvida: **a tela nunca
+ * mandava data**, e o servidor caía em "hoje". Agora a tela escolhe a data DESTA
+ * lista e a manda.
+ *
+ * `status`: `registrado` (chamada feita) · `nao_registrado` (passou e ninguém
+ * registrou — o "presença não registrada" que ele pediu, e que pode ser
+ * registrada depois) · `cancelado` (o líder cancelou; NÃO é pendência).
+ */
+export type OcorrenciaEncontro = {
+  data_original: string;
+  data: string;
+  horario: string | null;
+  status: "registrado" | "nao_registrado" | "cancelado";
+  motivo: string | null;
+  dia_semana: number | null;
+  registrado: boolean;
+  /** Chamada gravada num dia FORA da recorrência (inclusive as que nasceram com
+   *  a data errada antes deste conserto). Nunca é escondida. */
+  avulso?: boolean;
+  encontro_id: string | null;
+  presentes: number | null;
+  tema: string | null;
+  observacoes: string | null;
+  registrado_por_nome: string | null;
+};
+
+export function getEncontrosGrupo(grupoId: string): Promise<{
+  encontros: GrupoEncontro[];
+  /** ⚠️ `null` = o servidor não conseguiu montar a agenda (ou é bundle novo
+   *  contra backend antigo). A tela cai na lista crua — nunca afirma que não
+   *  houve encontro. */
+  ocorrencias?: OcorrenciaEncontro[] | null;
+  ocorrencias_aviso?: string | null;
+}> {
+  return apiGet(`/app/grupos/${grupoId}/encontros`);
 }
 
 /**

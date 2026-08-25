@@ -2593,3 +2593,130 @@ contas do app apontavam pra cadastro sem CPF.
 - ⚠️ `perfil.tsx` ainda salva por `app_salvar_membro` (RPC antiga que cruza por
   CPF/telefone/**nome**) — porta velha, fora do contrato. Migrar pro
   `/app/identidade/completar` num próximo passo.
+
+## ⚠️⚠️ Grupos · 6 mudanças na tela de gerenciar (2026-08-25 · ERP #migration `20260825170000`)
+
+Marcos avaliando a tela de grupos do app. Seis pedidos numa mensagem, terminando
+com *"alinhe todas essas mudanças com o sistema web"* — então **toda régua nova
+mora no backend/serviço compartilhado, e o app é casca fina**.
+
+| # | pedido | precisa OTA? |
+|---|---|---|
+| 1 | "Co-líder" MORRE · quem tinha vira `lider_treinamento` | tela sim, dado não |
+| 2 | **Líder em treinamento GERENCIA o grupo** | **NÃO** — é servidor |
+| 3 | Encontros à vista · semana sem chamada = "presença não registrada" | sim |
+| 4 | "Remover do grupo" (era "Registrar saída") + folhas mais altas | sim |
+| 5 | Transferência SEM destino · o líder solicita, a coordenação decide | sim |
+| 6 | "Adicionar pessoa" no fim do roster · nasce aprovada, sem WhatsApp | sim |
+
+### ⚠️⚠️ ITEM 3 · o "bug" era a TELA NÃO MANDAR A DATA
+
+Relato dele: *"quando eu não preencho uma semana e preencho a outra ele dá meio
+que um bug — ele provavelmente ficou em dúvida se eu estava registrando a presença
+do dia 18, aí ele marcou que o encontro foi dia 24."*
+
+**Nada ficou em dúvida.** `POST /app/grupos/:id/encontros` sempre aceitou `data` e
+caía em `hojeBRT()` quando ela não vinha — e `salvarChamada` **nunca mandava
+data**. O servidor gravou o único dia que recebeu. Somado a isso, a aba Encontros
+listava só o que JÁ estava registrado: a semana pulada não existia na tela, e o
+único caminho de registro era o botão do herói, que grava hoje.
+
+- **A aba agora renderiza `ocorrencias`** (do servidor · régua
+  `backend/utils/agendaGrupo.ocorrenciasPassadas`), com `status` `registrado` /
+  `nao_registrado` / `cancelado`. A pendente tem botão "Registrar" que abre a
+  chamada **naquela data**.
+- ⚠️⚠️ **`ocorrencias === null` cai na LISTA CRUA** (o comportamento de antes):
+  cobre backend antigo e falha da agenda. A tela **nunca** afirma "não houve
+  encontro" por não ter conseguido montar a timeline — e o aviso aparece quando o
+  servidor manda um motivo.
+- ⚠️ **`abrirChamada(dataAlvo)`**: o parâmetro NÃO pode se chamar `data` — esse é
+  o nome do estado do ROSTER nesta tela, e sombreá-lo faz a chamada nascer VAZIA
+  (`presentes` vem de `data.membros`). **O typecheck pegou**; sem tipos, teria
+  virado "a chamada não marca ninguém".
+- ⚠️ Quando a data não é hoje, a confirmação **diz a data** — é o que dá ao líder
+  a prova de que a chamada atrasada foi gravada no dia certo, que é exatamente a
+  dúvida que gerou o relato.
+- ⚠️ `data: chamadaData || undefined` (nunca `null`): sem data, quem decide é a
+  régua BRT do SERVIDOR. Calcular "hoje" no aparelho reintroduziria risco de fuso.
+- ⚠️ Chamada gravada fora da recorrência aparece marcada (`avulso`) — inclusive as
+  que nasceram com a data errada ANTES deste conserto. Esconder faria o trabalho
+  do líder desaparecer da tela, pior que o defeito original.
+
+### ⚠️ ITEM 4 · `fundoSeguro` é PISO, e é o conserto monotônico
+
+*"Subir um pouco pois esse botão fica onde está os botões do android,
+dificultando."* As 5 folhas desta tela usavam o inset cru + respiro pequeno;
+agora todas usam `spacing.lg + Math.max(insets.bottom, spacing.lg)`.
+
+⚠️ Dentro de um `<Modal>` do Android o inset pode vir **0** (a folha é outra
+janela), e diagnosticar QUAL das três causas é (inset 0 · gesture bar de 24 dp ·
+barra de 3 botões de 48 dp) exigiria o aparelho dele. **Piso é monotônico: mais
+folga embaixo = botão mais alto, valha qual valer a causa.** De quebra, a opção
+"Co-líder" saindo do menu encurtou a folha em uma linha.
+⚠️ **NÃO acrescentei `navigationBarTranslucent`** nas 5 folhas: mudaria o
+comportamento da JANELA de todas de uma vez, e o piso resolve sem isso.
+
+### ⚠️ ITENS 1 e 2 · o termo morreu; o treinamento passou a gerenciar
+
+- `FUNCOES_QUE_O_APP_DA` = `["frequentador", "lider_treinamento", "lider"]`. O
+  banco recusa `co_lider` (CHECK), então mandá-lo daqui só produziria erro.
+- ⚠️ **`co_lider`/`colider` FICAM nos mapas de LEITURA** (`FUNCAO` em
+  `grupo-membros`/`grupo-visita`, `gerencia()` e `rotuloPapel()` em `meu-grupo`),
+  apontando pro rótulo NOVO: bundle/cache antigo e resposta de backend antigo não
+  podem virar `"co_lider"` cru na tela.
+- ⚠️⚠️ **Quem autoriza a gestão é o SERVIDOR** (`gruposPapelApp` responde 403).
+  `gerencia()` existe só pra não MOSTRAR botão que vai dar 403 — divergir dela
+  reproduz o defeito de 21/08 ao contrário (tela oferece, servidor recusa).
+- A nota do menu de função passou a dizer que líder **e** líder em treinamento
+  gerenciam: sem isso o líder não tem como saber que está dando acesso de gestão.
+
+### ⚠️ ITEM 5 · a lista de grupos SAIU do modal de transferência
+
+`transferirMembroGrupo(grupoId, rowId, motivo?)` — o `destinoGrupoId` **morreu**.
+O modal virou uma solicitação com motivo opcional (e o placeholder dá exemplos,
+porque o motivo é o insumo de quem vai escolher o destino).
+
+⚠️ A tela DIZ que a pessoa **continua no grupo** até a coordenação resolver, e que
+**ninguém recebe mensagem automática**. Dois toques devolvem `ja_pedido` e a tela
+diz isso em vez de fingir que abriu outro pedido.
+
+### ⚠️⚠️ ITEM 6 · "Adicionar pessoa" é PORTA DE PESSOA
+
+Linha no FIM do roster (`+` no avatar), como ele pediu — de propósito uma linha da
+lista e não um botão flutuante: o líder está olhando o roster e percebendo quem
+falta nele. Aparece também no grupo VAZIO, onde é mais útil.
+
+- ⚠️ Obrigatórios só **nome + celular**; o resto é opcional. Exigir 6 campos faz o
+  líder não usar a tela — e aí a pessoa não entra em lugar nenhum. Cadastro
+  incompleto cai na fila de "faltam dados" da coordenação.
+- ⚠️⚠️ **Sexo em branco fica em branco** — NUNCA chutado pelo nome (lei de 10/08),
+  e só `masculino|feminino` (vocabulário da coluna · Contrato de Inscrição).
+- ⚠️ A máscara é **`mascararTelefoneBR` de `lib/telefone`** — **não existe
+  `lib/inscricao` neste repo** (esse é o nome do helper do ERP). Ela TRUNCA no
+  limite, que é o que impede o campo aceitar 20 dígitos e o servidor recusar lá na
+  frente sem a pessoa saber por quê.
+- ⚠️ `inputLinha` é estilo NOVO: o `styles.input` desta tela é multiline
+  (`minHeight: 70`, nasceu pro campo de motivo) e reusá-lo daria 5 caixas de 70 px
+  num formulário que não caberia na folha.
+- ⚠️⚠️ **A confirmação DIZ quando o matcher LIGOU** numa pessoa que já existia
+  (`pessoa_nova === false`). Sem isso o líder acha que não funcionou e tenta de
+  novo com outro nome — o comportamento que fabrica duplicata na base.
+- ⚠️ `visitante` só quando o líder MARCA a caixa (lei de 14/08); o default é
+  `frequentador`, porque adicionar de propósito é participação.
+
+### Traduções
+
+⚠️ **6 chaves que eu ia acrescentar JÁ EXISTIAM** e o `tsc` pegou (TS1117). As
+pré-existentes ficaram como estavam — sobrescrever mudaria texto de telas que não
+têm nada a ver com esta leva. Em especial `"Encontros"` continua `"Gatherings"` em
+inglês. E `"Co-líder"` **fica no dicionário**: bundle antigo em cache ainda pode
+pedir a chave, e sem ela o app mostra a chave crua a quem usa en/es.
+
+### Verificação
+
+`npx tsc --noEmit` limpo · `npm test` (**210 verdes**). No ERP: build, 2.366
+testes do vitest e os 16 scripts do gate.
+
+⏳ **PENDENTE: publicar o OTA** (`npm run ota -- "msg"` — **NUNCA `eas update`
+cru**, ver a lei no topo deste arquivo). Os itens 3, 4, 5 e 6 são tela; o item 2
+já vale sem OTA porque é servidor.
