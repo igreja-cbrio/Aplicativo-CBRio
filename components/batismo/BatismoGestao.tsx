@@ -42,12 +42,13 @@ type FormPessoa = {
   data_batismo: string;
   horario_culto: string;
   tamanho_camisa: string;
+  endereco: string;
   observacoes: string;
 };
 
 const FORM_VAZIO: FormPessoa = {
   nome: '', sobrenome: '', telefone: '', email: '', data_nascimento: '',
-  data_batismo: '', horario_culto: '', tamanho_camisa: '', observacoes: '',
+  data_batismo: '', horario_culto: '', tamanho_camisa: '', endereco: '', observacoes: '',
 };
 
 function dataCurta(iso: string): { dia: string; mes: string; semana: string } {
@@ -79,6 +80,7 @@ function payloadDoForm(form: FormPessoa): BatismoPessoaPayload {
     data_batismo: form.data_batismo,
     horario_culto: form.horario_culto.trim() || null,
     tamanho_camisa: form.tamanho_camisa.trim() || null,
+    endereco: form.endereco.trim() || null,
     observacoes: form.observacoes.trim() || null,
   };
 }
@@ -376,8 +378,8 @@ function PessoaCard({ pessoa: p, aprovacao, processando, onCheckin, onAprovar, o
         <View style={{ flex: 1 }}>
           <Text style={styles.personName} numberOfLines={1}>{nome}</Text>
           <View style={styles.metaRow}>
-            {p.horario_culto ? <Text style={styles.meta}>{p.horario_culto.slice(0, 5)}</Text> : null}
-            {p.tamanho_camisa ? <Text style={styles.meta}>{t('Camisa')} {p.tamanho_camisa}</Text> : null}
+            {p.horario_culto ? <Text style={styles.meta}>{t('Culto')} {p.horario_culto.slice(0, 5)}</Text> : null}
+            {p.tamanho_camisa ? <Text style={styles.meta}>{t('Camisa:')} {p.tamanho_camisa}</Text> : null}
             {p.telefone ? <Text style={styles.meta} numberOfLines={1}>{p.telefone}</Text> : null}
           </View>
         </View>
@@ -386,7 +388,8 @@ function PessoaCard({ pessoa: p, aprovacao, processando, onCheckin, onAprovar, o
         </Pressable>
       </View>
 
-      {p.observacoes ? <Text style={styles.note} numberOfLines={2}>{p.observacoes}</Text> : null}
+      {p.endereco ? <Text style={styles.note} numberOfLines={2}>{t('Endereço')}: {p.endereco}</Text> : null}
+      {p.observacoes ? <Text style={styles.note} numberOfLines={2}>{t('Observações')}: {p.observacoes}</Text> : null}
 
       <View style={styles.cardActions}>
         <Pressable onPress={onRetirar} disabled={processando} style={styles.removeBtn}>
@@ -426,7 +429,7 @@ function PessoaModal({ alvo, dataPadrao, horarios, onClose, onSaved, colors, sty
     nome: alvo.nome || '', sobrenome: alvo.sobrenome || '', telefone: alvo.telefone || '',
     email: alvo.email || '', data_nascimento: alvo.data_nascimento || '',
     data_batismo: alvo.data_batismo || dataPadrao, horario_culto: alvo.horario_culto || '',
-    tamanho_camisa: alvo.tamanho_camisa || '', observacoes: alvo.observacoes || '',
+    tamanho_camisa: alvo.tamanho_camisa || '', endereco: alvo.endereco || '', observacoes: alvo.observacoes || '',
   } : { ...FORM_VAZIO, data_batismo: dataPadrao }, [alvo, dataPadrao]);
   const [form, setForm] = useState(inicial);
 
@@ -475,6 +478,7 @@ function PessoaModal({ alvo, dataPadrao, horarios, onClose, onSaved, colors, sty
             {horarios.map(h => <Pressable key={h.horario} onPress={() => set('horario_culto')(h.horario)} style={[styles.option, form.horario_culto === h.horario && styles.optionActive]}><Text style={[styles.optionTxt, form.horario_culto === h.horario && styles.optionTxtActive]}>{h.label}</Text></Pressable>)}
           </ScrollView>
           <Campo label={t('Tamanho da camisa')} hint='P, M, G…' value={form.tamanho_camisa} onChange={set('tamanho_camisa')} styles={styles} />
+          <Campo label={t('Endereço')} value={form.endereco} onChange={set('endereco')} styles={styles} />
           <Campo label={t('Observações')} value={form.observacoes} onChange={set('observacoes')} multiline styles={styles} />
           <Pressable onPress={salvar} disabled={salvando} style={styles.saveBtn}>
             {salvando ? <ActivityIndicator color='#fff' /> : <Text style={styles.saveBtnTxt}>{novo ? t('Adicionar ao Batismo') : t('Salvar alterações')}</Text>}
