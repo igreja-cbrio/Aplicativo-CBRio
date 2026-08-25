@@ -128,7 +128,21 @@ export default function MeuGrupoScreen() {
 
   // Papel de GESTÃO no grupo (vem de /app/meu-grupo: 'lider' quando o
   // mem_grupos.lider_id é o membro logado, mesmo sem linha no roster).
-  const gerencia = (g: Grupo) => g.funcao === "lider" || g.funcao === "co_lider";
+  // ⚠️⚠️ `lider_treinamento` ENTROU aqui em 25/08/2026 (Marcos: *"quero que quem
+  // for líder em treinamento também possa gerenciar grupo"*), e quem manda de
+  // verdade é o SERVIDOR — `gruposPapelApp` responde 403 pra quem não gerencia.
+  // Esta lista existe pra não MOSTRAR um botão que vai dar 403; divergir dela
+  // produz o defeito de 21/08 ao contrário (tela oferece, servidor recusa).
+  // ⚠️ `co_lider` fica na lista só pra bundle/cache antigo: o termo morreu e
+  // quem tinha virou `lider_treinamento`.
+  const gerencia = (g: Grupo) =>
+    g.funcao === "lider" || g.funcao === "lider_treinamento" || g.funcao === "co_lider";
+
+  // Rótulo do papel — `co_lider` de dado velho mostra o nome NOVO.
+  const rotuloPapel = (f?: string | null) =>
+    f === "lider" ? t("Líder")
+      : (f === "lider_treinamento" || f === "co_lider") ? t("Líder em treinamento")
+        : f || "";
 
   // Modal de remarcar/cancelar UMA ocorrencia (Nana . 18/08). Guarda o grupo
   // junto: o alvo e sempre "esta ocorrencia deste grupo".
@@ -261,7 +275,7 @@ export default function MeuGrupoScreen() {
                 <View style={styles.tituloRow}>
                   <Text style={styles.nome}>{g.nome}</Text>
                   {g.funcao && g.funcao !== "membro" && (
-                    <View style={styles.papelBadge}><Text style={styles.papelTxt}>{g.funcao === "lider" ? t("Líder") : g.funcao === "co_lider" ? t("Co-líder") : g.funcao}</Text></View>
+                    <View style={styles.papelBadge}><Text style={styles.papelTxt}>{rotuloPapel(g.funcao)}</Text></View>
                   )}
                 </View>
 
@@ -300,11 +314,13 @@ export default function MeuGrupoScreen() {
 
                 {/* ⚠️ Quem LIDERA o grupo não recebe "Falar com <ele mesmo>"
                     (o Marcos criou um grupo pra testar e viu "Falar com
-                    Marcos" · 04/08). Pra líder/co-líder o CTA é gerenciar. */}
+                    Marcos" · 04/08). Pra quem gerencia, o CTA é gerenciar. */}
                 {gerencia(g) ? (
                   <>
                     <Text style={styles.liderInfo}>
-                      {g.funcao === "co_lider" ? t("Você é co-líder deste grupo.") : t("Você lidera este grupo.")}
+                      {(g.funcao === "lider_treinamento" || g.funcao === "co_lider")
+                        ? t("Você é líder em treinamento deste grupo e pode gerenciá-lo.")
+                        : t("Você lidera este grupo.")}
                     </Text>
                     {(pendentesPorId.get(g.id) || 0) > 0 && (
                       <Text style={styles.pendentesAviso}>
@@ -334,9 +350,10 @@ export default function MeuGrupoScreen() {
                 ) : null}
 
                 {/* ⚠️ SAIR só aparece pra quem NÃO gerencia. O servidor recusa
-                    líder e co-líder (o grupo ficaria sem destinatário de aviso
-                    e sumiria da busca pelo nome deles), então oferecer o botão
-                    a eles seria oferecer um 409. */}
+                    líder e líder em treinamento (o principal deixaria o grupo
+                    sem destinatário de aviso; o de treinamento perderia a gestão
+                    de um grupo em que não está), então oferecer o botão a eles
+                    seria oferecer um 409. */}
                 {!gerencia(g) ? (
                   <Pressable
                     style={styles.sair}

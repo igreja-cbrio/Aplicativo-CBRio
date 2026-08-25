@@ -57,12 +57,14 @@ import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 const DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
-// ⚠️ O roster devolve o ENUM cru do banco (`co_lider`, `lider_treinamento`,
-// `visitante`). Sem mapa, o supervisor lia "co_lider · 12 presenças".
+// ⚠️ O roster devolve o ENUM cru do banco (`lider_treinamento`, `visitante`).
+// Sem mapa, o supervisor lia "lider_treinamento · 12 presenças".
+// ⚠️ `co_lider` continua no mapa só pra LER dado histórico (o termo morreu em
+// 25/08/2026 e quem tinha virou `lider_treinamento`), mostrando o rótulo NOVO.
 const FUNCAO: Record<string, string> = {
   lider: "Líder",
-  co_lider: "Co-líder",
-  lider_treinamento: "Em treinamento",
+  co_lider: "Líder em treinamento",
+  lider_treinamento: "Líder em treinamento",
   frequentador: "Frequentador",
   visitante: "Visitante",
   supervisor: "Supervisor",

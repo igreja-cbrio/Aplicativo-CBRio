@@ -47,16 +47,15 @@ import { trackEvento } from "@/lib/telemetria";
 import { isValidCPF, nascimentoBRParaISO } from "@/lib/validators";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { abrirFichaCadastro, fecharFichaCadastro } from "@/lib/cadastroAberto";
+import { mascararCpf } from "@/lib/cpf";
 
 const soDigitos = (s: string) => s.replace(/\D/g, "");
 
-const mascaraCpf = (v: string) => {
-  const d = soDigitos(v).slice(0, 11);
-  if (d.length <= 3) return d;
-  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
-  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
-  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
-};
+// ⚠️ A máscara MUDOU DE CASA (25/08/2026) pra `lib/cpf` — a tela de "Adicionar
+// pessoa" do grupo passou a precisar dela, e uma 3ª cópia de máscara de CPF é
+// exatamente o que a lei do Contrato de Inscrição proíbe. Zero-diff: o corpo é
+// byte a byte o que estava aqui.
+const mascaraCpf = mascararCpf;
 
 const mascaraTelefone = (v: string) => {
   const d = soDigitos(v).slice(0, 11);

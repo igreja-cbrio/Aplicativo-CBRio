@@ -58,6 +58,14 @@ type Props = {
    * encontro seguinte). Sem o máximo, o calendário oferecia datas que o
    * servidor recusa — e a pessoa só descobre depois de escolher. */
   maximoISO?: string | null;
+  /** `YYYY-MM-DD[]` — dias DENTRO da faixa que mesmo assim não podem ser
+   * escolhidos.
+   *
+   * ⚠⚠ Diferente do mínimo/máximo, que descrevem uma FAIXA: aqui são buracos
+   * no meio dela. Nasceu do encontro de grupo (25/08/2026), onde o dia que JÁ
+   * TEM chamada colide com o UNIQUE (grupo_id, data) do banco — escolher um
+   * deles levantava 23505 e o líder só descobria DEPOIS de salvar. */
+  bloqueadasISO?: string[] | null;
   /** `YYYY-MM-DD` em BRT: marca o "hoje" e é o mês inicial quando não há valor. */
   hojeISO: string;
   onFechar: () => void;
@@ -71,6 +79,7 @@ export function CalendarioBR({
   valor,
   minimoISO,
   maximoISO,
+  bloqueadasISO,
   hojeISO,
   onFechar,
   onEscolher,
@@ -78,6 +87,11 @@ export function CalendarioBR({
   const colors = useColors();
   const t = useT();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  // Set pra a checagem por célula ser O(1): o mês inteiro passa por ela.
+  const indisponiveis = useMemo(
+    () => new Set((bloqueadasISO || []).map((d) => String(d).slice(0, 10))),
+    [bloqueadasISO]
+  );
 
   const inicial = useMemo(() => {
     const m = (valor || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -167,7 +181,10 @@ export function CalendarioBR({
             {celulas.map((dia, i) => {
               if (dia === null) return <View key={`v${i}`} style={styles.celula} />;
               const iso = isoDe(cursor.ano, cursor.mes, dia);
-              const bloqueado = (!!minimoISO && iso < minimoISO) || (!!maximoISO && iso > maximoISO);
+              const bloqueado =
+                (!!minimoISO && iso < minimoISO) ||
+                (!!maximoISO && iso > maximoISO) ||
+                indisponiveis.has(iso);
               const selecionado = iso === selecionadoISO;
               const ehHoje = iso === hojeISO;
               return (

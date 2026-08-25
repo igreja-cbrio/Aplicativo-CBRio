@@ -58,13 +58,31 @@ export function versaoMinimaApp(): Promise<VersaoMinima> {
   return apiGet<VersaoMinima>("/app/versao", { auth: false });
 }
 
-async function parseErro(resp: Response): Promise<string> {
+/**
+ * O erro da API com o CORPO junto.
+ *
+ * ⚠⚠ O helper antigo devolvia só a string e o resto do JSON era DESCARTADO —
+ * então resposta de negócio que carrega dado ("este dia tem chamada com 3
+ * presenças: confirma apagar?") chegava na tela como texto solto, e a tela não
+ * tinha como fazer a pergunta nem reenviar a confirmação. Agora o corpo vem em
+ * `err.corpo`, ao lado do `err.status` que já vinha.
+ *
+ * ⚠ `corpo` pode ser `null` (resposta sem JSON): quem usa checa antes.
+ */
+export type ErroApi = Error & { status?: number; corpo?: any };
+
+async function erroDaResposta(resp: Response): Promise<ErroApi> {
+  let corpo: any = null;
   try {
-    const j = await resp.json();
-    return (j.error || j.message || `Erro ${resp.status}`) as string;
+    corpo = await resp.json();
   } catch {
-    return `Erro ${resp.status}`;
+    corpo = null;
   }
+  const msg = (corpo?.error || corpo?.message || `Erro ${resp.status}`) as string;
+  const err = new Error(msg) as ErroApi;
+  err.status = resp.status;
+  err.corpo = corpo;
+  return err;
 }
 
 export async function apiGet<T>(path: string, opts?: { auth?: boolean }): Promise<T> {
@@ -75,9 +93,7 @@ export async function apiGet<T>(path: string, opts?: { auth?: boolean }): Promis
     // ⚠️ `apiGet` era o ÚNICO dos quatro verbos que lançava SEM o status
     // (post/patch/put/delete já anexavam) — quem quisesse distinguir 401 de 429
     // de 500 numa leitura só tinha a string da mensagem pra olhar.
-    const err = new Error(await parseErro(resp)) as Error & { status?: number };
-    err.status = resp.status;
-    throw err;
+    throw await erroDaResposta(resp);
   }
   return resp.json();
 }
@@ -98,9 +114,7 @@ export async function apiPost<T>(
     body: JSON.stringify(body),
   });
   if (!resp.ok) {
-    const err = new Error(await parseErro(resp)) as Error & { status?: number };
-    err.status = resp.status;
-    throw err;
+    throw await erroDaResposta(resp);
   }
   return resp.json().catch(() => ({}) as T);
 }
@@ -109,9 +123,7 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json", ...(await authHeaders()) };
   const resp = await fetch(`${BASE}${path}`, { method: "PATCH", headers, body: JSON.stringify(body) });
   if (!resp.ok) {
-    const err = new Error(await parseErro(resp)) as Error & { status?: number };
-    err.status = resp.status;
-    throw err;
+    throw await erroDaResposta(resp);
   }
   return resp.json().catch(() => ({}) as T);
 }
@@ -122,9 +134,7 @@ export async function apiPut<T>(path: string, body: unknown): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json", ...(await authHeaders()) };
   const resp = await fetch(`${BASE}${path}`, { method: "PUT", headers, body: JSON.stringify(body) });
   if (!resp.ok) {
-    const err = new Error(await parseErro(resp)) as Error & { status?: number };
-    err.status = resp.status;
-    throw err;
+    throw await erroDaResposta(resp);
   }
   return resp.json().catch(() => ({}) as T);
 }
@@ -154,9 +164,7 @@ export async function apiUpload<T>(
   form.append(campo, arquivo as unknown as Blob);
   const resp = await fetch(`${BASE}${path}`, { method: "POST", headers, body: form });
   if (!resp.ok) {
-    const err = new Error(await parseErro(resp)) as Error & { status?: number };
-    err.status = resp.status;
-    throw err;
+    throw await erroDaResposta(resp);
   }
   return resp.json().catch(() => ({}) as T);
 }
@@ -165,9 +173,7 @@ export async function apiDelete<T>(path: string): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json", ...(await authHeaders()) };
   const resp = await fetch(`${BASE}${path}`, { method: "DELETE", headers });
   if (!resp.ok) {
-    const err = new Error(await parseErro(resp)) as Error & { status?: number };
-    err.status = resp.status;
-    throw err;
+    throw await erroDaResposta(resp);
   }
   return resp.json().catch(() => ({}) as T);
 }
@@ -578,8 +584,19 @@ export function recusarPedidoGrupo(id: string, motivo: string): Promise<{ ok: bo
  * PESSOA que é `lider_id` (o servidor recusa mudar função/saída dela).
  * ⚠️ `supervisor` e `coordenador` seguem fora: são papéis da hierarquia de
  * supervisão, não do roster do grupo.
+ *
+ * ⚠️⚠️ `co_lider` SAIU (Marcos · 25/08/2026): *"nós não usamos o termo
+ * co-líder, pode excluir esse termo, se alguém estiver com essa categoria,
+ * coloque para líder em treinamento e exclua."* Quem tinha virou
+ * `lider_treinamento` na migration 20260825170000, e o CHECK do banco recusa
+ * gravá-lo de novo — mandar o valor daqui só produziria erro na tela.
+ *
+ * ⚠️⚠️ E `lider_treinamento` passou a GERENCIAR o grupo, no mesmo pedido:
+ * *"quero que quem for líder em treinamento também possa gerenciar grupo."* Quem
+ * decide isso é o SERVIDOR (`gruposPapelApp`) — esta lista é só o que a tela
+ * oferece pra marcar.
  */
-export const FUNCOES_QUE_O_APP_DA = ["frequentador", "lider_treinamento", "co_lider", "lider"] as const;
+export const FUNCOES_QUE_O_APP_DA = ["frequentador", "lider_treinamento", "lider"] as const;
 export type FuncaoApp = (typeof FUNCOES_QUE_O_APP_DA)[number];
 
 export function mudarFuncaoMembroGrupo(grupoId: string, rowId: string, funcao: FuncaoApp) {
@@ -594,12 +611,59 @@ export function registrarSaidaGrupo(grupoId: string, rowId: string, motivo?: str
   );
 }
 
-/** ⚠️ Transferir NÃO põe a pessoa no outro grupo: cria um PEDIDO pro líder de lá
- *  aprovar. A saída do grupo atual é um passo separado (o líder decide). */
-export function transferirMembroGrupo(grupoId: string, rowId: string, destinoGrupoId: string) {
-  return apiPost<{ ok: boolean; destino?: string; ja_no_destino?: boolean; ja_pedido?: boolean }>(
-    `/app/grupos/${grupoId}/membros/${rowId}/transferir`, { destino_grupo_id: destinoGrupoId }
+/**
+ * SOLICITAR transferência — sem escolher destino.
+ *
+ * ⚠️⚠️ MUDOU EM 25/08/2026 (Marcos): *"eu quero que o líder de grupo não escolha
+ * para onde ele está transferindo, eu quero que ele aperte e solicite
+ * transferência, isso vai para caixa de entradas como pendente para Naná
+ * gerenciar."* O parâmetro `destinoGrupoId` MORREU — o líder só oferecia os
+ * grupos que ele mesmo gerencia, e o destino certo raramente é um deles.
+ *
+ * ⚠️ A pessoa NÃO sai do grupo agora: ela continua onde está até a coordenação
+ * resolver. Tirar aqui a deixaria sem grupo nenhum no meio do caminho.
+ */
+export function transferirMembroGrupo(grupoId: string, rowId: string, motivo?: string) {
+  return apiPost<{ ok: boolean; transferencia_id?: string | null; ja_pedido?: boolean }>(
+    `/app/grupos/${grupoId}/membros/${rowId}/transferir`, motivo ? { motivo } : {}
   );
+}
+
+/**
+ * Cadastrar pessoa NOVA já dentro do grupo (Pr. Nélio e Natasha · 25/08/2026).
+ *
+ * ⚠️ Ela nasce APROVADA: nenhum WhatsApp, nenhuma confirmação. Quem decide é o
+ * líder, com a pessoa na frente dele.
+ * ⚠️ Obrigatórios só `nome` e `telefone` — o resto o servidor valida quando vem,
+ * e cadastro incompleto aparece na fila de "faltam dados" da coordenação.
+ * ⚠️ `pessoa_nova: false` significa que o matcher LIGOU num cadastro que já
+ * existia. A tela tem que dizer isso, senão o líder acha que não funcionou e
+ * tenta de novo com outro nome — que é o comportamento que fabrica duplicata.
+ */
+export function cadastrarPessoaGrupo(
+  grupoId: string,
+  dados: {
+    // ⚠️⚠️ OBRIGATÓRIOS — os MESMOS do formulário público de grupos (Marcos ·
+    // 25/08: *"queremos cadastro completo, os mesmos campos que solicitam a
+    // inscrição de grupos"*). Quem valida é o servidor, pelo
+    // `inscricaoContrato.validarCamposPadrao`; se algum faltar ele devolve 400
+    // com o campo, e a tela aponta.
+    nome: string; telefone: string; email: string;
+    data_nascimento: string; cpf: string;
+    genero?: "masculino" | "feminino" | "";
+    /** Fixo-OPCIONAL (Contrato de Inscrição · 28/07). */
+    endereco?: string;
+    /** ⚠️ Opt-in EXPLÍCITO, default false. O líder está declarando por outra
+     *  pessoa, e o servidor grava isso como declaração de terceiro. */
+    whatsapp_optin?: boolean;
+    funcao?: "frequentador" | "visitante";
+  },
+) {
+  return apiPost<{
+    ok: boolean; membro_id: string; vinculo_id: string | null; nome: string;
+    funcao: string; pessoa_nova: boolean; ligada_por: string | null;
+    ja_no_grupo?: boolean; sem_cpf?: boolean;
+  }>(`/app/grupos/${encodeURIComponent(grupoId)}/pessoas`, dados);
 }
 
 export type GrupoEncontro = {
@@ -611,8 +675,65 @@ export type GrupoEncontro = {
   presentes: number;
 };
 
-export function getEncontrosGrupo(grupoId: string): Promise<{ encontros: GrupoEncontro[] }> {
-  return apiGet<{ encontros: GrupoEncontro[] }>(`/app/grupos/${grupoId}/encontros`);
+/**
+ * Uma OCORRÊNCIA que já passou: o encontro que a recorrência do grupo produziu,
+ * registrado ou não.
+ *
+ * ⚠️⚠️ É o conserto do defeito que o Marcos relatou em 25/08: *"quando eu não
+ * preencho uma semana e preencho a outra ele dá meio que um bug — ele
+ * provavelmente ficou em dúvida se eu estava registrando a presença do dia 18,
+ * aí ele marcou que o encontro foi dia 24."* Não havia dúvida: **a tela nunca
+ * mandava data**, e o servidor caía em "hoje". Agora a tela escolhe a data DESTA
+ * lista e a manda.
+ *
+ * `status`: `registrado` (chamada feita) · `nao_registrado` (passou e ninguém
+ * registrou — o "presença não registrada" que ele pediu, e que pode ser
+ * registrada depois) · `cancelado` (o líder cancelou; NÃO é pendência).
+ */
+export type OcorrenciaEncontro = {
+  data_original: string;
+  data: string;
+  horario: string | null;
+  status: "registrado" | "nao_registrado" | "cancelado";
+  motivo: string | null;
+  dia_semana: number | null;
+  registrado: boolean;
+  /** ⚠️ Campos PRÓPRIOS porque `status` responde outra pergunta ("a chamada foi
+   *  feita?") e colapsa os dois. Sem eles a tela não sabe que há exceção a
+   *  DESFAZER, e o botão "voltar ao normal" nunca apareceria depois de uma
+   *  correção — o líder ficaria preso com a data que acabou de mudar. */
+  remarcado?: boolean;
+  cancelado?: boolean;
+  /** Chamada gravada num dia FORA da recorrência (inclusive as que nasceram com
+   *  a data errada antes deste conserto). Nunca é escondida. */
+  avulso?: boolean;
+  encontro_id: string | null;
+  presentes: number | null;
+  tema: string | null;
+  observacoes: string | null;
+  registrado_por_nome: string | null;
+  /** ⚠️ A cadência foi derivada do INÍCIO da temporada porque o grupo nunca
+   *  registrou encontro (34 dos 35 não-semanais ativos, medido em 25/08): a data
+   *  é PROPOSTA, não fato. A tela DIZ isso e oferece corrigir — e a correção vira
+   *  âncora real, então na próxima leitura as datas param de ser estimadas. */
+  data_estimada?: boolean;
+  /** ⚠️ Janela de CORREÇÃO do passado, decidida no SERVIDOR. É régua DIFERENTE
+   *  da remarcação do futuro (aquela proíbe data no passado); o app não
+   *  recalcula nenhuma das duas. */
+  pode_corrigir?: boolean;
+  corrigir_de?: string | null;
+  corrigir_ate?: string | null;
+};
+
+export function getEncontrosGrupo(grupoId: string): Promise<{
+  encontros: GrupoEncontro[];
+  /** ⚠️ `null` = o servidor não conseguiu montar a agenda (ou é bundle novo
+   *  contra backend antigo). A tela cai na lista crua — nunca afirma que não
+   *  houve encontro. */
+  ocorrencias?: OcorrenciaEncontro[] | null;
+  ocorrencias_aviso?: string | null;
+}> {
+  return apiGet(`/app/grupos/${grupoId}/encontros`);
 }
 
 /**

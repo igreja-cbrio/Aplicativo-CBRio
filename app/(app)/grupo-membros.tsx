@@ -23,12 +23,28 @@
 // ⚠️ O botão "Inscrições do grupo" saiu do /meu-grupo — aprovar pedido agora só
 // existe AQUI (a aba Pedidos). Duas portas pra mesma coisa era o que confundia.
 //
-// ⚠️ FUNÇÃO: o app dá `frequentador`, `em treinamento` e `co-líder`. NÃO dá
-// `líder` — quem lidera é `mem_grupos.lider_id`, e esse campo decide **quem
-// recebe o WhatsApp do grupo** (lei de 31/07: um destinatário só, e tem que ser
-// líder do roster). Trocar liderança é ato da coordenação, não do app.
-// ⚠️ TRANSFERÊNCIA não empurra ninguém pra dentro de outro grupo: cria um PEDIDO
-// pro líder de lá aprovar. E a SAÍDA é um passo separado, que o líder decide.
+// ⚠️⚠️ MUDANÇAS DE 25/08/2026 (Marcos, avaliando esta tela):
+//  1. **"Co-líder" MORREU.** *"Nós não usamos o termo co-líder, pode excluir esse
+//     termo, se alguém estiver com essa categoria, coloque para líder em
+//     treinamento e exclua."* Quem tinha virou `lider_treinamento` (migration
+//     20260825170000) e o banco recusa gravar o valor de novo.
+//  2. **Líder em treinamento GERENCIA o grupo.** Quem decide é o SERVIDOR
+//     (`gruposPapelApp`), não esta tela.
+//  3. **Os encontros ficam À VISTA** — a semana que ninguém registrou aparece
+//     como "presença não registrada" e pode ser registrada depois. Era aqui o
+//     "bug" que ele viu: a tela NÃO MANDAVA A DATA e o servidor caía em "hoje",
+//     então a chamada do dia 18 feita no dia 24 nascia no dia 24.
+//  4. **"Registrar saída" virou "Remover do grupo"**, e as folhas subiram —
+//     o botão caía onde ficam os botões do Android.
+//  5. **Transferência não escolhe destino**: o líder SOLICITA e a coordenação
+//     decide pra onde (vai pra Caixa de entrada do /grupos).
+//  6. **"Adicionar pessoa"** no fim do roster: o líder cadastra e a pessoa já
+//     nasce dentro do grupo, sem WhatsApp e sem confirmação.
+//
+// ⚠️ FUNÇÃO: o app dá `frequentador`, `líder em treinamento` e `líder`
+// (cadastro). Quem recebe o WhatsApp do grupo é só `mem_grupos.lider_id` (lei de
+// 31/07: um destinatário só, e tem que ser líder do roster) — marcar líder aqui
+// NÃO muda isso. Trocar a principal é ato da coordenação.
 // ⚠️ FREQUÊNCIA usa a RPC `registrar_encontro_grupo` (o mesmo escritor do web e
 // do fluxo do WhatsApp) — não existe segunda régua de presença.
 // ============================================================================
@@ -48,6 +64,12 @@ import { filtrarPorTexto } from "@/lib/buscaTexto";
 import { linkDeInscricao, precisaEscolherNaLista } from "@/lib/convite";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { hojeBRT } from "@/lib/dataBRT";
+// ⚠️ A máscara do app vive em `lib/telefone` — NÃO existe `lib/inscricao` aqui
+// (esse é o nome do helper do ERP). Ela TRUNCA no limite, que é o que impede o
+// campo aceitar 20 dígitos e o servidor recusar lá na frente sem a pessoa saber
+// por quê.
+import { mascararTelefoneBR } from "@/lib/telefone";
+import { mascararCpf } from "@/lib/cpf";
 import {
   estadoDoEncontro, dataLonga, quandoCurto, distanciaEmTexto, horaCurta,
 } from "@/lib/proximoEncontro";
@@ -57,9 +79,10 @@ import {
   getGrupoRoster, aprovarPedidoGrupo, recusarPedidoGrupo,
   mudarFuncaoMembroGrupo, registrarSaidaGrupo, transferirMembroGrupo,
   getEncontrosGrupo, registrarEncontroGrupo, pedirAjudaGrupo, getMateriaisGrupo,
-  listarMeusGruposLider, getAgendaGrupo, type OcorrenciaAgenda,
+  cadastrarPessoaGrupo, getAgendaGrupo, type OcorrenciaAgenda,
   type GrupoMembro, type GrupoPedido, type GrupoRoster,
   type GrupoEncontro, type GrupoMaterial, type FuncaoApp,
+  type OcorrenciaEncontro,
 } from "@/lib/api";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { chavesVisiveis, MARCADOR_INFO } from "@/lib/marcadoresJornada";
@@ -77,9 +100,12 @@ const ABAS: { k: Aba; label: string }[] = [
 ];
 
 const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+// ⚠️ `co_lider`/`colider` continuam no mapa só pra LER dado histórico (bundle
+// velho em cache, resposta de backend antigo): eles mostram o rótulo NOVO. Chave
+// sem rótulo viraria "co_lider" cru na tela, que é pior que um nome atualizado.
 const FUNCAO: Record<string, string> = {
-  lider: "Líder", co_lider: "Co-líder", colider: "Co-líder",
-  lider_treinamento: "Em treinamento", supervisor: "Supervisor",
+  lider: "Líder", co_lider: "Líder em treinamento", colider: "Líder em treinamento",
+  lider_treinamento: "Líder em treinamento", supervisor: "Supervisor",
   coordenador: "Coordenador", membro: "Membro", frequentador: "Frequentador",
   visitante: "Visitante",
 };
@@ -104,6 +130,20 @@ export default function GrupoMembrosScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  // ⚠️⚠️ ITEM 4 do Marcos (25/08): *"mudar o nome do texto para 'Remover do
+  // grupo' e subir um pouco pois esse botão fica onde está os botões do android,
+  // dificultando."*
+  //
+  // ⚠️ As 5 folhas usavam o inset cru somado a um respiro pequeno. O PISO existe
+  // porque dentro de um `<Modal>` do Android o inset pode chegar 0 (a folha é
+  // outra janela) — e aí a última linha encosta na barra de navegação. Um piso
+  // é o conserto MONOTÔNICO: mais folga embaixo = botão mais alto, qualquer que
+  // seja a causa real (inset 0, gesture bar fina de 24 dp ou barra de 3 botões
+  // de 48 dp). Diagnosticar QUAL das três é no aparelho dele exigiria o
+  // aparelho; o piso resolve as três.
+  // ⚠️ Se o inset vier correto (48), isso dá 48+24 = 72 dp de folga: bastante,
+  // mas o pedido foi literalmente "subir um pouco".
+  const fundoSeguro = spacing.lg + Math.max(insets.bottom, spacing.lg);
   const router = useRouter();
   const t = useT();
   const params = useLocalSearchParams<{ id: string; nome?: string }>();
@@ -122,7 +162,23 @@ export default function GrupoMembrosScreen() {
   const [saidaAlvo, setSaidaAlvo] = useState<GrupoMembro | null>(null);
   const [saidaMotivo, setSaidaMotivo] = useState("");
   const [transferirAlvo, setTransferirAlvo] = useState<GrupoMembro | null>(null);
-  const [meusGrupos, setMeusGrupos] = useState<{ id: string; nome: string }[]>([]);
+  const [transfMotivo, setTransfMotivo] = useState("");
+  // "Adicionar pessoa" (pedido do Pr. Nélio e da Natasha · 25/08)
+  const [addAberto, setAddAberto] = useState(false);
+  const [addNome, setAddNome] = useState("");
+  const [addTel, setAddTel] = useState("");
+  const [addEmail, setAddEmail] = useState("");
+  const [addNasc, setAddNasc] = useState("");
+  const [addSexo, setAddSexo] = useState<"" | "masculino" | "feminino">("");
+  const [addCpf, setAddCpf] = useState("");
+  const [addEndereco, setAddEndereco] = useState("");
+  const [addVisitante, setAddVisitante] = useState(false);
+  // ⚠️⚠️ LGPD · o líder está DECLARANDO por outra pessoa. O aceite é obrigatório
+  // (é a base legal do tratamento) e o opt-in de WhatsApp é opt-in de verdade —
+  // default false, como manda o Contrato de Inscrição (D4).
+  const [addTermos, setAddTermos] = useState(false);
+  const [addOptin, setAddOptin] = useState(false);
+  const [addSalvando, setAddSalvando] = useState(false);
   // Agenda (recorrência + exceções) — o líder gerencia a temporada inteira aqui.
   const [agenda, setAgenda] = useState<OcorrenciaAgenda[] | null>(null);
   const [agendaAviso, setAgendaAviso] = useState<string | null>(null);
@@ -132,6 +188,20 @@ export default function GrupoMembrosScreen() {
   const [agendaAlvo, setAgendaAlvo] = useState<OcorrenciaAgenda | null>(null);
   // Frequência
   const [encontros, setEncontros] = useState<GrupoEncontro[] | null>(null);
+  // ⚠️⚠️ A TIMELINE e a DATA ALVO são o conserto do item 3. `ocorrencias === null`
+  // = o servidor não mandou (backend antigo, ou a agenda falhou) ⇒ a aba cai na
+  // lista crua, o comportamento de antes. Nunca afirma "não houve encontro".
+  const [ocorrencias, setOcorrencias] = useState<OcorrenciaEncontro[] | null>(null);
+  const [ocorrenciasAviso, setOcorrenciasAviso] = useState<string | null>(null);
+  // ⚠️ A data que a chamada vai GRAVAR. `null` = hoje (o caminho do herói, que
+  // é registrar o encontro de agora). Preenchida = o líder tocou numa semana
+  // atrasada da timeline — e é o que impede a chamada do dia 18 nascer no 24.
+  const [chamadaData, setChamadaData] = useState<string | null>(null);
+  // ⚠️ A ocorrência PASSADA que o líder tocou (Marcos · 25/08): *"a pessoa clica
+  // em um encontro passado, altera data ou registra que encontro não aconteceu,
+  // registra presença e fica naquele encontro."* Abre o MESMO modal da agenda,
+  // em `modo="passado"` — um modal, dois modos.
+  const [ocorrenciaAlvo, setOcorrenciaAlvo] = useState<OcorrenciaEncontro | null>(null);
   const [chamadaAberta, setChamadaAberta] = useState(false);
   const [presentes, setPresentes] = useState<Set<string>>(new Set());
   const [tema, setTema] = useState("");
@@ -173,7 +243,17 @@ export default function GrupoMembrosScreen() {
   // pior do que esperar 300 ms. `materiais` segue lazy (só a aba Estudos usa).
   useEffect(() => {
     if (encontros === null) {
-      getEncontrosGrupo(grupoId).then((r) => setEncontros(r.encontros || [])).catch(() => setEncontros([]));
+      getEncontrosGrupo(grupoId)
+        .then((r) => {
+          setEncontros(r.encontros || []);
+          // ⚠️ `undefined` (backend antigo) e `null` (o servidor tentou e não
+          // conseguiu) caem no MESMO lugar de propósito: sem timeline, a aba
+          // mostra a lista crua. O que muda é o aviso — só o segundo caso tem
+          // motivo pra explicar.
+          setOcorrencias(r.ocorrencias ?? null);
+          setOcorrenciasAviso(r.ocorrencias_aviso || null);
+        })
+        .catch(() => { setEncontros([]); setOcorrencias(null); });
     }
     // ⚠️ A agenda NÃO é lazy de aba: ela vive no topo da tela (pedido do Marcos
     // · 18/08 — "gerenciar tudo na mesma tela"). Erro NÃO vira agenda vazia:
@@ -192,16 +272,6 @@ export default function GrupoMembrosScreen() {
       getMateriaisGrupo(grupoId).then((r) => setMateriais(r.materiais || [])).catch(() => setMateriais([]));
     }
   }, [aba, grupoId, encontros, materiais, agenda, t]);
-
-  // Destinos possíveis da transferência = os grupos que ESTE líder gerencia
-  // (mandar pra grupo de terceiro sem o líder de lá saber não é transferência,
-  // é despejo — e mesmo aqui o destino recebe como PEDIDO).
-  useEffect(() => {
-    if (!transferirAlvo || meusGrupos.length) return;
-    listarMeusGruposLider()
-      .then((r) => setMeusGrupos((r.grupos || []).map((g) => ({ id: g.id, nome: g.nome }))))
-      .catch(() => setMeusGrupos([]));
-  }, [transferirAlvo, meusGrupos.length]);
 
   async function aplicarFuncao(m: GrupoMembro, funcao: FuncaoApp) {
     setAcaoAlvo(null);
@@ -229,25 +299,28 @@ export default function GrupoMembrosScreen() {
     } finally { setProcessandoId(null); }
   }
 
-  async function confirmarTransferencia(destinoId: string) {
+  async function confirmarTransferencia() {
     const m = transferirAlvo;
     if (!m) return;
     setProcessandoId(m.id);
     try {
-      const r = await transferirMembroGrupo(grupoId, m.id, destinoId);
+      const r = await transferirMembroGrupo(grupoId, m.id, transfMotivo.trim() || undefined);
       setTransferirAlvo(null);
+      setTransfMotivo("");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      // ⚠️ Dois toques não são erro: o servidor devolve o MESMO pedido. A tela
+      // diz isso em vez de fingir que abriu outro.
       Alert.alert(
-        t("Pedido enviado"),
-        r.ja_no_destino
-          ? t("Essa pessoa já está no grupo de destino.")
-          : r.ja_pedido
-            ? t("Já existe um pedido dela nesse grupo, aguardando aprovação.")
-            : `${t("O pedido foi pra fila de")} ${r.destino}. ${t("A saída deste grupo é um passo separado — você decide quando registrar.")}`
+        r?.ja_pedido ? t("Já estava solicitado") : t("Transferência solicitada"),
+        r?.ja_pedido
+          ? t("A coordenação já tem este pedido na fila.")
+          : t("A coordenação vai escolher o grupo e falar com a pessoa. Ela continua no seu grupo até lá."),
       );
     } catch (e: any) {
-      Alert.alert(t("Não deu"), e?.message || t("Não foi possível pedir a transferência."));
+      Alert.alert(t("Não deu"), e?.message || t("Não foi possível solicitar a transferência."));
     } finally { setProcessandoId(null); }
   }
+
 
   /**
    * ⚠️ Fechar SÓ pergunta quando há trabalho a perder — a régua vive em
@@ -293,7 +366,20 @@ export default function GrupoMembrosScreen() {
     );
   }
 
-  function abrirChamada() {
+  /**
+   * `data` = a ocorrência que está sendo registrada (ISO). `null` = hoje, que é
+   * o caminho do herói ("registrar presença" do encontro de agora).
+   *
+   * ⚠️⚠️ É ESTE PARÂMETRO o conserto do defeito relatado: sem ele, o `POST` caía
+   * em `hojeBRT()` no servidor e a chamada do dia 18 feita no dia 24 nascia com
+   * a data 24.
+   */
+  // ⚠️ O parâmetro NÃO pode se chamar `data`: esse é o nome do estado do ROSTER
+  // nesta tela (`const [data, setData] = useState<GrupoRoster>`), e sombreá-lo
+  // fazia a chamada nascer VAZIA (a lista de presentes vinha de `data.membros`).
+  // O typecheck pegou; sem tipos, teria virado "a chamada não marca ninguém".
+  function abrirChamada(dataAlvo: string | null = null) {
+    setChamadaData(dataAlvo);
     // Começa com TODO MUNDO marcado: na prática o líder desmarca quem faltou, e
     // é bem menos toque do que marcar 12 pessoas uma a uma.
     const todos = new Set((data?.membros || []).map((m) => m.membro_id).filter(Boolean) as string[]);
@@ -310,18 +396,88 @@ export default function GrupoMembrosScreen() {
     setSalvandoChamada(true);
     try {
       const r = await registrarEncontroGrupo(grupoId, {
+        // ⚠️ `undefined` (não `null`) quando é hoje: o servidor tem o default
+        // BRT correto, e mandar a data calculada no APARELHO reintroduziria o
+        // risco de fuso que a régua do servidor já resolve.
+        data: chamadaData || undefined,
         tema: tema.trim() || undefined,
         observacoes: comentario.trim() || undefined,
         presentes: [...presentes],
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setChamadaAberta(false);
-      setEncontros(null); // força recarregar o histórico
+      const dataRegistrada = chamadaData;
+      setChamadaData(null);
+      setEncontros(null); // força recarregar o histórico E a timeline
+      setOcorrencias(null);
       await carregar(true); // o contador de presenças do roster mudou
-      Alert.alert(t("Frequência registrada"), `${r.presentes} ${r.presentes === 1 ? t("presente") : t("presentes")}.`);
+      // ⚠️ A confirmação DIZ a data quando não é hoje: é o que dá ao líder a
+      // prova de que a chamada atrasada foi gravada no dia certo — a dúvida que
+      // gerou o relato dele.
+      Alert.alert(
+        t("Frequência registrada"),
+        `${r.presentes} ${r.presentes === 1 ? t("presente") : t("presentes")}`
+        + (dataRegistrada ? ` ${t("em")} ${dataRegistrada.split("-").reverse().join("/")}.` : "."),
+      );
     } catch (e: any) {
       Alert.alert(t("Não deu"), e?.message || t("Não foi possível registrar."));
     } finally { setSalvandoChamada(false); }
+  }
+
+  function limparAdd() {
+    setAddNome(""); setAddTel(""); setAddEmail(""); setAddNasc("");
+    setAddSexo(""); setAddCpf(""); setAddEndereco("");
+    setAddVisitante(false); setAddTermos(false); setAddOptin(false);
+  }
+
+  // ⚠️⚠️ O MESMO conjunto do formulário público de grupos (Marcos · 25/08:
+  // *"queremos cadastro completo, os mesmos campos que solicitam a inscrição de
+  // grupos"*): nome completo · celular · nascimento · sexo · CPF · e-mail. Quem
+  // valida DE VERDADE é o servidor (`inscricaoContrato.validarCamposPadrao`) —
+  // isto aqui só decide quando o botão acende, pra a pessoa não tocar e levar
+  // erro. As duas réguas podem discordar em casos de borda (DV do CPF, nome
+  // abreviado), e nesse caso quem manda é o servidor, que devolve o campo.
+  const addPodeEnviar = addNome.trim().split(/\s+/).filter(Boolean).length >= 2
+    && addNome.trim().length >= 5
+    && addTel.replace(/\D/g, "").length >= 10
+    && /^\d{4}-\d{2}-\d{2}$/.test(addNasc.trim())
+    && !!addSexo
+    && addCpf.replace(/\D/g, "").length === 11
+    && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addEmail.trim())
+    && addTermos;
+
+  async function salvarPessoaNova() {
+    setAddSalvando(true);
+    try {
+      const r = await cadastrarPessoaGrupo(grupoId, {
+        nome: addNome.trim(),
+        telefone: addTel.trim(),
+        email: addEmail.trim(),
+        data_nascimento: addNasc.trim(),
+        genero: addSexo || undefined,
+        cpf: addCpf.trim(),
+        endereco: addEndereco.trim() || undefined,
+        whatsapp_optin: addOptin,
+        funcao: addVisitante ? "visitante" : "frequentador",
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      setAddAberto(false);
+      limparAdd();
+      await carregar(true);
+      // ⚠️⚠️ A tela DIZ quando o matcher LIGOU numa pessoa que já existia. Sem
+      // isso o líder acha que não funcionou e tenta de novo com outro nome — que
+      // é exatamente o comportamento que fabrica duplicata na base.
+      Alert.alert(
+        r?.ja_no_grupo ? t("Já estava no grupo") : t("Pronto!"),
+        r?.ja_no_grupo
+          ? `${r.nome} ${t("já faz parte deste grupo.")}`
+          : r?.pessoa_nova === false
+            ? `${r.nome} ${t("já tinha cadastro na igreja e entrou no grupo.")}`
+            : `${r?.nome || t("A pessoa")} ${t("entrou no grupo.")}`,
+      );
+    } catch (e: any) {
+      Alert.alert(t("Não deu"), e?.message || t("Não foi possível cadastrar."));
+    } finally { setAddSalvando(false); }
   }
 
   async function enviarAjuda() {
@@ -596,7 +752,7 @@ export default function GrupoMembrosScreen() {
                     ) : (
                       <Pressable
                         style={[styles.heroBtn, h.variante === "atencao" ? styles.heroBtnAtencao : styles.heroBtnCheio]}
-                        onPress={abrirChamada}
+                        onPress={() => abrirChamada(null)}
                         disabled={semGente}
                         accessibilityRole="button"
                       >
@@ -731,6 +887,22 @@ export default function GrupoMembrosScreen() {
                         <Text style={styles.vazioTit}>{t("Ninguém no grupo ainda")}</Text>
                         <Text style={styles.vazioTxt}>{t("Quem pedir para entrar aparece em Pedidos, e você recebe um WhatsApp.")}</Text>
                       </View>
+                      {/* ⚠️⚠️ ITEM 6 (Pr. Nélio e Natasha · 25/08): *"abaixo da
+                          última pessoa do grupo, colocar como se fosse mais uma
+                          linha, na foto um botão de '+' e no nome escrito
+                          Adicionar pessoa."* É de propósito uma LINHA DO ROSTER,
+                          não um botão flutuante: o líder está olhando a lista e
+                          percebendo quem falta nela. */}
+                      <Pressable style={styles.linha} onPress={() => setAddAberto(true)} accessibilityRole="button">
+                        <View style={[styles.avatarSm, styles.avatarAdd]}>
+                          <Ionicons name="add" size={20} color={colors.primary} />
+                        </View>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={[styles.nome, { color: colors.primary }]}>{t("Adicionar pessoa")}</Text>
+                          <Text style={styles.pequeno} numberOfLines={1}>{t("Entra no grupo na hora, sem esperar aprovação")}</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                      </Pressable>
                       <Pressable style={styles.discreta} onPress={convidar} accessibilityRole="button">
                         <Ionicons name="person-add-outline" size={17} color={colors.textMuted} />
                         <Text style={styles.discretaTxt}>{t("Convidar alguém pelo WhatsApp")}</Text>
@@ -799,6 +971,22 @@ export default function GrupoMembrosScreen() {
                           </View>
                         );
                       })}
+                      {/* ⚠️⚠️ ITEM 6 (Pr. Nélio e Natasha · 25/08): *"abaixo da
+                          última pessoa do grupo, colocar como se fosse mais uma
+                          linha, na foto um botão de '+' e no nome escrito
+                          Adicionar pessoa."* É de propósito uma LINHA DO ROSTER,
+                          não um botão flutuante: o líder está olhando a lista e
+                          percebendo quem falta nela. */}
+                      <Pressable style={styles.linha} onPress={() => setAddAberto(true)} accessibilityRole="button">
+                        <View style={[styles.avatarSm, styles.avatarAdd]}>
+                          <Ionicons name="add" size={20} color={colors.primary} />
+                        </View>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={[styles.nome, { color: colors.primary }]}>{t("Adicionar pessoa")}</Text>
+                          <Text style={styles.pequeno} numberOfLines={1}>{t("Entra no grupo na hora, sem esperar aprovação")}</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                      </Pressable>
                       <Pressable style={styles.discreta} onPress={convidar} accessibilityRole="button">
                         <Ionicons name="person-add-outline" size={17} color={colors.textMuted} />
                         <Text style={styles.discretaTxt}>{t("Convidar alguém pelo WhatsApp")}</Text>
@@ -808,10 +996,122 @@ export default function GrupoMembrosScreen() {
                 )}
 
                 {/* ─── ENCONTROS ─── */}
+                {/* ⚠️⚠️ ITEM 3 do Marcos (25/08): *"vale a pena sempre manter os
+                    encontros à vista: se a pessoa passar 1 semana e não
+                    registrar, ele entra automaticamente como presença não
+                    registrada e pode ser registrada posteriormente se o líder
+                    quiser."*
+
+                    O que a aba mostrava antes: SÓ os encontros registrados. A
+                    semana que ninguém preencheu simplesmente não existia na
+                    tela — então registrar "a de trás" só dava pelo botão do
+                    herói, que grava HOJE. Era daí que vinha a chamada do dia 18
+                    nascendo no dia 24.
+
+                    ⚠️ `ocorrencias === null` = o servidor não mandou a timeline
+                    (backend antigo, ou a agenda falhou). Aí a aba cai na LISTA
+                    CRUA, que é o comportamento de antes — nunca afirma que não
+                    houve encontro. */}
                 {aba === "frequencia" && (
                   <>
                     {encontros === null ? (
                       <View style={{ paddingVertical: spacing.lg }}><ActivityIndicator color={colors.primary} /></View>
+                    ) : ocorrencias ? (
+                      ocorrencias.length === 0 ? (
+                        <View style={styles.vazio}>
+                          <Text style={styles.vazioTit}>{t("Nenhum encontro ainda")}</Text>
+                          <Text style={styles.vazioTxt}>{t("Quando o grupo se reunir, registre a presença aqui.")}</Text>
+                        </View>
+                      ) : (
+                        <>
+                          <Text style={styles.secLabel}>{t("Encontros")}</Text>
+                          {ocorrencias.map((o) => {
+                            const [ano, mes, dia] = String(o.data).split("-");
+                            const pendente = o.status === "nao_registrado";
+                            const cancelado = o.status === "cancelado";
+                            return (
+                              <Pressable
+                                key={`${o.data}_${o.encontro_id || o.data_original}`}
+                                style={[styles.evento, pendente && styles.eventoPendente]}
+                                // ⚠️ Avulso NÃO abre o modal: ele não vem da
+                                // recorrência, então não existe `data_original`
+                                // pra escrever exceção — o POST recusaria.
+                                onPress={o.avulso ? undefined : () => setOcorrenciaAlvo(o)}
+                                accessibilityRole={o.avulso ? undefined : "button"}
+                                accessibilityLabel={o.avulso ? undefined : `${t("Gerenciar o encontro de")} ${o.data.split("-").reverse().join("/")}`}>
+                                <View style={[styles.eventoData, pendente && styles.eventoDataPendente]}>
+                                  <Text style={[styles.eventoDia, pendente && styles.eventoDiaPendente]}>{dia}</Text>
+                                  <Text style={[styles.eventoMes, pendente && styles.eventoDiaPendente]}>
+                                    {MESES_CURTOS[Number(mes) - 1] || mes}
+                                  </Text>
+                                </View>
+                                <View style={{ flex: 1, gap: 3 }}>
+                                  {cancelado ? (
+                                    <>
+                                      {/* ⚠️ Cancelado NÃO é pendência: o líder decidiu
+                                          que não haveria encontro. Cobrar chamada dele
+                                          seria cobrar uma reunião que não houve. */}
+                                      <Text style={styles.eventoCancelado}>{t("Encontro cancelado")}</Text>
+                                      {!!o.motivo && <Text style={styles.eventoObs}>{o.motivo}</Text>}
+                                    </>
+                                  ) : pendente ? (
+                                    <>
+                                      <Text style={styles.eventoPendenteTxt}>{t("Presença não registrada")}</Text>
+                                      {/* ⚠️⚠️ A data ESTIMADA é DITA na linha, não
+                                          só dentro do modal: em grupo quinzenal/
+                                          mensal sem encontro registrado ela foi
+                                          calculada pelo início da temporada, e
+                                          apresentá-la como fato seria afirmar o
+                                          que não se sabe. */}
+                                      <Text style={styles.pequeno}>
+                                        {o.data_estimada
+                                          ? t("Data estimada — toque para corrigir ou registrar")
+                                          : t("Toque para registrar ou marcar que não aconteceu")}
+                                      </Text>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Text style={styles.eventoPres}>
+                                        <Text style={styles.eventoPresN}>{o.presentes ?? 0}</Text>
+                                        {membros.length ? ` ${t("de")} ${membros.length}` : ""}
+                                        {` ${o.presentes === 1 ? t("presente") : t("presentes")}`}
+                                      </Text>
+                                      {!!o.tema && <Text style={styles.eventoTema}>{o.tema}</Text>}
+                                      {!!o.observacoes && <Text style={styles.eventoObs}>{o.observacoes}</Text>}
+                                      {!!o.registrado_por_nome && <Text style={styles.pequeno}>{t("por")} {o.registrado_por_nome}</Text>}
+                                      {/* ⚠️ Chamada gravada FORA da recorrência
+                                          aparece marcada — inclusive as que nasceram
+                                          com a data errada antes deste conserto.
+                                          Esconder faria o trabalho do líder desaparecer
+                                          da tela, que é pior que o defeito original. */}
+                                      {o.avulso && <Text style={styles.pequeno}>{t("fora do dia habitual do grupo")}</Text>}
+                                    </>
+                                  )}
+                                </View>
+                                {pendente ? (
+                                  <Pressable
+                                    style={styles.registrarBtn}
+                                    onPress={() => abrirChamada(o.data)}
+                                    disabled={semGente}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`${t("Registrar presença de")} ${dia}/${mes}`}>
+                                    <Ionicons name="checkmark-circle-outline" size={16} color={colors.primary} />
+                                    <Text style={styles.registrarBtnTxt}>{t("Registrar")}</Text>
+                                  </Pressable>
+                                ) : o.avulso ? null : (
+                                  /* ⚠️ Afordância ESCRITA, não só um chevron: a
+                                     lição de 18/08 é que "nem quem pediu achou"
+                                     um lápis cinza de 18px sozinho. */
+                                  <View style={styles.gerenciarDica}>
+                                    <Text style={styles.gerenciarDicaTxt}>{t("Gerenciar")}</Text>
+                                    <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+                                  </View>
+                                )}
+                              </Pressable>
+                            );
+                          })}
+                        </>
+                      )
                     ) : encontros.length === 0 ? (
                       <View style={styles.vazio}>
                         <Text style={styles.vazioTit}>{t("Nenhum encontro registrado")}</Text>
@@ -842,6 +1142,11 @@ export default function GrupoMembrosScreen() {
                           );
                         })}
                       </>
+                    )}
+                    {/* ⚠️ Erro NUNCA vira silêncio: "não consegui montar a agenda"
+                        e "não houve encontro" levam a decisões opostas. */}
+                    {!!ocorrenciasAviso && (
+                      <Text style={styles.agendaAvisoLinha}>{ocorrenciasAviso}</Text>
                     )}
                     {/* ⚠️ "Preciso de ajuda" é ação RARA: linha discreta no rodapé,
                         não card do tamanho do botão principal. Card com seta do
@@ -901,7 +1206,7 @@ export default function GrupoMembrosScreen() {
       {/* ═══ Ações do participante (função · transferir · saída) ═══ */}
       <Modal visible={!!acaoAlvo} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setAcaoAlvo(null)}>
         <Pressable style={styles.modalWrap} onPress={() => setAcaoAlvo(null)}>
-          <Pressable style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom }]} onPress={(e) => e.stopPropagation()}>
+          <Pressable style={[styles.sheet, { paddingBottom: fundoSeguro }]} onPress={(e) => e.stopPropagation()}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle} numberOfLines={1}>{acaoAlvo?.nome}</Text>
               <Pressable onPress={() => setAcaoAlvo(null)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
@@ -912,15 +1217,23 @@ export default function GrupoMembrosScreen() {
             <Text style={styles.sheetLabel}>{t("Função no grupo")}</Text>
             {([
               { v: "frequentador" as FuncaoApp, l: "Frequentador", i: "person-outline" as const },
+              // ⚠️⚠️ "Líder em treinamento" agora GERENCIA o grupo (Marcos ·
+              // 25/08). O rótulo diz isso na linha abaixo, senão o líder não tem
+              // como saber que está dando acesso de gestão.
               { v: "lider_treinamento" as FuncaoApp, l: "Líder em treinamento", i: "school-outline" as const },
-              { v: "co_lider" as FuncaoApp, l: "Co-líder", i: "people-circle-outline" as const },
+              // ⚠️ "Co-líder" SAIU: o termo foi aposentado e o banco recusa o
+              // valor. NÃO reintroduzir.
               // ⚠️ "Líder" aqui é CADASTRO (podem ser vários) — quem recebe as
               // mensagens do grupo é só a líder PRINCIPAL (`mem_grupos.lider_id`),
               // e ela nem aparece com este menu. Marcar alguém como líder aqui
               // NÃO faz o WhatsApp do grupo passar a ir pra essa pessoa.
               { v: "lider" as FuncaoApp, l: "Líder (cadastro)", i: "star-outline" as const },
             ]).map((op) => {
-              const atual = acaoAlvo?.funcao === op.v || (op.v === "co_lider" && acaoAlvo?.funcao === "colider");
+              // ⚠️ `co_lider`/`colider` de dado histórico acendem a linha de
+              // "líder em treinamento": é nela que a pessoa está agora.
+              const atual = acaoAlvo?.funcao === op.v
+                || (op.v === "lider_treinamento"
+                  && (acaoAlvo?.funcao === "co_lider" || acaoAlvo?.funcao === "colider"));
               return (
                 <Pressable key={op.v} style={styles.acaoItem} disabled={atual} onPress={() => acaoAlvo && aplicarFuncao(acaoAlvo, op.v)} accessibilityRole="button">
                   <Ionicons name={op.i} size={20} color={atual ? colors.primary : colors.text} />
@@ -932,18 +1245,20 @@ export default function GrupoMembrosScreen() {
             {/* ⚠️ A distinção que o Marcos pediu (05/08): marcar líder aqui é
                 CADASTRO — a mensagem do grupo continua indo só pra principal. */}
             <Text style={styles.pequeno}>
-              {t("Marcar como líder aqui é só pro cadastro do grupo — as mensagens do grupo no WhatsApp continuam indo só pra líder principal. Trocar quem é a principal é com a coordenação.")}
+              {t("Líder e líder em treinamento podem gerenciar este grupo. As mensagens do grupo no WhatsApp continuam indo só pra líder principal — trocar quem é a principal é com a coordenação.")}
             </Text>
 
             <View style={{ height: 1, backgroundColor: colors.border, marginVertical: spacing.sm }} />
 
-            <Pressable style={styles.acaoItem} onPress={() => { const m = acaoAlvo; setAcaoAlvo(null); setTransferirAlvo(m); }} accessibilityRole="button">
+            <Pressable style={styles.acaoItem} onPress={() => { const m = acaoAlvo; setAcaoAlvo(null); setTransfMotivo(""); setTransferirAlvo(m); }} accessibilityRole="button">
               <Ionicons name="swap-horizontal-outline" size={20} color={colors.text} />
-              <Text style={styles.acaoTxt}>{t("Transferir para outro grupo")}</Text>
+              <Text style={styles.acaoTxt}>{t("Solicitar transferência")}</Text>
             </Pressable>
+            {/* ⚠️ ITEM 4: era "Registrar saída do grupo". O nome novo é o do
+                Marcos, e diz o que a ação FAZ da perspectiva de quem clica. */}
             <Pressable style={styles.acaoItem} onPress={() => { const m = acaoAlvo; setAcaoAlvo(null); setSaidaMotivo(""); setSaidaAlvo(m); }} accessibilityRole="button">
-              <Ionicons name="exit-outline" size={20} color={colors.danger} />
-              <Text style={[styles.acaoTxt, styles.acaoTxtPerigo]}>{t("Registrar saída do grupo")}</Text>
+              <Ionicons name="person-remove-outline" size={20} color={colors.danger} />
+              <Text style={[styles.acaoTxt, styles.acaoTxtPerigo]}>{t("Remover do grupo")}</Text>
             </Pressable>
           </Pressable>
         </Pressable>
@@ -952,14 +1267,14 @@ export default function GrupoMembrosScreen() {
       {/* ═══ Saída ═══ */}
       <Modal visible={!!saidaAlvo} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setSaidaAlvo(null)}>
         <TecladoSeguro style={styles.modalWrap}>
-          <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom }]}>
+          <View style={[styles.sheet, { paddingBottom: fundoSeguro }]}>
             <View style={styles.sheetHead}>
-              <Text style={styles.sheetTitle}>{t("Registrar saída")}</Text>
+              <Text style={styles.sheetTitle}>{t("Remover do grupo")}</Text>
               <Pressable onPress={() => setSaidaAlvo(null)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
                 <Ionicons name="close" size={24} color={colors.text} />
               </Pressable>
             </View>
-            {saidaAlvo && <Text style={[styles.muted, { marginBottom: spacing.xs }]}>{saidaAlvo.nome} {t("sai deste grupo?")}</Text>}
+            {saidaAlvo && <Text style={[styles.muted, { marginBottom: spacing.xs }]}>{t("Remover")} {saidaAlvo.nome} {t("deste grupo?")}</Text>}
             {/* Saída é reversível e não apaga ninguém — a pessoa continua no
                 sistema e pode entrar de novo (mesma régua do "confira a lista"). */}
             <Text style={[styles.muted, { marginBottom: spacing.sm }]}>
@@ -975,38 +1290,270 @@ export default function GrupoMembrosScreen() {
               multiline
             />
             <Pressable style={[styles.btn, styles.btnRecusarSolido, { marginTop: spacing.md }]} disabled={!!processandoId} onPress={confirmarSaida} accessibilityRole="button">
-              {processandoId ? <ActivityIndicator color="#fff" size="small" /> : <Text style={[styles.btnTxt, { color: "#fff" }]}>{t("Confirmar saída")}</Text>}
+              {processandoId ? <ActivityIndicator color="#fff" size="small" /> : <Text style={[styles.btnTxt, { color: "#fff" }]}>{t("Remover do grupo")}</Text>}
             </Pressable>
           </View>
         </TecladoSeguro>
       </Modal>
 
-      {/* ═══ Transferência ═══ */}
-      <Modal visible={!!transferirAlvo} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setTransferirAlvo(null)}>
-        <Pressable style={styles.modalWrap} onPress={() => setTransferirAlvo(null)}>
-          <Pressable style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom }]} onPress={(e) => e.stopPropagation()}>
+      {/* ═══ Gerenciar um encontro que JÁ PASSOU (25/08) ═══ */}
+      {/* ⚠️⚠️ É o MESMO modal do box "Próximo encontro", em `modo="passado"`.
+          As duas telas escrevem no MESMO endpoint (`/agenda`) e a única
+          diferença é a janela de datas e o vocabulário — duas telas divergiriam
+          no primeiro ajuste, e a divergência apareceria como "no futuro deu, no
+          passado não". */}
+      <ModalAgendaEncontro
+        visivel={!!ocorrenciaAlvo}
+        modo="passado"
+        grupoId={grupoId}
+        grupoNome={nome}
+        /* ⚠️⚠️ MAPEAMENTO EXPLÍCITO, nunca `as any`: os dois vocabulários de
+           `status` são DIFERENTES (aqui é "a chamada foi feita?"; no modal é "há
+           exceção de agenda?"). O cast compilava e escondia o efeito real — o
+           modal nunca veria `remarcado` e o botão de DESFAZER a correção não
+           apareceria. */
+        ocorrencia={ocorrenciaAlvo ? {
+          data_original: ocorrenciaAlvo.data_original,
+          data: ocorrenciaAlvo.data,
+          horario: ocorrenciaAlvo.horario || "",
+          status: ocorrenciaAlvo.cancelado
+            ? "cancelado"
+            : ocorrenciaAlvo.remarcado ? "remarcado" : "normal",
+          motivo: ocorrenciaAlvo.motivo,
+          data_estimada: ocorrenciaAlvo.data_estimada,
+          registrado: ocorrenciaAlvo.registrado,
+          pode_corrigir: ocorrenciaAlvo.pode_corrigir,
+          corrigir_de: ocorrenciaAlvo.corrigir_de,
+          corrigir_ate: ocorrenciaAlvo.corrigir_ate,
+        } : null}
+        onFechar={() => setOcorrenciaAlvo(null)}
+        onRegistrarPresenca={(dataISO) => { setOcorrenciaAlvo(null); abrirChamada(dataISO); }}
+        onSalvo={() => {
+          setOcorrenciaAlvo(null);
+          // ⚠️ Recarrega a timeline E o histórico: corrigir a data move a
+          // chamada junto no servidor, então os dois mudaram.
+          setEncontros(null);
+          setOcorrencias(null);
+          setAgenda(null);
+        }}
+      />
+
+      {/* ═══ Adicionar pessoa · item 6 (25/08) ═══ */}
+      {/* ⚠️⚠️ ELA NASCE APROVADA: sem pedido, sem WhatsApp, sem confirmação
+          (*"se for criado ali, ela não passa por whatsapp e confirmação
+          nenhuma"*). Quem decide é o líder, com a pessoa na frente dele.
+          ⚠️ Obrigatórios só NOME e CELULAR. O resto é opcional de propósito:
+          quem preenche está no meio de um encontro, no celular, POR OUTRA
+          PESSOA — exigir 6 campos faz o líder não usar a tela, e aí a pessoa
+          não entra em lugar nenhum. Cadastro incompleto aparece na fila de
+          "faltam dados" da coordenação, que existe justamente pra isso.
+          ⚠️ Folha ALTA + TecladoSeguro: são 5 campos e o teclado cobriria os
+          últimos (mesma lição do campo de motivo da agenda, 18/08). */}
+      <Modal visible={addAberto} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setAddAberto(false)}>
+        <TecladoSeguro style={styles.modalWrap}>
+          <View style={[styles.sheet, styles.sheetAlta, { paddingBottom: fundoSeguro }]}>
             <View style={styles.sheetHead}>
-              <Text style={styles.sheetTitle}>{t("Transferir")}</Text>
+              <Text style={styles.sheetTitle}>{t("Adicionar pessoa")}</Text>
+              <Pressable onPress={() => setAddAberto(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </Pressable>
+            </View>
+            <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets style={{ flex: 1 }}>
+              <Text style={[styles.muted, { marginBottom: spacing.sm }]}>
+                {t("A pessoa entra no grupo na hora. Ela não recebe mensagem nem precisa confirmar.")}
+              </Text>
+
+              <Text style={styles.sheetLabel}>{t("Nome completo")} *</Text>
+              {/* ⚠️ Nome COMPLETO e SEM ABREVIAÇÃO é exigência do Contrato de
+                  Inscrição (28/07) e o servidor recusa "Ana P." — por isso o
+                  placeholder pede os dois nomes em vez de só "Nome". */}
+              <TextInput
+                style={styles.inputLinha}
+                placeholder={t("Nome e sobrenome, sem abreviar")}
+                placeholderTextColor={colors.textMuted}
+                value={addNome}
+                onChangeText={setAddNome}
+                autoCapitalize="words"
+                autoCorrect={false}
+              />
+
+              <Text style={styles.sheetLabel}>{t("Celular com DDD")} *</Text>
+              <TextInput
+                style={styles.inputLinha}
+                placeholder="(21) 99999-9999"
+                placeholderTextColor={colors.textMuted}
+                value={addTel}
+                onChangeText={(v) => setAddTel(mascararTelefoneBR(v))}
+                keyboardType="phone-pad"
+              />
+
+              <Text style={styles.sheetLabel}>{t("E-mail")} *</Text>
+              <TextInput
+                style={styles.inputLinha}
+                placeholder="email@exemplo.com"
+                placeholderTextColor={colors.textMuted}
+                value={addEmail}
+                onChangeText={setAddEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+
+              <Text style={styles.sheetLabel}>{t("CPF")} *</Text>
+              {/* ⚠️ O CPF é a chave FORTE do matcher: é ele que faz o cadastro
+                  novo LIGAR na pessoa que já está na base em vez de duplicar. É
+                  por isso que ele é obrigatório aqui, e não enfeite. */}
+              <TextInput
+                style={styles.inputLinha}
+                placeholder="000.000.000-00"
+                placeholderTextColor={colors.textMuted}
+                value={addCpf}
+                onChangeText={(v) => setAddCpf(mascararCpf(v))}
+                keyboardType="number-pad"
+                maxLength={14}
+              />
+
+              <Text style={styles.sheetLabel}>{t("Data de nascimento")} *</Text>
+              <TextInput
+                style={styles.inputLinha}
+                placeholder="AAAA-MM-DD"
+                placeholderTextColor={colors.textMuted}
+                value={addNasc}
+                onChangeText={setAddNasc}
+                keyboardType="numbers-and-punctuation"
+                maxLength={10}
+                autoCorrect={false}
+              />
+
+              {/* ⚠️ Sexo em branco fica em branco — NUNCA chutado pelo nome (a
+                  lei de 10/08 proíbe gravar sexo por palpite, e é ele que decide
+                  em qual grupo a pessoa pode entrar). E só masculino/feminino:
+                  é o vocabulário da coluna (Contrato de Inscrição · 28/07). */}
+              <Text style={styles.sheetLabel}>{t("Sexo")} *</Text>
+              <View style={styles.chips}>
+                {([["masculino", "Masculino"], ["feminino", "Feminino"]] as const).map(([v, l]) => (
+                  <Pressable
+                    key={v}
+                    style={[styles.chip, addSexo === v && styles.chipAtivo]}
+                    onPress={() => setAddSexo(addSexo === v ? "" : v)}
+                    accessibilityRole="button">
+                    <Text style={[styles.chipTxt, addSexo === v && styles.chipTxtAtivo]}>{t(l)}</Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              <Text style={styles.sheetLabel}>{t("Endereço (opcional)")}</Text>
+              <TextInput
+                style={styles.inputLinha}
+                placeholder={t("Rua, número, bairro")}
+                placeholderTextColor={colors.textMuted}
+                value={addEndereco}
+                onChangeText={setAddEndereco}
+                autoCapitalize="words"
+              />
+
+              {/* ⚠️⚠️ LGPD · VOCÊ ESTÁ DECLARANDO POR OUTRA PESSOA, e o texto diz
+                  isso. No formulário público quem marca a caixa é a própria
+                  pessoa; aqui é o líder. O servidor grava o consentimento com o
+                  prefixo "DECLARADO PRESENCIALMENTE POR <líder>" — gravar como
+                  aceite do titular seria fabricar prova legal (mesma decisão do
+                  link do voluntário · 14/08). */}
+              <Pressable
+                style={[styles.chip, styles.chipLargo, addTermos && styles.chipAtivo]}
+                onPress={() => setAddTermos(v => !v)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: addTermos }}>
+                <Ionicons
+                  name={addTermos ? "checkbox" : "square-outline"}
+                  size={18}
+                  color={addTermos ? colors.primary : colors.textMuted} />
+                <Text style={[styles.chipTxt, styles.chipTxtQuebra, addTermos && styles.chipTxtAtivo]}>
+                  {t("Confirmo que a pessoa está aqui comigo e autorizou o cadastro dos dados dela na igreja (LGPD)")} *
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={[styles.chip, styles.chipLargo, addOptin && styles.chipAtivo]}
+                onPress={() => setAddOptin(v => !v)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: addOptin }}>
+                <Ionicons
+                  name={addOptin ? "checkbox" : "square-outline"}
+                  size={18}
+                  color={addOptin ? colors.primary : colors.textMuted} />
+                <Text style={[styles.chipTxt, styles.chipTxtQuebra, addOptin && styles.chipTxtAtivo]}>
+                  {t("Ela autorizou receber mensagens da igreja no WhatsApp")}
+                </Text>
+              </Pressable>
+
+              {/* ⚠️ Adicionar alguém DE PROPÓSITO é participação, não visita — daí
+                  o default. `visitante` só quando o líder DECLARA (lei de 14/08:
+                  "quem o líder realmente identifica como visitante, deve ser
+                  visitante"). */}
+              <Pressable
+                style={[styles.chip, styles.chipLargo, addVisitante && styles.chipAtivo]}
+                onPress={() => setAddVisitante(v => !v)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: addVisitante }}>
+                <Ionicons
+                  name={addVisitante ? "checkbox" : "square-outline"}
+                  size={18}
+                  color={addVisitante ? colors.primary : colors.textMuted} />
+                <Text style={[styles.chipTxt, addVisitante && styles.chipTxtAtivo]}>
+                  {t("É visitante (veio conhecer)")}
+                </Text>
+              </Pressable>
+            </ScrollView>
+            <Pressable
+              style={[styles.btn, styles.btnAceitar, { marginTop: spacing.sm, flexGrow: 0 }]}
+              disabled={addSalvando || !addPodeEnviar}
+              onPress={salvarPessoaNova}
+              accessibilityRole="button">
+              {addSalvando
+                ? <ActivityIndicator color="#fff" size="small" />
+                : <Text style={[styles.btnTxt, { color: "#fff" }]}>{t("Adicionar ao grupo")}</Text>}
+            </Pressable>
+          </View>
+        </TecladoSeguro>
+      </Modal>
+
+      {/* ═══ Transferência · SOLICITAÇÃO, sem destino (item 5 · 25/08) ═══ */}
+      {/* ⚠️⚠️ A lista de grupos MORREU aqui. Antes o líder escolhia entre os
+          grupos que ELE gerencia — e o destino certo raramente é um deles (é o
+          que estiver mais perto da pessoa, na categoria dela). Quem enxerga a
+          malha inteira é a coordenação, e é ela que decide agora. */}
+      <Modal visible={!!transferirAlvo} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setTransferirAlvo(null)}>
+        <TecladoSeguro style={styles.modalWrap}>
+          <View style={[styles.sheet, { paddingBottom: fundoSeguro }]}>
+            <View style={styles.sheetHead}>
+              <Text style={styles.sheetTitle}>{t("Solicitar transferência")}</Text>
               <Pressable onPress={() => setTransferirAlvo(null)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
                 <Ionicons name="close" size={24} color={colors.text} />
               </Pressable>
             </View>
-            {/* ⚠️ Não empurra ninguém: vira PEDIDO na fila do grupo de destino. */}
             <Text style={[styles.muted, { marginBottom: spacing.sm }]}>
-              {transferirAlvo?.nome} {t("vai como PEDIDO para o grupo escolhido — o líder de lá aprova. A saída deste grupo é um passo separado.")}
+              {transferirAlvo?.nome} {t("vai para a fila da coordenação, que escolhe o grupo novo. Ela continua no seu grupo até isso ser resolvido.")}
             </Text>
-            {meusGrupos.filter((g) => g.id !== grupoId).length === 0 ? (
-              <Text style={styles.muted}>{t("Você gerencia só este grupo. Para transferir pra um grupo de outro líder, fale com a coordenação.")}</Text>
-            ) : (
-              meusGrupos.filter((g) => g.id !== grupoId).map((g) => (
-                <Pressable key={g.id} style={styles.acaoItem} disabled={!!processandoId} onPress={() => confirmarTransferencia(g.id)} accessibilityRole="button">
-                  <Ionicons name="people-outline" size={20} color={colors.text} />
-                  <Text style={styles.acaoTxt} numberOfLines={1}>{g.nome}</Text>
-                </Pressable>
-              ))
-            )}
-          </Pressable>
-        </Pressable>
+            {/* ⚠️ O motivo é OPCIONAL, mas é o insumo principal de quem vai
+                decidir o destino — daí o exemplo no placeholder em vez de um
+                rótulo genérico. */}
+            <Text style={styles.sheetLabel}>{t("Por quê? (opcional, ajuda a escolher o grupo)")}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder={t("Ex.: mudou pra Barra, o horário não dá mais, quer um grupo de casais…")}
+              placeholderTextColor={colors.textMuted}
+              value={transfMotivo}
+              onChangeText={setTransfMotivo}
+              multiline
+            />
+            <Pressable style={[styles.btn, styles.btnAceitar, { marginTop: spacing.md, flexGrow: 0 }]} disabled={!!processandoId} onPress={confirmarTransferencia} accessibilityRole="button">
+              {processandoId ? <ActivityIndicator color="#fff" size="small" /> : <Text style={[styles.btnTxt, { color: "#fff" }]}>{t("Solicitar transferência")}</Text>}
+            </Pressable>
+            <Text style={[styles.pequeno, { marginTop: spacing.xs }]}>
+              {t("Ninguém recebe mensagem automática — a coordenação fala com a pessoa.")}
+            </Text>
+          </View>
+        </TecladoSeguro>
       </Modal>
 
       {/* ═══ Chamada (frequência) ═══ */}
@@ -1029,7 +1576,7 @@ export default function GrupoMembrosScreen() {
               ⚠️ `flex: 1` em vez de outro número fixo: `applyFontScale`
               multiplica o tamanho do texto no boot, então qualquer teto em
               pixels cabe menos nomes com fonte grande e o defeito volta. */}
-          <View style={[styles.sheet, styles.sheetAlta, { paddingBottom: spacing.md + insets.bottom }]}>
+          <View style={[styles.sheet, styles.sheetAlta, { paddingBottom: fundoSeguro }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{t("Frequência de hoje")}</Text>
               <Pressable onPress={fecharChamada} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
@@ -1113,7 +1660,7 @@ export default function GrupoMembrosScreen() {
       {/* ═══ Pedir ajuda ═══ */}
       <Modal visible={ajudaAberta} animationType="slide" transparent statusBarTranslucent onRequestClose={fecharAjuda}>
         <TecladoSeguro style={styles.modalWrap}>
-          <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom }]}>
+          <View style={[styles.sheet, { paddingBottom: fundoSeguro }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{t("Preciso de ajuda")}</Text>
               <Pressable onPress={fecharAjuda} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
@@ -1301,6 +1848,45 @@ function makeStyles(c: Palette) {
     },
     chamadaNome: { color: c.text, fontSize: font.size.md, flex: 1 },
     modalWrap: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" },
+    // ── Timeline dos encontros (item 3) ────────────────────────────────────
+    // ⚠️ A ocorrência pendente é ÂMBAR, nunca vermelha: é pendência, não erro
+    // nem decisão contra ninguém — a mesma leitura do `sem_contato` do ERP.
+    eventoPendente: { borderStyle: "dashed", borderColor: c.warning },
+    eventoDataPendente: { backgroundColor: c.warning + "1c" },
+    eventoDiaPendente: { color: c.warning },
+    eventoPendenteTxt: { color: c.warning, fontSize: font.size.md, fontWeight: "700" },
+    eventoCancelado: { color: c.textMuted, fontSize: font.size.md, fontWeight: "600" },
+    registrarBtn: {
+      flexDirection: "row", alignItems: "center", gap: 4,
+      paddingVertical: 8, paddingHorizontal: 10,
+      borderRadius: radius.full, borderWidth: 1, borderColor: c.primary,
+    },
+    registrarBtnTxt: { color: c.primary, fontSize: font.size.sm, fontWeight: "700" },
+    gerenciarDica: { flexDirection: "row", alignItems: "center", gap: 2 },
+    gerenciarDicaTxt: { color: c.textMuted, fontSize: font.size.sm - 1 },
+    // ── Adicionar pessoa (item 6) ─────────────────────────────────────────
+    avatarAdd: { backgroundColor: c.primary + "1c", borderWidth: 1, borderColor: c.primary + "55" },
+    // ⚠️ Input de UMA LINHA: o `styles.input` da tela é multiline (minHeight 70,
+    // textAlignVertical top) porque nasceu pro campo de motivo. Reusá-lo aqui
+    // daria 5 caixas de 70 px e o formulário não caberia na folha.
+    inputLinha: {
+      backgroundColor: c.surfaceAlt, borderRadius: radius.sm,
+      paddingHorizontal: 12, paddingVertical: 10, color: c.text,
+      borderWidth: 1, borderColor: c.border, marginBottom: spacing.sm,
+    },
+    chips: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.sm },
+    chip: {
+      flexDirection: "row", alignItems: "center", gap: 6,
+      paddingVertical: 9, paddingHorizontal: 14,
+      borderRadius: radius.full, borderWidth: 1, borderColor: c.border,
+    },
+    chipLargo: { alignSelf: "flex-start", marginBottom: spacing.sm },
+    chipAtivo: { borderColor: c.primary, backgroundColor: c.primary + "14" },
+    chipTxt: { color: c.text, fontSize: font.size.sm },
+    chipTxtAtivo: { color: c.primary, fontWeight: "700" },
+    // ⚠️ O texto do consentimento é longo de propósito (é prova legal, não
+    // rótulo): sem `flex: 1` ele estoura a linha do chip e sai da folha.
+    chipTxtQuebra: { flex: 1, lineHeight: 18 },
     sheet: { backgroundColor: c.background, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.md },
     sheetHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.sm },
     sheetTitle: { color: c.text, fontSize: font.size.lg, fontWeight: "800" },
