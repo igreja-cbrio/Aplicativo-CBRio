@@ -54,6 +54,10 @@ export type Ocorrencia = {
   pode_corrigir?: boolean;
   corrigir_de?: string | null;
   corrigir_ate?: string | null;
+  /** Dias DENTRO da janela que mesmo assim não servem: já têm chamada, e
+   *  `mem_grupo_encontros` tem UNIQUE (grupo_id, data). Quem decide é o
+   *  servidor — o app só apaga do calendário o que ele mandou. */
+  corrigir_bloqueadas?: string[] | null;
   /** A cadência foi derivada do início da temporada porque o grupo nunca
    *  registrou encontro: a data é PROPOSTA, e a tela tem que dizer isso. */
   data_estimada?: boolean;
@@ -108,6 +112,20 @@ export function ModalAgendaEncontro({
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
   const [confirmando, setConfirmando] = useState(false);
+  /**
+   * ⚠⚠ A 2ª ETAPA de "não aconteceu" num dia que JÁ TEM chamada.
+   *
+   * Antes o servidor recusava e mandava falar com a coordenação — o app sabia
+   * que a chamada estava errada e não deixava o líder arrumar (o "beco sem
+   * saída" que o Marcos mandou fechar em 25/08). Agora a 1ª tentativa volta com
+   * quantas presenças serão perdidas, a tela PERGUNTA, e só então reenvia com
+   * `confirmar_apagar_chamada`. O 409 continua existindo de propósito: sem ele,
+   * um toque errado apagaria uma chamada real sem ninguém perceber.
+   *
+   * `presentes` pode ser `null` — o servidor não conseguiu contar; a pergunta
+   * fica mais vaga, nunca ausente.
+   */
+  const [apagarChamada, setApagarChamada] = useState<{ presentes: number | null } | null>(null);
   // Qual ocorrência está sendo editada. `null` = a que o modal abriu.
   const [trocaKey, setTrocaKey] = useState<string | null>(null);
   const [verAgenda, setVerAgenda] = useState(false);
@@ -141,13 +159,18 @@ export function ModalAgendaEncontro({
     setCalendario(false);
     setErro("");
     setConfirmando(false);
+    setApagarChamada(null);
   };
   const fechar = () => {
     limpar();
     onFechar();
   };
 
-  const enviar = async (acao: "remarcar" | "cancelar" | "desfazer") => {
+  const enviar = async (
+    acao: "remarcar" | "cancelar" | "desfazer",
+    /** Só vem `true` depois de a tela ter perguntado (ver `apagarChamada`). */
+    confirmarApagarChamada = false
+  ) => {
     setErro("");
     setSalvando(true);
     try {
@@ -173,10 +196,19 @@ export function ModalAgendaEncontro({
         }
       }
       if (acao !== "desfazer" && motivo.trim()) corpo.motivo = motivo.trim();
+      if (confirmarApagarChamada) corpo.confirmar_apagar_chamada = true;
       await apiPost("/app/grupos/" + grupoId + "/agenda", corpo);
       limpar();
       onSalvo();
     } catch (e: any) {
+      // ⚠ `tem_chamada` NÃO é erro: é a pergunta da 2ª etapa. Mostrar a
+      // mensagem em vermelho aqui faria o líder achar que falhou e desistir —
+      // exatamente o beco que isto veio fechar.
+      if (e?.corpo?.codigo === "tem_chamada") {
+        const p = e.corpo.presentes;
+        setApagarChamada({ presentes: typeof p === "number" ? p : null });
+        return;
+      }
       setErro(e?.message || t("Não deu para salvar. Tente de novo."));
     } finally {
       setSalvando(false);
@@ -336,6 +368,10 @@ export function ModalAgendaEncontro({
                        sem piso e quem recusa é o POST. */
                     minimoISO={deISO || (noPassado ? undefined : hojeBRT())}
                     maximoISO={ateISO}
+                    /* ⚠ Dia que já tem chamada sai do calendário: escolher um
+                       deles levantaria 23505 no banco e o líder só descobriria
+                       depois de salvar. Quem decide é o servidor. */
+                    bloqueadasISO={noPassado ? oc.corrigir_bloqueadas : null}
                     hojeISO={hojeBRT()}
                     onFechar={() => setCalendario(false)}
                     onEscolher={(d) => {
@@ -373,7 +409,41 @@ export function ModalAgendaEncontro({
 
             {!jaCancelado ? (
               <View style={styles.zonaAcoes}>
-                {confirmando ? (
+                {apagarChamada ? (
+                  /* ⚠⚠ 2ª ETAPA · o dia TEM chamada e "não aconteceu" é uma
+                     contradição que só se resolve apagando o registro. A pergunta
+                     é CONCRETA ("a presença de N pessoas") porque é isso que se
+                     perde — inclusive o contador de presenças de cada uma, que a
+                     régua de visitante→frequentador usa. */
+                  <>
+                    <Text style={styles.confirmaTxt}>
+                      {apagarChamada.presentes
+                        ? `${t("Esse dia tem chamada com")} ${apagarChamada.presentes} ${apagarChamada.presentes === 1 ? t("presença") : t("presenças")}. ${t("Marcar que não aconteceu vai APAGAR essa chamada. Isso não tem como desfazer.")}`
+                        : t("Esse dia tem uma chamada registrada. Marcar que não aconteceu vai APAGAR essa chamada. Isso não tem como desfazer.")}
+                    </Text>
+                    <View style={styles.linhaBotoes}>
+                      <Button
+                        title={t("Voltar")}
+                        variant="ghost"
+                        onPress={() => {
+                          setApagarChamada(null);
+                          setConfirmando(false);
+                        }}
+                        style={{ flex: 1 }}
+                      />
+                      <Pressable
+                        style={styles.btnPerigo}
+                        disabled={salvando}
+                        onPress={() => enviar("cancelar", true)}
+                        accessibilityRole="button"
+                      >
+                        <Text numberOfLines={1} style={styles.btnPerigoTxt}>
+                          {salvando ? t("Salvando...") : t("Apagar e marcar")}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </>
+                ) : confirmando ? (
                   <>
                     {/* ⚠️ Honestidade: o app NÃO avisa os participantes. Quem
                         fala com o grupo é o líder, no WhatsApp dele — e é ele

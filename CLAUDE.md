@@ -2793,6 +2793,53 @@ zero.
 `npx tsc --noEmit` limpo · `npm test` (**210 verdes**). No ERP: build, 2.374
 testes do vitest e os 16 scripts do gate.
 
+
+### ⚠️⚠️ 3ª rodada no mesmo dia (25/08) · os becos sem saída fecharam
+
+*"Precisamos corrigir essas coisas que você falou que valem saber, não podem
+acontecer."* — sobre as ressalvas que a 2ª rodada deixou. **Ressalva que tranca o
+líder não é ressalva, é defeito.**
+
+#### "Não aconteceu" num dia que TEM chamada · dois passos, no próprio modal
+
+Antes o servidor recusava e a tela mostrava o erro em vermelho — o líder concluía
+que quebrou e desistia. Agora o 409 `tem_chamada` **não é tratado como erro**: é
+a pergunta da 2ª etapa, com o número de presenças que se perdem, e o botão
+reenvia com `confirmar_apagar_chamada`.
+
+- ⚠️ A pergunta é **CONCRETA** ("a presença de 3 pessoas") porque é isso que se
+  perde — inclusive o contador de presenças de cada uma, que a régua de
+  visitante→frequentador usa. `presentes` pode vir `null` (o servidor não
+  conseguiu contar): a pergunta fica mais vaga, **nunca ausente**.
+- ⚠️ Quem decide é o SERVIDOR: o app só reenvia o que ele pediu. Nada de o app
+  apagar chamada por conta própria.
+
+#### O calendário apaga o dia que já tem chamada · `bloqueadasISO`
+
+`CalendarioBR` ganhou a prop. ⚠️ Diferente de `minimoISO`/`maximoISO`, que
+descrevem uma FAIXA: aqui são **buracos no meio dela**. Nasceu do UNIQUE
+(grupo_id, data) de `mem_grupo_encontros` — escolher um dia ocupado levantava
+23505 e o líder só descobria **depois de salvar**.
+⚠️ A lista vem pronta do servidor (`corrigir_bloqueadas`) — o app **não** calcula
+qual dia está ocupado, pela mesma razão de não recalcular a janela: duas contas
+apareceriam como *"o calendário deixou escolher e o servidor recusou"*.
+
+#### ⚠️⚠️ `lib/api.ts` · o erro passou a carregar o CORPO
+
+O helper devolvia **só a string** e o resto do JSON era DESCARTADO — então
+resposta de negócio que carrega dado ("tem chamada com 3 presenças: confirma
+apagar?") chegava na tela como texto solto, e a tela não tinha como fazer a
+pergunta nem reenviar a confirmação. Agora vem em **`err.corpo`**, ao lado do
+`err.status` que já vinha, e os **6 blocos duplicados** dos verbos viraram um
+helper só (`erroDaResposta`).
+⚠️ `corpo` pode ser `null` (resposta sem JSON) — quem usa checa antes.
+
+#### Verificação da 3ª rodada
+
+`npx tsc --noEmit` limpo · `npm test` (**210 verdes**). No ERP: `tsc -b` sem
+cache, build, os **16 scripts** do gate (16/16) e **5 mutantes novos** rodados e
+mortos (3 na régua de janela, 2 na guarda estática dos becos).
+
 ⏳ **PENDENTE: publicar o OTA** (`npm run ota -- "msg"` — **NUNCA `eas update`
 cru**, ver a lei no topo deste arquivo). Os itens 3, 4, 5 e 6 são tela; o item 2
 já vale sem OTA porque é servidor.

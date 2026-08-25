@@ -58,13 +58,31 @@ export function versaoMinimaApp(): Promise<VersaoMinima> {
   return apiGet<VersaoMinima>("/app/versao", { auth: false });
 }
 
-async function parseErro(resp: Response): Promise<string> {
+/**
+ * O erro da API com o CORPO junto.
+ *
+ * ⚠⚠ O helper antigo devolvia só a string e o resto do JSON era DESCARTADO —
+ * então resposta de negócio que carrega dado ("este dia tem chamada com 3
+ * presenças: confirma apagar?") chegava na tela como texto solto, e a tela não
+ * tinha como fazer a pergunta nem reenviar a confirmação. Agora o corpo vem em
+ * `err.corpo`, ao lado do `err.status` que já vinha.
+ *
+ * ⚠ `corpo` pode ser `null` (resposta sem JSON): quem usa checa antes.
+ */
+export type ErroApi = Error & { status?: number; corpo?: any };
+
+async function erroDaResposta(resp: Response): Promise<ErroApi> {
+  let corpo: any = null;
   try {
-    const j = await resp.json();
-    return (j.error || j.message || `Erro ${resp.status}`) as string;
+    corpo = await resp.json();
   } catch {
-    return `Erro ${resp.status}`;
+    corpo = null;
   }
+  const msg = (corpo?.error || corpo?.message || `Erro ${resp.status}`) as string;
+  const err = new Error(msg) as ErroApi;
+  err.status = resp.status;
+  err.corpo = corpo;
+  return err;
 }
 
 export async function apiGet<T>(path: string, opts?: { auth?: boolean }): Promise<T> {
@@ -75,9 +93,7 @@ export async function apiGet<T>(path: string, opts?: { auth?: boolean }): Promis
     // ⚠️ `apiGet` era o ÚNICO dos quatro verbos que lançava SEM o status
     // (post/patch/put/delete já anexavam) — quem quisesse distinguir 401 de 429
     // de 500 numa leitura só tinha a string da mensagem pra olhar.
-    const err = new Error(await parseErro(resp)) as Error & { status?: number };
-    err.status = resp.status;
-    throw err;
+    throw await erroDaResposta(resp);
   }
   return resp.json();
 }
@@ -98,9 +114,7 @@ export async function apiPost<T>(
     body: JSON.stringify(body),
   });
   if (!resp.ok) {
-    const err = new Error(await parseErro(resp)) as Error & { status?: number };
-    err.status = resp.status;
-    throw err;
+    throw await erroDaResposta(resp);
   }
   return resp.json().catch(() => ({}) as T);
 }
@@ -109,9 +123,7 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json", ...(await authHeaders()) };
   const resp = await fetch(`${BASE}${path}`, { method: "PATCH", headers, body: JSON.stringify(body) });
   if (!resp.ok) {
-    const err = new Error(await parseErro(resp)) as Error & { status?: number };
-    err.status = resp.status;
-    throw err;
+    throw await erroDaResposta(resp);
   }
   return resp.json().catch(() => ({}) as T);
 }
@@ -122,9 +134,7 @@ export async function apiPut<T>(path: string, body: unknown): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json", ...(await authHeaders()) };
   const resp = await fetch(`${BASE}${path}`, { method: "PUT", headers, body: JSON.stringify(body) });
   if (!resp.ok) {
-    const err = new Error(await parseErro(resp)) as Error & { status?: number };
-    err.status = resp.status;
-    throw err;
+    throw await erroDaResposta(resp);
   }
   return resp.json().catch(() => ({}) as T);
 }
@@ -154,9 +164,7 @@ export async function apiUpload<T>(
   form.append(campo, arquivo as unknown as Blob);
   const resp = await fetch(`${BASE}${path}`, { method: "POST", headers, body: form });
   if (!resp.ok) {
-    const err = new Error(await parseErro(resp)) as Error & { status?: number };
-    err.status = resp.status;
-    throw err;
+    throw await erroDaResposta(resp);
   }
   return resp.json().catch(() => ({}) as T);
 }
@@ -165,9 +173,7 @@ export async function apiDelete<T>(path: string): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json", ...(await authHeaders()) };
   const resp = await fetch(`${BASE}${path}`, { method: "DELETE", headers });
   if (!resp.ok) {
-    const err = new Error(await parseErro(resp)) as Error & { status?: number };
-    err.status = resp.status;
-    throw err;
+    throw await erroDaResposta(resp);
   }
   return resp.json().catch(() => ({}) as T);
 }
