@@ -33,7 +33,8 @@ import { router, type Href } from "expo-router";
  *   │   ├── /grupos  /grupo-detalhe  /grupo-membros  /grupo-visita
  *   │   ├── /grupo-inscricoes  /grupo-editar
  *   ├── /voluntariado      barra: Servir
- *   │   └── /escala-supervisor
+ *   │   ├── /escala-supervisor
+ *   │   └── /checkin-voluntarios   (só no dia do culto)
  *   ├── /cuidados          barra
  *   ├── /devocional        barra
  *   │   └── /anotacoes
@@ -79,6 +80,9 @@ const PAI: Record<string, string> = {
 
   // servir
   "/escala-supervisor": "/voluntariado",
+  // Check-in do supervisor: entra PELA aba Servir (pedido do Matheus, 25/08),
+  // então o pai é /voluntariado — não /escala-supervisor, que é irmã.
+  "/checkin-voluntarios": "/voluntariado",
 
   // devocional
   "/anotacoes": "/devocional",

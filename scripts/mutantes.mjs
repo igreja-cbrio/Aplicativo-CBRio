@@ -59,6 +59,25 @@ const MUTANTES = [
     para: "return new Date(Date.now()).toISOString().slice(0, 10);",
   },
   {
+    // ⚠️⚠️ O bug do DOMINGO À NOITE. Culto de 19h é 22h UTC: das 21h BRT em
+    // diante `toISOString()` já devolve o dia seguinte, e a janela do check-in
+    // FECHA NO MEIO DO CULTO — quando o supervisor está justamente marcando
+    // quem chegou. O botão desaparece da mão dele, com gente na porta.
+    nome: "janelaCheckin: comparar o dia em UTC (fecha a janela no culto da noite)",
+    arq: "lib/janelaCheckin.ts",
+    de: 'return d.toLocaleDateString("en-CA", { timeZone: TZ });',
+    para: "return d.toISOString().slice(0, 10);",
+  },
+  {
+    // A janela é o DIA do culto. Trocar por "sempre aberta" é o pedido do
+    // Matheus ao contrário — e o servidor recusaria com 403, então o app
+    // ofereceria um botão que falha.
+    nome: "janelaCheckin: janela sempre aberta (ignora o dia do culto)",
+    arq: "lib/janelaCheckin.ts",
+    de: "return dCulto === dHoje ? { ok: true, dia: dCulto } : { ok: false, motivo: \"fora_do_dia\", dia: dCulto };",
+    para: "return { ok: true, dia: dCulto };",
+  },
+  {
     nome: "ficha: parar de exigir CPF (que o servidor exige)",
     arq: "lib/ficha.ts",
     de: 'falta.push(CAMPOS_CONTRATO.cpf);',

@@ -202,6 +202,32 @@ export function getEscalaServicos() {
 export function getEscala(serviceId: string) {
   return apiGet<EscalaResposta>(`/app/voluntariado/escala/${serviceId}`);
 }
+// ── Check-in pelo supervisor (25/08/2026) ─────────────────────────────────
+// ⚠️ O servidor decide a JANELA (dia do culto em BRT) e o ESCOPO (área+subárea)
+// e responde 403. A régua do app (`lib/janelaCheckin`) existe pra o botão não
+// APARECER fora da janela — não pra substituir a checagem do servidor. Se as
+// duas discordarem, o toque falha, que é pior que o botão não existir.
+export type CheckinItem = {
+  id: string;
+  schedule_id: string | null;
+  volunteer_id: string | null;
+  volunteer_name: string | null;
+  checked_in_at: string;
+  method: string;
+  is_unscheduled?: boolean;
+  equipe?: string | null;
+  subarea?: string | null;
+};
+export function getCheckinsDoServico(serviceId: string) {
+  return apiGet<CheckinItem[]>(`/app/voluntariado/escala/${serviceId}/checkins`);
+}
+export function registrarCheckin(body: { service_id: string; schedule_id?: string; volunteer_id?: string }) {
+  return apiPost<CheckinItem>("/app/voluntariado/checkin", body);
+}
+export function desfazerCheckin(id: string) {
+  return apiDelete<{ ok: true; id: string; volunteer_name: string | null }>(`/app/voluntariado/checkin/${id}`);
+}
+
 export function buscarEscalaPool(q: string) {
   return apiGet<PoolVoluntario[]>(`/app/voluntariado/escala-pool?q=${encodeURIComponent(q)}`);
 }

@@ -14,6 +14,7 @@ import { estadoVoluntariado, volEncerrado } from "@/lib/volStatus";
 import { rotaPai, ehRaiz, subirUmNivel } from "@/lib/hierarquia";
 import { acaoDaBarra, ehRotaDeBarra, irParaBarra, ROTAS_BARRA } from "@/lib/nav";
 import { hojeBRT, diaBRT } from "@/lib/dataBRT";
+import { diaDoInstanteBRT, ehDiaDoCulto, cultosDeHoje } from "@/lib/janelaCheckin";
 import { fichaCompleta, faltaNaFicha, podeInscrever, jaTemNaFicha } from "@/lib/ficha";
 import { montarPayloadInscricao, extrasFaltando } from "@/lib/inscricaoPayload";
 import { tipoDaCapa, arquivoDaCapa, capaCabe, MAX_CAPA_BYTES } from "@/lib/capaGrupo";
@@ -301,6 +302,74 @@ describe("dataBRT · o dia de operação da igreja", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-31T20:00:00.000Z")); // 17h BRT de 31/08
     expect(diaBRT(1)).toBe("2026-09-01");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// JANELA DO CHECK-IN PELO SUPERVISOR · o dia do culto, em BRT (25/08/2026)
+//
+// O supervisor faz check-in dos voluntários da área dele pelo app, só nos dias
+// de culto (pedido do Matheus · pra a igreja não ficar refém de um único ponto
+// de check-in). O servidor decide o MESMO em `backend/utils/janelaCulto.js` e
+// responde 403 fora da janela — se o app calcular diferente, o botão aparece e
+// o toque falha, que é pior que o botão não aparecer.
+//
+// ⚠️⚠️ Culto de domingo 19h é 22h UTC. Das 21h BRT o UTC já virou o dia
+// seguinte, então `toISOString().slice(0,10)` FECHA A JANELA NO MEIO DO CULTO DA
+// NOITE — quando o supervisor está justamente batendo os check-ins.
+// ─────────────────────────────────────────────────────────────────────────────
+describe("janelaCheckin · o dia do culto em BRT", () => {
+  const DOMINGO_19H = "2026-08-23T22:00:00.000Z"; // 19h BRT de domingo 23/08
+
+  it("diaDoInstanteBRT devolve a data LOCAL, não a UTC", () => {
+    expect(diaDoInstanteBRT(DOMINGO_19H)).toBe("2026-08-23");
+    // 22h30 BRT do domingo já é 01h30 UTC de segunda.
+    expect(diaDoInstanteBRT("2026-08-24T01:30:00.000Z")).toBe("2026-08-23");
+    // 23h BRT do sábado é 02h UTC do domingo.
+    expect(diaDoInstanteBRT("2026-08-23T02:00:00.000Z")).toBe("2026-08-22");
+  });
+
+  it("não inventa data pra entrada inválida", () => {
+    expect(diaDoInstanteBRT(null)).toBeNull();
+    expect(diaDoInstanteBRT("")).toBeNull();
+    expect(diaDoInstanteBRT("nao-e-data")).toBeNull();
+  });
+
+  // ⚠️⚠️ O CASO QUE MOTIVOU A RÉGUA: culto da NOITE, supervisor batendo ponto às
+  // 21h30 BRT. Em UTC já é segunda; a janela tem que continuar ABERTA.
+  it("21h30 BRT do domingo: janela do culto das 19h continua ABERTA", () => {
+    expect(ehDiaDoCulto(DOMINGO_19H, new Date("2026-08-24T00:30:00.000Z")).ok).toBe(true);
+    expect(ehDiaDoCulto(DOMINGO_19H, new Date("2026-08-24T02:59:00.000Z")).ok).toBe(true);
+  });
+
+  it("00h01 BRT de segunda já fechou", () => {
+    const r = ehDiaDoCulto(DOMINGO_19H, new Date("2026-08-24T03:01:00.000Z"));
+    expect(r.ok).toBe(false);
+    expect(r.ok === false && r.motivo).toBe("fora_do_dia");
+  });
+
+  it("dia INTEIRO: abre antes do culto e não fecha depois dele", () => {
+    const manha = "2026-08-23T11:30:00.000Z"; // 08h30 BRT
+    expect(ehDiaDoCulto(manha, new Date("2026-08-23T09:00:00.000Z")).ok).toBe(true); // 06h BRT
+    expect(ehDiaDoCulto(manha, new Date("2026-08-24T01:00:00.000Z")).ok).toBe(true); // 22h BRT
+    expect(ehDiaDoCulto(manha, new Date("2026-08-22T20:00:00.000Z")).ok).toBe(false); // véspera
+  });
+
+  it("sem data é distinguível de fora do dia (a tela diz coisas diferentes)", () => {
+    const r = ehDiaDoCulto(null, new Date(DOMINGO_19H));
+    expect(r.ok).toBe(false);
+    expect(r.ok === false && r.motivo).toBe("sem_data");
+  });
+
+  it("cultosDeHoje só deixa passar os de hoje", () => {
+    const servicos = [
+      { id: "a", scheduled_at: DOMINGO_19H },
+      { id: "b", scheduled_at: "2026-08-23T11:30:00.000Z" },
+      { id: "c", scheduled_at: "2026-08-26T23:00:00.000Z" }, // quarta
+      { id: "d", scheduled_at: null },
+    ];
+    const hoje = cultosDeHoje(servicos, new Date("2026-08-24T00:30:00.000Z")); // 21h30 BRT dom
+    expect(hoje.map((s) => s.id)).toEqual(["a", "b"]);
   });
 });
 
