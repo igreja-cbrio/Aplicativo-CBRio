@@ -19,7 +19,7 @@
 // ============================================================================
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
+  ActivityIndicator, Alert, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -59,7 +59,6 @@ export default function CheckinVoluntariosScreen() {
   const [carregando, setCarregando] = useState(true);
   const [carregandoLista, setCarregandoLista] = useState(false);
   const [refrescando, setRefrescando] = useState(false);
-  const [emAcao, setEmAcao] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
   const carregarCultos = useCallback(async () => {
@@ -116,35 +115,89 @@ export default function CheckinVoluntariosScreen() {
     return m;
   }, [checkins]);
 
+  /**
+   * Agrupa a escala por ÁREA (pedido do Matheus, 26/08: "no check-in pelo app
+   * dos membros deve ter separado por área").
+   *
+   * ⚠️ A `area` vem do SERVIDOR (PR #2733), não é derivada aqui: ela mora em
+   * `vol_teams.area`, e remontar o mapa equipe→área no app criaria uma segunda
+   * fonte pra divergir na primeira equipe que trocasse de área.
+   *
+   * ⚠️ Quem não tem área cai num grupo próprio no FIM, com rótulo que diz isso —
+   * em vez de sumir da lista ou se misturar a uma área de verdade.
+   */
+  const porArea = useMemo(() => {
+    const m = new Map<string, EscalaItem[]>();
+    for (const e of escala) {
+      const k = (e.area || "").trim() || "__sem";
+      const arr = m.get(k) || [];
+      arr.push(e);
+      m.set(k, arr);
+    }
+    return [...m.entries()]
+      .sort((a, b) => (a[0] === "__sem" ? 1 : b[0] === "__sem" ? -1 : a[0].localeCompare(b[0], "pt-BR")))
+      .map(([k, itens]) => ({
+        chave: k,
+        rotulo: k === "__sem" ? t("Sem área definida") : k,
+        itens: itens.sort((x, y) => (x.volunteer_name || "").localeCompare(y.volunteer_name || "", "pt-BR")),
+      }));
+  }, [escala, t]);
+
   const doItem = useCallback((item: EscalaItem): CheckinItem | null => (
     (item.id ? marcadoPorEscala.get(item.id) : null)
     || (item.volunteer_id ? marcadoPorPessoa.get(item.volunteer_id) : null)
     || null
   ), [marcadoPorEscala, marcadoPorPessoa]);
 
+  /**
+   * Marca presença de forma OTIMISTA.
+   *
+   * ⚠️⚠️ POR QUE OTIMISTA (26/08 · "quando marca a pessoa, achei o carregamento
+   * meio lento; deixe mais suave e mais rápido"). A primeira versão fazia
+   * `await registrarCheckin()` e DEPOIS `await carregarLista()`, que refaz DOIS
+   * pedidos (escala + check-ins) — três idas ao servidor antes de a linha mudar
+   * de cor, com a fila do culto esperando na porta. É o mesmo padrão que o ERP já
+   * usa em `Batismos.tsx`: "a UI muda na hora; persiste em background e reverte
+   * se falhar".
+   *
+   * ⚠️ NÃO recarrega a lista no sucesso. A resposta do POST já é a linha criada;
+   * recarregar tudo pra confirmar o que o servidor acabou de confirmar é a
+   * lentidão que motivou o pedido.
+   *
+   * ⚠️ E REVERTE no erro — sem isso o otimismo vira mentira: a pessoa ficaria
+   * marcada na tela e ausente no banco, que é pior que o carregamento lento.
+   */
   async function marcar(item: EscalaItem) {
-    if (!servicoSel?.id || emAcao) return;
-    setEmAcao(item.id);
+    if (!servicoSel?.id) return;
+    if (doItem(item)) return;                       // já marcado: nada a fazer
+    const provisorio: CheckinItem = {
+      id: `otimista:${item.id}`,
+      schedule_id: item.id,
+      volunteer_id: item.volunteer_id,
+      volunteer_name: item.volunteer_name,
+      checked_in_at: new Date().toISOString(),
+      method: "manual",
+    };
+    setCheckins((atuais) => [provisorio, ...atuais]);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-      await registrarCheckin({
+      const criado = await registrarCheckin({
         service_id: servicoSel.id,
         schedule_id: item.id,
         ...(item.volunteer_id ? { volunteer_id: item.volunteer_id } : {}),
       });
-      await carregarLista(servicoSel.id);
+      // Troca o provisório pelo real (o id importa: é o que o desfazer usa).
+      setCheckins((atuais) => atuais.map((c) => (c.id === provisorio.id ? { ...provisorio, ...criado } : c)));
     } catch (e: any) {
+      setCheckins((atuais) => atuais.filter((c) => c.id !== provisorio.id));
       // ⚠️ A mensagem do servidor é MELHOR que qualquer texto genérico daqui:
       // ela diz se foi janela, escopo ou duplicado, com o nome da subárea.
       Alert.alert(t("Não deu"), e?.message || t("Não foi possível registrar o check-in."));
       if (/403|janela|dia do culto/i.test(String(e?.message || ""))) carregarCultos();
-    } finally {
-      setEmAcao(null);
     }
   }
 
   async function desfazer(item: EscalaItem, ck: CheckinItem) {
-    if (emAcao) return;
     Alert.alert(
       t("Desfazer check-in"),
       `${item.volunteer_name} — ${t("marcado às")} ${horaBRT(ck.checked_in_at)}.`,
@@ -153,14 +206,13 @@ export default function CheckinVoluntariosScreen() {
         {
           text: t("Desfazer"), style: "destructive",
           onPress: async () => {
-            setEmAcao(item.id);
+            // Mesmo raciocínio do marcar: some da tela na hora, volta se falhar.
+            setCheckins((atuais) => atuais.filter((c) => c.id !== ck.id));
             try {
               await desfazerCheckin(ck.id);
-              if (servicoSel?.id) await carregarLista(servicoSel.id);
             } catch (e: any) {
+              setCheckins((atuais) => [ck, ...atuais]);   // reverte
               Alert.alert(t("Não deu"), e?.message || t("Não foi possível desfazer."));
-            } finally {
-              setEmAcao(null);
             }
           },
         },
@@ -233,38 +285,60 @@ export default function CheckinVoluntariosScreen() {
             ) : escala.length === 0 ? (
               <Text style={styles.vazioTxt}>{t("Ninguém escalado da sua área neste culto.")}</Text>
             ) : (
-              escala.map((item) => {
-                const ck = doItem(item);
-                const ocupado = emAcao === item.id;
-                return (
-                  <Pressable
-                    key={item.id}
-                    onPress={() => (ck ? desfazer(item, ck) : marcar(item))}
-                    disabled={ocupado}
-                    style={[styles.linha, ck && styles.linhaMarcada]}
-                  >
-                    <View style={[styles.avatar, ck && styles.avatarMarcado]}>
-                      <Text style={[styles.avatarTxt, ck && styles.avatarTxtMarcado]}>{iniciais(item.volunteer_name)}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.nome}>{item.volunteer_name}</Text>
-                      <Text style={styles.sub}>
-                        {[item.team_name, item.position_name].filter(Boolean).join(" · ") || t("Sem equipe")}
-                      </Text>
-                    </View>
-                    {ocupado ? (
-                      <ActivityIndicator color={colors.brandMid} />
-                    ) : ck ? (
-                      <View style={styles.marcado}>
-                        <Ionicons name="checkmark-circle" size={22} color={colors.brandMid} />
-                        <Text style={styles.marcadoHora}>{horaBRT(ck.checked_in_at)}</Text>
-                      </View>
-                    ) : (
-                      <Ionicons name="ellipse-outline" size={22} color={colors.textMuted} />
-                    )}
-                  </Pressable>
-                );
-              })
+              porArea.map((g) => (
+                <View key={g.chave} style={{ marginBottom: spacing.md }}>
+                  {/* Cabeçalho da ÁREA · com a conta do turno, que é o que o
+                      supervisor confere de relance na porta do culto. */}
+                  <View style={styles.areaHeader}>
+                    <Text style={styles.areaTitulo}>{g.rotulo}</Text>
+                    <Text style={styles.areaConta}>
+                      {g.itens.filter((x) => !!doItem(x)).length}/{g.itens.length}
+                    </Text>
+                  </View>
+                  {g.itens.map((item) => {
+                    const ck = doItem(item);
+                    return (
+                      <Pressable
+                        key={item.id}
+                        onPress={() => (ck ? desfazer(item, ck) : marcar(item))}
+                        style={[styles.linha, ck && styles.linhaMarcada]}
+                      >
+                        {/* ⚠️ Foto SÓ quando o servidor manda `foto_url` — ele já
+                            descarta o placeholder de iniciais do Planning Center
+                            (352 dos 619 escalados têm um). Sem foto, ficam as
+                            iniciais desenhadas aqui, que combinam com o app. */}
+                        {item.foto_url ? (
+                          <Image
+                            source={{ uri: item.foto_url }}
+                            style={[styles.avatar, ck && styles.avatarMarcado]}
+                            accessibilityIgnoresInvertColors
+                          />
+                        ) : (
+                          <View style={[styles.avatar, ck && styles.avatarMarcado]}>
+                            <Text style={[styles.avatarTxt, ck && styles.avatarTxtMarcado]}>{iniciais(item.volunteer_name)}</Text>
+                          </View>
+                        )}
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.nome}>{item.volunteer_name}</Text>
+                          {/* A área já é o cabeçalho — aqui fica só equipe/função,
+                              pra não repetir a mesma palavra em toda linha. */}
+                          <Text style={styles.sub}>
+                            {[item.team_name, item.position_name].filter(Boolean).join(" · ") || t("Sem equipe")}
+                          </Text>
+                        </View>
+                        {ck ? (
+                          <View style={styles.marcado}>
+                            <Ionicons name="checkmark-circle" size={22} color={colors.brandMid} />
+                            <Text style={styles.marcadoHora}>{horaBRT(ck.checked_in_at)}</Text>
+                          </View>
+                        ) : (
+                          <Ionicons name="ellipse-outline" size={22} color={colors.textMuted} />
+                        )}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ))
             )}
 
             {/* Declara o que a tela NÃO faz — a lição do painel que esconde o
@@ -300,6 +374,12 @@ function makeStyles(c: Palette) {
     chipTxt: { color: c.textMuted, fontSize: font.size.sm, fontWeight: "600" },
     chipTxtAtivo: { color: c.primaryDark },
     resumo: { color: c.textMuted, fontSize: font.size.sm, fontWeight: "700", marginBottom: spacing.sm },
+    areaHeader: {
+      flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+      marginBottom: spacing.xs, paddingHorizontal: spacing.xs,
+    },
+    areaTitulo: { color: c.text, fontSize: font.size.sm, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.4 },
+    areaConta: { color: c.textMuted, fontSize: font.size.sm, fontWeight: "700" },
     linha: {
       flexDirection: "row", alignItems: "center", gap: spacing.md,
       backgroundColor: c.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border,

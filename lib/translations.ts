@@ -1185,6 +1185,7 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Montar escala": { en: "Build schedule", es: "Armar equipo" },
   // ── Check-in dos voluntários pelo supervisor (25/08/2026) ──
   "Check-in dos voluntários": { en: "Volunteer check-in", es: "Check-in de voluntarios" },
+  "Sem área definida": { en: "No area set", es: "Sin área definida" },
   "Hoje tem culto · marque quem chegou, da sua área.": { en: "There's a service today · mark who arrived, from your area.", es: "Hoy hay culto · marca quién llegó, de tu área." },
   "Hoje não tem culto": { en: "No service today", es: "Hoy no hay culto" },
   "O check-in pelo app só funciona no dia do culto. Volte no dia e a lista da sua área aparece aqui.": { en: "Check-in from the app only works on the day of the service. Come back on the day and your area's list shows up here.", es: "El check-in por la app solo funciona el día del culto. Vuelve ese día y la lista de tu área aparece aquí." },
