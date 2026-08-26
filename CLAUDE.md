@@ -2891,3 +2891,83 @@ mostrando a hora do check-in. Fora do dia, o servidor recusa.
 ⚠️ Quem apareceu **sem estar na escala** não aparece na lista — e a tela **declara
 isso** no pé, em vez de esconder. O endpoint aceita check-in avulso, mas oferecer
 busca de pessoa aqui abriria uma segunda porta de escalação sem a régua da escala.
+
+## ⚠️⚠️ O portão de i18n estava VERMELHO na `main` — e travava o OTA (26/08/2026)
+
+Descoberto ao mexer no atalho de "Apresentação de crianças": `npm run verificar`
+falhava com **32 strings soltas (teto 31)** — e falhava **antes** da minha
+mudança (conferido com `git stash`). Como `npm run ota` roda o portão antes de
+publicar, **ninguém conseguia publicar OTA** nesse estado.
+
+**A solta era `"dd/mm/aaaa"`** em `app/(app)/completar-cadastro.tsx` (arquivo
+tocado pelo PR #137). É **máscara de data, não texto** — traduzir quebraria a
+máscara. O `ehFormato` do scanner isentava só a versão em MAIÚSCULA
+(`[DMAYHhSs0-9]`), e a tela usa minúscula.
+
+⇒ Conserto na RAIZ (`scripts/i18n-cobertura.mjs`), **sem subir o teto** — a lei
+deste repo é que o teto só desce. Voltou pra 31/31.
+
+⚠️ **A variante minúscula NÃO aceita espaço como separador**, de propósito. A
+maiúscula aceita; se a nova aceitasse, prosa curta feita só de `a d m h s` +
+espaço (ex.: `"ah ah"`) sairia da contagem **em silêncio** — e guarda que esconde
+o problema é pior que guarda nenhuma. Tem caso de teste pras duas pontas.
+
+⚠️ **Caixa MISTA (`"HH:mm"`) segue não isenta**, e é decisão medida: essa máscara
+**não existe no app** hoje (grep). Alargar a classe sem necessidade real deixaria
+`"as.mas"` passar. Se um dia precisar, medir primeiro.
+
+`ehFormato` virou `export` para entrar no portão (`test/reguas.test.ts`) — antes
+não tinha teste nenhum, o que é justamente como o furo apareceu.
+
+## Atalho "Apresentação de crianças" · quebra de linha (26/08/2026)
+
+Pedido do Matheus: *"deixe a palavra crianças embaixo, pq tá meio estranho assim
+em 1 linha só"*. O `numberOfLines={2}` já permitia duas linhas — o rótulo CABIA
+em uma e ficava apertado.
+
+⇒ **Espaço inquebrável (NBSP) entre "Apresentação" e "de"**: a única quebra
+possível passa a ser antes de "crianças". Sai `Apresentação de` / `crianças`.
+
+⚠️ Preferi NBSP a um `\n` no meio da chave de i18n, que obrigaria o tradutor a
+reproduzir a quebra. **A chave em `lib/translations.ts` tem o NBSP e precisa
+casar caractere a caractere** — trocar por espaço normal devolve o aperto. A
+entrada antiga (com espaço comum) ficou no dicionário de propósito, pra não
+quebrar nada que ainda a referencie.
+
+## Check-in do supervisor · por ÁREA, com avatar, e OTIMISTA (26/08/2026)
+
+Três pedidos do Matheus na mesma tela (`/checkin-voluntarios`):
+
+**1. Separado por ÁREA.** Cabeçalho por área com a conta do turno
+(`marcados/total`), que é o que o supervisor confere de relance na porta do culto.
+⚠️ A `area` vem do **servidor** (PR #2733 do ERP): ela mora em `vol_teams.area`, e
+remontar o mapa equipe→área aqui criaria uma segunda fonte pra divergir na
+primeira equipe que trocasse de área. Quem não tem área cai num grupo próprio no
+FIM, rotulado — em vez de sumir ou se misturar a uma área de verdade.
+
+**2. Avatar quando a pessoa tem foto.** ⚠️ Só quando o servidor manda `foto_url`.
+MEDIDO no ERP: **352 dos 619** escalados têm em `vol_profiles.avatar_url` um
+**placeholder de iniciais do Planning Center** (`/uploads/initials/MS.png`), não
+uma foto. O servidor já descarta; se não descartasse, o app trocaria as iniciais
+desenhadas (que combinam com o tema) por um PNG cinza — mais bytes, resultado
+pior. **269 de 619 (43%) mostram foto**; o resto fica nas iniciais.
+⚠️ A foto real do PCO pesa (~156 KB a que eu medi). Se pesar no wifi da igreja, o
+caminho é guardar o `photo_thumbnail` que o PCO já devolve no sync — hoje o sync
+prefere o avatar cheio.
+
+**3. ⚠️⚠️ Marcar ficou OTIMISTA** — *"quando marca a pessoa, achei o carregamento
+meio lento; deixe mais suave e mais rápido"*. A primeira versão fazia
+`await registrarCheckin()` e **depois** `await carregarLista()`, que refaz DOIS
+pedidos (escala + check-ins): **três idas ao servidor antes de a linha mudar de
+cor**, com a fila esperando na porta. Agora a linha muda na hora e persiste em
+background — o mesmo padrão que o ERP usa em `Batismos.tsx`.
+
+- ⚠️ **NÃO recarrega no sucesso.** A resposta do POST já é a linha criada;
+  recarregar tudo pra confirmar o que o servidor acabou de confirmar era a
+  lentidão em pessoa.
+- ⚠️ **REVERTE no erro.** Sem isso o otimismo vira mentira: a pessoa ficaria
+  marcada na tela e ausente no banco — pior que o carregamento lento.
+- O provisório é trocado pelo real quando o POST responde, porque **o id
+  importa**: é ele que o desfazer usa.
+- `emAcao` foi removido: com a marcação otimista o spinner por linha não existe
+  mais, e deixar o estado morto só confundiria quem ler depois.

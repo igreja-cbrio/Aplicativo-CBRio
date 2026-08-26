@@ -15,6 +15,7 @@ import { rotaPai, ehRaiz, subirUmNivel } from "@/lib/hierarquia";
 import { acaoDaBarra, ehRotaDeBarra, irParaBarra, ROTAS_BARRA } from "@/lib/nav";
 import { hojeBRT, diaBRT } from "@/lib/dataBRT";
 import { diaDoInstanteBRT, ehDiaDoCulto, cultosDeHoje } from "@/lib/janelaCheckin";
+import { ehFormato } from "../scripts/i18n-cobertura.mjs";
 import { fichaCompleta, faltaNaFicha, podeInscrever, jaTemNaFicha } from "@/lib/ficha";
 import { montarPayloadInscricao, extrasFaltando } from "@/lib/inscricaoPayload";
 import { tipoDaCapa, arquivoDaCapa, capaCabe, MAX_CAPA_BYTES } from "@/lib/capaGrupo";
@@ -302,6 +303,56 @@ describe("dataBRT · o dia de operação da igreja", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-31T20:00:00.000Z")); // 17h BRT de 31/08
     expect(diaBRT(1)).toBe("2026-09-01");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ehFormato · MÁSCARA não é texto traduzível (26/08/2026)
+//
+// ⚠️ O portão de i18n conta "strings soltas" (texto em português fora do `t()`).
+// Máscara de data é FORMATO, não texto — traduzir `dd/mm/aaaa` quebraria a
+// máscara. O `ehFormato` isentava só a versão em MAIÚSCULA (`DD/MM/AAAA`), e a
+// tela de completar-cadastro usa minúscula: o teto de soltas estourou por causa
+// dela e **`npm run ota` passou a recusar publicar**. Este teste guarda as duas
+// pontas: o que DEVE ser isento e o que NÃO pode ser.
+// ─────────────────────────────────────────────────────────────────────────────
+describe("ehFormato · máscara é isenta, prosa não", () => {
+  it("isenta máscara de data e hora, em maiúscula e minúscula", () => {
+    expect(ehFormato("DD/MM/AAAA")).toBe(true);
+    expect(ehFormato("dd/mm/aaaa")).toBe(true);
+    expect(ehFormato("mm/yy")).toBe(true);
+    expect(ehFormato("dd-mm-aaaa")).toBe(true);
+    expect(ehFormato("HH:MM")).toBe(true);
+  });
+
+  // ⚠️ MISTURAR CAIXA não é isento — e é assim de propósito. `"HH:mm"` não casa
+  // nem na classe maiúscula (não tem `m`) nem na minúscula (não tem `H`). Eu
+  // cheguei a achar que era um furo, mas conferi: essa máscara NÃO EXISTE no app
+  // hoje. Alargar a classe pra aceitar caixa mista sem necessidade medida
+  // deixaria prosa curta como "as.mas" sair da contagem em silêncio.
+  it("máscara de caixa MISTA não é isenta (não existe no app; não alargar sem medir)", () => {
+    expect(ehFormato("HH:mm")).toBe(false);
+  });
+
+  // ⚠️⚠️ O RISCO DE ABRIR DEMAIS. A variante em maiúscula aceita ESPAÇO como
+  // separador; se a de minúscula aceitasse, prosa curta feita só de `a`, `h`,
+  // `d`, `m`, `s` e espaço sairia da contagem EM SILÊNCIO — e guarda que
+  // esconde o problema é pior que guarda nenhuma.
+  it("NÃO isenta prosa que por acaso só tem letras de máscara", () => {
+    expect(ehFormato("ah ah")).toBe(false);
+    expect(ehFormato("sim sim")).toBe(false);
+    expect(ehFormato("ada mas")).toBe(false);
+  });
+
+  it("NÃO isenta texto de verdade", () => {
+    expect(ehFormato("Data de nascimento")).toBe(false);
+    expect(ehFormato("Salvar")).toBe(false);
+    expect(ehFormato("CPF")).toBe(false);      // curto demais, e é rótulo
+  });
+
+  it("string curta nunca é formato", () => {
+    expect(ehFormato("dd")).toBe(false);
+    expect(ehFormato("")).toBe(false);
   });
 });
 

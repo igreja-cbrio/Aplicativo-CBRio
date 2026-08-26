@@ -189,6 +189,13 @@ export type EscalaItem = {
   position_name: string | null;
   confirmation_status: string | null;
   recusa_motivo?: string | null;
+  // ⚠️ Vêm do SERVIDOR (PR #2733 do ERP), não são derivados aqui. `area` mora em
+  // vol_teams.area, e remontar o mapa equipe→área no app criaria uma segunda
+  // fonte pra divergir. `foto_url` só vem quando é FOTO de verdade: 352 dos 619
+  // escalados têm em vol_profiles.avatar_url um placeholder de iniciais do
+  // Planning Center, que o servidor já descarta.
+  area?: string | null;
+  foto_url?: string | null;
 };
 export type EscalaResposta = { escalas: EscalaItem[]; equipes: string[] };
 export type PoolVoluntario = { id: string; full_name: string; planning_center_id: string | null };
