@@ -752,7 +752,7 @@ export default function GrupoMembrosScreen() {
                     ) : (
                       <Pressable
                         style={[styles.heroBtn, h.variante === "atencao" ? styles.heroBtnAtencao : styles.heroBtnCheio]}
-                        onPress={() => abrirChamada(null)}
+                        onPress={() => abrirChamada(estado.tipo === 'sem_dia' ? null : estado.data)}
                         disabled={semGente}
                         accessibilityRole="button"
                       >
@@ -1088,7 +1088,7 @@ export default function GrupoMembrosScreen() {
                                     </>
                                   )}
                                 </View>
-                                {pendente ? (
+                                {false && pendente ? (
                                   <Pressable
                                     style={styles.registrarBtn}
                                     onPress={() => abrirChamada(o.data)}
