@@ -71,10 +71,20 @@ const dicionario = readFileSync(join(RAIZ, "lib", "translations.ts"), "utf8");
  * ⚠️ Padrão ESTREITO de propósito: só letras de formato, barra, hífen, dois
  * pontos e dígito. "Data de nascimento" não casa; "DD/MM/AAAA" e "hh:mm" casam.
  */
-function ehFormato(s) {
+export function ehFormato(s) {
   const v = String(s).trim();
   if (v.length < 4) return false;
-  return /^[DMAYHhSs0-9]+([\/\-:. ][DMAYHhSs0-9]+)+$/.test(v);
+  if (/^[DMAYHhSs0-9]+([\/\-:. ][DMAYHhSs0-9]+)+$/.test(v)) return true;
+  // ⚠️ MÁSCARA EM MINÚSCULA — `dd/mm/aaaa` (26/08/2026). Era falso positivo: a
+  // tela de completar-cadastro usa o placeholder em minúscula, o teto de soltas
+  // estourou por causa dele e o `npm run ota` passou a RECUSAR PUBLICAR. Máscara
+  // de data não é texto: traduzir "dd/mm/aaaa" quebraria a máscara.
+  //
+  // ⚠️ SEM espaço como separador aqui, de propósito. A variante de cima aceita
+  // espaço; se esta aceitasse, prosa curta como "ah ah" (só `a`, `h` e espaço)
+  // seria classificada como formato e sairia da contagem em silêncio — guarda
+  // que esconde o problema é pior que guarda nenhuma.
+  return /^[dmayhs0-9]+([\/\-:.][dmayhs0-9]+)+$/.test(v);
 }
 
 function noDicionario(chave) {

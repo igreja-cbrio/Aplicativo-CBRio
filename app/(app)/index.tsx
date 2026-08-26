@@ -96,7 +96,13 @@ const ATALHOS: Atalho[] = [
   { label: "NEXT", icon: "sparkles", href: "/next" },
   { label: "Voluntariado", icon: "hand-left", href: "/voluntariado" },
   { label: "Batismo", icon: "water", href: "/batismo" },
-  { label: "Apresentação de crianças", icon: "happy", href: "/apresentacao-crianca" },
+  // ⚠️ ESPAÇO INQUEBRÁVEL entre "Apresentação" e "de" (26/08 · pedido do
+  // Matheus: "deixe a palavra crianças embaixo, pq tá meio estranho assim em 1
+  // linha só"). O `numberOfLines={2}` já permitia duas linhas, mas o rótulo
+  // CABIA em uma e ficava apertado. Com o NBSP a única quebra possível é antes
+  // de "crianças", então sai "Apresentação de" / "crianças" — sem `\n` no meio
+  // da chave de i18n, que obrigaria o tradutor a reproduzir a quebra.
+  { label: "Apresentação de crianças", icon: "happy", href: "/apresentacao-crianca" },
   { label: "Inscrições", icon: "clipboard", href: "/inscricoes" },
 ];
 

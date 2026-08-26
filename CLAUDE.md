@@ -2891,3 +2891,45 @@ mostrando a hora do check-in. Fora do dia, o servidor recusa.
 ⚠️ Quem apareceu **sem estar na escala** não aparece na lista — e a tela **declara
 isso** no pé, em vez de esconder. O endpoint aceita check-in avulso, mas oferecer
 busca de pessoa aqui abriria uma segunda porta de escalação sem a régua da escala.
+
+## ⚠️⚠️ O portão de i18n estava VERMELHO na `main` — e travava o OTA (26/08/2026)
+
+Descoberto ao mexer no atalho de "Apresentação de crianças": `npm run verificar`
+falhava com **32 strings soltas (teto 31)** — e falhava **antes** da minha
+mudança (conferido com `git stash`). Como `npm run ota` roda o portão antes de
+publicar, **ninguém conseguia publicar OTA** nesse estado.
+
+**A solta era `"dd/mm/aaaa"`** em `app/(app)/completar-cadastro.tsx` (arquivo
+tocado pelo PR #137). É **máscara de data, não texto** — traduzir quebraria a
+máscara. O `ehFormato` do scanner isentava só a versão em MAIÚSCULA
+(`[DMAYHhSs0-9]`), e a tela usa minúscula.
+
+⇒ Conserto na RAIZ (`scripts/i18n-cobertura.mjs`), **sem subir o teto** — a lei
+deste repo é que o teto só desce. Voltou pra 31/31.
+
+⚠️ **A variante minúscula NÃO aceita espaço como separador**, de propósito. A
+maiúscula aceita; se a nova aceitasse, prosa curta feita só de `a d m h s` +
+espaço (ex.: `"ah ah"`) sairia da contagem **em silêncio** — e guarda que esconde
+o problema é pior que guarda nenhuma. Tem caso de teste pras duas pontas.
+
+⚠️ **Caixa MISTA (`"HH:mm"`) segue não isenta**, e é decisão medida: essa máscara
+**não existe no app** hoje (grep). Alargar a classe sem necessidade real deixaria
+`"as.mas"` passar. Se um dia precisar, medir primeiro.
+
+`ehFormato` virou `export` para entrar no portão (`test/reguas.test.ts`) — antes
+não tinha teste nenhum, o que é justamente como o furo apareceu.
+
+## Atalho "Apresentação de crianças" · quebra de linha (26/08/2026)
+
+Pedido do Matheus: *"deixe a palavra crianças embaixo, pq tá meio estranho assim
+em 1 linha só"*. O `numberOfLines={2}` já permitia duas linhas — o rótulo CABIA
+em uma e ficava apertado.
+
+⇒ **Espaço inquebrável (NBSP) entre "Apresentação" e "de"**: a única quebra
+possível passa a ser antes de "crianças". Sai `Apresentação de` / `crianças`.
+
+⚠️ Preferi NBSP a um `\n` no meio da chave de i18n, que obrigaria o tradutor a
+reproduzir a quebra. **A chave em `lib/translations.ts` tem o NBSP e precisa
+casar caractere a caractere** — trocar por espaço normal devolve o aperto. A
+entrada antiga (com espaço comum) ficou no dicionário de propósito, pra não
+quebrar nada que ainda a referencie.
