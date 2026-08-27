@@ -2919,20 +2919,57 @@ o problema é pior que guarda nenhuma. Tem caso de teste pras duas pontas.
 `ehFormato` virou `export` para entrar no portão (`test/reguas.test.ts`) — antes
 não tinha teste nenhum, o que é justamente como o furo apareceu.
 
-## Atalho "Apresentação de crianças" · quebra de linha (26/08/2026)
+## ⚠️⚠️ Atalho "Apresentação de crianças" · NBSP NÃO FORÇA QUEBRA (26→27/08/2026)
 
 Pedido do Matheus: *"deixe a palavra crianças embaixo, pq tá meio estranho assim
-em 1 linha só"*. O `numberOfLines={2}` já permitia duas linhas — o rótulo CABIA
-em uma e ficava apertado.
+em 1 linha só"*. Em 26/08 resolvi com **espaço inquebrável** entre "Apresentação"
+e "de". Ele testou e voltou: *"não mudou nada no app"*.
 
-⇒ **Espaço inquebrável (NBSP) entre "Apresentação" e "de"**: a única quebra
-possível passa a ser antes de "crianças". Sai `Apresentação de` / `crianças`.
+**Ele estava certo, e o conserto era incapaz de funcionar:**
 
-⚠️ Preferi NBSP a um `\n` no meio da chave de i18n, que obrigaria o tradutor a
-reproduzir a quebra. **A chave em `lib/translations.ts` tem o NBSP e precisa
-casar caractere a caractere** — trocar por espaço normal devolve o aperto. A
-entrada antiga (com espaço comum) ficou no dicionário de propósito, pra não
-quebrar nada que ainda a referencie.
+1. ⚠️⚠️ **NBSP não FORÇA quebra, só IMPEDE.** Se o texto já couber como está, ele
+   não produz efeito nenhum. Eu tratei "impedir quebra no lugar errado" como se
+   fosse "forçar quebra no lugar certo" — são coisas diferentes.
+2. Pior: ele COLA "Apresentação de" num pedaço só. A célula do atalho tem 33,3%
+   da largura do conteúdo (~119 pt num iPhone de 390) e o pedaço grudado fica no
+   limite; quando não cabe, o motor quebra onde quiser ou estoura. O resultado
+   podia ficar **pior** que o natural.
+
+⚠️ Conferido antes de refazer: o NBSP ESTAVA no bundle publicado. Não faltou OTA
+— a técnica é que estava errada.
+
+⇒ **`lib/rotuloAtalho.quebrarAposPrimeiraPalavra`** faz a quebra EXPLÍCITA depois
+da primeira palavra: `Apresentação` / `de crianças`. Some a dúvida de medida — a
+linha 1 é a palavra mais longa sozinha e a 2 é o resto, as duas com folga até em
+aparelho estreito. Quebrar antes da ÚLTIMA palavra deixaria a linha 1 justo no
+limite, que é a armadilha de novo.
+
+- A quebra vive no **RENDER** (flag `duasLinhas` no item do `ATALHOS`), não na
+  chave de i18n: `\n` na chave obrigaria o tradutor a reproduzir layout. A régua
+  é posicional, então funciona em qualquer idioma — en `Children's` /
+  `dedication`, es `Presentación` / `de niños`.
+- ⚠️ A chave com NBSP **saiu** do dicionário, mas a função **normaliza NBSP**
+  antes de procurar o separador: sem isso um rótulo herdado com ` ` seria UMA
+  palavra gigante e a função devolveria o texto intacto — o bug de volta, em
+  silêncio.
+- ⚠️ O regex usa `\u00a0` **explícito**, não o caractere literal: NBSP no meio de
+  um regex é invisível no editor, e qualquer reformatação que o troque por espaço
+  comum quebraria a régua sem ninguém ver.
+- Palavra única (`NEXT`, `Voluntariado`) não é quebrada — inventar quebra dentro
+  da palavra é pior que texto apertado.
+- Portão: 5 casos em `test/reguas.test.ts` + **2 mutantes** ("o rótulo deixa de
+  quebrar", que é literalmente o no-op do NBSP, e "NBSP deixa de contar como
+  separador").
+
+⚠️⚠️ **A LIÇÃO QUE PASSA DAQUI: antes de dizer que um conserto de layout está
+feito, conferir se ele é MECANICAMENTE CAPAZ do efeito pedido.** "Impedir" e
+"forçar" não são a mesma coisa, e uma técnica que depende de o texto não caber é
+uma técnica que não faz nada quando ele cabe.
+
+⚠️ Armadilha de FERRAMENTA registrada junto: âncora de mutante em
+`scripts/mutantes.mjs` **não pode conter escape** (`\n`, `\u00a0`) — o JS os
+interpreta e a string para de casar o texto do arquivo. A 1ª versão dos dois
+mutantes morreu com `ÂNCORA PERDIDA` por isso.
 
 ## Check-in do supervisor · por ÁREA, com avatar, e OTIMISTA (26/08/2026)
 
