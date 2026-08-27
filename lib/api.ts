@@ -357,6 +357,20 @@ export type VoluntariadoMe = {
     integrado_em: string | null;
   } | null;
   voluntario_ativo: boolean;
+  /**
+   * ⚠️⚠️ "Esta pessoa SERVE?" pela régua CANÔNICA do sistema
+   * (`mem_voluntarios.ate IS NULL` — a mesma da NSM e do /painel).
+   *
+   * É diferente das duas vizinhas, e a diferença é o bug de 27/08:
+   *  · `inscricao` = ela preencheu o FORMULÁRIO público (pode servir há anos
+   *    sem nunca ter preenchido — 314 das 598 pessoas que servem);
+   *  · `voluntario_ativo` = existe perfil do Planning Center alcançável por
+   *    ESTA conta (`auth_user_id`), coisa que só 35 dos 938 perfis têm.
+   *
+   * `null`/ausente = o servidor não soube dizer (consulta falhou, ou build
+   * antigo). Quem lê trata como "não sei", NUNCA como "não serve".
+   */
+  serve?: boolean | null;
   escalas?: Array<{
     id: string;
     data: string;

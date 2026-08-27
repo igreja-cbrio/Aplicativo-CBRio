@@ -39,16 +39,22 @@ export function normalizarVoluntariadoMe(raw: unknown): VoluntariadoMe {
    * booleano `true` do servidor e trata qualquer outra coisa como "não sei".
    */
   const voluntario_ativo = obj?.voluntario_ativo === true;
+  // ⚠️ TRÊS estados de propósito: true · false · null ("não sei"). Colapsar em
+  // boolean aqui faria a jornada afirmar "não serve" quando o servidor apenas
+  // não respondeu — que é o defeito que esta leva veio consertar.
+  const serve = obj?.serve === true ? true : obj?.serve === false ? false : null;
 
   return {
     inscricao: normalizarInscricao(obj?.inscricao),
     voluntario_ativo,
+    serve,
     ...(obj?.escalas ? { escalas: obj.escalas } : {}),
   } as VoluntariadoMe;
 }
 
 type Cru = {
   voluntario_ativo?: unknown;
+  serve?: unknown;
   inscricao?: unknown;
   escalas?: VoluntariadoMe["escalas"];
 };

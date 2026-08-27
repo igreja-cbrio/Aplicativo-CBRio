@@ -14,6 +14,7 @@ import { estadoVoluntariado, volEncerrado } from "@/lib/volStatus";
 import { rotaPai, ehRaiz, subirUmNivel } from "@/lib/hierarquia";
 import { acaoDaBarra, ehRotaDeBarra, irParaBarra, ROTAS_BARRA } from "@/lib/nav";
 import { hojeBRT, diaBRT } from "@/lib/dataBRT";
+import { decidirServe } from "@/lib/serveJornada";
 import { diaDoInstanteBRT, ehDiaDoCulto, cultosDeHoje } from "@/lib/janelaCheckin";
 import { ehFormato } from "../scripts/i18n-cobertura.mjs";
 import { fichaCompleta, faltaNaFicha, podeInscrever, jaTemNaFicha } from "@/lib/ficha";
@@ -2081,5 +2082,30 @@ describe("rótulo do atalho · quebra depois da primeira palavra", () => {
     expect(quebrarAposPrimeiraPalavra("Grupos ")).toBe("Grupos ");
     // @ts-expect-error entrada inesperada não pode estourar num rótulo de tela
     expect(quebrarAposPrimeiraPalavra(undefined)).toBe("");
+  });
+});
+
+// ⚠️⚠️ Marcos · 27/08/2026: uma líder que serve há meses via "Comece a servir"
+// na própria jornada. A causa: `serveVol` perguntava se ela preencheu o
+// FORMULÁRIO público de voluntariado — e formulário não é serviço.
+// Medido: das 598 pessoas com vínculo ativo, 314 (52%) não têm inscrição.
+describe("jornada · quem serve é lido pela régua do sistema", () => {
+  const base = { inscricao: null, voluntario_ativo: false, serve: null } as any;
+
+  it("`serve: true` do servidor manda, mesmo sem inscrição nem perfil", () => {
+    expect(decidirServe({ ...base, serve: true })).toBe(true);
+  });
+
+  // ⚠️ `false` é RESPOSTA, não ausência: quem parou de servir não pode ter o
+  // check ressuscitado por uma inscrição antiga que ficou na base.
+  it("`serve: false` NÃO cai no fallback da inscrição", () => {
+    expect(decidirServe({ ...base, serve: false, inscricao: { id: "x" } })).toBe(false);
+  });
+
+  // Deploy em 2 etapas: o bundle novo pode falar com o servidor antigo.
+  it("sem `serve`, cai no perfil e depois na inscrição (comportamento antigo)", () => {
+    expect(decidirServe({ ...base, voluntario_ativo: true })).toBe(true);
+    expect(decidirServe({ ...base, inscricao: { id: "x" } })).toBe(true);
+    expect(decidirServe(base)).toBe(false);
   });
 });

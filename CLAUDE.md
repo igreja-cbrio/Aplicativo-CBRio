@@ -3008,3 +3008,58 @@ background — o mesmo padrão que o ERP usa em `Batismos.tsx`.
   importa**: é ele que o desfazer usa.
 - `emAcao` foi removido: com a marcação otimista o spinner por linha não existe
   mais, e deixar o estado morto só confundiria quem ler depois.
+
+## ⚠️⚠️ A jornada perguntava se a pessoa PREENCHEU O FORMULÁRIO (2026-08-27)
+
+Relato do Marcos sobre a **Mariana Dalsgaard**: *"ela tem histórico de serviço,
+porém não aparece o check quando ela acessa o módulo de jornada."*
+
+`serveVol()` decidia com **`!!me.inscricao`** — o formulário público de
+voluntariado. **Formulário não é serviço**: quem entrou pelo Planning Center ou
+foi integrada pela liderança nunca preencheu um.
+
+⚠️⚠️ **MEDIDO: das 598 pessoas com vínculo ATIVO de voluntário, 314 (52%) não
+têm inscrição nenhuma.** Todas viam "Comece a servir num ministério" na própria
+jornada. Mesma classe do bug de 13/08 (ler o telefone só de `vol_profiles` e
+concluir "não tem"): **"não procurei no lugar certo" ≠ "a pessoa não faz"**.
+
+- **`lib/serveJornada.ts`** = régua PURA (sem imports) com `decidirServe`.
+  ⚠️ Ela **não pode morar em `lib/jornada.ts`**: aquele arquivo importa Supabase
+  e React Native, e o vitest roda em node puro — o teste nem carrega o módulo
+  (`RollupError: Expected 'from', got 'typeOf'` no `react-native/index.js`).
+  Mesmo desenho de `volStatus.ts` e `janelaCheckin.ts`.
+- Ordem: **`serve`** (vínculo vivo em `mem_voluntarios` — a régua da NSM e do
+  /painel) → `voluntario_ativo` (perfil do PCO alcançável por ESTA conta) →
+  `inscricao` (o formulário). Os dois últimos são fallback de deploy em 2 etapas.
+- ⚠️ **`serve` é TRI-ESTADO**: `null` = "não sei" (o servidor não respondeu, ou é
+  antigo), nunca "não serve". E **`serve === false` MANDA** — não cai no
+  fallback, senão inscrição antiga de quem PAROU de servir ressuscitaria o check.
+- 2 mutantes rodados: voltar a olhar só a inscrição → 3 vermelhos · `false`
+  caindo no fallback → 1.
+
+### "Já me batizei aqui na CBRio" · a opção que faltava
+
+A tela só oferecia *"Já sou batizado(a) em OUTRA igreja"*. Quem se batizou AQUI
+antes de o sistema existir não tinha o que marcar — e escrever "CBRio" no campo
+de outra igreja gravaria a própria igreja como se fosse outra.
+
+- `marcarBatismoCbrio(data?)` / `desmarcarBatismoCbrio()` (RPCs com alvo por
+  `auth.uid()` · a data é **opcional**: quem se batizou há anos não lembra o dia,
+  e exigir isso faria a pessoa desistir ou chutar).
+- ⚠️⚠️ É **DECLARAÇÃO**, não registro: não vira batismo realizado em KPI nenhum.
+  O que ela faz é **parar de cobrar batismo de quem já se batizou**.
+- ⚠️ **As duas declarações se EXCLUEM.** A RPC nova limpa a de outra igreja; na
+  direção contrária quem limpa é a TELA (`desmarcarBatismoCbrio()` best-effort),
+  porque a RPC de "outra igreja" é anterior e não conhece a coluna nova —
+  reescrevê-la arriscaria reverter ajuste que só existe em produção.
+- ⚠️ **`getBatismoAnterior` lê as colunas novas em SELECT SEPARADO**: pedir
+  coluna inexistente faz o PostgREST recusar a QUERY INTEIRA (42703), e o app
+  perderia junto a declaração de outra igreja, que JÁ está em produção — o OTA
+  pode chegar antes da migration.
+- ⚠️ Os `setBatismoAnt` viraram **updaters**: desfazer "outra igreja" não pode
+  apagar a declaração de batismo na CBRio, que é outro fato.
+
+#### Verificação
+
+`npx tsc --noEmit` limpo · `npm test` (**230 verdes**). No ERP: `tsc -b` sem
+cache, build, **2.669** testes e os **16 scripts** do gate.

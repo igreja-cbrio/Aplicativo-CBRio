@@ -31,6 +31,8 @@ import {
   getBatismoAnterior,
   marcarBatismoAnterior,
   desmarcarBatismoAnterior,
+  marcarBatismoCbrio,
+  desmarcarBatismoCbrio,
   type MeuBatismo,
   type BatismoAnterior,
   type FotoBatismo,
@@ -74,6 +76,35 @@ export default function BatismoScreen() {
   const [batismoAnt, setBatismoAnt] = useState<BatismoAnterior | null>(null);
   const [modalIgrejaAberto, setModalIgrejaAberto] = useState(false);
   const [igrejaTxt, setIgrejaTxt] = useState("");
+  const [salvandoCbrio, setSalvandoCbrio] = useState(false);
+
+  /**
+   * "Já me batizei aqui na CBRio" — declaração de batismo REAL anterior ao
+   * sistema (não há histórico antigo em `batismo_inscricoes`).
+   *
+   * ⚠️ NÃO pede a data: quem se batizou há anos raramente lembra o dia, e
+   * exigir isso faria a pessoa desistir ou chutar. A RPC aceita a data como
+   * opcional pra quando a equipe quiser completar pela Membresia.
+   * ⚠️ É DECLARAÇÃO: não vira batismo realizado em KPI nenhum — só para de
+   * cobrar batismo de quem já se batizou.
+   */
+  const marcarBatizadoAqui = async () => {
+    setSalvandoCbrio(true);
+    try {
+      await marcarBatismoCbrio(null);
+      setBatismoAnt((p) => ({
+        ...(p ?? { batizado_outra_igreja: false, igreja_batismo_anterior: null }),
+        batizado_outra_igreja: false,
+        igreja_batismo_anterior: null,
+        batismo_cbrio_declarado: true,
+        batismo_cbrio_data: null,
+      }));
+    } catch (e: any) {
+      Alert.alert(t("Não deu para salvar"), e?.message || t("Tente de novo."));
+    } finally {
+      setSalvandoCbrio(false);
+    }
+  };
   const [salvandoIgreja, setSalvandoIgreja] = useState(false);
 
   const carregar = useCallback(async () => {
@@ -194,7 +225,13 @@ export default function BatismoScreen() {
             igreja={batismoAnt.igreja_batismo_anterior}
             onCorrigir={async () => {
               await desmarcarBatismoAnterior();
-              setBatismoAnt({ batizado_outra_igreja: false, igreja_batismo_anterior: null });
+              // ⚠️ updater, não literal: desfazer "outra igreja" NÃO pode apagar
+              // a declaração de batismo na CBRio, que é outro fato.
+              setBatismoAnt((p) => ({
+                ...(p ?? { batismo_cbrio_declarado: false, batismo_cbrio_data: null }),
+                batizado_outra_igreja: false,
+                igreja_batismo_anterior: null,
+              }));
               setIgrejaTxt('');
             }}
             colors={colors}
@@ -216,7 +253,11 @@ export default function BatismoScreen() {
                 <Pressable
                   onPress={async () => {
                     await desmarcarBatismoAnterior();
-                    setBatismoAnt({ batizado_outra_igreja: false, igreja_batismo_anterior: null });
+                    setBatismoAnt((p) => ({
+                      ...(p ?? { batismo_cbrio_declarado: false, batismo_cbrio_data: null }),
+                      batizado_outra_igreja: false,
+                      igreja_batismo_anterior: null,
+                    }));
                     setIgrejaTxt("");
                   }}
                   hitSlop={6}
@@ -239,13 +280,30 @@ export default function BatismoScreen() {
               styles={styles}
             />
             {!batismoAnt?.batizado_outra_igreja && (
-              <Pressable
-                onPress={() => setModalIgrejaAberto(true)}
-                style={({ pressed }) => [styles.linkAcao, pressed && { opacity: 0.6 }]}
-              >
-                <Ionicons name="checkmark-circle-outline" size={18} color={colors.brandMid} />
-                <Text style={styles.linkAcaoTxt}>{t("Já sou batizado(a) em outra igreja")}</Text>
-              </Pressable>
+              <>
+                {/* ⚠️⚠️ A opção que faltava (Marcos · 27/08): quem se batizou AQUI
+                    antes de o sistema existir não tinha o que marcar, e escrever
+                    "CBRio" no campo de OUTRA igreja gravaria a própria igreja
+                    como se fosse outra. São dois fatos diferentes, e a tela
+                    passou a oferecer os dois. */}
+                <Pressable
+                  onPress={marcarBatizadoAqui}
+                  disabled={salvandoCbrio}
+                  style={({ pressed }) => [styles.linkAcao, pressed && { opacity: 0.6 }]}
+                >
+                  <Ionicons name="water-outline" size={18} color={colors.brandMid} />
+                  <Text style={styles.linkAcaoTxt}>
+                    {salvandoCbrio ? t("Salvando...") : t("Já me batizei aqui na CBRio")}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setModalIgrejaAberto(true)}
+                  style={({ pressed }) => [styles.linkAcao, pressed && { opacity: 0.6 }]}
+                >
+                  <Ionicons name="checkmark-circle-outline" size={18} color={colors.brandMid} />
+                  <Text style={styles.linkAcaoTxt}>{t("Já sou batizado(a) em outra igreja")}</Text>
+                </Pressable>
+              </>
             )}
           </View>
         ) : !batismo.data_batismo ? (
@@ -333,9 +391,20 @@ export default function BatismoScreen() {
                   setSalvandoIgreja(true);
                   try {
                     await marcarBatismoAnterior(igrejaTxt);
+                    // ⚠️⚠️ As duas declarações se EXCLUEM (batizou aqui × em
+                    // outra igreja), então declarar uma limpa a outra.
+                    // `app_marcar_batizado_cbrio` já faz isso no banco; a RPC de
+                    // "outra igreja" é ANTIGA e não conhece a coluna nova — em
+                    // vez de reescrevê-la (risco de reverter ajuste que só
+                    // existe em produção), a limpeza vem por esta chamada.
+                    // Best-effort: falhar aqui não pode impedir a declaração que
+                    // a pessoa acabou de fazer.
+                    await desmarcarBatismoCbrio().catch(() => {});
                     setBatismoAnt({
                       batizado_outra_igreja: true,
                       igreja_batismo_anterior: igrejaTxt.trim() || null,
+                      batismo_cbrio_declarado: false,
+                      batismo_cbrio_data: null,
                     });
                     setModalIgrejaAberto(false);
                   } catch (e) {
