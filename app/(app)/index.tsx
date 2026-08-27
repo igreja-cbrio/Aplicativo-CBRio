@@ -18,6 +18,7 @@ import { Carrossel } from "@/components/home/Carrossel";
 import { ProximosCultos } from "@/components/home/ProximosCultos";
 import { AnimatedShortcut } from "@/components/anim/AnimatedShortcut";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { quebrarAposPrimeiraPalavra } from "@/lib/rotuloAtalho";
 
 // ⚠️ O logo, o sino e a foto SAÍRAM daqui (04/08/2026): agora vivem na faixa
 // superior global (components/ui/TopBar.tsx), que aparece igual em todas as
@@ -33,6 +34,8 @@ function primeiroNome(nomeCompleto?: string, email?: string | null) {
 
 type Atalho = {
   label: string;
+  /** Força "primeira palavra" / "resto" no rótulo. Ver lib/rotuloAtalho. */
+  duasLinhas?: true;
   icon: React.ComponentProps<typeof Ionicons>["name"];
   href:
     | "/generosidade" | "/batismo" | "/kids" | "/jornada" | "/next" | "/inscricoes"
@@ -96,13 +99,12 @@ const ATALHOS: Atalho[] = [
   { label: "NEXT", icon: "sparkles", href: "/next" },
   { label: "Voluntariado", icon: "hand-left", href: "/voluntariado" },
   { label: "Batismo", icon: "water", href: "/batismo" },
-  // ⚠️ ESPAÇO INQUEBRÁVEL entre "Apresentação" e "de" (26/08 · pedido do
-  // Matheus: "deixe a palavra crianças embaixo, pq tá meio estranho assim em 1
-  // linha só"). O `numberOfLines={2}` já permitia duas linhas, mas o rótulo
-  // CABIA em uma e ficava apertado. Com o NBSP a única quebra possível é antes
-  // de "crianças", então sai "Apresentação de" / "crianças" — sem `\n` no meio
-  // da chave de i18n, que obrigaria o tradutor a reproduzir a quebra.
-  { label: "Apresentação de crianças", icon: "happy", href: "/apresentacao-crianca" },
+  // ⚠️⚠️ `duasLinhas` FORÇA "Apresentação" / "de crianças" (pedido do Matheus em
+  // 26/08, refeito em 27/08). A 1ª tentativa usou espaço inquebrável e ele
+  // voltou dizendo que NÃO MUDOU NADA — estava certo: NBSP não força quebra, só
+  // impede. O porquê completo está em lib/rotuloAtalho.ts. A chave de i18n volta
+  // a ter espaço COMUM, porque quebra é layout e não tradução.
+  { label: "Apresentação de crianças", icon: "happy", href: "/apresentacao-crianca", duasLinhas: true },
   { label: "Inscrições", icon: "clipboard", href: "/inscricoes" },
 ];
 
@@ -218,7 +220,9 @@ export default function InicioScreen() {
               <View style={styles.shortcutIcon}>
                 <Ionicons name={a.icon} size={22} color={colors.brandMid} />
               </View>
-              <Text style={styles.shortcutLabel} numberOfLines={2}>{t(a.label)}</Text>
+              <Text style={styles.shortcutLabel} numberOfLines={2}>
+                {a.duasLinhas ? quebrarAposPrimeiraPalavra(t(a.label)) : t(a.label)}
+              </Text>
             </AnimatedShortcut>
           ))}
         </View>

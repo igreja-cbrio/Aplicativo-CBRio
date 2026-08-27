@@ -58,6 +58,7 @@ import { rotaDoGrupo, ehSupervisao } from "@/lib/papelGrupo";
 import { montarRegistroVisita } from "@/lib/visitaSupervisao";
 import { folgaDoTeclado } from "@/lib/teclado";
 import { compararVersoes, abaixoDoPiso } from "@/lib/versaoApp";
+import { quebrarAposPrimeiraPalavra } from "../lib/rotuloAtalho";
 import {
   iniciarCadastroNativo, terminarCadastroNativo, lerCadastroNativo,
   assinarCadastroNativo,
@@ -2041,5 +2042,44 @@ describe("dataLonga · recebe DIA, nunca instante", () => {
     // válido, então passa: fica REGISTRADO como limite conhecido, não como
     // promessa de validação de calendário.
     expect(dataLonga("2026-02-30")).toBe("Segunda, 2 de março");
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// ATALHO DA HOME · a quebra de linha do rótulo (27/08/2026)
+//
+// O Matheus pediu "crianças" embaixo e a 1ª tentativa (espaço inquebrável) não
+// mudou nada — NBSP não FORÇA quebra, só impede. Estes casos travam a régua que
+// substituiu o truque.
+// ══════════════════════════════════════════════════════════════════════════
+describe("rótulo do atalho · quebra depois da primeira palavra", () => {
+  it("o caso que originou o pedido", () => {
+    expect(quebrarAposPrimeiraPalavra("Apresentação de crianças"))
+      .toBe("Apresentação\nde crianças");
+  });
+
+  it("⚠️ NBSP herdado do dicionário conta como separador", () => {
+    // A chave antiga tinha ` ` depois de "Apresentação". Sem normalizar, o
+    // rótulo seria UMA palavra gigante e a função devolveria o texto intacto —
+    // exatamente o bug que ela conserta, de volta pela porta dos fundos.
+    expect(quebrarAposPrimeiraPalavra("Apresentação\u00a0de crianças"))
+      .toBe("Apresentação\nde crianças");
+  });
+
+  it("funciona em qualquer idioma, porque a régua é posicional", () => {
+    expect(quebrarAposPrimeiraPalavra("Children's dedication")).toBe("Children's\ndedication");
+    expect(quebrarAposPrimeiraPalavra("Presentación de niños")).toBe("Presentación\nde niños");
+  });
+
+  it("uma palavra só NÃO é quebrada — inventar quebra dentro da palavra é pior", () => {
+    expect(quebrarAposPrimeiraPalavra("Voluntariado")).toBe("Voluntariado");
+    expect(quebrarAposPrimeiraPalavra("NEXT")).toBe("NEXT");
+  });
+
+  it("entrada vazia ou espaço solto não vira quebra", () => {
+    expect(quebrarAposPrimeiraPalavra("")).toBe("");
+    expect(quebrarAposPrimeiraPalavra("Grupos ")).toBe("Grupos ");
+    // @ts-expect-error entrada inesperada não pode estourar num rótulo de tela
+    expect(quebrarAposPrimeiraPalavra(undefined)).toBe("");
   });
 });

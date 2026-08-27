@@ -593,10 +593,10 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Sala prevista": { en: "Expected room", es: "Sala prevista" },
 
   // ───── Apresentação de criança no app (11/08) ─────
-  // ⚠️ A chave tem ESPAÇO INQUEBRÁVEL depois de "Apresentação" (ver o comentário
-  // no atalho, em app/(app)/index.tsx). Trocar por espaço normal devolve o
-  // rótulo apertado numa linha; a chave PRECISA casar caractere a caractere.
-  "Apresentação de crianças": { en: "Children's dedication", es: "Presentación de niños" },
+  // ⚠️ A chave tem ESPAÇO COMUM. Houve uma versão com espaço inquebrável (26/08)
+  // pra tentar controlar a quebra do atalho da Home — não funcionou (NBSP não
+  // força quebra) e foi removida em 27/08. Quem quebra o rótulo é
+  // `lib/rotuloAtalho.ts`, no render: quebra é layout, não tradução.
   "Apresentação de crianças": { en: "Children's dedication", es: "Presentación de niños" },
   "Apresentação registrada": { en: "Dedication registered", es: "Presentación registrada" },
   "A cerimônia é no culto de domingo, dia": { en: "The ceremony is at the Sunday service on", es: "La ceremonia es en el culto del domingo, día" },
