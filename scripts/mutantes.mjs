@@ -489,6 +489,23 @@ const MUTANTES = [
     para: '  return "nada";',
   },
   {
+    // ⚠️ O conserto de 26/08 (espaço inquebrável) NÃO funcionava, e o Matheus
+    // voltou dizendo isso. Este mutante é o "não faz nada" original: devolver o
+    // texto intacto é exatamente o efeito que o NBSP tinha.
+    nome: "atalho: rótulo deixa de quebrar (o no-op do NBSP)",
+    arq: "lib/rotuloAtalho.ts",
+    de: "  if (i <= 0 || i === limpo.length - 1) return limpo;",
+    para: "  return limpo;",
+  },
+  {
+    // Sem normalizar o NBSP herdado da chave antiga, o rótulo é UMA palavra e a
+    // função sai pelo `i <= 0` — o bug de volta, em silêncio.
+    nome: "atalho: NBSP deixa de contar como separador",
+    arq: "lib/rotuloAtalho.ts",
+    de: '  const i = limpo.indexOf(" ");',
+    para: '  const i = t.indexOf(" ");',
+  },
+  {
     // ⚠️ O oposto: TODA aba acesa jogando pra Home faz a pessoa perder a tela
     // num toque acidental.
     nome: "barra: qualquer aba acesa passa a voltar pra Home",
