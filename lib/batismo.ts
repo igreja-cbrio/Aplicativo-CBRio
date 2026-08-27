@@ -52,18 +52,55 @@ export async function fazerCheckin(inscricaoId: string): Promise<
 export type BatismoAnterior = {
   batizado_outra_igreja: boolean;
   igreja_batismo_anterior: string | null;
+  /**
+   * ⚠️⚠️ "Já me batizei AQUI na CBRio" (27/08/2026 · pedido do Marcos): batismo
+   * REAL anterior ao sistema, sem linha em `batismo_inscricoes`.
+   *
+   * Antes disso a pessoa nessa situação não tinha o que marcar — e escrever
+   * "CBRio" no campo de OUTRA igreja gravaria a própria igreja como se fosse
+   * outra. É declaração: **não entra em KPI de batismo nenhum**; o que ela faz
+   * é parar de cobrar batismo de quem já se batizou.
+   */
+  batismo_cbrio_declarado: boolean;
+  batismo_cbrio_data: string | null;
 };
 
 export async function getBatismoAnterior(membroId: string): Promise<BatismoAnterior> {
-  const { data } = await supabase
-    .from("mem_membros")
-    .select("batizado_outra_igreja, igreja_batismo_anterior")
-    .eq("id", membroId)
-    .is("deleted_at", null)
-    .maybeSingle();
+  // ⚠️⚠️ As colunas do batismo na CBRio saem em SELECT SEPARADO, e não juntas
+  // com as de "outra igreja": pedir coluna que ainda não existe faz o PostgREST
+  // recusar a QUERY INTEIRA (42703), e aí o app perderia também a declaração de
+  // outra igreja, que JÁ está em produção. Deploy em 2 etapas (o OTA chega antes
+  // ou depois da migration) não pode quebrar o que já funciona.
+  // ⚠️ O builder do PostgREST é PromiseLike e NÃO tem `.catch` — o try/catch
+  // precisa envolver o `await`, senão nem compila.
+  const lerCbrio = async (): Promise<{ data: unknown }> => {
+    try {
+      return await supabase
+        .from("mem_membros")
+        .select("batismo_cbrio_declarado_em, batismo_cbrio_data")
+        .eq("id", membroId)
+        .is("deleted_at", null)
+        .maybeSingle();
+    } catch {
+      return { data: null };
+    }
+  };
+  const [base, cbrio] = await Promise.all([
+    supabase
+      .from("mem_membros")
+      .select("batizado_outra_igreja, igreja_batismo_anterior")
+      .eq("id", membroId)
+      .is("deleted_at", null)
+      .maybeSingle(),
+    lerCbrio(),
+  ]);
+  const data = base.data;
+  const c = cbrio.data as { batismo_cbrio_declarado_em?: string | null; batismo_cbrio_data?: string | null } | null;
   return {
     batizado_outra_igreja: !!(data as { batizado_outra_igreja?: boolean } | null)?.batizado_outra_igreja,
     igreja_batismo_anterior: (data as { igreja_batismo_anterior?: string | null } | null)?.igreja_batismo_anterior ?? null,
+    batismo_cbrio_declarado: !!c?.batismo_cbrio_declarado_em,
+    batismo_cbrio_data: c?.batismo_cbrio_data ?? null,
   };
 }
 
@@ -74,6 +111,21 @@ export async function marcarBatismoAnterior(igreja: string): Promise<void> {
 
 export async function desmarcarBatismoAnterior(): Promise<void> {
   const { error } = await supabase.rpc("app_desmarcar_batizado_outra");
+  if (error) throw error;
+}
+
+/**
+ * Declara que já se batizou NA CBRio. `data` é opcional — quem não lembra o dia
+ * não pode ficar impedido de registrar o fato.
+ * ⚠️ A RPC resolve a pessoa por `auth.uid()`; não existe parâmetro de pessoa.
+ */
+export async function marcarBatismoCbrio(data?: string | null): Promise<void> {
+  const { error } = await supabase.rpc("app_marcar_batizado_cbrio", { p_data: data ?? null });
+  if (error) throw error;
+}
+
+export async function desmarcarBatismoCbrio(): Promise<void> {
+  const { error } = await supabase.rpc("app_desmarcar_batizado_cbrio");
   if (error) throw error;
 }
 
