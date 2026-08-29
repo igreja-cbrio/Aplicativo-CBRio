@@ -37,6 +37,7 @@ import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { assinarFichaCadastro, lerFichaCadastro } from "@/lib/cadastroAberto";
+import { decidirAplicacao, leEmbutido } from "@/lib/portaoUpdate";
 
 /**
  * Busca por atualização na abertura e a cada volta do background — o padrão do
@@ -248,14 +249,31 @@ export function PortaoAtualizacao({ children }: { children: React.ReactNode }) {
   //   · `!fichaAberta` — não apaga o `/completar-cadastro`.
   // A aplicação fica num efeito reativo (nunca num handler), então não há janela
   // em que o render alterne entre o portão e a árvore do app.
-  const prontoParaAplicar =
-    Updates.isEnabled &&
-    isUpdatePending &&
-    !baixouNestaSessao &&
-    !fichaAberta &&
-    !isChecking &&
-    !isDownloading &&
-    !isStartupProcedureRunning;
+  // ⚠️⚠️ A DECISÃO saiu daqui para `lib/portaoUpdate` (29/08) — pura, testada e
+  // com mutantes. Motivo: ela ganhou uma exceção que precisa ser conferível.
+  //
+  // Relato do Matheus: "quando a pessoa instala, algumas baixam e vem com uma
+  // versão antiga; aí tem que fechar e abrir pra subir o OTA. Na instalação já
+  // deve vir com a última versão."
+  //
+  // A causa era `!baixouNestaSessao`. Aquela guarda existe desde 07/08 pra NÃO
+  // INTERROMPER quem está usando quando um download termina no meio — e está
+  // certa. Só que na PRIMEIRA abertura depois de instalar não há nada a
+  // interromper: a pessoa acabou de abrir e está vendo o bundle que veio no
+  // APK. Ali a guarda protegia o vazio e cobrava o ciclo de duas aberturas.
+  //
+  // `Updates.isEmbeddedLaunch` separa os dois casos pelo FATO, não por
+  // heurística de tempo: true = nenhum OTA aplicado ainda.
+  const { aplicar: prontoParaAplicar } = decidirAplicacao({
+    habilitado: Updates.isEnabled,
+    updatePendente: isUpdatePending,
+    baixouNestaSessao,
+    lancamentoEmbutido: leEmbutido((Updates as { isEmbeddedLaunch?: unknown }).isEmbeddedLaunch),
+    fichaAberta,
+    checando: isChecking,
+    baixando: isDownloading,
+    startupRodando: isStartupProcedureRunning,
+  });
 
   useEffect(() => {
     if (prontoParaAplicar) aplicar();
