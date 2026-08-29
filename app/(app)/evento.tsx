@@ -533,13 +533,6 @@ function MinhaInscricao({
           </Text>
         ) : null}
 
-        {insc.numero_sorte ? (
-          <View style={styles.sorteBox}>
-            <Text style={styles.sorteLabel}>{t("Seu número da sorte")}</Text>
-            <Text style={styles.sorteNum}>{insc.numero_sorte}</Text>
-          </View>
-        ) : null}
-
         {pendente && insc.pagamento?.url ? (
           <Button title={t("Pagar agora")} onPress={() => abrirInscricaoEvento(insc.pagamento!.url as string)} />
         ) : null}
@@ -559,6 +552,15 @@ function MinhaInscricao({
           <View style={styles.qrBox}>
             <QRCode value={insc.comprovante_url} size={168} backgroundColor="#fff" />
           </View>
+          {/* ⚠️ O número da sorte fica AO LADO do QR, nunca DENTRO dele: o que o
+              QR carrega é o token do comprovante, e é isso que o leitor da
+              portaria espera. Codificar o número aqui quebraria o check-in. */}
+          {insc.numero_sorte ? (
+            <View style={styles.sorteBox}>
+              <Text style={styles.sorteLabel}>{t("Seu número da sorte")}</Text>
+              <Text style={styles.sorteNum}>{insc.numero_sorte}</Text>
+            </View>
+          ) : null}
           <Button
             title={t("Abrir comprovante")}
             variant="ghost"
@@ -571,6 +573,14 @@ function MinhaInscricao({
           <Text style={styles.desc}>
             {t("O código de entrada aparece aqui assim que o seu pagamento for confirmado.")}
           </Text>
+          {/* O número da sorte já existe desde a inscrição — some junto com o QR
+              seria esconder o que a pessoa veio ver num evento com sorteio. */}
+          {insc.numero_sorte ? (
+            <View style={styles.sorteBox}>
+              <Text style={styles.sorteLabel}>{t("Seu número da sorte")}</Text>
+              <Text style={styles.sorteNum}>{insc.numero_sorte}</Text>
+            </View>
+          ) : null}
         </GlassCard>
       )}
 
