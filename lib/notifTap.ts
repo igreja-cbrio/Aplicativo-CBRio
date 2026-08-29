@@ -114,6 +114,15 @@ export function attachNotifTapListener(): () => void {
       case "comunicado":
         router.navigate("/mural");
         return;
+      // ⚠️ Nome começa com `inscricao_` de PROPÓSITO: no binário que ainda não
+      // recebeu este OTA, o `default` manda pra aba Inscrições (onde o cartão do
+      // evento leva ao comprovante) em vez de o toque não fazer nada.
+      case "inscricao_evento_checkin": {
+        const eventoId = (data as { evento_id?: string }).evento_id;
+        if (eventoId) router.navigate({ pathname: "/evento", params: { id: eventoId } });
+        else router.navigate("/inscricoes");
+        return;
+      }
       case "inscricao_evento": {
         // Push de evento publicado → abre o formulário público do evento
         // (mesmo fluxo do site · gratuito ou pago→Asaas). Sem slug, cai na aba.
