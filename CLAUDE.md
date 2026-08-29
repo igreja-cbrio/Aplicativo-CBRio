@@ -10,37 +10,27 @@
 > Code**. O `CLAUDE.md` é o canal — a sua sessão carrega este arquivo ao abrir o
 > projeto. **Apaga este bloco quando resolver**, ou responde escrevendo aqui.
 
-### 1 · Só você destrava: Firebase para o push do Android
+### 1 · ✅ RESOLVIDO · push do Android (FCM V1) · PROVADO em 29/08/2026
 
-**Você tem o acesso ao Google Console, o Marcos não.** Enquanto isso não sai, os
-avisos de grupo que eu estou construindo chegam **só no iPhone**.
+Feito pelo Matheus em 18–20/08: `google-services.json` **commitado** (não é
+gitignored) + `android.googleServicesFile` no `app.json` + credencial **FCM V1**
+com conta de serviço **dedicada** (`eas-push-fcm`) + **build 7 (versionCode 6)**.
 
-**Medido:** `app_push_tokens` tem 31 linhas, **100% iOS, zero Android**. A causa
-está provada pelo aparelho: a telemetria registrou, do Xiaomi do Marcos, a
-mensagem literal do módulo nativo —
-`Default FirebaseApp is not initialized in this process br.com.cbrio.app`.
-O projeto **nunca teve** `google-services.json` nem `android.googleServicesFile`
-no `app.json` (`git log --all` volta vazio nos dois).
+⚠️⚠️ **A prova é o BANCO, não o build** — medido em `app_push_tokens` em
+29/08/2026:
 
-⚠️ **Não é adotar o Firebase como backend.** O Supabase continua sendo tudo. O
-FCM é só o *carteiro* que o Android exige — o mesmo papel que a APNs já cumpre no
-iOS. E o SDK do Firebase **já está compilado no APK**
-(`firebase-messaging:24.0.1`, via `expo-notifications`): falta só o arquivo de
-config.
+| plataforma | tokens | pessoas | último visto |
+|---|---|---|---|
+| ios | 67 | 58 | 29/08 |
+| **android** | **7** | **2** | 20/08 |
 
-**Os 4 passos:**
-1. **Anexar ao projeto Google Cloud `crm-cbrio` que a igreja JÁ TEM.** ⚠️ NÃO
-   criar projeto novo, e nunca em Gmail pessoal — o assistente do Firebase
-   oferece isso por padrão. É de `crm-cbrio` que já sai a conta de serviço
-   `eas-submit@` do Play Console.
-2. Registrar app Android com o package **`br.com.cbrio.app`** e baixar o
-   `google-services.json`.
-3. `eas credentials -p android` → Push Notifications → **FCM V1**. ⚠️ Conta de
-   serviço **dedicada**, só com `firebasemessaging.messages.create` — não a
-   padrão, que compartilha raio de dano com a que publica no Play.
-4. **Build Android novo.** ⚠️⚠️ Com `version` ainda **`"1.0.0"`**. Subir a versão
-   dispara a armadilha do `runtimeVersion` e **congela o OTA da frota inteira,
-   iOS incluído**. O `google-services.json` não muda o `runtimeVersion`.
+Antes disto eram **31 linhas, 100% iOS**. O Android passou a registrar token
+**dois dias depois** do binário com FCM — ou seja o carteiro está entregando.
+`Default FirebaseApp is not initialized` não aparece mais.
+
+⚠️ **As 2 pessoas são quem instalou o binário novo** (faixa `internal` do Play).
+A frota geral do Android só passa a registrar token quando um build com FCM for
+**promovido no Play Console** — é passo de GENTE, não de código.
 
 ### 2 · Coordenação: onde eu vou mexer (pra não colidirmos)
 
