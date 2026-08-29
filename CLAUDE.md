@@ -76,6 +76,38 @@ somar ao seu trabalho, não duplicar.
 - **ERP #2354** (mover a função da API pra `pdx1`/Oregon) está **aberto de
   propósito** — é a API inteira, e o Marcos vai mergear numa janela calma.
 
+## ⚠️ AJUDA COM O APP · suporte do produto, no menu (29/08/2026)
+
+Pedido do Matheus: *"no app, no menu, tivesse um botão de ajuda com app, caso a
+pessoa precise tirar dúvidas em relação ao app, seus dados e etc, de forma mais
+direta e prática. E aí essas dúvidas devem chegar para o meu WhatsApp. Quero o
+nome da pessoa e a dúvida dela, com o número de celular dela."*
+
+⚠️⚠️ **NÃO é `/falar-com-a-igreja`** (a porta única de 11/08), e a diferença é de
+**DESTINO**: aquela é fila **PASTORAL** (Cuidados) e esta é **SUPORTE do
+produto**. *"Meu grupo não aparece no app"* não é assunto da equipe de cuidado —
+misturar encheria a fila do cuidado de bug report e o suporte de pedido de
+oração. A tela DIZ isso e aponta a outra porta, pra quem chegou no lugar errado
+não ficar sem saída.
+
+- ⚠️ **Esta tela não conhece pessoa nenhuma**: quem recebe vive em
+  `whatsapp_config.suporte_app_membro_id`, no ERP. Trocar o destinatário é um
+  UPDATE, sem tocar no app (e sem OTA).
+- ⚠️ **O celular vem preenchido do cadastro e é editável** — a pessoa pode estar
+  escrevendo justamente porque o cadastro está errado. ⚠️ Isso **não sobrescreve**
+  `mem_membros.telefone`: o servidor só o usa pra responder.
+- ⚠️ **Sem celular NÃO trava o envio**, só avisa que a resposta pode demorar:
+  cadastro incompleto é o assunto de boa parte das dúvidas, e barrar deixaria de
+  fora quem mais precisa de ajuda.
+- ⚠️ **A tela de sucesso NÃO promete WhatsApp** ("quem cuida do app vai te
+  responder pelo contato que você deixou"): o canal depende de configuração no
+  ERP, e prometer o que não se controla é a tela afirmando o que o produto não
+  garante.
+- Manda a **versão do bundle** junto — é o que responde "essa pessoa está num OTA
+  antigo?", que é metade das dúvidas de app.
+- ⚠️ Voltar com texto digitado **pergunta antes de descartar** (régua
+  `descartarRascunho`, a mesma da porta pastoral).
+
 ## ⚠️ NOTIFICAÇÃO COM BOTÃO · confirmar/pedir troca e aprovar/recusar (29/08/2026)
 
 Pedido do Matheus: *"nas notificações queria as notificações dentro do app
