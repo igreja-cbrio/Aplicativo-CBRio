@@ -15,6 +15,7 @@ import { useT } from "@/lib/i18n";
 import { destaquesAtivos, type Destaque } from "@/lib/destaques";
 import { proximosCultos, cultoAoVivo, type CultoUpcoming, type CultoAoVivo } from "@/lib/cultos";
 import { Carrossel } from "@/components/home/Carrossel";
+import { CardKidsCheckin } from "@/components/home/CardKidsCheckin";
 import { ProximosCultos } from "@/components/home/ProximosCultos";
 import { AnimatedShortcut } from "@/components/anim/AnimatedShortcut";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -186,6 +187,12 @@ export default function InicioScreen() {
             <Ionicons name="chevron-forward" size={20} color="#fff" />
           </Pressable>
         )}
+
+        {/* KIDS — só no dia em que há culto com Kids e a pessoa tem filho lá.
+            Pedido do Matheus (29/08): o pré-check-in existia e ninguém achava
+            (1 uso na história × 888 check-ins no totem em 30 dias). A condição
+            sai de `cultos`, que esta tela já carregou. */}
+        <CardKidsCheckin cultos={cultos} />
 
         {carregando ? (
           <Skeleton width="100%" height={180} borderRadius={20} />
