@@ -6,6 +6,30 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  // ───────────── Ajuda com o app · suporte do produto (29/08/2026) ─────────────
+  "Ajuda com o app": { en: "Help with the app", es: "Ayuda con la app" },
+  "Dúvida sobre o aplicativo, seus dados aqui dentro ou algo que não está funcionando? Escreva abaixo — quem cuida do app recebe direto.": {
+    en: "A question about the app, your data in here, or something not working? Write below — whoever looks after the app gets it directly.",
+    es: "¿Duda sobre la app, tus datos aquí dentro o algo que no funciona? Escribe abajo — quien cuida de la app lo recibe directo.",
+  },
+  "Para oração ou conversa com um pastor, use \"Falar com a CBRio\".": {
+    en: "For prayer or to talk with a pastor, use \"Talk to CBRio\".",
+    es: "Para oración o hablar con un pastor, usa \"Hablar con CBRio\".",
+  },
+  "Ex.: meu grupo não aparece no app…": { en: "E.g.: my group doesn't show up in the app…", es: "Ej.: mi grupo no aparece en la app…" },
+  "Seu celular (pra te responderem)": { en: "Your phone (so they can reply)", es: "Tu celular (para responderte)" },
+  "Sem celular a resposta pode demorar mais.": { en: "Without a phone the reply may take longer.", es: "Sin celular la respuesta puede tardar más." },
+  "Escreva sua dúvida com um pouco mais de detalhe.": { en: "Write your question with a bit more detail.", es: "Escribe tu duda con un poco más de detalle." },
+  "Não foi possível enviar agora. Tente de novo em instantes.": {
+    en: "Couldn't send right now. Try again in a moment.",
+    es: "No se pudo enviar ahora. Inténtalo de nuevo en unos instantes.",
+  },
+  "Recebemos sua dúvida": { en: "We got your question", es: "Recibimos tu duda" },
+  "Quem cuida do app vai te responder pelo contato que você deixou.": {
+    en: "Whoever looks after the app will reply using the contact you left.",
+    es: "Quien cuida de la app te responderá por el contacto que dejaste.",
+  },
+
   // ───────────── Notificação com botão + card do Kids (29/08/2026) ─────────────
   "Confirmar presença": { en: "Confirm attendance", es: "Confirmar asistencia" },
   "Pedir troca": { en: "Ask for a swap", es: "Pedir cambio" },

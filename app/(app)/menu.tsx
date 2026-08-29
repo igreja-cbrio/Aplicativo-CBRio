@@ -109,6 +109,10 @@ export default function MenuScreen() {
       titulo: "Ajustes",
       itens: [
         { label: "Configurações", icon: "settings-outline", onPress: () => router.navigate("/configuracoes") },
+        // ⚠️ Suporte do PRODUTO, não fila pastoral: "Falar com a CBRio" continua
+        // sendo o caminho de oração/conversa com pastor (pedido do Matheus,
+        // 29/08). Misturar os dois encheria a fila do cuidado de bug report.
+        { label: "Ajuda com o app", icon: "help-buoy-outline", onPress: () => router.navigate("/ajuda-app") },
       ],
     },
   ];
