@@ -86,6 +86,59 @@ somar ao seu trabalho, não duplicar.
 - **ERP #2354** (mover a função da API pra `pdx1`/Oregon) está **aberto de
   propósito** — é a API inteira, e o Marcos vai mergear numa janela calma.
 
+## ⚠️⚠️ INSTALOU E VEIO A VERSÃO ANTIGA · o portão na primeira abertura (29/08/2026)
+
+Relato do Matheus: *"quem tá baixando o app pro android, quando a pessoa instala,
+algumas baixam e ele vem com uma versão antiga, como se não tivesse subido o OTA
+pra ela. Aí a pessoa tem q fechar e abrir o app para subir o OTA novo. Na
+instalação, já deve vir com a última versão."*
+
+⚠️⚠️ **A TELA "Atualizando…" JÁ EXISTIA e funcionava** (`components/app/
+PortaoAtualizacao.tsx`) — o que faltava era ela DISPARAR na primeira abertura. O
+bloqueio era uma linha:
+
+```ts
+setBaixouNestaSessao(true);   // sobe ANTES do fetch, pra fechar uma corrida
+await Updates.fetchUpdateAsync();
+...
+const prontoParaAplicar = ... && !baixouNestaSessao && ...
+```
+
+Aquela guarda existe desde 07/08 pra **NÃO INTERROMPER quem está usando** quando
+um download termina no meio da sessão (foi ela que fechou o bug do teclado
+sumindo no campo de CPF, 10/08) — e está certa. Só que na **primeira abertura
+depois de instalar não há nada a interromper**: a pessoa acabou de abrir e está
+vendo exatamente o bundle que veio no APK. Ali a guarda protegia o vazio e
+cobrava o ciclo de duas aberturas que ele descreveu.
+
+⇒ A decisão saiu do componente e virou régua PURA em **`lib/portaoUpdate.ts`**
+(`decidirAplicacao`), com `Updates.isEmbeddedLaunch` como exceção: `true` = nenhum
+OTA aplicado ainda, ou seja **é a primeira abertura**. Fato do runtime, não
+heurística de tempo.
+
+⚠️ **A ORDEM das guardas é o contrato** (tem teste): ficha de cadastro aberta,
+`isChecking`, `isDownloading` e `isStartupProcedureRunning` bloqueiam **INCLUSIVE
+na primeira abertura**. Dá pra instalar, abrir e começar o `/completar-cadastro`
+antes de o download terminar — aplicar ali apagaria o formulário. E sem as
+guardas de transição o `reloadAsync` reinicia no MESMO bundle, que é o loop de
+13/08.
+
+⚠️ **`leEmbutido` devolve `false` quando o valor não é booleano.** `undefined`
+virando `true` ligaria a exceção em TODA sessão e traria de volta a interrupção no
+meio do uso — o oposto do que a guarda protege. Na dúvida, comportamento de antes.
+
+⚠️⚠️ **ISTO SÓ VALE A PARTIR DO PRÓXIMO BINÁRIO.** A régua roda a partir do bundle
+**embutido no APK/IPA**, no instante em que ainda não há OTA aplicado — publicar
+por OTA a entrega só para quem instalar dali em diante. Quem já tem o app no
+aparelho continua com o ciclo de duas aberturas até trocar de binário.
+⚠️ E o build novo sai **com `version` ainda `"1.0.0"`**: subir a versão dispara a
+armadilha do `runtimeVersion` e congela o OTA da frota inteira, iOS incluído.
+
+Teste: `test/portaoUpdate.test.ts` (7 casos). **4 mutantes RODADOS e mortos**:
+tirar a exceção do lançamento embutido (o bug original) → 1 vermelho · deixar o
+embutido passar por cima da ficha aberta → 1 · transição em voo deixando de
+bloquear no embutido → 1 · `isEmbeddedLaunch` ausente virando `true` → 1.
+
 ## ⚠️⚠️ CUIDADOS · DUAS PORTAS, não quatro (11/08/2026 · apontamento 14)
 
 Desenho do Marcos, depois de eu levantar as portas existentes: *"vamos separar em
