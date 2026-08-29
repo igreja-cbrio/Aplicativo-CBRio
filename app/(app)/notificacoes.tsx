@@ -32,6 +32,7 @@ const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
   devocional: "book",
   aniversario: "gift",
   inscricao_evento: "calendar",
+  inscricao_evento_checkin: "qr-code",
   comunicado: "megaphone",
 };
 
@@ -48,6 +49,7 @@ const CATEGORIA: Record<string, string> = {
   devocional: "Devocional",
   aniversario: "Outros",
   inscricao_evento: "Inscrições",
+  inscricao_evento_checkin: "Inscrições",
   comunicado: "Avisos",
 };
 
@@ -135,6 +137,12 @@ export default function NotificacoesScreen() {
       case "culto": {
         const cultoId = (data as { culto_id?: string }).culto_id;
         if (cultoId) router.navigate({ pathname: "/culto-detalhe", params: { id: cultoId } });
+        return;
+      }
+      case "inscricao_evento_checkin": {
+        const eventoId = (n.data as { evento_id?: string })?.evento_id;
+        if (eventoId) router.navigate({ pathname: "/evento", params: { id: eventoId } });
+        else router.navigate("/inscricoes");
         return;
       }
       case "inscricao_evento": {
