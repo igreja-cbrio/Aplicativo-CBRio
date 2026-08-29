@@ -45,6 +45,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { SeusDados } from "@/components/inscricoes/SeusDados";
 import { faltaNaFicha, podeInscrever } from "@/lib/ficha";
 import { extrasFaltando, montarPayloadInscricao } from "@/lib/inscricaoPayload";
+import { respostasParaExibir } from "@/lib/respostasInscricao";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { useT } from "@/lib/i18n";
@@ -388,7 +389,7 @@ export default function EventoScreen() {
 
         {/* ───────── JÁ INSCRITA · a inscrição dela ───────── */}
         {minha && minha.status !== "cancelada" ? (
-          <MinhaInscricao insc={minha} styles={styles} colors={colors} t={t} />
+          <MinhaInscricao insc={minha} campos={evento?.campos} styles={styles} colors={colors} t={t} />
         ) : sucesso ? (
           <GlassCard style={styles.card}>
             <View style={styles.selo}>
@@ -504,15 +505,22 @@ export default function EventoScreen() {
 /** Bloco "minha inscrição": estado, número da sorte, QR e pagamento. */
 function MinhaInscricao({
   insc,
+  campos,
   styles,
   colors,
   t,
 }: {
   insc: MinhaInscricaoEvento;
+  // Rótulos das perguntas — a MESMA lista que desenhou o formulário.
+  campos?: CampoEvento[] | null;
   styles: ReturnType<typeof makeStyles>;
   colors: Palette;
   t: (s: string) => string;
 }) {
+  const respostasExibidas = useMemo(
+    () => respostasParaExibir(insc.respostas, campos),
+    [insc.respostas, campos],
+  );
   const st = rotuloStatus(insc, t);
   const corBadge =
     st.cor === "success" ? colors.success : st.cor === "danger" ? colors.danger : "#F59E0B";
@@ -584,13 +592,16 @@ function MinhaInscricao({
         </GlassCard>
       )}
 
-      {Object.keys(insc.respostas || {}).length ? (
+      {/* ⚠️ O rótulo sai de `evento.campos` — a MESMA fonte que desenhou o
+          formulário. A chave (`area_serve`) é identificador do form-builder e
+          nunca vai pra tela. */}
+      {respostasExibidas.length ? (
         <GlassCard style={styles.card}>
           <Text style={styles.qrTitulo}>{t("Suas respostas")}</Text>
-          {Object.entries(insc.respostas).map(([k, v]) => (
-            <View key={k} style={styles.respRow}>
-              <Text style={styles.respKey}>{k}</Text>
-              <Text style={styles.respVal}>{String(v)}</Text>
+          {respostasExibidas.map((r) => (
+            <View key={r.chave} style={styles.respBloco}>
+              <Text style={styles.respKey}>{r.rotulo}</Text>
+              <Text style={styles.respVal}>{r.valor}</Text>
             </View>
           ))}
         </GlassCard>
@@ -725,9 +736,9 @@ const makeStyles = (c: Palette) =>
     sorteNum: { color: c.primary, fontSize: 40, fontWeight: "900" },
     qrTitulo: { color: c.text, fontSize: font.size.md, fontWeight: "800" },
     qrBox: { alignSelf: "center", padding: spacing.md, backgroundColor: "#fff", borderRadius: radius.lg },
-    respRow: { flexDirection: "row", justifyContent: "space-between", gap: spacing.sm },
-    respKey: { color: c.textMuted, fontSize: 13, flex: 1 },
-    respVal: { color: c.text, fontSize: 13, fontWeight: "600", flex: 1, textAlign: "right" },
+    respBloco: { gap: 2, paddingVertical: 6 },
+    respKey: { color: c.textMuted, fontSize: 12 },
+    respVal: { color: c.text, fontSize: 15, fontWeight: "700" },
     campoBloco: { gap: 6 },
     campoLabel: { color: c.text, fontSize: font.size.sm, fontWeight: "700" },
     pills: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
