@@ -245,6 +245,10 @@ export default function InscricoesScreen() {
                   url: i.evento.url ?? null,
                   statusInsc: i.status,
                   pagamentoPendente: i.status === "recebida" && i.pagamento?.status !== "pago",
+                  // Quem decide se existe comprovante é o SERVIDOR — a tela não
+                  // monta esse link nem adivinha (só `confirmada` tem QR).
+                  numeroSorte: i.numero_sorte ?? null,
+                  temComprovante: !!i.comprovante_url,
                 }))
               : (eventos ?? []).map((e) => ({
                   id: e.id,
@@ -263,6 +267,9 @@ export default function InscricoesScreen() {
                   // em evento pago, a pessoa fechava o app achando que tinha
                   // lugar. Quem decide é o backend (`pagamento_pendente`).
                   pagamentoPendente: !!e.pagamento_pendente,
+                  // Aba "Todos": ainda não há inscrição desta pessoa aqui.
+                  numeroSorte: null,
+                  temComprovante: false,
                 }))
             ).map((ev) => {
               const quando = formatarDataEvento(ev.data, ev.hora);
@@ -308,8 +315,20 @@ export default function InscricoesScreen() {
                       ) : (
                         <View style={styles.tagGratis}><Text style={styles.tagGratisTxt}>{t("Gratuito")}</Text></View>
                       )}
-                      {ev.tem_sorteio ? (
+                      {ev.numeroSorte != null ? (
+                        <View style={styles.tagSorteio}>
+                          <Text style={styles.tagSorteioTxt}>{t("Nº da sorte")} {ev.numeroSorte}</Text>
+                        </View>
+                      ) : ev.tem_sorteio ? (
                         <View style={styles.tagSorteio}><Text style={styles.tagSorteioTxt}>{t("Sorteio")}</Text></View>
+                      ) : null}
+                      {/* Sem esta pista o comprovante fica escondido atrás de um
+                          toque e a pessoa não sabe que ele existe. */}
+                      {ev.temComprovante ? (
+                        <View style={styles.tagQr}>
+                          <Ionicons name="qr-code-outline" size={11} color={colors.brandMid} />
+                          <Text style={styles.tagQrTxt}>{t("Comprovante")}</Text>
+                        </View>
                       ) : null}
                       {ev.pagamentoPendente ? (
                         <View style={styles.tagPendente}>
@@ -383,5 +402,7 @@ const makeStyles = (colors: Palette) =>
     tagPendente: { backgroundColor: "rgba(245,158,11,0.16)", borderRadius: radius.full, paddingHorizontal: 8, paddingVertical: 3 },
     tagPendenteTxt: { color: "#F59E0B", fontSize: 11, fontWeight: "800" },
     tagSorteio: { backgroundColor: "rgba(112,168,176,0.18)", borderRadius: radius.full, paddingHorizontal: 9, paddingVertical: 3 },
+    tagQr: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border },
+    tagQrTxt: { color: colors.brandMid, fontSize: 11, fontWeight: "700" },
     tagSorteioTxt: { color: colors.brandMid, fontSize: 11, fontWeight: "700" },
   });
