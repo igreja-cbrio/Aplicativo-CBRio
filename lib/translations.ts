@@ -956,7 +956,6 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Veja os encontros e faça check-in no dia, quando estiver na igreja.": { en: "See the gatherings and check in on the day, when you're at the church.", es: "Mira los encuentros y haz check-in el día, cuando estés en la iglesia." },
   "Próximos encontros": { en: "Upcoming gatherings", es: "Próximos encuentros" },
   "Nenhum encontro programado por enquanto.": { en: "No gatherings scheduled yet.", es: "No hay encuentros programados por ahora." },
-  "Presença confirmada": { en: "Attendance confirmed", es: "Asistencia confirmada" },
   "Confirmando…": { en: "Confirming…", es: "Confirmando…" },
   "Check-in abre no dia do encontro.": { en: "Check-in opens on the day of the gathering.", es: "El check-in se abre el día del encuentro." },
 
