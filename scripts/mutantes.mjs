@@ -513,6 +513,40 @@ const MUTANTES = [
     de: 'const VOLTA_PRA_HOME = new Set<string>(["/menu"]);',
     para: 'const VOLTA_PRA_HOME = new Set<string>(ROTAS_BARRA);',
   },
+  {
+    // ⚠️⚠️ O BUG DO "INSTALOU E VEIO A VERSÃO ANTIGA" (29/08). Sem a exceção do
+    // lançamento embutido, a guarda `baixouNestaSessao` — que existe pra não
+    // interromper quem ESTÁ usando — bloqueia também a primeira abertura, onde
+    // não há nada a interromper. É isso que cobrava o ciclo de duas aberturas.
+    nome: "portaoUpdate: sem a exceção da primeira abertura (o bug original)",
+    arq: "lib/portaoUpdate.ts",
+    de: '  if (e.lancamentoEmbutido) return { aplicar: true, motivo: "primeira_abertura" };',
+    para: "",
+  },
+  {
+    // Ficha aberta segura o portão MESMO na primeira abertura: dá pra instalar,
+    // abrir e começar o /completar-cadastro antes de o download terminar.
+    nome: "portaoUpdate: primeira abertura passando por cima da ficha aberta",
+    arq: "lib/portaoUpdate.ts",
+    de: '  if (e.fichaAberta) return { aplicar: false, motivo: "ficha_aberta" };',
+    para: "",
+  },
+  {
+    // ⚠️ AMI e Bridge não têm Kids. `has_kids` nulo tratado como "tem" acende o
+    // card e manda o pai gerar um código que nenhum totem vai ler naquele dia.
+    nome: "kidsHoje: has_kids nulo contando como culto com Kids",
+    arq: "lib/kidsHoje.ts",
+    de: "c?.data === hojeISO && c?.has_kids === true",
+    para: "c?.data === hojeISO && c?.has_kids !== false",
+  },
+  {
+    // A lista da Home traz 7 dias. Sem o corte por data o card fica aceso a
+    // semana inteira, e o código de 12h gerado na quarta morre antes do domingo.
+    nome: "kidsHoje: card aceso a semana toda (ignora o dia de hoje)",
+    arq: "lib/kidsHoje.ts",
+    de: "c?.data === hojeISO && c?.has_kids === true",
+    para: "c?.has_kids === true",
+  },
   // ⚠️ NÃO entra aqui um mutante pro `crianca_nome` da tela de apresentação
   // (o campo que estava lido como `bebe_nome` e mostrava `undefined` em
   // produção): o escopo deste harness é código PURO de `lib/`, e o vitest não

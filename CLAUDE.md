@@ -76,6 +76,46 @@ somar ao seu trabalho, não duplicar.
 - **ERP #2354** (mover a função da API pra `pdx1`/Oregon) está **aberto de
   propósito** — é a API inteira, e o Marcos vai mergear numa janela calma.
 
+## ⚠️ HOME · card do Kids nos dias de culto (29/08/2026)
+
+Pedido do Matheus: *"dias de culto aparecer um card assim na tela principal,
+para os pais de crianças do kids poderem fazer o pré checkin de forma mais
+rápida."*
+
+⚠️⚠️ **O pré-check-in JÁ EXISTIA, funcionava, e ninguém achava.** Medido no banco
+em 29/08: **1 pré-check-in na história inteira** (criado naquele dia, testando)
+contra **888 check-ins no totem em 30 dias**. A tela `/kids` está inteira — o que
+faltava era ela ser alcançável **no dia em que serve**. Mesma classe do portão de
+atualização e do avatar do app: a coisa está pronta e o caminho até ela não existe.
+
+**Público hoje: 24 pais** com conta no app e filho ativo autorizado.
+
+- **`lib/kidsHoje.ts`** = régua PURA (`temKidsHoje` · `rotuloFilhos` ·
+  `codigoValido`), com **4 mutantes no gate** (`scripts/mutantes.mjs`).
+- ⚠️ **A condição sai do que a Home JÁ CARREGOU**: `proximosCultos(7)` traz
+  `data` (em BRT) e `has_kids`. Nenhuma consulta nova só pra decidir se o card
+  aparece — e a busca dos filhos só acontece **quando hoje tem Kids**.
+- ⚠️⚠️ **`has_kids` NULO não conta.** É `vol_service_types.has_kids`, nullable:
+  tratar null como "tem" acenderia o card em dia de AMI/Bridge e mandaria o pai
+  gerar um código que nenhum totem vai ler. Mutante trava isso.
+- ⚠️ **Sem o corte por data o card fica aceso a semana inteira** (a lista da Home
+  é de 7 dias) — e o código expira em 12h, então o gerado na quarta morre antes
+  do domingo. Mutante trava isso também.
+- ⚠️⚠️ **O botão diz "Adiantar", NUNCA "Fazer check-in".** O app não faz check-in:
+  ele gera o CÓDIGO que a pessoa apresenta na chegada. Entrada e retirada seguem
+  presenciais, por decisão de segurança do módulo — prometer check-in aqui seria
+  a tela afirmando o que o produto não faz.
+- ⚠️ **Não é uma segunda implementação**: o card chama o MESMO
+  `POST /app/kids/pre-checkin` da tela `/kids` e manda a pessoa pra lá pra ver o
+  QR. Duas implementações divergiriam, e o sintoma seria "gerei pela Home e o
+  código não é o mesmo da tela do Kids".
+- **Gera pra TODOS os filhos num toque** — a família chega junta, e é isso que
+  torna o card "mais rápido" (o pedido). Quem precisa escolher ajusta em `/kids`.
+- ⚠️ **Código VENCIDO não é mostrado como pronto** (`codigoValido` é fail-closed):
+  código morto na tela faria o pai chegar no totem com algo que não abre nada.
+- ⚠️ **Falha de rede esconde o card**, nunca mostra card quebrado — a tela `/kids`
+  segue no menu.
+
 ## ⚠️⚠️ INSTALOU E VEIO A VERSÃO ANTIGA · o portão na primeira abertura (29/08/2026)
 
 Relato do Matheus: *"quem tá baixando o app pro android, quando a pessoa instala,
