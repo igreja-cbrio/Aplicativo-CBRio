@@ -76,6 +76,42 @@ somar ao seu trabalho, não duplicar.
 - **ERP #2354** (mover a função da API pra `pdx1`/Oregon) está **aberto de
   propósito** — é a API inteira, e o Marcos vai mergear numa janela calma.
 
+## ⚠️ NOTIFICAÇÃO COM BOTÃO · confirmar/pedir troca e aprovar/recusar (29/08/2026)
+
+Pedido do Matheus: *"nas notificações queria as notificações dentro do app
+chegassem com botão para confirmar ou pedir troca (quando a pessoa não puder
+ir). Pedidos para entrar em grupo também. Claro que se clicar fora dos botões,
+deve direcionar para a rota respectiva da notificação."*
+
+- **`lib/acoesNotificacao.ts`** é **ESPELHO EXATO** de
+  `backend/utils/acaoNotificacao.js` (ERP) — os mesmos casos rodam nos dois
+  repos. ⚠️⚠️ Divergir tem dois estragos: o app oferece um botão que o servidor
+  recusa (400 na cara da pessoa) ou esconde um que funcionaria.
+- ⚠️⚠️ **Sem ALVO, sem botão.** As notificações de escala anteriores a 29/08 têm
+  `data = {tipo:'escala'}` — sem id não há o que responder, e inventar um
+  responderia pela escala ERRADA. Elas seguem abrindo a tela no toque.
+  `grupo_pedido` sempre levou `pedido_id`.
+- ⚠️ **Tocar FORA dos botões continua abrindo a rota** — os botões são
+  `Pressable` aninhado e não deixam o toque subir pro card.
+- ⚠️⚠️ **"Pedir troca" é RÓTULO; o fato gravado é `declined`.** O sistema **não
+  procura substituto** — avisa a coordenação e o supervisor pra REPOR. O texto
+  do diálogo diz exatamente isso ("a liderança é avisada pra reorganizar"), sem
+  prometer troca automática.
+- ⚠️ **"Confirmar presença" vai direto**; as outras três pedem confirmação, com
+  o efeito escrito. **Aprovar lembra de LIGAR antes** — é o fluxo que o template
+  do WhatsApp instrui desde 29/07, e aprovar por engano põe alguém num grupo sem
+  conversa nenhuma. O botão não impede; lembra.
+- ⚠️ **Recusar diz que NÃO é rejeição**: volta pra equipe de grupos e a pessoa
+  não recebe aviso (lei de 14/07).
+- ⚠️ **Parcial é declarado**: uma notificação de escala cobre os N cultos do dia
+  (o aviso agrupa por pessoa+dia), então "3 de 4" nunca vira "pronto".
+- ⚠️ **Erro também recarrega a lista**: a causa mais comum é a coisa já ter sido
+  decidida noutro lugar, e a tela tem que refletir isso.
+
+Testes: `test/acoesNotificacao.test.ts` (10 casos · espelham os do ERP) + **2
+mutantes no gate** (escala sem ids ganhando botão · já respondida voltando a
+mostrar botão).
+
 ## ⚠️ HOME · card do Kids nos dias de culto (29/08/2026)
 
 Pedido do Matheus: *"dias de culto aparecer um card assim na tela principal,

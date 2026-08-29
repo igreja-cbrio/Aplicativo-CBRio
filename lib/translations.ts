@@ -6,6 +6,42 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  // ───────────── Notificação com botão + card do Kids (29/08/2026) ─────────────
+  "Confirmar presença": { en: "Confirm attendance", es: "Confirmar asistencia" },
+  "Pedir troca": { en: "Ask for a swap", es: "Pedir cambio" },
+  "Avisar que não vai poder?": { en: "Let them know you can't make it?", es: "¿Avisar que no podrás ir?" },
+  "A liderança da sua área é avisada na hora pra reorganizar a escala.": {
+    en: "Your area's leaders are notified right away so they can rearrange the schedule.",
+    es: "Los líderes de tu área son avisados de inmediato para reorganizar la escala.",
+  },
+  "Avisar": { en: "Let them know", es: "Avisar" },
+  "Aprovar a entrada?": { en: "Approve them joining?", es: "¿Aprobar la entrada?" },
+  "A pessoa entra no grupo e recebe o aviso. Se ainda não falou com ela, ligue antes.": {
+    en: "They join the group and get notified. If you haven't spoken to them yet, call first.",
+    es: "La persona entra en el grupo y recibe el aviso. Si aún no hablaste con ella, llámala antes.",
+  },
+  "Recusar o pedido?": { en: "Decline the request?", es: "¿Rechazar la solicitud?" },
+  "O pedido volta pra equipe de grupos, que fala com a pessoa. Ela não recebe aviso de recusa.": {
+    en: "The request goes back to the groups team, who will talk to them. They get no rejection notice.",
+    es: "La solicitud vuelve al equipo de grupos, que hablará con la persona. Ella no recibe aviso de rechazo.",
+  },
+  "Presença confirmada": { en: "Attendance confirmed", es: "Asistencia confirmada" },
+  "Você avisou que não vai poder": { en: "You said you can't make it", es: "Avisaste que no podrás ir" },
+  "Pedido aprovado": { en: "Request approved", es: "Solicitud aprobada" },
+  "Pedido devolvido pra equipe": { en: "Request sent back to the team", es: "Solicitud devuelta al equipo" },
+  "Respondido": { en: "Answered", es: "Respondido" },
+  "Respondemos em parte": { en: "Partly answered", es: "Respondido en parte" },
+  "{n} de {total} escalas foram atualizadas. Abra o Voluntariado pra ver o resto.": {
+    en: "{n} of {total} assignments were updated. Open Volunteering to see the rest.",
+    es: "{n} de {total} escalas fueron actualizadas. Abre Voluntariado para ver el resto.",
+  },
+  "Não deu pra concluir": { en: "Couldn't finish", es: "No se pudo concluir" },
+  "Tente de novo em instantes.": { en: "Try again in a moment.", es: "Inténtalo de nuevo en unos instantes." },
+  "Check-in do Kids": { en: "Kids check-in", es: "Check-in de Kids" },
+  "Adiantar": { en: "Get a head start", es: "Adelantar" },
+  "Ver código": { en: "See code", es: "Ver código" },
+  "código": { en: "code", es: "código" },
+
   // ───────────────── Next · responsável de turma ─────────────────
   "Turmas que você conduz": { en: "Classes you lead", es: "Clases que conduces" },
   "Gerenciar turma": { en: "Manage class", es: "Gestionar clase" },
