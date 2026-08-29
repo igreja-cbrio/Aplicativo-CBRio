@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors } from "@/contexts/ThemeContext";
 import { useNotificacoes, type AppNotificacao } from "@/lib/useNotificacoes";
+import { AcoesNotificacao } from "@/components/notificacoes/AcoesNotificacao";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
@@ -85,7 +86,7 @@ export default function NotificacoesScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const t = useT();
-  const { itens, loading, marcarLida, marcarTodasLidas } = useNotificacoes();
+  const { itens, loading, carregar, marcarLida, marcarTodasLidas } = useNotificacoes();
   const [filtro, setFiltro] = useState<string>("Todas");
 
   const naoLidas = itens.filter((n) => !n.lida_em).length;
@@ -170,6 +171,10 @@ export default function NotificacoesScreen() {
           <Text style={styles.titulo} numberOfLines={1}>{item.titulo}</Text>
           <Text style={styles.body} numberOfLines={2}>{item.body}</Text>
           <Text style={styles.tempo}>{formatTempo(item.criada_em, t)}</Text>
+          {/* ⚠️ Os botões ficam DENTRO do card: tocar fora deles continua
+              abrindo a rota da notificação (pedido do Matheus). Notificação
+              sem alvo — as de escala anteriores a 29/08 — não ganha botão. */}
+          <AcoesNotificacao id={item.id} tipo={item.tipo} data={item.data} onFeito={carregar} />
         </View>
         {naoLida && <View style={styles.dot} />}
       </Pressable>

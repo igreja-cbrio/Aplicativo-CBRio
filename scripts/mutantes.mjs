@@ -547,6 +547,23 @@ const MUTANTES = [
     de: "c?.data === hojeISO && c?.has_kids === true",
     para: "c?.has_kids === true",
   },
+  {
+    // ⚠️⚠️ Sem alvo, sem botão. As notificações de escala anteriores a 29/08 têm
+    // `data = {tipo:'escala'}`: oferecer botão nelas manda o app responder por
+    // uma escala que ninguém identificou — ou tomar 400 na cara da pessoa.
+    nome: "acoesNotificacao: escala sem ids ganhando botão",
+    arq: "lib/acoesNotificacao.ts",
+    de: "    if (!escalaIds.length) return { acoes: [], feita: null };",
+    para: "",
+  },
+  {
+    // Já respondida vira desfecho. Sem isso a pessoa toca de novo, o servidor
+    // diz "já estava assim" e ela conclui que o app não gravou.
+    nome: "acoesNotificacao: já respondida voltando a mostrar botão",
+    arq: "lib/acoesNotificacao.ts",
+    de: '  if (d.acao) return { acoes: [], feita: String(d.acao) };',
+    para: "",
+  },
   // ⚠️ NÃO entra aqui um mutante pro `crianca_nome` da tela de apresentação
   // (o campo que estava lido como `bebe_nome` e mostrava `undefined` em
   // produção): o escopo deste harness é código PURO de `lib/`, e o vitest não
