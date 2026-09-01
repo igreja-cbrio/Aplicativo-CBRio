@@ -197,7 +197,15 @@ export type EscalaItem = {
   area?: string | null;
   foto_url?: string | null;
 };
-export type EscalaResposta = { escalas: EscalaItem[]; equipes: string[] };
+export type EscalaComposicaoItem = {
+  team_id: string | null;
+  team_name: string;
+  area: string;
+  position_id: string | null;
+  position_name: string | null;
+  quantidade: number;
+};
+export type EscalaResposta = { escalas: EscalaItem[]; composicao: EscalaComposicaoItem[] };
 export type PoolVoluntario = { id: string; full_name: string; planning_center_id: string | null };
 
 export function getSupervisorInfo() {
