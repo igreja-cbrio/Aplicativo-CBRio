@@ -22,7 +22,7 @@
 // exatamente o que derruba o app da loja. `Linking.openURL` não é preferência de
 // estilo aqui: é a diferença entre permitido e proibido.
 // ============================================================================
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -30,6 +30,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { apiGet } from "@/lib/api";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
@@ -38,10 +39,35 @@ import { font, radius, spacing, type Palette } from "@/constants/theme";
 // `lib/api.ts` e do `lib/eventos.ts`).
 const URL_DOAR = "https://www.cbrio.org/doar";
 
+/**
+ * O link de doação, JÁ COM o token que preenche a tela com os dados da pessoa.
+ *
+ * Pedido do Matheus (01/09/2026): *"está pedindo nome, e-mail, celular e CPF —
+ * sendo que no app já tem essas informações dela."* O servidor emite um token
+ * curto (30 min) e a página abre preenchida.
+ *
+ * ⚠️⚠️ ISTO NÃO MUDA NADA sobre a guideline 3.2.2(iv): continua sendo
+ * `Linking.openURL` para o NAVEGADOR EXTERNO. O que muda é só a query string.
+ * NÃO trocar por WebView — ver o aviso no topo deste arquivo.
+ *
+ * ⚠️ Falha (offline, sessão vencida, servidor antigo) devolve o link FIXO, que é
+ * o comportamento de hoje: a pessoa doa digitando. Doação nunca pode depender de
+ * um prefill dar certo.
+ */
+async function linkDeDoacao(): Promise<string> {
+  try {
+    const r = await apiGet<{ url?: string }>("/app/generosidade/link");
+    return typeof r?.url === "string" && r.url.startsWith("https://") ? r.url : URL_DOAR;
+  } catch {
+    return URL_DOAR;
+  }
+}
+
 export function GenerosidadeTexto() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
+  const [abrindo, setAbrindo] = useState(false);
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
@@ -87,7 +113,15 @@ export function GenerosidadeTexto() {
               // ⚠️ Navegador EXTERNO, sem WebView (ver o aviso no topo do arquivo).
               // Falha silenciosa de propósito: se não houver navegador para abrir,
               // a pessoa segue com o caminho de falar com a igreja logo abaixo.
-              Linking.openURL(URL_DOAR).catch(() => {});
+              // ⚠️ Busca o link (com o token) e SÓ ENTÃO abre. Sem o await, a
+              // pessoa cairia na tela em branco e teria que digitar tudo — que é
+              // exatamente o que este pedido resolve.
+              if (abrindo) return;
+              setAbrindo(true);
+              linkDeDoacao()
+                .then((url) => Linking.openURL(url))
+                .catch(() => {})
+                .finally(() => setAbrindo(false));
             }}
             style={({ pressed }) => [styles.btn, pressed && { opacity: 0.85 }]}
             accessibilityRole="button"
