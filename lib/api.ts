@@ -1055,6 +1055,14 @@ export type NextMatricula = {
   telefone: string | null;
   status: string | null;
   check_in_at: string | null;
+  /**
+   * ⚠️ O que JÁ foi indicado no sistema. O direcionamento é ADITIVO e
+   * idempotente, então isto é contexto ("já mandei essa pessoa pro batismo"),
+   * não trava — reenviar o mesmo destino não duplica nada.
+   */
+  indicou_batismo?: boolean | null;
+  indicou_servir?: boolean | null;
+  indicou_grupo?: boolean | null;
 };
 
 export type NextPresenca = {
@@ -1072,6 +1080,119 @@ export type NextTurmaDetalhe = {
 
 export function getNextTurma(turmaId: string): Promise<NextTurmaDetalhe> {
   return apiGet<NextTurmaDetalhe>(`/app/next/turmas/${encodeURIComponent(turmaId)}`);
+}
+
+// ===== /app/next — GESTÃO pelo VOLUNTÁRIO (03/09/2026) =====
+// ⚠️⚠️ POR QUE ISTO EXISTE. `getNextPapel` gateia por POSSE
+// (`next_turmas.responsavel_id = membro.id`) e as turmas vivas têm esse campo
+// NULO — medido em 03/09: 44 turmas, ZERO com dono. Ou seja `responsavel`
+// respondia `false` pra TODO MUNDO e a seção "Turmas que você conduz" nunca
+// renderizava: a tela de gestão existia e era inalcançável.
+//
+// O portão passou a ser a MATRIZ DE PERMISSÃO (módulo `next` >= 2) **EM UNIÃO**
+// com a posse — quem é responsável de turma continua entrando sem nível. Quem
+// decide é o SERVIDOR (`backend/utils/nextGestaoApp.js`); aqui a tela só
+// pergunta e obedece.
+export type NextTurmaGestao = NextTurmaResumo & {
+  responsavel_id?: string | null;
+  sou_responsavel?: boolean;
+  matriculados?: number;
+  encontros?: { id: string; numero: number | null; data: string | null }[];
+};
+
+export type NextGestao = {
+  gerencia: boolean;
+  /**
+   * ⚠️ O que separa VER de AGIR. Leitura alta na matriz não escreve (é a régua
+   * do `authorizeModule` do web) — sem este campo a tela mostraria os botões de
+   * presença e walk-in pra quem só lê, e o toque voltaria 403.
+   */
+  escreve: boolean;
+  por_permissao: boolean;
+  eh_responsavel: boolean;
+  espera: number;
+  turmas: NextTurmaGestao[];
+};
+
+export function getNextGestao(): Promise<NextGestao> {
+  return apiGet<NextGestao>("/app/next/gestao");
+}
+
+export type NextPessoaEspera = {
+  id: string;
+  nome: string | null;
+  sobrenome: string | null;
+  telefone: string | null;
+  observacoes?: string | null;
+  created_at?: string | null;
+};
+
+export function getNextListaEspera(): Promise<{ count: number; pessoas: NextPessoaEspera[] }> {
+  return apiGet<{ count: number; pessoas: NextPessoaEspera[] }>("/app/next/lista-espera");
+}
+
+export function alocarNextMatricula(
+  matriculaId: string,
+  turmaId: string
+): Promise<{ ok: boolean; id: string; turma_id: string }> {
+  return apiPost(`/app/next/matriculas/${encodeURIComponent(matriculaId)}/alocar`, { turma_id: turmaId });
+}
+
+// ⚠️ Os catálogos vêm do SERVIDOR (`batismo_horarios` e `vol_form_opcoes`, os
+// MESMOS que o totem e o formulário público leem). Uma 2ª lista escrita aqui
+// ofereceria opção que o servidor recusa no envio.
+export type NextDirecionarOpcoes = {
+  batismo: {
+    data_batismo: string | null;
+    horarios: { horario: string; label?: string | null; vagas_restantes?: number | null }[];
+    /** ⚠️ `true` = não deu pra saber (ou a equipe fechou tudo). Não é "não tem". */
+    indisponivel?: boolean;
+  };
+  areas: { id: string; label: string; area_canonica?: string | null }[];
+  areas_indisponivel?: boolean;
+};
+
+export function getNextDirecionarOpcoes(): Promise<NextDirecionarOpcoes> {
+  return apiGet<NextDirecionarOpcoes>("/app/next/direcionar-opcoes");
+}
+
+export type NextDirecionarDestino = "batismo" | "voluntarios" | "grupos";
+
+/**
+ * ⚠️⚠️ Roda a MESMA `direcionarMatricula` do totem e da aba Pessoas — o app é
+ * cliente novo da porta, não uma 2ª régua. É lá que vivem o horário do batismo
+ * OBRIGATÓRIO, a resolução das áreas do servir e a idempotência.
+ *
+ * ⚠️ O erro dela vem com `codigo`/`campo` no corpo (`err.corpo`), e é isso que
+ * deixa a tela PEDIR o horário em vez de dizer "erro".
+ */
+export function direcionarNextMatricula(
+  matriculaId: string,
+  body: { destinos: NextDirecionarDestino[]; areas?: string[]; horario_batismo?: string | null }
+): Promise<{ ok?: boolean; destinos?: string[]; [k: string]: unknown }> {
+  return apiPost(`/app/next/matriculas/${encodeURIComponent(matriculaId)}/direcionar`, body);
+}
+
+/**
+ * WALK-IN: quem chegou no encontro sem estar na lista.
+ *
+ * ⚠️ Política do totem: "nunca travar o atendimento na hora" — só o NOME é
+ * obrigatório. CPF e e-mail são opcionais, mas se vierem têm que estar certos
+ * (dado errado é pior que ausente), e quem valida é o servidor.
+ */
+export function nextWalkIn(
+  turmaId: string,
+  body: {
+    nome: string;
+    sobrenome?: string | null;
+    telefone?: string | null;
+    cpf?: string | null;
+    email?: string | null;
+    data_nascimento?: string | null;
+    encontro_id?: string | null;
+  }
+): Promise<{ ok: boolean; id?: string; ja_inscrito?: boolean; pessoa_nova?: boolean }> {
+  return apiPost(`/app/next/turmas/${encodeURIComponent(turmaId)}/matriculas`, body);
 }
 
 export function marcarPresencaNext(

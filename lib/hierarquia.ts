@@ -45,7 +45,7 @@ import { router, type Href } from "expo-router";
  *   │   ├── /generosidade → /comprovante-doacoes
  *   │   ├── /inscricoes → /batismo → /inscricao-batismo
  *   │   │              └→ /evento (detalhe + inscrição no app)
- *   │   │              └→ /next → /next-turma
+ *   │   │              └→ /next → /next-turma, /next-espera
  *   │   ├── /videos
  *   │   └── /configuracoes → /trocar-senha, /fale-conosco, /sobre
  *   ├── /notificacoes      (o sino está na faixa em qualquer tela)
@@ -104,6 +104,8 @@ const PAI: Record<string, string> = {
   "/inscricao-batismo": "/batismo",
   "/next": "/inscricoes",
   "/next-turma": "/next",
+  // Aceitações do Next: a fila de quem foi direcionado e ainda não tem turma.
+  "/next-espera": "/next",
   "/videos": "/menu",
   "/configuracoes": "/menu",
   "/trocar-senha": "/configuracoes",
