@@ -76,6 +76,85 @@ somar ao seu trabalho, não duplicar.
 - **ERP #2354** (mover a função da API pra `pdx1`/Oregon) está **aberto de
   propósito** — é a API inteira, e o Marcos vai mergear numa janela calma.
 
+## ⚠️⚠️ A PORTA DE ENTRADA DA LOJA ESTAVA VELHA · medido (03/09/2026)
+
+Pergunta do Marcos: *"toda vez que alguém baixa o app da playstore ou appstore,
+ela entra na primeira versão do app, sem validação de cpf, sem várias abas que
+criamos depois"*. Não era o OTA quebrado. **A loja não serve "o último OTA": ela
+serve um BINÁRIO, e cada binário carrega o bundle de JS congelado no dia em que
+foi compilado.** Os dois binários publicados estavam velhos:
+
+| | Binário no ar | Compilado | Commits de atraso |
+|---|---|---|---|
+| **iOS** | build **33** | 22/06/2026 | **192** |
+| **Android** | versionCode **5** | 24/07/2026 | 159 |
+
+Medições (não suposições): `eas submit:status -p ios` → `App Store Live: 1.0 (33)
+— uploaded 2 months ago`, nada em review nem pending. Android inferido da
+telemetria (`app_eventos`): das 98 instalações novas em 30 dias, **35 caíram na
+vc 5** e 49 no build 33 iOS; as vc 6 (18/08) e vc 7 (29/08) somam **7**.
+
+### As causas, e o que foi feito
+
+1. **`eas.json` mandava o Android pro track errado** — `submit.production.android.
+   track: "internal"`. Os builds vc 6 e vc 7 existem e estão saudáveis (canal
+   `production`, runtime 1.0.0), mas foram pro teste interno; a Play pública
+   continuou servindo a vc 5 de julho. ⇒ **trocado pra `"production"`.**
+   ⚠️⚠️ **A conta de serviço `eas-submit@crm-cbrio` tem só "Release apps to
+   testing tracks" no Play Console.** Com `track: production` o submit pode
+   falhar por permissão até o Matheus conceder "Release to production". Se
+   falhar, o caminho manual é promover internal → produção no Play Console.
+2. **`updates.fallbackToCacheTimeout` nunca existiu no `app.json`** ⇒ default
+   `0` = *"não espere nada"*. A primeira abertura depois de instalar roda o JS
+   embutido no binário, e o OTA só entra da segunda em diante. ⇒ **posto em
+   `10000`** (o teto útil; o máximo aceito é 300000).
+3. **Rebuild + submit dos dois** — é a única coisa que faz o embutido deixar de
+   ser de junho/julho.
+
+### ⚠️⚠️ ISTO É O QUE ATIVA O CONSERTO DE 29/08
+
+A régua de `lib/portaoUpdate.ts` (`decidirAplicacao` + `isEmbeddedLaunch`, seção
+"INSTALOU E VEIO A VERSÃO ANTIGA") **já resolvia a primeira abertura em JS desde
+29/08 — e está morta em campo há 5 dias**, porque ela roda a partir do bundle
+embutido e nenhum binário publicado a contém. O build novo é o que liga.
+
+**As duas camadas são complementares, não redundantes:**
+- `fallbackToCacheTimeout` é **nativo**: a primeira abertura nem chega a rodar o
+  JS velho — espera até 10s e sobe já no bundle novo. Funciona mesmo quando o JS
+  embutido é antigo, porque é config compilada no binário.
+- `decidirAplicacao` é o **fallback de rede ruim**: se os 10s estouram, o app
+  sobe no embutido e a régua aplica assim que o download cair, em vez de cobrar
+  o ciclo de duas aberturas.
+
+⚠️ Custo aceito: numa abertura logo depois de um OTA publicado, o cold start pode
+levar até 10s de splash. É o preço de "se não atualizar não usa" — e só acontece
+quando há bundle novo pra baixar; sem update, a checagem é um HTTP curto.
+
+⚠️ A `version` continua **`"1.0.0"`** de propósito. Subir dispara a armadilha do
+`runtimeVersion` e congela o OTA da frota inteira (ver "A ARMADILHA DO
+`runtimeVersion`"). O contador de buildNumber do EAS já está em **41** (> 33),
+então o blocker de colisão com o ASC descrito na Onda 3 **está resolvido** — o
+próximo iOS sai como 42.
+
+### O que ficou de fora desta rodada (conversado com o Marcos)
+
+- **`runtimeVersion.policy: "fingerprint"`** — hoje é `appVersion` travado em
+  1.0.0 enquanto módulos NATIVOS entraram (maplibre, expo-local-authentication,
+  apple-targets, apple-authentication). O OTA de hoje é entregue à vc 5 de
+  julho, que não tem esse nativo: hoje só deixa a pessoa velha, mas o próximo
+  OTA que tocar num desses módulos vira **crash**, não desatualização.
+- **O piso da loja está desarmado E não funcionaria**: `app_config` tem
+  `bloqueia: false` e `versao_minima_*: null` (as URLs das lojas foram
+  preenchidas em 03/09). E `abaixoDoPiso` compara `Updates.runtimeVersion`, que
+  é `"1.0.0"` em **todo** build que já existiu — ele não distingue o 33 do 42.
+  A régua certa é `Constants.nativeBuildVersion` (33/42 no iOS, versionCode no
+  Android), que é o que a telemetria já coleta em `build_number`.
+- **Os binários iOS de junho #14/#15/#16 saíram sem canal e sem runtime**: neles
+  `Updates.isEnabled` é `false`, não recebem OTA nenhum e não têm portão (ele
+  nasceu em 05/08). Em campo: nos 7 dias antes de 03/09, **470 eventos de 16
+  usuários distintos** vieram de bundle antigo o bastante pra não enviar
+  `runtime_version`/`installation_id` (campos que entraram em 05/08).
+
 ## ⚠️ AJUDA COM O APP · suporte do produto, no menu (29/08/2026)
 
 Pedido do Matheus: *"no app, no menu, tivesse um botão de ajuda com app, caso a
