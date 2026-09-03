@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "test:mutantes": "node scripts/mutantes.mjs",
     "i18n": "node scripts/i18n-cobertura.mjs",
-    "verificar": "npm run typecheck && npm run test && npm run i18n"
+    "verificar": "npm run typecheck && npm run test && npm run i18n",
+    "loja": "node scripts/driftLoja.js"
   },
   "dependencies": {
     "@bacons/apple-targets": "^4.0.7",

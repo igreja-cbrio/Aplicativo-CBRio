@@ -1,0 +1,23 @@
+{
+  "_leia": "Qual BINÁRIO está PUBLICADO em cada loja (não o último build do EAS). É a fonte da verdade da catraca em scripts/driftLoja.js. ATUALIZE ESTE ARQUIVO no mesmo PR/commit em que uma release chegar à loja — foi justamente o descompasso entre 'build feito' e 'build publicado' que causou o incidente de 03/09/2026: o iOS 41 e as vc 6 e 7 existiam no EAS enquanto as lojas serviam binários de junho e julho.",
+  "_como_conferir": {
+    "ios": "npx eas-cli submit:status -p ios  → a linha 'App Store  Live: 1.0 (NN)'",
+    "android": "Play Console → Produção → release ativa (o CLI não responde isso; a conta de serviço só tem 'testing tracks')"
+  },
+  "_campos": {
+    "rotulo": "como a loja chama (build NN no iOS, versionCode NN no Android)",
+    "publicado_em": "AAAA-MM-DD em que ESTE binário passou a ser servido ao público",
+    "commit": "hash do commit que gerou o binário, quando conhecido; ausente ⇒ a catraca aproxima pelo último commit até publicado_em"
+  },
+  "ios": {
+    "rotulo": "build 33",
+    "publicado_em": "2026-06-22",
+    "nota": "Compilado FORA do EAS (Xcode/Transporter) — não existe registro de commit. Os builds iOS #17 a #33 não existem no EAS. Medido em 03/09 com `eas submit:status -p ios`: App Store Live 1.0 (33), uploaded 2 months ago."
+  },
+  "android": {
+    "rotulo": "versionCode 5",
+    "publicado_em": "2026-07-24",
+    "commit": "6202102",
+    "nota": "As vc 6 (18/08) e vc 7 (29/08) foram para o track INTERNAL (eas.json corrigido em 03/09, PR #154) e nunca chegaram à produção. Confirmado pela telemetria: das 98 instalações novas em 30 dias, 35 caíram na vc 5."
+  }
+}
