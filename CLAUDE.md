@@ -155,6 +155,76 @@ próximo iOS sai como 42.
   usuários distintos** vieram de bundle antigo o bastante pra não enviar
   `runtime_version`/`installation_id` (campos que entraram em 05/08).
 
+## ⚠️⚠️ A ROTINA DO BUILD DE LOJA · a catraca no `npm run ota` (03/09/2026)
+
+O Marcos perguntou: *"criamos uma rotina para subir isso a cada quantas OTAs?"*
+
+**Resposta curta: a unidade não é OTA.** Contar OTA mede VOLUME de publicação,
+não DISTÂNCIA. Um OTA que troca uma string não envelhece o binário; um que
+adiciona uma aba ou mexe no cadastro envelhece muito. As três réguas que valem:
+
+1. **Mudança NATIVA pendente** — dependência, plugin, permissão, entitlement,
+   `googleServicesFile`. O OTA não entrega isso **e tenta mesmo assim**: com
+   `runtimeVersion.policy = appVersion` travado em 1.0.0, o manifesto serve o
+   pacote novo a um binário que não tem aquele código nativo. Desfecho é
+   **crash**, não desatualização. ⇒ **bloqueio, sozinho, sem olhar distância.**
+2. **Distância do embutido** — dias e commits desde o binário publicado.
+3. **Cadência de 2 semanas** — ancorada no ciclo de revisão da Apple; semanal
+   viraria fila.
+
+### Onde isso é cobrado
+
+`scripts/ota.js` (o **único** caminho autorizado pra publicar OTA) ganhou a
+**GUARDA 0**, antes de todas as outras: ela é a única guarda dali que fala do que
+a pessoa que **BAIXA** o app recebe, e não do que quem já tem instalado recebe.
+
+- **Régua pura** em `scripts/driftLoja.js` (`avaliarDrift` + `diffNativo`), com
+  `scripts/driftLoja.d.ts` pra o `tsc` aceitar o import no teste. CJS de
+  propósito: `ota.js` roda por `node` direto, sem bundler. **Não vive em `lib/`
+  porque não é código de app** — iria pro bundle sem servir pra nada.
+- **Limites:** avisa em **14 dias OU 30 commits**; bloqueia em **30 dias OU 60
+  commits**, ou com mudança nativa pendente.
+- **Escape hatch:** `CBRIO_OTA_EMBUTIDO_VELHO=1` (padrão do
+  `CBRIO_OTA_SEM_PORTAO`). ⚠️ **Não é flag de argv** — tudo em `process.argv`
+  vira a MENSAGEM do update.
+- `npm run loja` imprime o relatório sem publicar nada.
+- Teste: `test/driftLoja.test.ts` (21 casos) + **4 mutantes** em
+  `scripts/mutantes.mjs`, todos mortos (75/75 no total).
+
+### ⚠️⚠️ `loja-publicado.json` É O LEDGER — e atualizar é parte da release
+
+Ele registra qual binário está **PUBLICADO** em cada loja, não o último build do
+EAS. **Essa distinção é a causa raiz do incidente:** o iOS 41 e as vc 6 e 7
+existiam no EAS enquanto as lojas serviam junho e julho, então "tem build
+recente" nunca foi sinal de nada.
+
+**Atualize o ledger no mesmo PR/commit em que uma release chegar à loja.** Como
+conferir: iOS por `npx eas-cli submit:status -p ios` (linha `App Store Live`);
+Android **só pelo Play Console** — o CLI não responde isso, porque a conta de
+serviço `eas-submit@crm-cbrio` só tem "Release apps to testing tracks".
+
+⚠️ `commit` é opcional: o iOS 33 foi compilado FORA do EAS (Xcode, 22/06) e não
+tem registro de commit. Sem ele a catraca aproxima pelo último commit até
+`publicado_em` — pior que o hash, muito melhor que não medir.
+
+⚠️⚠️ **FAIL-OPEN é lei**, igual `lib/versaoApp.ts`: ledger ausente, commit fora
+do clone, JSON ilegível ⇒ **avisa e deixa publicar**. Travar um hotfix por um
+dado que não deu pra ler é o pior desfecho. Só bloqueia com fato na mão.
+
+### Estado no dia em que isto entrou (o `npm run loja` real)
+
+```
+❌ IOS     build 33 · publicado em 2026-06-22 · 76 dias · 193 commits
+❌ ANDROID versionCode 5 · publicado em 2026-07-24 · 41 dias · 168 commits
+   ⚙ app.json · plugins mudou · android.googleServicesFile mudou
+```
+
+⇒ **A catraca BLOQUEIA OTA hoje**, e está certa: o `googleServicesFile` entrou
+em **18/08** (#124) e a Play serve a vc 5 de 24/07 — é exatamente a origem do
+`Default FirebaseApp is not initialized` que o recado do Matheus registra. Até a
+vc 8 / build 42 chegarem às lojas **e o ledger ser atualizado**, publicar OTA
+exige `CBRIO_OTA_EMBUTIDO_VELHO=1`.
+
 ## ⚠️ AJUDA COM O APP · suporte do produto, no menu (29/08/2026)
 
 Pedido do Matheus: *"no app, no menu, tivesse um botão de ajuda com app, caso a

@@ -572,6 +572,42 @@ const MUTANTES = [
   // não manda", e ela só se pega cruzando os dois repos, que é coisa que nem o
   // `tsc` faz (o tipo é declarado na própria tela, e a resposta da API não é
   // validada em runtime). Fica registrado pra ninguém achar que está coberto.
+  {
+    // ⚠️ O mutante do CRASH. Mudança nativa não viaja por OTA, e com
+    // `runtimeVersion.policy = appVersion` travado em 1.0.0 o manifesto entrega
+    // mesmo assim: o pacote novo chega a um binário sem aquele código nativo.
+    // Medido em 03/09: o `googleServicesFile` entrou em 18/08 (#124) e a Play
+    // servia a vc 5 de 24/07 — daí o "Default FirebaseApp is not initialized".
+    nome: "driftLoja: mudança nativa deixar de bloquear (o caminho do crash)",
+    arq: "scripts/driftLoja.js",
+    de: "  if (nativo === true || estourouTeto) return { nivel: 'bloqueio', motivos };",
+    para: "  if (estourouTeto) return { nivel: 'bloqueio', motivos };",
+  },
+  {
+    // ⚠️ Fail-open virando fail-closed: um ledger ilegível passaria a TRAVAR
+    // toda publicação de OTA — inclusive um hotfix de domingo. É o oposto da
+    // lei de `lib/versaoApp.ts`, e o defeito seria descoberto no pior momento.
+    nome: "driftLoja: desconhecido virar bloqueio (fail-closed)",
+    arq: "scripts/driftLoja.js",
+    de: "    return { nivel: nativo === true ? 'bloqueio' : 'desconhecido', motivos };",
+    para: "    return { nivel: 'bloqueio', motivos };",
+  },
+  {
+    // ⚠️ "Não consegui medir" tratado como "medi e está errado": bastaria o
+    // commit-base sair do clone pra travar o OTA sem fato nenhum na mão.
+    nome: "driftLoja: mudouNativo ausente virar true",
+    arq: "scripts/driftLoja.js",
+    de: "  const nativo = e && typeof e.mudouNativo === 'boolean' ? e.mudouNativo : null;",
+    para: "  const nativo = e && typeof e.mudouNativo === 'boolean' ? e.mudouNativo : true;",
+  },
+  {
+    // ⚠️ Off-by-one na cadência combinada: com `>` o aviso só sai no 15º dia, e
+    // a régua deixa de ser "a cada 2 semanas" caladinha.
+    nome: "driftLoja: cadência de aviso virar > em vez de >=",
+    arq: "scripts/driftLoja.js",
+    de: "    (dias !== null && dias >= limites.avisoDias) ||",
+    para: "    (dias !== null && dias > limites.avisoDias) ||",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

@@ -28,12 +28,40 @@
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+const { relatar } = require('./driftLoja');
 
 const raiz = path.join(__dirname, '..');
 const msg = process.argv.slice(2).join(' ').trim();
 if (!msg) {
   console.error('Uso: npm run ota -- "mensagem do update"');
   process.exit(1);
+}
+
+// ⚠️⚠️ GUARDA 0 · A CATRACA DO BINÁRIO DA LOJA (03/09/2026)
+//
+// Vem ANTES de tudo de propósito: é a única guarda daqui que fala do que a
+// pessoa que BAIXA o app recebe, não do que quem já tem instalado recebe. O
+// incidente: as lojas serviam iOS 33 (22/06) e Android vc 5 (24/07) enquanto o
+// OTA saía verde todos os dias — e a régua de `lib/portaoUpdate.ts`, que
+// conserta a primeira abertura, ficou MORTA em campo por rodar a partir do
+// bundle embutido. Publicar OTA sem olhar isso é o que deixou o buraco crescer
+// por 2 meses sem ninguém ver.
+//
+// ⚠️ Escape hatch no padrão do CBRIO_OTA_SEM_PORTAO (e NÃO um argv `--forcar`:
+// tudo em argv vira a MENSAGEM do update, na linha 33 acima).
+// ⚠️ Fail-open: `desconhecido` só avisa. Ver a lei no topo de driftLoja.js.
+const nivelLoja = relatar(raiz);
+if (nivelLoja === 'bloqueio') {
+  if (process.env.CBRIO_OTA_EMBUTIDO_VELHO === '1') {
+    console.warn('⚠️  catraca da loja IGNORADA por CBRIO_OTA_EMBUTIDO_VELHO=1 — publicando com o embutido velho');
+  } else {
+    console.error('❌ o binário publicado está velho demais — NADA foi publicado.');
+    console.error('   Rode `npx eas-cli build --platform all --profile production`, publique nas lojas');
+    console.error('   e atualize o `loja-publicado.json` com o que ficou vivo.');
+    console.error('   Hotfix consciente: CBRIO_OTA_EMBUTIDO_VELHO=1 npm run ota -- "..."');
+    console.error('');
+    process.exit(1);
+  }
 }
 
 // Guarda 1 · .env presente precisa estar SÃO (ele tem precedência sobre o servidor)
