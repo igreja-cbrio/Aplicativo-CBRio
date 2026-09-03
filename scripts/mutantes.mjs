@@ -608,6 +608,66 @@ const MUTANTES = [
     de: "    (dias !== null && dias >= limites.avisoDias) ||",
     para: "    (dias !== null && dias > limites.avisoDias) ||",
   },
+  {
+    // ⚠⚠ Voltar a procurar só a chave ENTRE ASPAS faz o scanner contar como
+    // dívida 10 chaves que JÁ estão traduzidas — e quem tentar "pagar" leva
+    // TS1117 (chave repetida) sem saída.
+    nome: "i18n: noDicionario deixar de ver a chave sem aspas",
+    arq: "scripts/i18n-cobertura.mjs",
+    de: '  if (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(chave)) {',
+    para: '  if (false) {',
+  },
+  {
+    // ⚠⚠ MEDIDO no dicionário real: sem a âncora de início de propriedade, `HH`
+    // casa dentro de "Horário (HH:MM)" e `e` dentro de "an estimate:" — as duas
+    // sairiam da contagem EM SILÊNCIO sem ter entrada nenhuma.
+    nome: "i18n: noDicionario sem âncora de início de propriedade",
+    arq: "scripts/i18n-cobertura.mjs",
+    de: '${INICIO_DE_PROPRIEDADE}${escapado}',
+    para: '${escapado}',
+  },
+  {
+    // ⚠⚠ O scanner casa TEXTO: comentario que mencione `CPF:` marcaria a chave
+    // como traduzida sem existir entrada. É a armadilha do `//` na fonte da verdade.
+    nome: "i18n: dicionario lido COM comentario",
+    arq: "scripts/i18n-cobertura.mjs",
+    de: 'export const DICIONARIO = semComentarios(',
+    para: 'export const DICIONARIO = ((x) => x)(',
+  },
+  {
+    // ⚠⚠ O batismo exige HORÁRIO, e quem lança 400 é o servidor
+    // (`services/nextDirecionar.js`). Sem esta guarda o líder preenche o
+    // direcionamento inteiro no fim do encontro, toca em "Direcionar" e leva
+    // erro — com a fila esperando.
+    nome: "nextGestao: batismo sem horário passar",
+    arq: "lib/nextGestao.ts",
+    de: '    if (!String(entrada.horarioBatismo || "").trim()) {',
+    para: '    if (false) {',
+  },
+  {
+    // ⚠⚠ `new Date("YYYY-MM-DD")` é meia-noite UTC = 21h do dia anterior no
+    // Rio: o encontro de HOJE deixaria de casar e o walk-in do domingo cairia
+    // no encontro errado. É a armadilha registrada 4× neste repo.
+    nome: "nextGestao: comparar encontro por Date em vez de string",
+    arq: "lib/nextGestao.ts",
+    de: "  const doDia = comData.find((e) => e.data === hoje);",
+    para: "  const doDia = comData.find((e) => new Date(e.data as string).getDate() === new Date(hoje).getDate() - 1);",
+  },
+  {
+    // ⚠ Oferecer turma encerrada no seletor manda o líder pro 403 do servidor.
+    nome: "nextGestao: oferecer turma encerrada pra receber gente",
+    arq: "lib/nextGestao.ts",
+    de: '  return (Array.isArray(turmas) ? turmas : []).filter((t) => t && t.status === "aberta");',
+    para: "  return Array.isArray(turmas) ? turmas : [];",
+  },
+  {
+    // ⚠ "Não deu pra saber" virando "pode direcionar" faria a tela oferecer
+    // um horário que o servidor recusa — o oposto de declarar a lacuna.
+    nome: "nextGestao: catálogo indisponível deixar de bloquear",
+    arq: "lib/nextGestao.ts",
+    de: "    if (entrada.batismoIndisponivel) {",
+    para: "    if (false) {",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

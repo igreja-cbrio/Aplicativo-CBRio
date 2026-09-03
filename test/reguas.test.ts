@@ -15,7 +15,7 @@ import { rotaPai, ehRaiz, subirUmNivel } from "@/lib/hierarquia";
 import { acaoDaBarra, ehRotaDeBarra, irParaBarra, ROTAS_BARRA } from "@/lib/nav";
 import { hojeBRT, diaBRT } from "@/lib/dataBRT";
 import { diaDoInstanteBRT, ehDiaDoCulto, cultosDeHoje } from "@/lib/janelaCheckin";
-import { ehFormato } from "../scripts/i18n-cobertura.mjs";
+import { DICIONARIO, ehFormato, noDicionario } from "../scripts/i18n-cobertura.mjs";
 import { fichaCompleta, faltaNaFicha, podeInscrever, jaTemNaFicha } from "@/lib/ficha";
 import { montarPayloadInscricao, extrasFaltando } from "@/lib/inscricaoPayload";
 import { tipoDaCapa, arquivoDaCapa, capaCabe, MAX_CAPA_BYTES } from "@/lib/capaGrupo";
@@ -28,6 +28,7 @@ import { join } from "node:path";
 import { motivoDaFalha, podeVirarConteudo, ler } from "@/lib/falhaDeLeitura";
 import { estadoDoQr, podeDesenharQr, temCpf } from "@/lib/cartaoQr";
 import { linkDeInscricao, ehPorConvite, precisaEscolherNaLista } from "@/lib/convite";
+import { podeDirecionar, areasSaoObrigatorias, turmasQueRecebem, encontroSugerido, nomeDaPessoa } from "@/lib/nextGestao";
 import { acaoAoFechar, temRascunho } from "@/lib/descartarRascunho";
 import { casaBusca, normalizarBusca, filtrarPorTexto } from "@/lib/buscaTexto";
 import { ehDomingo, indiceDoDestaque } from "@/lib/homeCultos";
@@ -153,6 +154,7 @@ describe("hierarquia · a árvore do `cd ..`", () => {
     expect(rotaPai("/kids-filho")).toBe("/kids");
     expect(rotaPai("/evento")).toBe("/inscricoes");
     expect(rotaPai("/next-turma")).toBe("/next");
+    expect(rotaPai("/next-espera")).toBe("/next");
   });
 
   it("query string não muda o pai (deep link com ?id= tem que subir igual)", () => {
@@ -2081,5 +2083,199 @@ describe("rótulo do atalho · quebra depois da primeira palavra", () => {
     expect(quebrarAposPrimeiraPalavra("Grupos ")).toBe("Grupos ");
     // @ts-expect-error entrada inesperada não pode estourar num rótulo de tela
     expect(quebrarAposPrimeiraPalavra(undefined)).toBe("");
+  });
+});
+
+// ============================================================================
+// GESTÃO DO NEXT NO APP (03/09/2026)
+//
+// O que este bloco existe pra impedir: a tela de gestão do Next JÁ EXISTIA e
+// era inalcançável em produção — os endpoints gateavam por POSSE
+// (`next_turmas.responsavel_id`) e as 44 turmas vivas têm o campo NULO. Agora o
+// gate é a matriz de permissão, e o que a TELA decide é só não oferecer o que o
+// servidor vai recusar.
+// ============================================================================
+describe("gestão do Next no app", () => {
+  describe("direcionar", () => {
+    it("sem destino não direciona, e DIZ por quê", () => {
+      const r = podeDirecionar({ destinos: [] });
+      expect(r.pode).toBe(false);
+      expect(r.motivo).toBeTruthy();
+    });
+
+    it("⚠️⚠️ batismo SEM horário não passa — o servidor lança 400", () => {
+      const r = podeDirecionar({ destinos: ["batismo"] });
+      expect(r.pode).toBe(false);
+      expect(r.motivo).toContain("horário");
+    });
+
+    it("batismo COM horário passa", () => {
+      expect(podeDirecionar({ destinos: ["batismo"], horarioBatismo: "08:30" }).pode).toBe(true);
+    });
+
+    it("horário só de espaço NÃO conta como horário", () => {
+      expect(podeDirecionar({ destinos: ["batismo"], horarioBatismo: "   " }).pode).toBe(false);
+    });
+
+    it("⚠️ catálogo indisponível NÃO é 'não tem horário' — é 'não deu pra saber'", () => {
+      const r = podeDirecionar({ destinos: ["batismo"], horarioBatismo: "08:30", batismoIndisponivel: true });
+      expect(r.pode).toBe(false);
+      expect(r.motivo).toContain("carregaram");
+    });
+
+    it("servir e grupo passam sem horário nenhum (o batismo é o único que exige)", () => {
+      expect(podeDirecionar({ destinos: ["voluntarios"] }).pode).toBe(true);
+      expect(podeDirecionar({ destinos: ["grupos"] }).pode).toBe(true);
+      expect(podeDirecionar({ destinos: ["voluntarios", "grupos"] }).pode).toBe(true);
+    });
+
+    it("⚠️ área NÃO é obrigatória — o servidor aceita servir sem área", () => {
+      expect(areasSaoObrigatorias()).toBe(false);
+    });
+
+    it("entrada inesperada não estoura no fim do encontro", () => {
+      // @ts-expect-error a tela pode chamar com o estado ainda vazio
+      expect(podeDirecionar(undefined).pode).toBe(false);
+      // @ts-expect-error idem
+      expect(podeDirecionar({ destinos: null }).pode).toBe(false);
+    });
+  });
+
+  describe("turmas que recebem alguém da fila", () => {
+    it("⚠️ só turma ABERTA — encerrada devolveria 403 do servidor", () => {
+      const r = turmasQueRecebem([
+        { id: "a", status: "aberta" },
+        { id: "b", status: "encerrada" },
+        { id: "c", status: null },
+      ]);
+      expect(r.map((t) => t.id)).toEqual(["a"]);
+    });
+
+    it("lista vazia ou ausente devolve vazio (a tela diz que não há turma aberta)", () => {
+      expect(turmasQueRecebem([])).toEqual([]);
+      expect(turmasQueRecebem(null)).toEqual([]);
+      expect(turmasQueRecebem(undefined)).toEqual([]);
+    });
+  });
+
+  describe("encontro sugerido", () => {
+    const encs = [
+      { id: "e1", numero: 1, data: "2026-09-06" },
+      { id: "e2", numero: 1, data: "2026-09-13" },
+      { id: "e3", numero: 1, data: "2026-09-20" },
+    ];
+
+    it("o de HOJE vence", () => {
+      expect(encontroSugerido(encs, "2026-09-13")).toBe("e2");
+    });
+
+    it("sem encontro hoje, vale o PRÓXIMO futuro (o mais perto)", () => {
+      expect(encontroSugerido(encs, "2026-09-08")).toBe("e2");
+    });
+
+    it("tudo no passado ⇒ o mais RECENTE (é onde a chamada atrasada é lançada)", () => {
+      expect(encontroSugerido(encs, "2026-10-01")).toBe("e3");
+    });
+
+    it("⚠️⚠️ compara STRING, não Date — se virar `new Date(data)` o dia escorrega", () => {
+      // 2026-09-06 em `new Date(...)` é meia-noite UTC = 21h de 05/09 no Rio.
+      // Com Date, "hoje = 2026-09-06" deixaria de casar o encontro do dia.
+      expect(encontroSugerido([{ id: "so", data: "2026-09-06" }], "2026-09-06")).toBe("so");
+    });
+
+    it("encontro SEM data ainda é destino de presença (último recurso)", () => {
+      expect(encontroSugerido([{ id: "legado", numero: null, data: null }], "2026-09-06")).toBe("legado");
+    });
+
+    it("sem encontro nenhum devolve null (a tela não pré-seleciona nada)", () => {
+      expect(encontroSugerido([], "2026-09-06")).toBeNull();
+      expect(encontroSugerido(null, "2026-09-06")).toBeNull();
+    });
+  });
+
+  describe("nome de quem está na fila", () => {
+    it("junta nome e sobrenome", () => {
+      expect(nomeDaPessoa({ nome: "Ana", sobrenome: "Souza" })).toBe("Ana Souza");
+    });
+
+    it("⚠️ nunca devolve vazio — cartão em branco não se lê", () => {
+      expect(nomeDaPessoa({ nome: null, sobrenome: null })).toBe("Sem nome");
+      expect(nomeDaPessoa({ nome: "  ", sobrenome: null })).toBe("Sem nome");
+    });
+
+    it("sobrenome ausente não deixa espaço pendurado", () => {
+      expect(nomeDaPessoa({ nome: "Ana", sobrenome: null })).toBe("Ana");
+    });
+  });
+});
+
+// ============================================================================
+// ⚠️⚠️ O SCANNER DE i18n CONTAVA COMO DÍVIDA CHAVE QUE JÁ EXISTIA (03/09/2026)
+//
+// `noDicionario` procurava só a chave ENTRE ASPAS (`"CPF":`), e o dicionário
+// tem entradas escritas sem aspas (`CPF:`, `Sexo:`, `Registrar:`, `em:` — JS
+// aceita quando a chave é identificador válido). Efeito: 10 chaves traduzidas
+// contadas como dívida — e quem tentasse "pagar" acrescentando a versão entre
+// aspas levava **TS1117 (chave repetida)** e ficava sem saída.
+// ============================================================================
+describe("i18n · noDicionario vê a chave escrita sem aspas", () => {
+  const dic = [
+    "export const TRANSLATIONS = {",
+    '  "Gestão do NEXT": { en: "NEXT management", es: "Gestión del NEXT" },',
+    '  CPF: { en: "CPF", es: "CPF" },',
+    '  em: { en: "on", es: "el" },',
+    '  "Registrar presença de": { en: "Record attendance for", es: "Registrar asistencia de" },',
+    "};",
+  ].join("\n");
+
+  it("acha a chave entre aspas (o caminho que já funcionava)", () => {
+    expect(noDicionario("Gestão do NEXT", dic)).toBe(true);
+  });
+
+  it("⚠️ acha a chave SEM aspas — era o furo", () => {
+    expect(noDicionario("CPF", dic)).toBe(true);
+  });
+
+  it("chave ausente continua sendo dívida", () => {
+    expect(noDicionario("Chegou agora", dic)).toBe(false);
+  });
+
+  it("⚠️⚠️ chave curta NÃO casa DENTRO de outro texto", () => {
+    // MEDIDO no dicionário real em 03/09: sem a âncora de início de
+    // propriedade, `HH` casava dentro de "Horário (HH:MM)" e `e` dentro de
+    // "an estimate:" — as duas sairiam da contagem EM SILÊNCIO mesmo sem
+    // entrada nenhuma. Guarda que esconde o problema é pior que guarda nenhuma.
+    const real = [
+      "export const TRANSLATIONS = {",
+      '  "Horário (HH:MM)": { en: "Time (HH:MM)", es: "Hora (HH:MM)" },',
+      '  "Esta data é uma estimativa": { en: "This is an estimate: calculated", es: "x" },',
+      "};",
+    ].join("\n");
+    expect(noDicionario("HH", real)).toBe(false);
+    expect(noDicionario("e", real)).toBe(false);
+    // e a entrada de VERDADE continua sendo achada
+    expect(noDicionario("HH", '{ HH: { en: "x", es: "y" } }')).toBe(true);
+    expect(noDicionario("em", dic)).toBe(true);
+  });
+
+  it("⚠️⚠️ COMENTÁRIO não marca chave como traduzida", () => {
+    // O scanner casa TEXTO. Um comentário que MENCIONE `CPF:` faria a chave
+    // passar sem existir entrada nenhuma — a armadilha do `//` na fonte da
+    // verdade. Por isso o dicionário é lido por `semComentarios`.
+    const comComentario = semComentarios('{ "Outra": { en: "x", es: "y" } } // fala de CPF: aqui');
+    expect(noDicionario("CPF", comComentario)).toBe(false);
+
+    // ⚠️ E o dicionário REAL que o scanner usa por padrão tem que chegar sem
+    // comentário — o teste acima prova a régua, este prova que ela É aplicada
+    // na fonte da verdade. "Dicionário de traduções" só existe no JSDoc do topo
+    // de `lib/translations.ts`; se aparecer aqui, o `semComentarios` caiu.
+    expect(DICIONARIO).not.toContain("Dicionário de traduções");
+    expect(DICIONARIO).toContain('"Gestão do NEXT"');
+  });
+
+  it("chave com caractere especial de regex não estoura", () => {
+    const d = '{ "Onde quer servir? (opcional)": { en: "x", es: "y" } }';
+    expect(noDicionario("Onde quer servir? (opcional)", d)).toBe(true);
+    expect(noDicionario("Onde quer servir. .opcional.", d)).toBe(false);
   });
 });

@@ -39,7 +39,10 @@ const RAIZ = process.cwd();
 // Depois de fechar perfil, escala-supervisor, grupo-visita e grupo-editar
 // (Onda 2/3): **293 e 36**. O grosso do que sobra é `completar-cadastro.tsx`
 // (~40 chaves) e o resto espalhado — ver a listagem que este script imprime.
-const TETO_SEM_TRADUCAO = 270;   // 273 -> 270 em 11/08 (o portao so desce)
+const TETO_SEM_TRADUCAO = 247;   // 273 -> 270 em 11/08 - 270 -> 247 em 03/09
+                                 // (o portao so desce). A queda de 03/09 NAO
+                                 // e texto traduzido: o scanner passou a VER
+                                 // as chaves escritas SEM aspas no dicionario.
 const TETO_SOLTAS = 31;   // 32 -> 31 em 11/08: o scanner parou de contar comentário
 
 function varrer(dir, saida = []) {
@@ -55,7 +58,15 @@ function varrer(dir, saida = []) {
 const arquivos = [join(RAIZ, "app"), join(RAIZ, "components")].flatMap((d) => varrer(d));
 
 // ── 1. chaves usadas em t("…") × dicionário ────────────────────────────────
-const dicionario = readFileSync(join(RAIZ, "lib", "translations.ts"), "utf8");
+// ⚠️⚠️ SEM COMENTÁRIO. `noDicionario` casa TEXTO do arquivo, e um
+// comentário que MENCIONE `CPF:` marcaria a chave como traduzida sem existir
+// entrada nenhuma — medido em 03/09: dois "acertos" vinham do comentário, não do
+// dicionário. É a MESMA armadilha do `//` que este scanner já tratava do outro
+// lado (a varredura das telas), agora na fonte da verdade.
+export const DICIONARIO = semComentarios(
+  readFileSync(join(RAIZ, "lib", "translations.ts"), "utf8")
+);
+const dicionario = DICIONARIO;
 /** A chave é a própria frase em PORTUGUÊS (ver `lib/i18n.ts`). */
 /**
  * ⚠️ Máscara de FORMATO não é texto traduzível — é a forma que a pessoa deve
@@ -87,10 +98,27 @@ export function ehFormato(s) {
   return /^[dmayhs0-9]+([\/\-:.][dmayhs0-9]+)+$/.test(v);
 }
 
-function noDicionario(chave) {
-  // As chaves do arquivo são literais entre aspas duplas seguidas de `:`.
+// ⚠️⚠️ Exige que a chave seja o INÍCIO de uma propriedade (começo de linha,
+// espaço, vírgula ou `{`). Sem isso a chave curta `em` casaria DENTRO de
+// outra ("Registrar presença de" tem "em" no meio de "presença") e sairia da
+// contagem EM SILÊNCIO — guarda que esconde o problema é pior que guarda
+// nenhuma. ⚠️ Fica em constante pro mutante poder ancorar sem escape.
+const INICIO_DE_PROPRIEDADE = "(^|[\\s,{])";
+
+export function noDicionario(chave, dic = dicionario) {
   const escapado = chave.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`"${escapado}"\\s*:`).test(dicionario);
+  // Forma comum: literal entre aspas duplas seguido de `:`.
+  if (new RegExp(`"${escapado}"\\s*:`).test(dic)) return true;
+  // ⚠️⚠️ E a forma SEM ASPAS. JS aceita `CPF: {…}` quando a chave é um
+  // identificador válido, e o dicionário tem entradas assim (`CPF`, `Sexo`,
+  // `Registrar`, `em`…). Procurar só a versão entre aspas fazia o scanner
+  // contar como DÍVIDA chave que já está traduzida — e o efeito prático é pior
+  // que o número errado: quem tentasse "pagar" acrescentando a versão entre
+  // aspas ganhava **TS1117 (chave repetida)** e ficava sem saída.
+  if (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(chave)) {
+    if (new RegExp(`${INICIO_DE_PROPRIEDADE}${escapado}\\s*:`, "m").test(dic)) return true;
+  }
+  return false;
 }
 
 const semTraducao = new Map(); // chave -> [arquivos]

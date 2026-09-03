@@ -20,7 +20,10 @@ import { dataComHora } from "@/lib/proximoEncontro";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { Skeleton } from "@/components/anim/Skeleton";
 import { useNextSync } from "@/lib/useNextSync";
-import { inscreverNext, checkinNext, getNextPapel, type NextEncontro, type NextTurmaResumo } from "@/lib/api";
+import {
+  inscreverNext, checkinNext, getNextGestao, getNextPapel,
+  type NextEncontro, type NextGestao, type NextTurmaGestao,
+} from "@/lib/api";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { BRAND_FONT } from "@/lib/fonts";
 
@@ -62,18 +65,38 @@ export default function NextScreen() {
   const [inscrevendo, setInscrevendo] = useState(false);
   const [checkinId, setCheckinId] = useState<string | null>(null);
 
-  // Papel do membro logado: se for responsável por turma(s), a tela revela a
-  // seção "Turmas que você conduz" (adapta pelo papel, sem aba nova).
-  const [turmasResp, setTurmasResp] = useState<NextTurmaResumo[]>([]);
+  // ⚠️⚠️ GESTÃO DO NEXT · o gate é PERMISSÃO, não posse (03/09/2026).
+  //
+  // Antes esta seção lia `getNextPapel()`, que gateia por POSSE
+  // (`next_turmas.responsavel_id = membro.id`) — e as 44 turmas vivas têm esse
+  // campo NULO. Ou seja `responsavel` respondia `false` pra TODO MUNDO e a
+  // seção NUNCA renderizava: a tela de gestão existia e era inalcançável.
+  //
+  // ⚠️ `getNextPapel` fica como PLANO B pra backend antigo (deploy em 2
+  // etapas): sem ele, um bundle novo contra API velha esconderia a gestão de
+  // quem entra por posse. O shape de `/next/papel` é INTOCADO de propósito.
+  const [gestao, setGestao] = useState<NextGestao | null>(null);
   useFocusEffect(
     useCallback(() => {
       let vivo = true;
-      getNextPapel()
-        .then((p) => { if (vivo) setTurmasResp(p.responsavel ? p.turmas : []); })
-        .catch(() => { if (vivo) setTurmasResp([]); });
+      getNextGestao()
+        .then((g) => { if (vivo) setGestao(g.gerencia ? g : null); })
+        .catch(() =>
+          getNextPapel()
+            .then((p) => {
+              if (!vivo) return;
+              setGestao(
+                p.responsavel
+                  ? { gerencia: true, escreve: true, por_permissao: false, eh_responsavel: true, espera: 0, turmas: p.turmas }
+                  : null
+              );
+            })
+            .catch(() => { if (vivo) setGestao(null); })
+        );
       return () => { vivo = false; };
     }, [])
   );
+  const turmasGeridas: NextTurmaGestao[] = gestao?.turmas || [];
 
   // ⚠️ CONFIRMA ANTES DE GRAVAR. Antes, o único aviso era um Alert DEPOIS da
   // inscrição — a pessoa descobria que estava inscrita, não decidia.
@@ -182,10 +205,46 @@ ${t("Primeiro encontro")}: ${dataComHora(me.encontros[0].data, me.encontros[0].h
           <View style={{ width: 24 }} />
         </View>
 
-        {turmasResp.length > 0 && (
+        {gestao !== null && (
           <View style={{ gap: spacing.sm }}>
-            <Text style={styles.section}>{t("Turmas que você conduz")}</Text>
-            {turmasResp.map((turma) => (
+            <Text style={styles.section}>{t("Gestão do NEXT")}</Text>
+
+            {/* ⚠️ Aceitações vem PRIMEIRO: é a fila que espera decisão de
+                gente. Turma sem ninguém alocado é o gargalo do fluxo. */}
+            <Pressable
+              style={styles.turmaCard}
+              onPress={() => router.push("/next-espera" as any)}
+              accessibilityRole="button"
+              accessibilityLabel={t("Aceitações do NEXT")}
+            >
+              <View style={styles.turmaIcon}>
+                <Ionicons name="hand-right-outline" size={20} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.turmaNome} numberOfLines={1}>{t("Aceitações")}</Text>
+                <Text style={styles.turmaSub}>
+                  {gestao.espera > 0
+                    ? `${gestao.espera} ${gestao.espera === 1 ? t("pessoa esperando turma") : t("pessoas esperando turma")}`
+                    : t("Ninguém esperando turma")}
+                </Text>
+              </View>
+              {gestao.espera > 0 ? (
+                <View style={styles.pastilha}><Text style={styles.pastilhaTxt}>{gestao.espera}</Text></View>
+              ) : null}
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </Pressable>
+
+            {/* ⚠️ "Somente leitura" é DECLARADO: sem isso a pessoa abre a turma,
+                toca em presença e leva 403 sem entender por quê. */}
+            {gestao.escreve === false ? (
+              <Text style={styles.turmaSub}>{t("Seu acesso ao NEXT é só de leitura.")}</Text>
+            ) : null}
+
+            {turmasGeridas.length === 0 ? (
+              <Text style={styles.turmaSub}>{t("Nenhuma turma aberta agora.")}</Text>
+            ) : null}
+
+            {turmasGeridas.map((turma) => (
               <Pressable
                 key={turma.id}
                 style={styles.turmaCard}
@@ -198,8 +257,23 @@ ${t("Primeiro encontro")}: ${dataComHora(me.encontros[0].data, me.encontros[0].h
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.turmaNome} numberOfLines={1}>{turma.nome}</Text>
-                  <Text style={styles.turmaSub}>
-                    {turma.status === "aberta" ? t("Aberta") : turma.status === "encerrada" ? t("Encerrada") : turma.status}
+                  <Text style={styles.turmaSub} numberOfLines={1}>
+                    {[
+                      turma.status === "aberta" ? t("Aberta") : turma.status === "encerrada" ? t("Encerrada") : turma.status,
+                      // ⚠️ Só mostra a contagem quando o servidor a mandou:
+                      // `0` é resposta ("ninguém matriculado"), `undefined` é
+                      // "backend antigo não manda" — e escrever "0" nesse caso
+                      // afirmaria turma vazia sem ter medido.
+                      typeof turma.matriculados === "number"
+                        ? `${turma.matriculados} ${turma.matriculados === 1 ? t("inscrito") : t("inscritos")}`
+                        : null,
+                      // ⚠️ Data do 1º encontro fatiada da string, nunca `new
+                      // Date(iso)`: aquela forma é UTC e no Rio devolve o dia
+                      // anterior.
+                      turma.encontros?.[0]?.data
+                        ? `${t("a partir de")} ${String(turma.encontros[0].data).slice(8, 10)}/${String(turma.encontros[0].data).slice(5, 7)}`
+                        : null,
+                    ].filter(Boolean).join(" · ")}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
@@ -423,6 +497,8 @@ const makeStyles = (colors: Palette) =>
     },
     turmaNome: { color: colors.text, fontSize: font.size.md, fontWeight: "800" },
     turmaSub: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 2 },
+    pastilha: { backgroundColor: colors.warning, borderRadius: radius.full, minWidth: 24, paddingHorizontal: 7, paddingVertical: 2, alignItems: "center" },
+    pastilhaTxt: { color: "#fff", fontSize: 12, fontWeight: "800" },
     // Prévia dos encontros ANTES de decidir (10/08 · apontamento 4).
     previaWrap: { gap: spacing.xs, marginBottom: spacing.sm },
     previaLinha: { flexDirection: "row", alignItems: "center", gap: spacing.xs },

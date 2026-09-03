@@ -6,6 +6,118 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  // ───────────── Gestão do NEXT no app · voluntário (03/09/2026) ─────────────
+  "Gestão do NEXT": { en: "NEXT management", es: "Gestión del NEXT" },
+  "Aceitações": { en: "Acceptances", es: "Aceptaciones" },
+  "Aceitações do NEXT": { en: "NEXT acceptances", es: "Aceptaciones del NEXT" },
+  "pessoa esperando turma": { en: "person waiting for a class", es: "persona esperando grupo" },
+  "pessoas esperando turma": { en: "people waiting for a class", es: "personas esperando grupo" },
+  "Ninguém esperando turma": { en: "Nobody waiting for a class", es: "Nadie esperando grupo" },
+  "Ninguém esperando turma agora.": { en: "Nobody waiting for a class right now.", es: "Nadie esperando grupo ahora." },
+  "Seu acesso ao NEXT é só de leitura.": {
+    en: "Your NEXT access is read-only.",
+    es: "Tu acceso al NEXT es solo de lectura.",
+  },
+  "Nenhuma turma aberta agora.": { en: "No open class right now.", es: "Ningún grupo abierto ahora." },
+  "Nenhuma turma aberta agora — as turmas do mês abrem por rotina automática.": {
+    en: "No open class right now — the monthly classes open automatically.",
+    es: "Ningún grupo abierto ahora — los grupos del mes se abren automáticamente.",
+  },
+  "a partir de": { en: "from", es: "desde" },
+  "Esperando": { en: "Waiting", es: "Esperando" },
+  "Quem aceitou o convite no fim do encontro e ainda não tem turma. Coloque cada pessoa numa turma aberta.": {
+    en: "People who accepted the invitation at the end of the gathering and still have no class. Put each one into an open class.",
+    es: "Quienes aceptaron la invitación al final del encuentro y aún no tienen grupo. Coloca a cada persona en un grupo abierto.",
+  },
+  "Esta fila é só para quem gerencia o NEXT.": {
+    en: "This queue is only for people who manage NEXT.",
+    es: "Esta fila es solo para quien gestiona el NEXT.",
+  },
+  "Não foi possível carregar a fila.": { en: "Couldn't load the queue.", es: "No se pudo cargar la fila." },
+  "Colocar em uma turma": { en: "Put into a class", es: "Colocar en un grupo" },
+  "Colocar em": { en: "Put into", es: "Colocar en" },
+  "Colocar nesta turma?": { en: "Put into this class?", es: "¿Colocar en este grupo?" },
+  "Colocar": { en: "Put in", es: "Colocar" },
+  "Em qual turma?": { en: "Which class?", es: "¿En qué grupo?" },
+  "entra em": { en: "goes into", es: "entra en" },
+  "está na turma": { en: "is in the class", es: "está en el grupo" },
+  "turma": { en: "class", es: "grupo" },
+  "Pronto": { en: "Done", es: "Listo" },
+  "Já estava resolvido": { en: "Already sorted", es: "Ya estaba resuelto" },
+  "Não foi possível colocar na turma": { en: "Couldn't put into the class", es: "No se pudo colocar en el grupo" },
+
+  // walk-in — quem chegou e não estava na lista
+  "Chegou agora": { en: "Just arrived", es: "Llegó ahora" },
+  "Registrar quem chegou agora": { en: "Register someone who just arrived", es: "Registrar a quien llegó ahora" },
+  "Só o nome é obrigatório. O resto ajuda a equipe a achar essa pessoa depois.": {
+    en: "Only the name is required. The rest helps the team find this person later.",
+    es: "Solo el nombre es obligatorio. El resto ayuda al equipo a encontrar a esta persona después.",
+  },
+  "Primeiro nome": { en: "First name", es: "Nombre" },
+  "Sobrenome": { en: "Last name", es: "Apellido" },
+  "Opcional": { en: "Optional", es: "Opcional" },
+  "Opcional — ajuda a não duplicar cadastro": {
+    en: "Optional — helps avoid duplicate records",
+    es: "Opcional — ayuda a no duplicar registros",
+  },
+  "Marcar presença em": { en: "Mark attendance at", es: "Marcar asistencia en" },
+  "Informe pelo menos o primeiro nome.": { en: "Enter at least the first name.", es: "Escribe al menos el nombre." },
+  "Já estava na turma": { en: "Already in the class", es: "Ya estaba en el grupo" },
+  "Marcamos a presença — essa pessoa já estava matriculada aqui.": {
+    en: "We marked attendance — this person was already enrolled here.",
+    es: "Marcamos la asistencia — esta persona ya estaba inscrita aquí.",
+  },
+  "Pronto. Ligamos ao cadastro que já existia dessa pessoa.": {
+    en: "Done. We linked it to this person's existing record.",
+    es: "Listo. Lo vinculamos al registro que ya existía de esta persona.",
+  },
+  "Pronto. A pessoa entrou na turma e a presença foi marcada.": {
+    en: "Done. The person joined the class and attendance was marked.",
+    es: "Listo. La persona entró al grupo y se marcó la asistencia.",
+  },
+  "Confira o campo": { en: "Check the field", es: "Revisa el campo" },
+  "Não foi possível registrar": { en: "Couldn't register", es: "No se pudo registrar" },
+
+  // direcionamento — o fim do encontro
+  "Direcionar": { en: "Send on", es: "Direccionar" },
+  "Direcionado": { en: "Sent on", es: "Direccionado" },
+  "Pra onde essa pessoa vai depois do NEXT?": {
+    en: "Where does this person go after NEXT?",
+    es: "¿A dónde va esta persona después del NEXT?",
+  },
+  "A equipe de cada área recebe o encaminhamento.": {
+    en: "Each area's team gets the referral.",
+    es: "El equipo de cada área recibe la derivación.",
+  },
+  "Não foi possível direcionar": { en: "Couldn't send on", es: "No se pudo direccionar" },
+  "Horário do batismo": { en: "Baptism time", es: "Horario del bautismo" },
+  "Escolha o horário do batismo.": { en: "Choose the baptism time.", es: "Elige el horario del bautismo." },
+  "Escolha ao menos um destino.": { en: "Choose at least one destination.", es: "Elige al menos un destino." },
+  "Os horários do batismo não carregaram.": {
+    en: "The baptism times didn't load.",
+    es: "Los horarios del bautismo no cargaron.",
+  },
+  "Os horários do batismo não carregaram. Tente de novo.": {
+    en: "The baptism times didn't load. Try again.",
+    es: "Los horarios del bautismo no cargaron. Inténtalo de nuevo.",
+  },
+  "Nenhum horário aberto no próximo batismo.": {
+    en: "No open time at the next baptism.",
+    es: "Ningún horario abierto en el próximo bautismo.",
+  },
+  "Onde quer servir? (opcional)": { en: "Where do you want to serve? (optional)", es: "¿Dónde quieres servir? (opcional)" },
+  "Quero servir": { en: "I want to serve", es: "Quiero servir" },
+  "Grupo de conexão": { en: "Connect group", es: "Grupo de conexión" },
+  // ⚠️ minúsculas: entram inline no resumo do que já foi indicado
+  "batismo": { en: "baptism", es: "bautismo" },
+  "servir": { en: "serving", es: "servir" },
+  "grupo": { en: "group", es: "grupo" },
+  // Duas chaves desta leva ("CPF" e "Registrar") JA EXISTEM aqui, escritas sem
+  // aspas mais abaixo. Chave repetida e erro de TypeScript (TS1117), e
+  // sobrescrever mudaria texto de telas que nao tem nada a ver com esta leva.
+  // O scanner de i18n passou a VER as duas formas em 03/09 (ver a secao no
+  // CLAUDE.md), entao elas nao contam mais como divida.
+  "Registrado": { en: "Registered", es: "Registrado" },
   // ───────────── Ajuda com o app · suporte do produto (29/08/2026) ─────────────
   "Ajuda com o app": { en: "Help with the app", es: "Ayuda con la app" },
   "Dúvida sobre o aplicativo, seus dados aqui dentro ou algo que não está funcionando? Escreva abaixo — quem cuida do app recebe direto.": {
