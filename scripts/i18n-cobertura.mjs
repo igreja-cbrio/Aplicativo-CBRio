@@ -43,7 +43,9 @@ const TETO_SEM_TRADUCAO = 247;   // 273 -> 270 em 11/08 - 270 -> 247 em 03/09
                                  // (o portao so desce). A queda de 03/09 NAO
                                  // e texto traduzido: o scanner passou a VER
                                  // as chaves escritas SEM aspas no dicionario.
-const TETO_SOLTAS = 31;   // 32 -> 31 em 11/08: o scanner parou de contar comentário
+const TETO_SOLTAS = 30;   // 32 -> 31 em 11/08 (o scanner parou de contar
+                          // comentario) - 31 -> 30 em 03/09: o "NEXT" do titulo
+                          // virou constante (e MARCA, nao texto de interface).
 
 function varrer(dir, saida = []) {
   for (const nome of readdirSync(dir)) {

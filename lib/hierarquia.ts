@@ -45,7 +45,7 @@ import { router, type Href } from "expo-router";
  *   │   ├── /generosidade → /comprovante-doacoes
  *   │   ├── /inscricoes → /batismo → /inscricao-batismo
  *   │   │              └→ /evento (detalhe + inscrição no app)
- *   │   │              └→ /next → /next-turma, /next-espera
+ *   │   │              └→ /next (membro OU gestão, decidido pelo servidor)
  *   │   ├── /videos
  *   │   └── /configuracoes → /trocar-senha, /fale-conosco, /sobre
  *   ├── /notificacoes      (o sino está na faixa em qualquer tela)
@@ -103,8 +103,10 @@ const PAI: Record<string, string> = {
   "/batismo": "/inscricoes",
   "/inscricao-batismo": "/batismo",
   "/next": "/inscricoes",
+  // ⚠️ As duas viraram REDIRECT pra `/next` em 03/09 (a gestão é uma tela só).
+  // O mapa FICA: link antigo e bundle intermediário ainda passam por elas, e
+  // rota fora do mapa cai na Home em vez de subir pro pai certo.
   "/next-turma": "/next",
-  // Aceitações do Next: a fila de quem foi direcionado e ainda não tem turma.
   "/next-espera": "/next",
   "/videos": "/menu",
   "/configuracoes": "/menu",

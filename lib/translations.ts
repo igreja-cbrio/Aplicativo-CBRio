@@ -6,6 +6,58 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  // ──── Gestão do NEXT · a tela de gerenciamento (03/09/2026) ────
+  "Gestão da equipe": { en: "Team management", es: "Gestión del equipo" },
+  "Ver minha inscrição no NEXT": { en: "See my NEXT enrollment", es: "Ver mi inscripción al NEXT" },
+  "Equipe do NEXT": { en: "NEXT team", es: "Equipo del NEXT" },
+  "Cada pessoa até o próximo passo": {
+    en: "Every person to their next step",
+    es: "Cada persona hasta el siguiente paso",
+  },
+  "Não foi possível carregar a gestão do NEXT.": {
+    en: "Couldn't load NEXT management.",
+    es: "No se pudo cargar la gestión del NEXT.",
+  },
+  "Não foi possível carregar esta turma.": {
+    en: "Couldn't load this class.",
+    es: "No se pudo cargar este grupo.",
+  },
+  "Não foi possível marcar presença": { en: "Couldn't mark attendance", es: "No se pudo marcar asistencia" },
+  "Nenhuma turma aberta": { en: "No open class", es: "Ningún grupo abierto" },
+  "Nenhuma turma aberta agora": { en: "No open class right now", es: "Ningún grupo abierto ahora" },
+  "As turmas do mês abrem por rotina automática.": {
+    en: "The monthly classes open automatically.",
+    es: "Los grupos del mes se abren automáticamente.",
+  },
+  "esperando": { en: "waiting", es: "esperando" },
+  "A turma do domingo mais próximo já vem selecionada": {
+    en: "The class for the closest Sunday comes selected",
+    es: "El grupo del domingo más cercano viene seleccionado",
+  },
+  "Pessoas da turma": { en: "People in the class", es: "Personas del grupo" },
+  "Quem aceitou o convite no fim do encontro e ainda não tem turma.": {
+    en: "People who accepted the invitation at the end of the gathering and still have no class.",
+    es: "Quienes aceptaron la invitación al final del encuentro y aún no tienen grupo.",
+  },
+  "Esta turma não tem encontro cadastrado — não dá pra marcar presença.": {
+    en: "This class has no gathering registered — attendance can't be marked.",
+    es: "Este grupo no tiene encuentro registrado — no se puede marcar asistencia.",
+  },
+  "Buscar por nome ou telefone": { en: "Search by name or phone", es: "Buscar por nombre o teléfono" },
+  "Limpar busca": { en: "Clear search", es: "Limpiar búsqueda" },
+  "Ninguém com esse nome": { en: "Nobody with that name", es: "Nadie con ese nombre" },
+  "Ninguém matriculado nesta turma": { en: "Nobody enrolled in this class", es: "Nadie inscrito en este grupo" },
+  "Confira a busca ou limpe o campo.": { en: "Check the search or clear the field.", es: "Revisa la búsqueda o limpia el campo." },
+  "Quem chegar sem estar na lista entra pelo \"Chegou agora\".": {
+    en: "Anyone arriving without being on the list goes in through \"Just arrived\".",
+    es: "Quien llegue sin estar en la lista entra por \"Llegó ahora\".",
+  },
+  "Quem aceitar no fim do encontro aparece aqui.": {
+    en: "Anyone who accepts at the end of the gathering shows up here.",
+    es: "Quien acepte al final del encuentro aparece aquí.",
+  },
+  "ajuda a não duplicar cadastro": { en: "helps avoid duplicate records", es: "ayuda a no duplicar registros" },
+  "Registrar e marcar presença": { en: "Register and mark attendance", es: "Registrar y marcar asistencia" },
   // ───────────── Gestão do NEXT no app · voluntário (03/09/2026) ─────────────
   "Gestão do NEXT": { en: "NEXT management", es: "Gestión del NEXT" },
   "Aceitações": { en: "Acceptances", es: "Aceptaciones" },

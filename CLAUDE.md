@@ -3143,6 +3143,102 @@ mortos (3 na régua de janela, 2 na guarda estática dos becos).
 ⏳ **PENDENTE: publicar o OTA** (`npm run ota -- "msg"` — **NUNCA `eas update`
 cru**, ver a lei no topo deste arquivo). Os itens 3, 4, 5 e 6 são tela; o item 2
 já vale sem OTA porque é servidor.
+## ⚠️⚠️ NEXT · quem gerencia ABRE DIRETO na gestão (03/09/2026 · 2ª rodada)
+
+Pedido do Marcos, horas depois da 1ª leva: *"agora dentro do next tem várias
+turmas, gostaria que para quem tem permissões, abrisse direto na página de
+gerenciamento, e pode fazer essa nova página, muito semelhante com a que temos
+de batismo em estilo."*
+
+### ⚠️⚠️ ISTO SUBSTITUI `/next-turma` e `/next-espera`, feitas HORAS ANTES
+
+As duas viraram **redirect pra `/next`**. Motivo: com a página de gestão única,
+elas seriam **duas portas pro mesmo lugar** — o erro que o módulo de Grupos
+pagou (lá "grupos" no menu e "Grupos" na barra abriam telas diferentes, e a
+saída foi juntar numa só). Aqui a junção veio antes de a divergência existir.
+
+⚠️ **O redirect FICA, não apagar os arquivos**: o OTA aplica na 2ª abertura,
+então há bundle intermediário com essas rotas na pilha, e `/next-turma` existia
+antes de hoje (pode estar em link/push já entregue). Precedente da casa:
+`inscricao-next.tsx`. As duas seguem no mapa de `lib/hierarquia.ts` — rota fora
+do mapa cai na Home em vez de subir pro pai certo.
+
+### O desenho é o do `/batismo`: a MESMA rota decide
+
+```
+if (gestao && !verComoMembro) → <NextGestaoScreen/>   (cabeçalho "NEXT · Gestão da equipe")
+senão                          → a tela de membro (inscrever + check-in)
+```
+
+- ⚠️⚠️ **NÃO é redirect entre rotas.** Redirect volta a disputar com a seta de
+  voltar e é o caminho mais curto pro laço — o incidente de 06/08 (o portão que
+  trancou todo mundo fora) foi exatamente disso. Aqui é ramo de render, como o
+  `/batismo` faz desde sempre.
+- ⚠️ **Enquanto `gestao` é `null` a tela NÃO decide**: mostrar a de membro e
+  trocar depois faria a página piscar pra quem gerencia. Falha na consulta cai
+  na de membro — **nunca prende ninguém**.
+- ⚠️⚠️ **A porta de volta pra visão de MEMBRO existe de propósito** (ícone de
+  pessoa no cabeçalho, estado local `verComoMembro`): quem lidera o NEXT também
+  pode ter inscrição e check-in próprios, e sem isso a página dele ficaria
+  **inalcançável**. ⚠️ É estado local, **não rota nova** — rota aqui significaria
+  a seta de voltar competindo com o toggle. O `/batismo` não tem essa saída, e é
+  uma diferença consciente.
+
+### `components/next/NextGestao.tsx` · o que a tela é
+
+Estilo copiado do `components/batismo/BatismoGestao.tsx` (herói na cor da marca,
+trilho horizontal, abas com contador, busca, cartões de pessoa, folhas):
+
+| batismo | next |
+|---|---|
+| trilho de DATAS do batismo | trilho de **TURMAS** (a turma é um domingo desde 26/08) |
+| abas Pessoas do dia · Aprovações | abas **Pessoas da turma · Aceitações** |
+| stats previstos/presentes/aguardando | **inscritos / presentes / esperando** |
+| "Adicionar" pessoa | **"Chegou agora"** (walk-in) |
+| check-in + aprovar + editar + retirar | **presença + direcionar + colocar em turma** |
+
+- ⚠️⚠️ **TROCAR DE TURMA LIMPA O DETALHE ANTES DE BUSCAR O NOVO.** Sem isso a
+  lista da turma ANTERIOR fica sob o cabeçalho da nova — e não é cosmético:
+  `encontroAtual` e `presMap` são derivados desse detalhe, então um toque em
+  "Presença" nessa janela **marcaria presença no encontro da turma ERRADA**. É a
+  versão em miniatura do bug de 12/07 no web (19 nomes lançados no culto errado).
+  Tem ainda a rede de segurança na própria ação: só marca quem está na lista
+  carregada.
+- ⚠️ **A fila de Aceitações só é buscada quando a aba abre**: ela carrega PII
+  (telefone) e não tem por que trafegar enquanto a pessoa marca presença.
+- ⚠️ **Erro do detalhe NÃO derruba a tela** (o trilho e a fila continuam de pé) e
+  **erro da fila não vira fila vazia** — "ninguém esperando" e "não carregou"
+  levam a decisões opostas.
+- ⚠️ **`refrescar` NÃO troca a turma selecionada** (`setTurmaId(atual => atual ??
+  …)`): arrastar a pessoa pra outra turma no meio do trabalho dela seria pior que
+  dado velho.
+- ⚠️ **Turma sem encontro datado mostra o NOME**, nunca uma data calculada — e a
+  tela DIZ que não dá pra marcar presença ali, em vez de deixar o botão mudo.
+- ⚠️ **`escreve === false` esconde as ações e é DECLARADO** ("seu acesso é só de
+  leitura"): a conta "Revisor App Store" tem leitura 3 / escrita 0.
+
+### As réguas novas em `lib/nextGestao.ts`
+
+- **`turmaSugerida(turmas, hoje)`** — a do domingo de HOJE → a próxima → a mais
+  recente que passou. ⚠️⚠️ Compara **STRING `YYYY-MM-DD`**, nunca
+  `new Date(data)`: aquela forma é meia-noite UTC e no Rio devolve o dia
+  ANTERIOR, então a tela abriria na turma do domingo passado **no meio do
+  domingo**. É a armadilha registrada 5× nos dois repos.
+- **`dataDaTurma`** — o encontro mais ANTIGO com data (a turma é 1 domingo).
+- **`contarPresentes`** — ⚠️ conta só `presente === true` (o histórico guarda
+  quem foi DESMARCADO) e por **PESSOA**, não por linha: a mesma pessoa em 2
+  encontros conta 1.
+
+### Portão
+
+`npx tsc --noEmit` limpo · **323 testes** · **85/85 mutantes** (3 novos: turma
+por `Date` · presença ignorando o campo `presente` · contagem por linha).
+i18n **247/247** e as soltas caíram **31 → 30**, com o teto descendo junto: o
+`"NEXT"` do título virou **constante**, porque é MARCA e não texto de interface
+— `t("NEXT")` pediria a "tradução" de um nome próprio.
+
+⚠️ **O portão cobre a RÉGUA, não a TELA.** Nada disto foi executado em aparelho.
+
 ## ⚠️⚠️ GESTÃO DO NEXT NO APP · a tela existia e ninguém alcançava (03/09/2026)
 
 Decisão do Marcos ao desenhar as 3 superfícies do Next (FUNCIONÁRIO na aba Next

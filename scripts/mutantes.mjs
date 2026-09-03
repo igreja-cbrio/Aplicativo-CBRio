@@ -635,6 +635,29 @@ const MUTANTES = [
     para: 'export const DICIONARIO = ((x) => x)(',
   },
   {
+    // ⚠⚠ `new Date("YYYY-MM-DD")` e meia-noite UTC = 21h do dia anterior no Rio:
+    // a tela de gestao abriria na turma do domingo PASSADO no meio do domingo.
+    nome: "nextGestao: turma sugerida comparada por Date em vez de string",
+    arq: "lib/nextGestao.ts",
+    de: "  const hojeMesmo = com.find((x) => x.data === hoje);",
+    para: "  const hojeMesmo = com.find((x) => new Date(x.data).getDate() === new Date(hoje).getDate() - 1);",
+  },
+  {
+    // ⚠⚠ Sem olhar o `presente`, o contador do heroi soma quem foi DESMARCADO —
+    // o card diria mais gente na sala do que a chamada mostra.
+    nome: "nextGestao: contar presente ignorando o campo `presente`",
+    arq: "lib/nextGestao.ts",
+    de: "    if (!p || p.presente !== true) continue;",
+    para: "    if (!p) continue;",
+  },
+  {
+    // ⚠ A mesma pessoa em 2 encontros contaria 2 sem o Set por matricula.
+    nome: "nextGestao: contar presenca por LINHA em vez de por pessoa",
+    arq: "lib/nextGestao.ts",
+    de: "  return vistos.size;",
+    para: "  return (Array.isArray(presencas) ? presencas : []).filter((p) => p && p.presente === true && (!encontroId || p.encontro_id === encontroId)).length;",
+  },
+  {
     // ⚠⚠ O batismo exige HORÁRIO, e quem lança 400 é o servidor
     // (`services/nextDirecionar.js`). Sem esta guarda o líder preenche o
     // direcionamento inteiro no fim do encontro, toca em "Direcionar" e leva
