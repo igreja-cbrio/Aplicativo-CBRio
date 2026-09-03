@@ -28,7 +28,7 @@ import { join } from "node:path";
 import { motivoDaFalha, podeVirarConteudo, ler } from "@/lib/falhaDeLeitura";
 import { estadoDoQr, podeDesenharQr, temCpf } from "@/lib/cartaoQr";
 import { linkDeInscricao, ehPorConvite, precisaEscolherNaLista } from "@/lib/convite";
-import { podeDirecionar, areasSaoObrigatorias, turmasQueRecebem, encontroSugerido, nomeDaPessoa } from "@/lib/nextGestao";
+import { podeDirecionar, areasSaoObrigatorias, turmasQueRecebem, encontroSugerido, nomeDaPessoa, turmaSugerida, dataDaTurma, contarPresentes } from "@/lib/nextGestao";
 import { acaoAoFechar, temRascunho } from "@/lib/descartarRascunho";
 import { casaBusca, normalizarBusca, filtrarPorTexto } from "@/lib/buscaTexto";
 import { ehDomingo, indiceDoDestaque } from "@/lib/homeCultos";
@@ -2277,5 +2277,81 @@ describe("i18n · noDicionario vê a chave escrita sem aspas", () => {
     const d = '{ "Onde quer servir? (opcional)": { en: "x", es: "y" } }';
     expect(noDicionario("Onde quer servir? (opcional)", d)).toBe(true);
     expect(noDicionario("Onde quer servir. .opcional.", d)).toBe(false);
+  });
+});
+
+describe("gestão do Next · turma que a tela abre", () => {
+  const turmas = [
+    { id: "t1", status: "aberta", encontros: [{ id: "e1", data: "2026-09-06" }] },
+    { id: "t2", status: "aberta", encontros: [{ id: "e2", data: "2026-09-13" }] },
+    { id: "t3", status: "aberta", encontros: [{ id: "e3", data: "2026-09-20" }] },
+  ];
+
+  it("a turma de HOJE vence", () => {
+    expect(turmaSugerida(turmas, "2026-09-13")).toBe("t2");
+  });
+
+  it("sem turma hoje, a PRÓXIMA (a mais perto)", () => {
+    expect(turmaSugerida(turmas, "2026-09-08")).toBe("t2");
+  });
+
+  it("tudo no passado ⇒ a mais RECENTE (é onde a chamada atrasada é lançada)", () => {
+    expect(turmaSugerida(turmas, "2026-10-05")).toBe("t3");
+  });
+
+  it("⚠️⚠️ compara STRING — com `new Date` a tela abriria no domingo passado", () => {
+    expect(turmaSugerida([{ id: "so", encontros: [{ id: "e", data: "2026-09-06" }] }], "2026-09-06")).toBe("so");
+  });
+
+  it("turma sem encontro datado não some da lista, só não é escolhida por data", () => {
+    const mistas = [{ id: "sem", encontros: [] }, ...turmas];
+    expect(turmaSugerida(mistas, "2026-09-13")).toBe("t2");
+    // só ela: entra como último recurso, em vez de a tela abrir sem turma
+    expect(turmaSugerida([{ id: "sem", encontros: [] }], "2026-09-13")).toBe("sem");
+  });
+
+  it("lista vazia devolve null", () => {
+    expect(turmaSugerida([], "2026-09-13")).toBeNull();
+    expect(turmaSugerida(null, "2026-09-13")).toBeNull();
+  });
+
+  it("a data da turma é o encontro mais ANTIGO com data", () => {
+    expect(dataDaTurma({ id: "x", encontros: [{ id: "b", data: "2026-09-20" }, { id: "a", data: "2026-09-06" }] })).toBe("2026-09-06");
+    expect(dataDaTurma({ id: "x", encontros: [] })).toBeNull();
+    expect(dataDaTurma(null)).toBeNull();
+  });
+});
+
+describe("gestão do Next · contagem de presentes", () => {
+  const pres = [
+    { encontro_id: "e1", matricula_id: "m1", presente: true },
+    { encontro_id: "e1", matricula_id: "m2", presente: true },
+    { encontro_id: "e1", matricula_id: "m3", presente: false },
+    { encontro_id: "e2", matricula_id: "m4", presente: true },
+  ];
+
+  it("conta só quem está PRESENTE", () => {
+    expect(contarPresentes(pres)).toBe(3);
+  });
+
+  it("⚠️ `presente: false` NÃO conta — o histórico guarda quem foi desmarcado", () => {
+    expect(contarPresentes([{ encontro_id: "e1", matricula_id: "m3", presente: false }])).toBe(0);
+  });
+
+  it("recorta por encontro quando pedido", () => {
+    expect(contarPresentes(pres, "e1")).toBe(2);
+    expect(contarPresentes(pres, "e2")).toBe(1);
+  });
+
+  it("a mesma pessoa em 2 encontros conta UMA vez no total", () => {
+    const dobrada = [
+      { encontro_id: "e1", matricula_id: "m1", presente: true },
+      { encontro_id: "e2", matricula_id: "m1", presente: true },
+    ];
+    expect(contarPresentes(dobrada)).toBe(1);
+  });
+
+  it("lista ausente devolve 0", () => {
+    expect(contarPresentes(null)).toBe(0);
   });
 });

@@ -26,6 +26,12 @@ import {
 } from "@/lib/api";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { BRAND_FONT } from "@/lib/fonts";
+import { NextGestaoScreen } from "@/components/next/NextGestao";
+
+// ⚠️ NEXT é o NOME do curso — marca, não texto de interface. Vive numa
+// constante em vez de literal repetido: assim o scanner de i18n não a cobra
+// como "português duro" e ninguém tenta traduzi-la.
+const TITULO_NEXT = "NEXT";
 
 const DOW = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 const MESES = [
@@ -96,7 +102,9 @@ export default function NextScreen() {
       return () => { vivo = false; };
     }, [])
   );
-  const turmasGeridas: NextTurmaGestao[] = gestao?.turmas || [];
+  // ⚠️ Sai da gestão pra visão de membro SEM trocar de rota (estado local):
+  // rota nova aqui significaria a seta de voltar competindo com o toggle.
+  const [verComoMembro, setVerComoMembro] = useState(false);
 
   // ⚠️ CONFIRMA ANTES DE GRAVAR. Antes, o único aviso era um Alert DEPOIS da
   // inscrição — a pessoa descobria que estava inscrita, não decidia.
@@ -193,6 +201,44 @@ ${t("Primeiro encontro")}: ${dataComHora(me.encontros[0].data, me.encontros[0].h
     }
   }
 
+  // ⚠️⚠️ QUEM GERENCIA ABRE DIRETO NA GESTÃO (pedido do Marcos · 03/09).
+  //
+  // Mesmo desenho do `/batismo`: a MESMA rota decide pelo que o SERVIDOR
+  // respondeu. Não é redirect — redirect entre duas rotas volta a disputar com
+  // a seta de voltar e é o caminho mais curto pro laço.
+  //
+  // ⚠️ Enquanto `gestao === undefined` (ainda perguntando) a tela NÃO decide:
+  // mostrar a de membro e trocar depois faria a página piscar pra quem
+  // gerencia. Falha na consulta cai na de membro — nunca prende ninguém.
+  if (gestao && !verComoMembro) {
+    return (
+      <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.headerGestao}>
+          <Pressable onPress={() => subirUmNivel()} hitSlop={8} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.titleGestao}>{TITULO_NEXT}</Text>
+            <Text style={styles.gestaoSub}>{t("Gestão da equipe")}</Text>
+          </View>
+          {/* ⚠️ A porta de volta pra visão de MEMBRO existe de propósito: quem
+              lidera o NEXT também pode ter inscrição e check-in próprios, e sem
+              isto a página dele ficaria inalcançável. */}
+          <Pressable
+            onPress={() => setVerComoMembro(true)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t("Ver minha inscrição no NEXT")}
+          >
+            <Ionicons name="person-circle-outline" size={24} color={colors.textMuted} />
+          </Pressable>
+        </View>
+        <NextGestaoScreen />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -201,86 +247,9 @@ ${t("Primeiro encontro")}: ${dataComHora(me.encontros[0].data, me.encontros[0].h
           <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>NEXT</Text>
+          <Text style={styles.title}>{TITULO_NEXT}</Text>
           <View style={{ width: 24 }} />
         </View>
-
-        {gestao !== null && (
-          <View style={{ gap: spacing.sm }}>
-            <Text style={styles.section}>{t("Gestão do NEXT")}</Text>
-
-            {/* ⚠️ Aceitações vem PRIMEIRO: é a fila que espera decisão de
-                gente. Turma sem ninguém alocado é o gargalo do fluxo. */}
-            <Pressable
-              style={styles.turmaCard}
-              onPress={() => router.push("/next-espera" as any)}
-              accessibilityRole="button"
-              accessibilityLabel={t("Aceitações do NEXT")}
-            >
-              <View style={styles.turmaIcon}>
-                <Ionicons name="hand-right-outline" size={20} color={colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.turmaNome} numberOfLines={1}>{t("Aceitações")}</Text>
-                <Text style={styles.turmaSub}>
-                  {gestao.espera > 0
-                    ? `${gestao.espera} ${gestao.espera === 1 ? t("pessoa esperando turma") : t("pessoas esperando turma")}`
-                    : t("Ninguém esperando turma")}
-                </Text>
-              </View>
-              {gestao.espera > 0 ? (
-                <View style={styles.pastilha}><Text style={styles.pastilhaTxt}>{gestao.espera}</Text></View>
-              ) : null}
-              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-            </Pressable>
-
-            {/* ⚠️ "Somente leitura" é DECLARADO: sem isso a pessoa abre a turma,
-                toca em presença e leva 403 sem entender por quê. */}
-            {gestao.escreve === false ? (
-              <Text style={styles.turmaSub}>{t("Seu acesso ao NEXT é só de leitura.")}</Text>
-            ) : null}
-
-            {turmasGeridas.length === 0 ? (
-              <Text style={styles.turmaSub}>{t("Nenhuma turma aberta agora.")}</Text>
-            ) : null}
-
-            {turmasGeridas.map((turma) => (
-              <Pressable
-                key={turma.id}
-                style={styles.turmaCard}
-                onPress={() => router.push({ pathname: "/next-turma", params: { id: turma.id, nome: turma.nome } } as any)}
-                accessibilityRole="button"
-                accessibilityLabel={`${t("Gerenciar turma")} ${turma.nome}`}
-              >
-                <View style={styles.turmaIcon}>
-                  <Ionicons name="people" size={20} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.turmaNome} numberOfLines={1}>{turma.nome}</Text>
-                  <Text style={styles.turmaSub} numberOfLines={1}>
-                    {[
-                      turma.status === "aberta" ? t("Aberta") : turma.status === "encerrada" ? t("Encerrada") : turma.status,
-                      // ⚠️ Só mostra a contagem quando o servidor a mandou:
-                      // `0` é resposta ("ninguém matriculado"), `undefined` é
-                      // "backend antigo não manda" — e escrever "0" nesse caso
-                      // afirmaria turma vazia sem ter medido.
-                      typeof turma.matriculados === "number"
-                        ? `${turma.matriculados} ${turma.matriculados === 1 ? t("inscrito") : t("inscritos")}`
-                        : null,
-                      // ⚠️ Data do 1º encontro fatiada da string, nunca `new
-                      // Date(iso)`: aquela forma é UTC e no Rio devolve o dia
-                      // anterior.
-                      turma.encontros?.[0]?.data
-                        ? `${t("a partir de")} ${String(turma.encontros[0].data).slice(8, 10)}/${String(turma.encontros[0].data).slice(5, 7)}`
-                        : null,
-                    ].filter(Boolean).join(" · ")}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-              </Pressable>
-            ))}
-          </View>
-        )}
 
         {loading ? (
           <View style={{ gap: spacing.md }}>
@@ -502,5 +471,10 @@ const makeStyles = (colors: Palette) =>
     // Prévia dos encontros ANTES de decidir (10/08 · apontamento 4).
     previaWrap: { gap: spacing.xs, marginBottom: spacing.sm },
     previaLinha: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+    // Cabeçalho da GESTÃO — espelha o do `/batismo.tsx`, que é a referência
+    // de estilo que o Marcos pediu.
+    headerGestao: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
+    titleGestao: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
+    gestaoSub: { color: colors.textMuted, fontSize: 11, marginTop: 1 },
     previaTxt: { color: colors.textMuted, fontSize: font.size.sm, flex: 1 },
   });
