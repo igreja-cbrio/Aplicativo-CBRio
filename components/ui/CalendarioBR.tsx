@@ -104,10 +104,32 @@ export function CalendarioBR({
 
   const [cursor, setCursor] = useState(inicial);
 
+  /**
+   * ⚠️⚠️ SELETOR DE ANO (15/09/2026) · sem ele o calendário não serve pra data
+   * de NASCIMENTO, que é o uso que o Pr. Nélio pediu na inscrição de pessoa no
+   * grupo.
+   *
+   * A navegação era só `andarMes(±1)`: chegar em 1978 a partir de hoje são
+   * ~570 toques. É a MESMA reclamação que o ERP já tinha recebido e resolvido
+   * em 07/08/2026 — lá o `BirthDatePicker` usa os dropdowns de mês/ano do
+   * react-day-picker, e o registro daquele dia diz literalmente *"chegar em
+   * 1978 num calendário são muitos toques"*.
+   *
+   * Aqui não há dropdown nativo (nem pode haver: módulo nativo NÃO sai por
+   * OTA · ver o cabeçalho deste arquivo), então o rótulo do mês virou botão e
+   * abre uma grade de anos, em JS puro.
+   */
+  const [modoAno, setModoAno] = useState(false);
+
   // Reabrir tem que voltar pro mês certo: sem isto o calendário guardaria o mês
   // pra onde a pessoa navegou da última vez, em outro campo.
+  // ⚠️ E tem que voltar pra grade de DIAS: reabrir na grade de anos faria a
+  // pessoa achar que o calendário mudou de função.
   useEffect(() => {
-    if (visivel) setCursor(inicial);
+    if (visivel) {
+      setCursor(inicial);
+      setModoAno(false);
+    }
   }, [visivel, inicial]);
 
   const selecionadoISO = useMemo(() => {
@@ -135,6 +157,45 @@ export function CalendarioBR({
     });
   }
 
+  /**
+   * Anos que a grade oferece, em páginas de 12.
+   *
+   * ⚠️ A faixa respeita `minimoISO`/`maximoISO` quando eles existem: oferecer
+   * ano inteiro que o calendário vai bloquear dia a dia é o mesmo defeito que o
+   * `maximoISO` foi criado pra evitar — a pessoa escolhe e só descobre depois
+   * que não dá.
+   *
+   * ⚠️ Sem faixa declarada, o piso é 120 anos atrás e o teto é o ano de `hoje`
+   * + 5. Nascimento não existe no futuro, mas este componente também marca
+   * encontro (que é futuro), então o teto não pode ser "hoje" — e 120 anos
+   * cobre a pessoa mais velha plausível sem virar rolagem infinita.
+   */
+  const anoDeISO = (iso?: string | null) => {
+    const m = (iso || "").match(/^(\d{4})-\d{2}-\d{2}$/);
+    return m ? +m[1] : null;
+  };
+  const anoHoje = anoDeISO(hojeISO) ?? new Date().getFullYear();
+  const anoMin = anoDeISO(minimoISO) ?? anoHoje - 120;
+  const anoMax = anoDeISO(maximoISO) ?? anoHoje + 5;
+
+  const anosDaPagina = useMemo(() => {
+    // Página de 12 ancorada no ano do cursor, para ele aparecer na grade que
+    // abre — pular pra uma década arbitrária esconderia onde a pessoa está.
+    const base = cursor.ano - (((cursor.ano - anoMin) % 12) + 12) % 12;
+    const lista: number[] = [];
+    for (let a = base; a < base + 12; a++) if (a >= anoMin && a <= anoMax) lista.push(a);
+    return lista;
+  }, [cursor.ano, anoMin, anoMax]);
+
+  function andarPaginaAno(delta: number) {
+    setCursor((c) => {
+      // ⚠️ Clampa nas pontas: sem isso o botão continua "andando" para fora da
+      // faixa e a grade fica vazia, com cara de tela quebrada.
+      const alvo = Math.min(anoMax, Math.max(anoMin, c.ano + delta * 12));
+      return { ...c, ano: alvo };
+    });
+  }
+
   function escolher(dia: number) {
     onEscolher(`${pad(dia)}/${pad(cursor.mes + 1)}/${cursor.ano}`);
   }
@@ -151,24 +212,71 @@ export function CalendarioBR({
 
           <View style={styles.navMes}>
             <Pressable
-              onPress={() => andarMes(-1)}
+              onPress={() => (modoAno ? andarPaginaAno(-1) : andarMes(-1))}
               hitSlop={10}
               style={styles.navBtn}
-              accessibilityLabel={t("Mês anterior")}
+              accessibilityLabel={modoAno ? t("Anos anteriores") : t("Mês anterior")}
             >
               <Ionicons name="chevron-back" size={20} color={colors.text} />
             </Pressable>
-            <Text style={styles.mesLabel}>{rotuloMes}</Text>
+            {/* ⚠️ O rótulo é BOTÃO, e diz isso com o chevron ao lado: um texto
+                tocável sem afordância nenhuma é caminho que ninguém acha — foi
+                o que aconteceu com o ícone cinza de 18px do "alterar data"
+                (18/08/2026), que nem quem pediu a funcionalidade encontrou. */}
             <Pressable
-              onPress={() => andarMes(1)}
+              onPress={() => setModoAno((v) => !v)}
+              hitSlop={10}
+              style={styles.mesBtn}
+              accessibilityRole="button"
+              accessibilityLabel={modoAno ? t("Voltar para os dias") : t("Escolher o ano")}
+              accessibilityState={{ expanded: modoAno }}
+            >
+              <Text style={styles.mesLabel}>{modoAno ? String(cursor.ano) : rotuloMes}</Text>
+              <Ionicons
+                name={modoAno ? "chevron-up" : "chevron-down"}
+                size={16}
+                color={colors.textMuted}
+              />
+            </Pressable>
+            <Pressable
+              onPress={() => (modoAno ? andarPaginaAno(1) : andarMes(1))}
               hitSlop={10}
               style={styles.navBtn}
-              accessibilityLabel={t("Próximo mês")}
+              accessibilityLabel={modoAno ? t("Próximos anos") : t("Próximo mês")}
             >
               <Ionicons name="chevron-forward" size={20} color={colors.text} />
             </Pressable>
           </View>
 
+          {modoAno ? (
+            <View style={styles.gradeAnos}>
+              {anosDaPagina.map((a) => {
+                const selecionado = a === cursor.ano;
+                return (
+                  <Pressable
+                    key={a}
+                    style={styles.celulaAno}
+                    // Escolher o ano NÃO escolhe a data: volta pra grade de
+                    // dias naquele ano, que é onde a pessoa termina o gesto.
+                    onPress={() => {
+                      setCursor((c) => ({ ...c, ano: a }));
+                      setModoAno(false);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={String(a)}
+                    accessibilityState={{ selected: selecionado }}
+                  >
+                    <View style={[styles.anoBolha, selecionado && styles.diaSelecionado]}>
+                      <Text style={[styles.diaTexto, selecionado && styles.diaTextoSelecionado]}>
+                        {a}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : (
+          <>
           <View style={styles.semana}>
             {DIAS_SEMANA.map((d, i) => (
               <Text key={i} style={styles.semanaLabel}>
@@ -218,6 +326,8 @@ export function CalendarioBR({
               );
             })}
           </View>
+          </>
+          )}
     </Pressable>
   );
 
@@ -268,7 +378,29 @@ const makeStyles = (colors: Palette) =>
       paddingVertical: spacing.xs,
     },
     navBtn: { padding: 6 },
+    mesBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingVertical: 6,
+      paddingHorizontal: spacing.sm,
+    },
     mesLabel: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
+    // 3 colunas de anos: 4 linhas de 12 cabem sem rolagem no cartão de 360.
+    gradeAnos: { flexDirection: "row", flexWrap: "wrap", paddingVertical: spacing.xs },
+    celulaAno: {
+      width: `${100 / 3}%`,
+      paddingVertical: 6,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    anoBolha: {
+      paddingVertical: 10,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.md,
+      alignItems: "center",
+      justifyContent: "center",
+    },
     semana: { flexDirection: "row" },
     semanaLabel: {
       flex: 1,

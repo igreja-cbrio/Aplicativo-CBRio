@@ -12,6 +12,29 @@ export function maskCPF(value: string) {
   return d;
 }
 
+/**
+ * Máscara de data brasileira: dd/mm/aaaa.
+ *
+ * ⚠️ MUDOU DE CASA (15/09/2026) — ela morava solta dentro de
+ * `completar-cadastro.tsx`, e a tela de "Adicionar pessoa" do grupo passou a
+ * precisar dela. Uma 2ª cópia de máscara de data é a mesma doença que a de CPF
+ * teve, e que já custou a mudança para `lib/cpf` em 25/08: as cópias divergem
+ * e o sintoma é uma porta aceitar o que a outra recusa.
+ *
+ * ⚠️ Aqui, no `lib/`, ela fica ao lado de `nascimentoBRParaISO` — a régua que
+ * lê o que esta máscara escreve — e dentro do alcance dos testes. Dentro do
+ * `.tsx` nenhuma das duas seria testada.
+ *
+ * ⚠️ Teto de 8 dígitos: ano com 4, sempre. Aceitar 2 exigiria adivinhar
+ * 19xx/20xx, e em data de NASCIMENTO esse chute erra por um século inteiro.
+ */
+export function mascaraDataBR(v: string) {
+  const d = onlyDigits(v).slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+}
+
 /** Valida CPF pelos dígitos verificadores. */
 export function isValidCPF(value: string) {
   const cpf = onlyDigits(value);

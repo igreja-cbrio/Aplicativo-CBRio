@@ -44,7 +44,7 @@ import { completarCadastroApp, confirmarCodigoIdentidade, identidadePorCpf, stat
 import { trackEvento } from "@/lib/telemetria";
 // Réguas de campo do app (as MESMAS das outras telas) — esta tela
 // reimplementava versões mais fracas, que só o servidor recusava.
-import { isValidCPF, nascimentoBRParaISO } from "@/lib/validators";
+import { isValidCPF, mascaraDataBR, nascimentoBRParaISO } from "@/lib/validators";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { abrirFichaCadastro, fecharFichaCadastro } from "@/lib/cadastroAberto";
 import { mascararCpf } from "@/lib/cpf";
@@ -65,12 +65,10 @@ const mascaraTelefone = (v: string) => {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 };
 
-const mascaraData = (v: string) => {
-  const d = soDigitos(v).slice(0, 8);
-  if (d.length <= 2) return d;
-  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
-  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
-};
+// ⚠️ A máscara MUDOU DE CASA (15/09/2026) pra `lib/validators` — a tela de
+// "Adicionar pessoa" do grupo passou a precisar dela, e uma 2ª cópia de máscara
+// de data é a mesma doença que a de CPF teve (resolvida em 25/08).
+const mascaraData = mascaraDataBR;
 
 // dd/mm/aaaa → ISO válido, ou null. A régua vive em `lib/validators.ts`
 // (`nascimentoBRParaISO`), no PORTÃO: aqui dentro do .tsx ela não seria testada,

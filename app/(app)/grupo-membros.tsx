@@ -70,6 +70,12 @@ import { hojeBRT } from "@/lib/dataBRT";
 // por quê.
 import { mascararTelefoneBR } from "@/lib/telefone";
 import { mascararCpf } from "@/lib/cpf";
+// ⚠️ Nascimento: a máscara e a conversão pra ISO vivem em `lib/validators` — a
+// régua rejeita 31/02 e data futura, e é a MESMA que o `/completar-cadastro`
+// usa. Reimplementar aqui deixaria a tela mais frouxa que o servidor, e a
+// pessoa só descobriria no 400 (o defeito que o comentário de lá registra).
+import { mascaraDataBR, nascimentoBRParaISO } from "@/lib/validators";
+import { CalendarioBR } from "@/components/ui/CalendarioBR";
 import {
   estadoDoEncontro, dataLonga, quandoCurto, distanciaEmTexto, horaCurta,
 } from "@/lib/proximoEncontro";
@@ -168,7 +174,13 @@ export default function GrupoMembrosScreen() {
   const [addNome, setAddNome] = useState("");
   const [addTel, setAddTel] = useState("");
   const [addEmail, setAddEmail] = useState("");
+  // ⚠️⚠️ GUARDA **DD/MM/AAAA** (o que a pessoa lê e escreve), não ISO. Até
+  // 15/09/2026 este campo era um TextInput cru com placeholder "AAAA-MM-DD" —
+  // formato de banco, que ninguém digita, sem máscara e sem validação de
+  // calendário. O Pr. Nélio pediu calendário "pra evitar erros"; a conversão
+  // pro ISO acontece no envio, pela régua canônica.
   const [addNasc, setAddNasc] = useState("");
+  const [addNascCalendario, setAddNascCalendario] = useState(false);
   const [addSexo, setAddSexo] = useState<"" | "masculino" | "feminino">("");
   const [addCpf, setAddCpf] = useState("");
   const [addEndereco, setAddEndereco] = useState("");
@@ -440,7 +452,7 @@ export default function GrupoMembrosScreen() {
   const addPodeEnviar = addNome.trim().split(/\s+/).filter(Boolean).length >= 2
     && addNome.trim().length >= 5
     && addTel.replace(/\D/g, "").length >= 10
-    && /^\d{4}-\d{2}-\d{2}$/.test(addNasc.trim())
+    && !!nascimentoBRParaISO(addNasc.trim())
     && !!addSexo
     && addCpf.replace(/\D/g, "").length === 11
     && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addEmail.trim())
@@ -453,7 +465,10 @@ export default function GrupoMembrosScreen() {
         nome: addNome.trim(),
         telefone: addTel.trim(),
         email: addEmail.trim(),
-        data_nascimento: addNasc.trim(),
+        // ⚠️ O servidor espera ISO. `addPodeEnviar` já garantiu que converte —
+        // o `?? ""` existe só pra o tipo fechar; corpo vazio o servidor recusa
+        // com o campo nomeado, que é melhor que a tela mandar "31/02/2026".
+        data_nascimento: nascimentoBRParaISO(addNasc.trim()) ?? "",
         genero: addSexo || undefined,
         cpf: addCpf.trim(),
         endereco: addEndereco.trim() || undefined,
@@ -1413,17 +1428,57 @@ export default function GrupoMembrosScreen() {
                 maxLength={14}
               />
 
+              {/* ⚠️⚠️ DIGITAR **E** ESCOLHER, os dois escrevendo no MESMO valor.
+                  O Pr. Nélio pediu calendário "pra evitar erros" (15/09), e o
+                  ERP já tinha passado por esse caminho: em 16/07/2026 o campo
+                  virou calendário e em 07/08 o Matheus pediu a digitação de
+                  volta — *"chegar em 1978 num calendário são muitos toques"*.
+                  O `BirthDatePicker` de lá é exatamente isto: campo com máscara
+                  + ícone que abre o calendário. Aqui é igual.
+
+                  ⚠️ O calendário entra `embutido` porque esta folha JÁ é um
+                  `<Modal>`: um segundo Modal irmão nasce ATRÁS no iOS, e o
+                  toque "não abre nada" (o defeito de 14/08 na aba Servir). */}
               <Text style={styles.sheetLabel}>{t("Data de nascimento")} *</Text>
-              <TextInput
-                style={styles.inputLinha}
-                placeholder="AAAA-MM-DD"
-                placeholderTextColor={colors.textMuted}
-                value={addNasc}
-                onChangeText={setAddNasc}
-                keyboardType="numbers-and-punctuation"
-                maxLength={10}
-                autoCorrect={false}
-              />
+              {addNascCalendario ? (
+                <CalendarioBR
+                  visivel
+                  embutido
+                  titulo={t("Data de nascimento")}
+                  valor={addNasc}
+                  // ⚠️ Nascimento no futuro não existe — e o teto some com a
+                  // metade inútil do seletor de ano.
+                  maximoISO={hojeBRT()}
+                  hojeISO={hojeBRT()}
+                  onFechar={() => setAddNascCalendario(false)}
+                  onEscolher={(dataBR) => {
+                    setAddNasc(dataBR);
+                    setAddNascCalendario(false);
+                  }}
+                />
+              ) : (
+                <View style={styles.campoComBotao}>
+                  <TextInput
+                    style={[styles.inputLinha, styles.campoComBotaoInput]}
+                    placeholder="dd/mm/aaaa"
+                    placeholderTextColor={colors.textMuted}
+                    value={addNasc}
+                    onChangeText={(v) => setAddNasc(mascaraDataBR(v))}
+                    keyboardType="number-pad"
+                    maxLength={10}
+                    autoCorrect={false}
+                  />
+                  <Pressable
+                    onPress={() => setAddNascCalendario(true)}
+                    style={styles.campoBotao}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("Escolher no calendário")}
+                  >
+                    <Ionicons name="calendar-outline" size={20} color={colors.text} />
+                  </Pressable>
+                </View>
+              )}
 
               {/* ⚠️ Sexo em branco fica em branco — NUNCA chutado pelo nome (a
                   lei de 10/08 proíbe gravar sexo por palpite, e é ele que decide
@@ -1873,6 +1928,18 @@ function makeStyles(c: Palette) {
       backgroundColor: c.surfaceAlt, borderRadius: radius.sm,
       paddingHorizontal: 12, paddingVertical: 10, color: c.text,
       borderWidth: 1, borderColor: c.border, marginBottom: spacing.sm,
+    },
+    // Campo com botão ao lado (nascimento + calendário).
+    // ⚠️ `alignItems: "flex-start"` porque o input já carrega o `marginBottom`
+    // da linha: centralizar deixaria o botão descendo junto com a margem.
+    campoComBotao: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
+    // ⚠️ `minWidth: 0` — sem ele o TextInput não encolhe abaixo do conteúdo e
+    // empurra o botão pra fora da folha (a armadilha do item de flex).
+    campoComBotaoInput: { flex: 1, minWidth: 0 },
+    campoBotao: {
+      width: 44, height: 44, alignItems: "center", justifyContent: "center",
+      borderRadius: radius.sm, borderWidth: 1, borderColor: c.border,
+      backgroundColor: c.surfaceAlt,
     },
     chips: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.sm },
     chip: {
