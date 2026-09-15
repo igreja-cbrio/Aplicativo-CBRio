@@ -6,6 +6,12 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  // ──── Calendário · seletor de ano + data de nascimento (15/09/2026) ────
+  "Escolher no calendário": { en: "Pick from calendar", es: "Elegir en el calendario" },
+  "Escolher o ano": { en: "Choose the year", es: "Elegir el año" },
+  "Voltar para os dias": { en: "Back to the days", es: "Volver a los días" },
+  "Anos anteriores": { en: "Previous years", es: "Años anteriores" },
+  "Próximos anos": { en: "Next years", es: "Años siguientes" },
   // ──── Gestão do NEXT · a tela de gerenciamento (03/09/2026) ────
   "Gestão da equipe": { en: "Team management", es: "Gestión del equipo" },
   "Ver minha inscrição no NEXT": { en: "See my NEXT enrollment", es: "Ver mi inscripción al NEXT" },

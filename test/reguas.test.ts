@@ -66,6 +66,7 @@ import {
 } from "@/lib/cadastroEmAndamento";
 import {
   nascimentoBRParaISO,
+  mascaraDataBR,
   isDataCalendarioBR,
   isValidDateBR,
   janelaIndisponibilidadeBR,
@@ -648,6 +649,46 @@ describe("proximoEncontro · o estado do herói", () => {
 // A régua morava dentro de `completar-cadastro.tsx` e era mais fraca: aceitava
 // 31/02 porque só conferia dia 1..31. A pessoa digitava, enviava, e só o
 // SERVIDOR recusava — 400 seco na tela mais crítica do onboarding.
+// ⚠️⚠️ A máscara de data MUDOU DE CASA em 15/09/2026: morava solta dentro de
+// `completar-cadastro.tsx` (sem teste, porque régua em `.tsx` não roda no CI) e
+// a tela de "Adicionar pessoa" do grupo passou a precisar dela. Uma 2ª cópia é
+// a doença que a máscara de CPF já teve — e agora ela serve DUAS portas de
+// PESSOA, então quebrá-la quebra o onboarding e o cadastro feito pelo líder.
+describe("mascaraDataBR", () => {
+  it("formata dd/mm/aaaa enquanto a pessoa digita", () => {
+    expect(mascaraDataBR("1")).toBe("1");
+    expect(mascaraDataBR("17")).toBe("17");
+    expect(mascaraDataBR("175")).toBe("17/5");
+    expect(mascaraDataBR("1705")).toBe("17/05");
+    expect(mascaraDataBR("17051990")).toBe("17/05/1990");
+  });
+
+  it("ignora o que não é dígito (colar '17-05-1990' funciona)", () => {
+    expect(mascaraDataBR("17-05-1990")).toBe("17/05/1990");
+    expect(mascaraDataBR("17/05/1990")).toBe("17/05/1990");
+  });
+
+  // ⚠️⚠️ ANO COM 4 DÍGITOS, SEMPRE. Aceitar 2 exigiria adivinhar 19xx/20xx, e
+  // em data de NASCIMENTO esse chute erra por um SÉCULO — a pessoa entraria na
+  // base com 1926 no lugar de 2026 (ou o contrário) e ninguém notaria.
+  it("trunca em 8 dígitos — não deixa o ano passar de 4", () => {
+    expect(mascaraDataBR("170519901234")).toBe("17/05/1990");
+  });
+
+  // Apagar tem que funcionar: sem isso a barra fica presa e a pessoa não
+  // consegue corrigir o que digitou errado.
+  it("deixa apagar", () => {
+    expect(mascaraDataBR("")).toBe("");
+    expect(mascaraDataBR("17/0")).toBe("17/0");
+  });
+
+  // O que a máscara escreve é o que `nascimentoBRParaISO` lê — se as duas
+  // divergirem, o campo aceita e o servidor recusa.
+  it("o que ela produz é aceito pela régua que converte pro banco", () => {
+    expect(nascimentoBRParaISO(mascaraDataBR("17051990"), "2026-09-15")).toBe("1990-05-17");
+  });
+});
+
 describe("nascimentoBRParaISO", () => {
   const HOJE = "2026-08-06";
 

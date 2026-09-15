@@ -668,6 +668,16 @@ const MUTANTES = [
     para: '    if (false) {',
   },
   {
+    // ⚠️⚠️ A máscara de data serve DUAS portas de PESSOA (o /completar-cadastro
+    // e o "Adicionar pessoa" do grupo). Sem o teto de 8 dígitos o ano aceita
+    // 5+ e a pessoa entra na base com nascimento absurdo — e em data de
+    // NASCIMENTO um dígito a mais erra por um século.
+    nome: "mascaraDataBR: ano sem teto de 4 dígitos",
+    arq: "lib/validators.ts",
+    de: "  const d = onlyDigits(v).slice(0, 8);",
+    para: "  const d = onlyDigits(v);",
+  },
+  {
     // ⚠⚠ `new Date("YYYY-MM-DD")` é meia-noite UTC = 21h do dia anterior no
     // Rio: o encontro de HOJE deixaria de casar e o walk-in do domingo cairia
     // no encontro errado. É a armadilha registrada 4× neste repo.
