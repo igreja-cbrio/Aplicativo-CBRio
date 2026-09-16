@@ -2396,3 +2396,53 @@ describe("gestão do Next · contagem de presentes", () => {
     expect(contarPresentes(null)).toBe(0);
   });
 });
+
+// ⚠️⚠️ A ARMADILHA DO `runtimeVersion` NÃO PODE VOLTAR A ARMAR.
+//
+// Até 16/09/2026 o `app.json` tinha `runtimeVersion.policy = "appVersion"` com
+// `version: "1.0.0"`. Medido ao vivo no manifesto: header `1.0.0` → 200 +
+// bundle; `1.0.1` → 204, nada. O casamento é igualdade EXATA de string
+// (`LauncherSelectionPolicyFilterAware` faz `runtimeVersion == it.runtimeVersion`).
+// ⇒ Subir a `version` — que a App Store OBRIGA a subir pra publicar update,
+// porque não republica a mesma marketing version — cortava o OTA de TODO binário
+// em campo de uma vez. A frota não quebrava: CONGELAVA no último bundle, com o
+// `PortaoAtualizacao` cego (ele só age com `isUpdatePending`, que nunca mais
+// existiria). Foi por isso que a `version` ficou presa em 1.0.0 desde o commit
+// inicial, e foi isso que deixou a App Store servindo o binário de 22/06 por
+// quase três meses.
+//
+// A `version` responde "que lançamento é este?" (dono: a loja). O
+// `runtimeVersion` responde "que bundles este binário roda?" (dono: o NATIVO).
+// São perguntas diferentes e a policy `appVersion` as amarrava.
+//
+// ⚠️ `policy: "fingerprint"` NÃO resolve isto sozinho: sem um
+// `fingerprint.config.js` com `ExpoConfigVersions`, a `version` ENTRA no hash e
+// subir 1.0.1 muda o runtime igual — medido em 16/09 gerando os dois hashes.
+// Quem trocar a policy achando que resolveu reintroduz o bug de forma mais
+// difícil de enxergar.
+describe("⚠️⚠️ runtimeVersion continua DESACOPLADO da version", () => {
+  const app = JSON.parse(
+    readFileSync(join(__dirname, "..", "app.json"), "utf8"),
+  ) as { expo: { version: string; runtimeVersion: unknown } };
+
+  it("é string literal, NUNCA uma policy", () => {
+    expect(
+      typeof app.expo.runtimeVersion,
+      "runtimeVersion virou objeto/policy — a armadilha rearmou: o próximo bump de version corta o OTA da frota inteira",
+    ).toBe("string");
+  });
+
+  it("e NÃO acompanha a version (senão o desacoplamento é só aparente)", () => {
+    expect(
+      app.expo.runtimeVersion,
+      "runtimeVersion ficou igual à version — subir a marketing version volta a cortar o OTA",
+    ).not.toBe(app.expo.version);
+  });
+
+  it("⚠️ o runtime só muda quando o NATIVO muda — não a cada release de loja", () => {
+    // 1.0.0 é o valor cozido em TODO binário já publicado (33, vc 5, 43, vc 9).
+    // Mudar isto tira do pool de OTA todo mundo que está em campo, então só se
+    // faz junto com binário novo nas duas lojas e com o piso da loja armado.
+    expect(app.expo.runtimeVersion).toBe("1.0.0");
+  });
+});

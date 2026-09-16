@@ -2,7 +2,7 @@
   "expo": {
     "name": "CBRio",
     "slug": "aplicativo-cbrio",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "scheme": "cbrio",
     "userInterfaceStyle": "automatic",
@@ -91,9 +91,7 @@
       }
     },
     "owner": "cbrio",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/3da60261-4811-458b-90c7-7e81f5511c51",
       "fallbackToCacheTimeout": 10000
