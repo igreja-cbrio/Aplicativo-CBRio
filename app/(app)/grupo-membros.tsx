@@ -92,6 +92,8 @@ import {
 } from "@/lib/api";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { chavesVisiveis, MARCADOR_INFO } from "@/lib/marcadoresJornada";
+import { ordenarRoster, proximaOrdem, type OrdemRoster } from "@/lib/rosterOrdem";
+import { chamadaEhHoje, dataDaChamada } from "@/lib/chamadaData";
 
 type Aba = "membros" | "frequencia" | "pedidos" | "estudos";
 // ⚠️ SEM ÍCONE e com rótulo curto: 4 abas em 328 dp dão ~80 dp cada, e ícone
@@ -391,7 +393,16 @@ export default function GrupoMembrosScreen() {
   // fazia a chamada nascer VAZIA (a lista de presentes vinha de `data.membros`).
   // O typecheck pegou; sem tipos, teria virado "a chamada não marca ninguém".
   function abrirChamada(dataAlvo: string | null = null) {
-    setChamadaData(dataAlvo);
+    // ⚠️⚠️ NUNCA ABRE NUMA DATA FUTURA (21/09/2026). O herói oferece "Registrar
+    // presença" também quando o próximo encontro ainda não chegou; ali a data
+    // que chegava aqui era futura, o servidor recusava com 400 e a tela mostrava
+    // o alerta seco "Não deu". A régua (e a queda pra ocorrência anterior) está
+    // em `lib/chamadaData.ts`.
+    setChamadaData(dataDaChamada({
+      alvo: dataAlvo,
+      hoje: hojeBRT(),
+      anterior: agendaAnterior ?? null,
+    }));
     // Começa com TODO MUNDO marcado: na prática o líder desmarca quem faltou, e
     // é bem menos toque do que marcar 12 pessoas uma a uma.
     const todos = new Set((data?.membros || []).map((m) => m.membro_id).filter(Boolean) as string[]);
@@ -549,7 +560,15 @@ export default function GrupoMembrosScreen() {
   // isso). Só a principal recebe o WhatsApp do grupo e por isso é a única
   // protegida aqui — antes a tela escondia as ações de todos os líderes.
   const liderPrincipalId = grupo?.lider_id || null;
-  const membros = data?.membros || [];
+  // ⚠️ ALFABÉTICA POR PADRÃO (21/09/2026 · pedido dos líderes na reunião). O
+  // servidor manda na ordem de ENTRADA (`order('created_at')`), que num grupo
+  // que virou de temporada é a ordem do import — ordem nenhuma pra quem procura
+  // um nome. A régua e o porquê estão em `lib/rosterOrdem.ts`.
+  const [ordemLista, setOrdemLista] = useState<OrdemRoster>("alfabetica");
+  const membros = useMemo(
+    () => ordenarRoster(data?.membros || [], ordemLista, liderPrincipalId),
+    [data?.membros, ordemLista, liderPrincipalId],
+  );
   // ⚠️ Só a CHAMADA filtra — a lista principal da tela continua inteira. E a
   // busca ignora acento: quem digita no meio do encontro escreve "joao", não
   // "João" (ver `lib/buscaTexto.ts`).
@@ -925,6 +944,27 @@ export default function GrupoMembrosScreen() {
                     </>
                   ) : (
                     <>
+                      {/* ⚠️ ALTERNADOR DE ORDEM (21/09/2026 · líderes na reunião):
+                          *"ter uma pequena opção de classificar por ordem de
+                          permissão; aí se você toca vira permissão e se você toca
+                          vira alfabética."* Um controle só, e o rótulo diz a ordem
+                          em que a lista ESTÁ — não a que o toque vai trazer, que é
+                          a confusão clássica desse tipo de botão. */}
+                      <Pressable
+                        style={styles.ordemBtn}
+                        onPress={() => setOrdemLista(proximaOrdem(ordemLista))}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          ordemLista === "alfabetica"
+                            ? t("Ordenar por função")
+                            : t("Ordenar por nome")
+                        }
+                      >
+                        <Ionicons name="swap-vertical" size={15} color={colors.textMuted} />
+                        <Text style={styles.ordemTxt}>
+                          {ordemLista === "alfabetica" ? t("Por nome") : t("Por função")}
+                        </Text>
+                      </Pressable>
                       {membros.map((m: GrupoMembro) => {
                         const wa = waLink(m.telefone);
                         const fLabel = m.funcao ? (FUNCAO[m.funcao] || null) : null;
@@ -1633,7 +1673,16 @@ export default function GrupoMembrosScreen() {
               pixels cabe menos nomes com fonte grande e o defeito volta. */}
           <View style={[styles.sheet, styles.sheetAlta, { paddingBottom: fundoSeguro }]}>
             <View style={styles.sheetHead}>
-              <Text style={styles.sheetTitle}>{t("Frequência de hoje")}</Text>
+              {/* ⚠️ O TÍTULO DIZ O DIA (21/09/2026 · pedido dos líderes): era a
+                  string fixa "Frequência de hoje", então quem registrava o
+                  encontro atrasado do dia 15 lia "hoje" e ficava na dúvida se
+                  tinha gravado certo. Hoje continua "hoje" — é o caso comum e
+                  uma data ali seria ruído. */}
+              <Text style={styles.sheetTitle}>
+                {chamadaEhHoje(chamadaData, hojeBRT())
+                  ? t("Frequência de hoje")
+                  : `${t("Frequência de")} ${dataLonga(chamadaData as string)}`}
+              </Text>
               <Pressable onPress={fecharChamada} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
                 <Ionicons name="close" size={24} color={colors.text} />
               </Pressable>
@@ -1876,6 +1925,15 @@ function makeStyles(c: Palette) {
       borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border,
     },
     discretaTxt: { color: c.textMuted, fontSize: 13.5 },
+
+    // alternador de ordem da lista de pessoas (21/09) — alinhado à direita, peso
+    // de ação secundária: ele não pode competir com os nomes, que são o conteúdo.
+    ordemBtn: {
+      flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-end",
+      paddingVertical: 6, paddingHorizontal: 10, borderRadius: radius.full,
+      borderWidth: 1, borderColor: c.border,
+    },
+    ordemTxt: { color: c.textMuted, fontSize: 13 },
 
     // ── usados pelos MODAIS (chamada · saída · transferir · ajuda · recusa) ──
     card: { backgroundColor: c.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: c.glassBorder, padding: spacing.md, gap: spacing.sm },

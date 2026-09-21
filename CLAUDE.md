@@ -76,6 +76,83 @@ somar ao seu trabalho, não duplicar.
 - **ERP #2354** (mover a função da API pra `pdx1`/Oregon) está **aberto de
   propósito** — é a API inteira, e o Marcos vai mergear numa janela calma.
 
+## ⚠️⚠️ GRUPOS · os 3 ajustes pedidos pelos LÍDERES na reunião (21/09/2026)
+
+Trazidos pelo Marcos no dia seguinte à reunião de lançamento do app pros ~100
+líderes de grupo — os três vieram de líder usando a tela na frente dele.
+
+### 1 · O atalho da Home abria OUTRA tela que a barra de baixo
+
+*"Quando apertamos no atalho de grupos, ele não abre a tela de grupos padrão, ele
+abre outra; tem que ser o mesmo atalho o do menu com o da tela principal."*
+
+O atalho ia pra `/grupos` (o buscador) e a barra pra `/meu-grupo`. **Mesmo nome,
+destinos diferentes** — o líder tocava em "Grupos" e caía no buscador sem achar o
+próprio grupo. E `/meu-grupo` é a ÚNICA porta que leva à seção "Grupos que você
+gerencia", de onde o supervisor alcança a tela de visita.
+
+⚠️⚠️ **Isto ABRE EXCEÇÃO na regra "não repetir a barra de baixo"** (o bloco do
+`index.tsx` explica a regra inteira e a exceção). Não era descuido: o comentário
+antigo defendia o buscador com o argumento de que apontar pra `/meu-grupo`
+duplicaria a barra. A reunião mostrou que **duas portas homônimas discordando é
+pior que duplicar**. Decisão dele, registrada no arquivo.
+
+### 2 · ⚠️⚠️ "Frequência de hoje" mentia — e a chamada podia nascer no FUTURO
+
+*"Quando você coloca preencher frequência, ali em cima ele coloca 'frequência de
+hoje'; deve mostrar o dia do grupo que a frequência está sendo registrada. E aí,
+não deve criar o dia de hoje como a presença, deve atrelar ao dia do grupo
+correto."*
+
+Eram **dois defeitos**, e o segundo é o grave:
+
+1. O título era string fixa. Quem registrava o encontro atrasado do dia 15 lia
+   "hoje" e ficava na dúvida se gravou certo — a mesma dúvida que o Marcos já
+   tinha relatado em agosto, e que o `chamadaData` consertou no POST **e não no
+   texto**.
+2. O herói oferece "Registrar presença" TAMBÉM quando o próximo encontro ainda
+   não chegou ("Próximo encontro · em 3 dias"). Ali a chamada abria com a data
+   **futura**, o servidor recusava com 400 ("Não dá pra registrar encontro no
+   futuro") e a tela mostrava o alerta seco **"Não deu"**. Medido no código em
+   20/09: **não havia guarda nenhuma no app**.
+
+⇒ `lib/chamadaData.ts` (`dataDaChamada`, no portão, com mutante): a chamada
+**nunca** nasce numa data futura — cai na ocorrência ANTERIOR do grupo (a que
+aconteceu) e, sem anterior conhecida, devolve `null`, que é "o servidor decide".
+⚠️ `null` continua sendo a lei de 10/08: o app **não** calcula fuso.
+⚠️ Hoje continua dizendo "hoje" no título — é o caso comum (o líder registrando
+no fim do encontro) e uma data ali seria ruído.
+
+### 3 · A lista de pessoas vinha na ordem do IMPORT
+
+*"Deixar por ordem alfabética padrão, mas ter uma pequena opção de classificar
+por ordem de permissão; aí se você toca vira permissão e se você toca vira
+alfabética."*
+
+O servidor manda `order('created_at')` — num grupo que virou de temporada, isso é
+a ordem em que o import gravou, ou seja ordem nenhuma pra quem procura um nome
+(o maior roster tem 57 pessoas).
+
+⇒ `lib/rosterOrdem.ts` (`ordenarRoster`/`proximaOrdem`, no portão, com mutante).
+⚠️ **Sem `localeCompare` com locale**: o Hermes nem sempre traz ICU completo e a
+ordem mudaria de aparelho pra aparelho — usa `normalizarBusca`, a régua de texto
+que a casa já tem, que ignora acento e caixa.
+⚠️ **Na ordem por permissão a LÍDER PRINCIPAL vem primeiro mesmo com `funcao`
+de frequentador**: em 86 dos 102 grupos ela não tem função de líder na própria
+linha do roster, e sem essa regra cairia no meio da lista.
+⚠️ Ordenar é **só exibição** — a chamada lê a mesma lista e também fica
+alfabética, que é o que o líder quer conferindo nome por nome no encontro.
+
+### ⏳ O 4º pedido NÃO entrou (é decisão de produto)
+
+Os líderes pediram **adicionar visitante na tela de frequência**, criando a
+pessoa como temporária/etiquetada, sem o contrato inteiro (hoje "Adicionar
+pessoa" exige CPF com DV, e-mail, nascimento e sexo — justamente a barreira que
+eles querem evitar com quem chegou de visita), mais alguns dados base (adulto,
+casado, homem/mulher). **Espera a régra do Marcos** sobre o que acontece com
+essa pessoa se ela nunca se inscrever — sem isso a base enche de cadastro pela
+metade.
+
 ## ⚠️⚠️ A PORTA DE ENTRADA DA LOJA ESTAVA VELHA · medido (03/09/2026)
 
 Pergunta do Marcos: *"toda vez que alguém baixa o app da playstore ou appstore,

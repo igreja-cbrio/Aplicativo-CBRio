@@ -6,6 +6,16 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  // ──── Grupos · ajustes pedidos pelos líderes na reunião (21/09/2026) ────
+  "Por nome": { en: "By name", es: "Por nombre" },
+  "Por função": { en: "By role", es: "Por función" },
+  "Ordenar por nome": { en: "Sort by name", es: "Ordenar por nombre" },
+  "Ordenar por função": { en: "Sort by role", es: "Ordenar por función" },
+  // ⚠️ Fica sem o dia de propósito: o dia entra depois, já formatado por
+  // `dataLonga`, que tem tradução própria. Juntar os dois numa chave só faria
+  // uma entrada por data do calendário.
+  "Frequência de": { en: "Attendance for", es: "Asistencia de" },
+
   // ──── Calendário · seletor de ano + data de nascimento (15/09/2026) ────
   "Escolher no calendário": { en: "Pick from calendar", es: "Elegir en el calendario" },
   "Escolher o ano": { en: "Choose the year", es: "Elegir el año" },

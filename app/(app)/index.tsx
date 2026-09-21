@@ -40,7 +40,7 @@ type Atalho = {
   icon: React.ComponentProps<typeof Ionicons>["name"];
   href:
     | "/generosidade" | "/batismo" | "/kids" | "/jornada" | "/next" | "/inscricoes"
-    | "/videos" | "/grupos" | "/voluntariado" | "/apresentacao-crianca";
+    | "/videos" | "/grupos" | "/meu-grupo" | "/voluntariado" | "/apresentacao-crianca";
 };
 
 /**
@@ -61,6 +61,14 @@ type Atalho = {
  *
  * "No culto" saiu por outro motivo: virou o CARD DE AO VIVO no topo, que só
  * aparece enquanto o culto acontece.
+ *
+ * ⚠️⚠️ EXCEÇÃO ABERTA EM 21/09/2026 · **Grupos repete a barra de baixo DE
+ * PROPÓSITO**. Decisão do Marcos depois da reunião de lançamento, vendo no
+ * iPhone dele: *"tem que ser o mesmo atalho o do menu com o da tela
+ * principal."* O atalho apontava pro buscador (`/grupos`) e a barra pro
+ * `/meu-grupo` — mesmo nome, destinos diferentes, e o líder que tocava em
+ * "Grupos" caía no buscador sem achar o próprio grupo. Aqui o custo de repetir
+ * é menor que o de ter duas portas homônimas discordando.
  *
  * ⚠️ A grade é de 3 colunas. Quem acrescentar um 7º deixa 3+3+1 — decidir o que
  * sai junto, não empurrar.
@@ -91,12 +99,19 @@ type Atalho = {
  * FEATURES não afeta mais o desenho da grade.
  */
 const ATALHOS: Atalho[] = [
-  // ⚠️ `/grupos` (ENCONTRAR um grupo), não `/meu-grupo`. O pedido dizia só
-  // "grupos", e a barra de baixo já leva a `/meu-grupo` — apontar pra lá faria
-  // o atalho ser o MESMO destino, duplicação sem nenhum ganho. Além disso a
-  // lista pedida é toda de PORTAS de entrada (next, voluntariado, batismo,
-  // apresentação, inscrições), e a porta dos grupos é o buscador.
-  { label: "Grupos", icon: "people", href: "/grupos" },
+  // ⚠️⚠️ `/meu-grupo`, e NÃO `/grupos` — invertido em 21/09/2026 pelo Marcos,
+  // depois de ver acontecer no iPhone dele: *"quando apertamos no atalho de
+  // grupos, ele não abre a tela de grupos padrão, ele abre outra; tem que ser o
+  // mesmo atalho o do menu com o da tela principal."*
+  //
+  // O comentário que estava aqui defendia o contrário (atalho = PORTA de
+  // entrada, logo o buscador) e o argumento era que apontar pra `/meu-grupo`
+  // duplicaria a barra de baixo. O que a reunião de lançamento mostrou é que
+  // duas portas com o MESMO nome e destinos diferentes é pior que duplicar:
+  // o líder toca em "Grupos", cai no buscador e não acha o próprio grupo.
+  // `/meu-grupo` também é a única porta que leva à seção "Grupos que você
+  // gerencia" — de onde o supervisor chega na tela de visita.
+  { label: "Grupos", icon: "people", href: "/meu-grupo" },
   { label: "NEXT", icon: "sparkles", href: "/next" },
   { label: "Voluntariado", icon: "hand-left", href: "/voluntariado" },
   { label: "Batismo", icon: "water", href: "/batismo" },

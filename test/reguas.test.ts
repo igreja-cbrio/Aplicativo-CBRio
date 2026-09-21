@@ -17,6 +17,8 @@ import { hojeBRT, diaBRT } from "@/lib/dataBRT";
 import { diaDoInstanteBRT, ehDiaDoCulto, cultosDeHoje } from "@/lib/janelaCheckin";
 import { DICIONARIO, ehFormato, noDicionario } from "../scripts/i18n-cobertura.mjs";
 import { fichaCompleta, faltaNaFicha, podeInscrever, jaTemNaFicha } from "@/lib/ficha";
+import { ordenarRoster, proximaOrdem } from "@/lib/rosterOrdem";
+import { chamadaEhHoje, dataDaChamada } from "@/lib/chamadaData";
 import { montarPayloadInscricao, extrasFaltando } from "@/lib/inscricaoPayload";
 import { tipoDaCapa, arquivoDaCapa, capaCabe, MAX_CAPA_BYTES } from "@/lib/capaGrupo";
 import { motivoDaFalhaPush, mensagemDoErro } from "@/lib/motivoPush";
@@ -2444,5 +2446,86 @@ describe("⚠️⚠️ runtimeVersion continua DESACOPLADO da version", () => {
     // Mudar isto tira do pool de OTA todo mundo que está em campo, então só se
     // faz junto com binário novo nas duas lojas e com o piso da loja armado.
     expect(app.expo.runtimeVersion).toBe("1.0.0");
+  });
+});
+
+// ============================================================================
+// GRUPOS · os 3 ajustes pedidos pelos líderes na reunião de lançamento (21/09)
+// ============================================================================
+describe("ordem da lista de pessoas do grupo", () => {
+  const roster = [
+    { nome: "Zuleica Alves", funcao: "frequentador", membro_id: "z" },
+    { nome: "ana paula", funcao: "visitante", membro_id: "a" },
+    { nome: "Élida Souza", funcao: "lider_treinamento", membro_id: "e" },
+    { nome: "Beatriz Lima", funcao: "frequentador", membro_id: "b" },
+  ];
+
+  it("alfabética ignora acento e caixa", () => {
+    // ⚠️ MUTATION GUARD: comparar as strings cruas manda "ana" pro fim (minúscula
+    // depois de maiúscula na tabela ASCII) e "Élida" pro depois de "Zuleica".
+    expect(ordenarRoster(roster, "alfabetica").map((m) => m.membro_id))
+      .toEqual(["a", "b", "e", "z"]);
+  });
+
+  it("por função põe liderança no topo e desempata pelo nome", () => {
+    expect(ordenarRoster(roster, "funcao").map((m) => m.membro_id))
+      .toEqual(["e", "b", "z", "a"]);
+  });
+
+  it("⚠️ a líder PRINCIPAL vem antes, mesmo com função de frequentador", () => {
+    // Em 86 dos 102 grupos a líder não tem `funcao='lider'` na própria linha do
+    // roster — sem esta regra ela cairia no meio da lista na ordem de permissão.
+    expect(ordenarRoster(roster, "funcao", "z").map((m) => m.membro_id))
+      .toEqual(["z", "e", "b", "a"]);
+  });
+
+  it("não mexe no array original (é o estado da tela)", () => {
+    const copia = [...roster];
+    ordenarRoster(roster, "alfabetica");
+    expect(roster).toEqual(copia);
+  });
+
+  it("o alternador só tem dois estados", () => {
+    expect(proximaOrdem("alfabetica")).toBe("funcao");
+    expect(proximaOrdem("funcao")).toBe("alfabetica");
+  });
+});
+
+describe("data que a chamada registra", () => {
+  const hoje = "2026-09-21";
+
+  it("data passada é respeitada (a chamada atrasada grava no dia certo)", () => {
+    expect(dataDaChamada({ alvo: "2026-09-15", hoje })).toBe("2026-09-15");
+  });
+
+  it("hoje é hoje", () => {
+    expect(dataDaChamada({ alvo: hoje, hoje })).toBe(hoje);
+  });
+
+  it("⚠️ data FUTURA cai na ocorrência anterior — nunca vai pro servidor", () => {
+    // MUTATION GUARD: sem esta regra o POST leva a data futura e o servidor
+    // responde 400 ("Não dá pra registrar encontro no futuro"), que chega na
+    // tela como o alerta seco "Não deu".
+    expect(dataDaChamada({ alvo: "2026-09-29", hoje, anterior: "2026-09-15" }))
+      .toBe("2026-09-15");
+  });
+
+  it("data futura SEM anterior conhecida devolve null (servidor decide)", () => {
+    expect(dataDaChamada({ alvo: "2026-09-29", hoje, anterior: null })).toBeNull();
+  });
+
+  it("anterior também futura não serve de escape", () => {
+    expect(dataDaChamada({ alvo: "2026-09-29", hoje, anterior: "2026-09-30" })).toBeNull();
+  });
+
+  it("lixo não vira data", () => {
+    expect(dataDaChamada({ alvo: "29/09/2026", hoje })).toBeNull();
+    expect(dataDaChamada({ alvo: null, hoje })).toBeNull();
+  });
+
+  it("o título só diz 'hoje' quando é hoje mesmo", () => {
+    expect(chamadaEhHoje(null, hoje)).toBe(true);
+    expect(chamadaEhHoje(hoje, hoje)).toBe(true);
+    expect(chamadaEhHoje("2026-09-15", hoje)).toBe(false);
   });
 });
