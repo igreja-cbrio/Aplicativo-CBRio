@@ -111,6 +111,27 @@ const MUTANTES = [
     para: "  // mutante",
   },
   {
+    // ⚠️ A GUARDA DE DATA FUTURA DA CHAMADA (21/09/2026). Sem ela o heroi
+    // "Proximo encontro · em 3 dias" abre a chamada na data futura, o servidor
+    // recusa com 400 e a tela mostra o alerta seco "Nao deu". Tirar a queda pra
+    // ocorrencia anterior parece simplificacao ("devolve o alvo e pronto") e
+    // reintroduz o defeito inteiro.
+    nome: "chamada: deixar a data FUTURA passar pro servidor",
+    arq: "lib/chamadaData.ts",
+    de: "  if (alvo && alvo <= hoje) return alvo;",
+    para: "  if (alvo) return alvo;",
+  },
+  {
+    // ⚠️ Ordenar pelo nome CRU manda "ana paula" pro fim da lista (minuscula
+    // depois de maiuscula no ASCII) e "Elida" pra depois de "Zuleica". A lista
+    // continua "ordenada" aos olhos de quem testa com 3 nomes ASCII, e quebra
+    // no grupo real, que e cheio de acento.
+    nome: "roster: ordenar pelo nome cru, sem normalizar acento/caixa",
+    arq: "lib/rosterOrdem.ts",
+    de: "  const na = normalizarBusca(a);",
+    para: "  const na = String(a || \"\");",
+  },
+  {
     // ⚠️ ESTE É O BUG DE 07/08, congelado. `Disponibilidade.tsx` validava as
     // datas em que o voluntario NAO pode servir com a regua de NASCIMENTO, que
     // termina em `<= Date.now()` — entao TODA data futura era recusada e a tela
