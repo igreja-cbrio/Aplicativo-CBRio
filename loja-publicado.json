@@ -11,9 +11,11 @@
     "runtime": "valor de `runtimeVersion` cozido NESTE binario. Desde 16/09/2026 ele e string literal e NAO acompanha a `version` (ver o teste em test/reguas.test.ts). Registrar aqui e o que permite saber se o OTA que vamos publicar alcanca o binario da loja."
   },
   "ios": {
-    "rotulo": "build 33",
-    "publicado_em": "2026-06-22",
-    "nota": "Compilado FORA do EAS (Xcode/Transporter) — não existe registro de commit. Os builds iOS #17 a #33 não existem no EAS. Medido em 03/09 com `eas submit:status -p ios`: App Store Live 1.0 (33), uploaded 2 months ago."
+    "rotulo": "build 44",
+    "publicado_em": "2026-09-21",
+    "commit": "ef7eb46",
+    "runtime": "1.0.0",
+    "nota": "Primeira release iOS a chegar na App Store desde o build 33 (22/06) — 91 dias. E o primeiro binario com `version` diferente de 1.0.0: a marketing version subiu pra 1.0.1 e o `runtimeVersion` ficou em 1.0.0 (string literal), entao ele esta no MESMO pool de OTA do build 33. ⚠️ Rejeitado uma vez (17/09) por Guideline 2.1: o PassKit no binario e do Apple Wallet (cartao de membro), nao de Apple Pay — o Apple Pay esta desligado por FEATURES.generosidade e e inalcancavel. Resolvido nas Notas de revisao, sem build novo. ⚠️ `publicado_em` veio do App Store Connect, NAO da telemetria: os 4 aparelhos no build 44 desde 16/09 sao TestFlight, anteriores a aprovacao."
   },
   "android": {
     "rotulo": "versionCode 9",
