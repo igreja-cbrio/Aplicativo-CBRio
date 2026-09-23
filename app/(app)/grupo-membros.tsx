@@ -94,6 +94,8 @@ import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { chavesVisiveis, MARCADOR_INFO } from "@/lib/marcadoresJornada";
 import { ordenarRoster, proximaOrdem, type OrdemRoster } from "@/lib/rosterOrdem";
 import { chamadaEhHoje, dataDaChamada } from "@/lib/chamadaData";
+import { fundoDaFolha } from "@/lib/folha";
+import { useDialogo } from "@/components/ui/Dialogo";
 
 type Aba = "membros" | "frequencia" | "pedidos" | "estudos";
 // ⚠️ SEM ÍCONE e com rótulo curto: 4 abas em 328 dp dão ~80 dp cada, e ícone
@@ -151,9 +153,12 @@ export default function GrupoMembrosScreen() {
   // aparelho; o piso resolve as três.
   // ⚠️ Se o inset vier correto (48), isso dá 48+24 = 72 dp de folga: bastante,
   // mas o pedido foi literalmente "subir um pouco".
-  const fundoSeguro = spacing.lg + Math.max(insets.bottom, spacing.lg);
+  // ⚠️ 23/09: virou régua ÚNICA do app (`lib/folha.ts`) depois do segundo
+  // relato no mesmo botão ("poderia ter clicado em fechar sem querer").
+  const fundoSeguro = fundoDaFolha(insets.bottom);
   const router = useRouter();
   const t = useT();
+  const dlg = useDialogo();
   const params = useLocalSearchParams<{ id: string; nome?: string }>();
   const grupoId = String(params.id || "");
 
@@ -522,23 +527,27 @@ export default function GrupoMembrosScreen() {
     try { await carregar(true); } finally { setRefrescando(false); }
   }
 
-  function aceitar(p: GrupoPedido) {
-    Alert.alert(t("Aceitar inscrição"), `${t("Aprovar")} ${p.nome}?`, [
-      { text: t("Cancelar"), style: "cancel" },
-      {
-        text: t("Aceitar"),
-        onPress: async () => {
-          setProcessandoId(p.id);
-          try {
-            await aprovarPedidoGrupo(p.id);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-            await carregar(true); // atualiza roster + pendentes
-          } catch (e: any) {
-            Alert.alert(t("Erro"), e?.message || t("Não foi possível aprovar."));
-          } finally { setProcessandoId(null); }
-        },
-      },
-    ]);
+  // ⚠️ Diálogo da CASA, não `Alert.alert` (23/09): o Marcos viu a caixa cinza
+  // do Android ao lado da folha bonita de Recusar. Seguro aqui porque NÃO há
+  // <Modal> aberto quando dispara — o diálogo é irmão da tela.
+  // ⚠️ Os OUTROS Alert.alert desta tela ficam nativos de propósito: disparam
+  // com uma folha (<Modal>) aberta, e um diálogo irmão nasce ATRÁS dela no
+  // iPhone (ver grupo-visita.tsx e lib/dialogosNativos.ts).
+  async function aceitar(p: GrupoPedido) {
+    const ok = await dlg.confirmar({
+      titulo: t("Aceitar inscrição"),
+      mensagem: `${t("Aprovar")} ${p.nome}?`,
+      acao: t("Aceitar"),
+    });
+    if (!ok) return;
+    setProcessandoId(p.id);
+    try {
+      await aprovarPedidoGrupo(p.id);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      await carregar(true); // atualiza roster + pendentes
+    } catch (e: any) {
+      void dlg.avisar(t("Erro"), e?.message || t("Não foi possível aprovar."));
+    } finally { setProcessandoId(null); }
   }
   async function confirmarRecusa() {
     const p = recusaAlvo;
@@ -1840,6 +1849,8 @@ export default function GrupoMembrosScreen() {
         }}
       />
 
+      {/* Diálogo da casa · IRMÃO do conteúdo (ver components/ui/Dialogo.tsx) */}
+      <dlg.Dialogo />
     </SafeAreaView>
   );
 }

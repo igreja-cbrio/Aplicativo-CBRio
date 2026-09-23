@@ -21,6 +21,8 @@ import {
 } from "@/lib/api";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { useT } from "@/lib/i18n";
+import { fundoDaFolha } from "@/lib/folha";
+import { useDialogo } from "@/components/ui/Dialogo";
 
 function waLink(tel: string | null): string | null {
   if (!tel) return null;
@@ -76,6 +78,7 @@ export default function EscalaSupervisorScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const t = useT();
+  const dlg = useDialogo();
 
   const [servicos, setServicos] = useState<EscalaServico[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -287,16 +290,21 @@ export default function EscalaSupervisorScreen() {
     finally { setCarregandoDetalhe(false); }
   }
 
-  function remover(item: EscalaItem) {
-    Alert.alert(t("Remover da escala"), `${t("Tirar")} ${item.volunteer_name} ${t("da escala?")}`, [
-      { text: t("Cancelar"), style: "cancel" },
-      { text: t("Remover"), style: "destructive", onPress: async () => {
-        setRemovendoId(item.id);
-        try { await removerDaEscala(item.id); setEscala(prev => prev.filter(e => e.id !== item.id)); }
-        catch (e: any) { Alert.alert(t("Erro"), e?.message || t("Erro ao remover")); }
-        finally { setRemovendoId(null); }
-      } },
-    ]);
+  // ⚠️ Diálogo da CASA, não `Alert.alert` (23/09): o Marcos viu a caixa cinza
+  // do Android ao lado da folha bonita de Recusar. Seguro aqui porque NÃO há
+  // <Modal> aberto quando dispara — o diálogo é irmão da tela.
+  async function remover(item: EscalaItem) {
+    const ok = await dlg.confirmar({
+      titulo: t("Remover da escala"),
+      mensagem: `${t("Tirar")} ${item.volunteer_name} ${t("da escala?")}`,
+      acao: t("Remover"),
+      perigo: true,
+    });
+    if (!ok) return;
+    setRemovendoId(item.id);
+    try { await removerDaEscala(item.id); setEscala(prev => prev.filter(e => e.id !== item.id)); }
+    catch (e: any) { void dlg.avisar(t("Erro"), e?.message || t("Erro ao remover")); }
+    finally { setRemovendoId(null); }
   }
 
   const statusInfo = (s: string | null) =>
@@ -454,7 +462,7 @@ export default function EscalaSupervisorScreen() {
       {/* Ficha do voluntário */}
       <Modal visible={detalheOpen} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setDetalheOpen(false)}>
         <View style={styles.modalWrap}>
-          <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom, maxHeight: "85%" }]}>
+          <View style={[styles.sheet, { paddingBottom: fundoDaFolha(insets.bottom), maxHeight: "85%" }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{t("Ficha do voluntário")}</Text>
               <Pressable onPress={() => setDetalheOpen(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}><Ionicons name="close" size={24} color={colors.text} /></Pressable>
@@ -508,7 +516,7 @@ export default function EscalaSupervisorScreen() {
       {/* Modal de adicionar */}
       <Modal visible={addOpen} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setAddOpen(false)}>
         <TecladoSeguro style={styles.modalWrap}>
-          <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom }]}>
+          <View style={[styles.sheet, { paddingBottom: fundoDaFolha(insets.bottom) }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{t("Adicionar voluntário")}</Text>
               <Pressable onPress={() => setAddOpen(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}><Ionicons name="close" size={24} color={colors.text} /></Pressable>
@@ -569,6 +577,8 @@ export default function EscalaSupervisorScreen() {
           </View>
         </TecladoSeguro>
       </Modal>
+      {/* Diálogo da casa · IRMÃO do conteúdo (ver components/ui/Dialogo.tsx) */}
+      <dlg.Dialogo />
     </SafeAreaView>
   );
 }

@@ -40,6 +40,7 @@ import {
 import { FEATURES } from "@/lib/features";
 import { apiGet, apiPost } from "@/lib/api";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { useDialogo } from "@/components/ui/Dialogo";
 
 const TEMA_OPCOES: { key: ThemePreference; label: string; icon: React.ComponentProps<typeof Ionicons>["name"] }[] = [
   { key: "system", label: "Sistema", icon: "phone-portrait-outline" },
@@ -78,6 +79,7 @@ export default function ConfiguracoesScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const t = useT();
+  const dlg = useDialogo();
 
   const { lang, setLang } = useLang();
   const [pagamento, setPagamento] = useState<MetodoPagamento>("pix");
@@ -151,14 +153,13 @@ export default function ConfiguracoesScreen() {
 
   async function alternarNotificacoes(valor: boolean) {
     if (!valor) {
-      Alert.alert(
-        t("Desativar notificações"),
-        t("Pra desativar, abra as Configurações do sistema e desligue as notificações do CBRio."),
-        [
-          { text: t("Cancelar"), style: "cancel" },
-          { text: t("Abrir Configurações"), onPress: () => Linking.openSettings() },
-        ]
-      );
+      // Diálogo da casa (23/09) — nenhuma folha aberta aqui.
+      const abrir = await dlg.confirmar({
+        titulo: t("Desativar notificações"),
+        mensagem: t("Pra desativar, abra as Configurações do sistema e desligue as notificações do CBRio."),
+        acao: t("Abrir Configurações"),
+      });
+      if (abrir) Linking.openSettings();
       return;
     }
     const req = await Notifications.requestPermissionsAsync();
@@ -199,18 +200,13 @@ export default function ConfiguracoesScreen() {
       // Não falha o fluxo se a coluna não existir (e2 vira erro mas seguimos).
       if (e2) console.log("[exclusao] não atualizou profiles.status:", e2.message);
 
-      Alert.alert(
+      // Diálogo da casa (23/09): espera o OK e só então desloga — a tela
+      // continua montada até a pessoa ler.
+      await dlg.avisar(
         t("Solicitação registrada"),
         t("Recebemos seu pedido. Em breve sua conta será desativada. Vamos sentir sua falta. 💙"),
-        [
-          {
-            text: t("Ok"),
-            onPress: async () => {
-              await signOut();
-            },
-          },
-        ]
       );
+      await signOut();
     } catch (e) {
       setErroExclusao(e instanceof Error ? e.message : t("Falha ao solicitar exclusão."));
     } finally {
@@ -446,6 +442,8 @@ export default function ConfiguracoesScreen() {
           )}
         </Section>
       </ScrollView>
+      {/* Diálogo da casa · IRMÃO do conteúdo (ver components/ui/Dialogo.tsx) */}
+      <dlg.Dialogo />
     </SafeAreaView>
   );
 }

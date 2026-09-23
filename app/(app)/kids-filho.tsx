@@ -22,6 +22,7 @@ import { useT } from "@/lib/i18n";
 import { apiGet, apiPost } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { useDialogo } from "@/components/ui/Dialogo";
 
 const FOTO_BUCKET = "kids-documentos";
 const CONSENT_VERSAO = "eca-lgpd-v1";
@@ -60,6 +61,7 @@ export default function KidsFilhoScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
+  const dlg = useDialogo();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const [d, setD] = useState<Detalhe | null>(null);
@@ -178,30 +180,29 @@ export default function KidsFilhoScreen() {
     }
   }
 
-  function removerFoto() {
+  // ⚠️ Diálogo da CASA, não `Alert.alert` (23/09): o Marcos viu a caixa cinza
+  // do Android ao lado da folha bonita de Recusar. Seguro aqui porque NÃO há
+  // <Modal> aberto quando dispara — o diálogo é irmão da tela.
+  // ⚠️ "Foto da criança" (câmera / galeria / cancelar) FICA nativo: são 3
+  // opções e o diálogo da casa tem 2 botões (ver lib/dialogosNativos.ts).
+  async function removerFoto() {
     if (!id) return;
-    Alert.alert(
-      t("Remover foto"),
-      t("Isso apaga a foto e revoga a autorização de uso da imagem. Tem certeza?"),
-      [
-        { text: t("Cancelar"), style: "cancel" },
-        {
-          text: t("Remover"),
-          style: "destructive",
-          onPress: async () => {
-            setSalvandoFoto(true);
-            try {
-              await apiPost(`/app/kids/filho/${id}/foto/remover`, {});
-              await carregar();
-            } catch (e) {
-              Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível remover."));
-            } finally {
-              setSalvandoFoto(false);
-            }
-          },
-        },
-      ]
-    );
+    const ok = await dlg.confirmar({
+      titulo: t("Remover foto"),
+      mensagem: t("Isso apaga a foto e revoga a autorização de uso da imagem. Tem certeza?"),
+      acao: t("Remover"),
+      perigo: true,
+    });
+    if (!ok) return;
+    setSalvandoFoto(true);
+    try {
+      await apiPost(`/app/kids/filho/${id}/foto/remover`, {});
+      await carregar();
+    } catch (e) {
+      void dlg.avisar(t("Erro"), e instanceof Error ? e.message : t("Não foi possível remover."));
+    } finally {
+      setSalvandoFoto(false);
+    }
   }
 
   return (
@@ -360,6 +361,8 @@ export default function KidsFilhoScreen() {
           </>
         ) : null}
       </ScrollView>
+      {/* Diálogo da casa · IRMÃO do conteúdo (ver components/ui/Dialogo.tsx) */}
+      <dlg.Dialogo />
     </SafeAreaView>
   );
 }

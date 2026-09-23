@@ -29,7 +29,7 @@
 // ============================================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -48,6 +48,7 @@ import { isValidCPF, mascaraDataBR, nascimentoBRParaISO } from "@/lib/validators
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { abrirFichaCadastro, fecharFichaCadastro } from "@/lib/cadastroAberto";
 import { mascararCpf } from "@/lib/cpf";
+import { FormularioRolavel } from "@/components/ui/FormularioRolavel";
 
 const soDigitos = (s: string) => s.replace(/\D/g, "");
 
@@ -328,7 +329,10 @@ export default function CompletarCadastroScreen() {
           nenhum — nem no iPhone (varredura de 07/08). `padding` nas duas
           plataformas: o cálculo do RN é auto-corretivo. */}
       <TecladoSeguro style={{ flex: 1 }}>
-      <ScrollView
+      {/* ⚠️ FormularioRolavel, não ScrollView (23/09): "quando a pessoa está
+          dizendo quem é, quando o teclado sobe fica difícil de ver". Ganhar
+          foco rola até o campo — ver components/ui/FormularioRolavel.tsx. */}
+      <FormularioRolavel
         automaticallyAdjustKeyboardInsets
         contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.hero}>
@@ -486,7 +490,7 @@ export default function CompletarCadastroScreen() {
         <Pressable onPress={() => signOut()} style={styles.sair}>
           <Text style={styles.sairTxt}>{t("Sair da conta")}</Text>
         </Pressable>
-      </ScrollView>
+      </FormularioRolavel>
       </TecladoSeguro>
     </SafeAreaView>
   );

@@ -45,6 +45,7 @@ import {
   type NextDirecionarOpcoes, type NextGestao, type NextMatricula,
   type NextPessoaEspera, type NextTurmaDetalhe, type NextTurmaGestao,
 } from "@/lib/api";
+import { fundoDaFolha } from "@/lib/folha";
 
 type Aba = "turma" | "aceitacoes";
 
@@ -88,7 +89,7 @@ export function NextGestaoScreen() {
   const insets = useSafeAreaInsets();
   // ⚠️ PISO, não o inset cru: dentro de um <Modal> do Android o inset pode vir
   // 0 (a folha é outra janela) e o botão encosta na barra de navegação.
-  const fundoSeguro = spacing.lg + Math.max(insets.bottom, spacing.lg);
+  const fundoSeguro = fundoDaFolha(insets.bottom); // régua única · lib/folha.ts
   const t = useT();
 
   const [gestao, setGestao] = useState<NextGestao | null>(null);
