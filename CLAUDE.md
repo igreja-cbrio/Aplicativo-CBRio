@@ -44,6 +44,10 @@ semanais estão todos `ativo=false`. O Codex ia carregar `Downloads/Samuel2.docx
 dia, TODAS as portas de plano mostram "ainda não foi publicado" — isso é
 conteúdo (Cuidados → planos no SISTEMA), não bug do app.
 
+⚠️ O portão do OTA (`npm run ota`) roda `test/dialogoDaCasa.test.ts`: confirmação com
+botões tem que ser `useDialogo` (a de excluir anotação foi migrada em #165 — o 1º OTA
+da restauração foi barrado por isso, e é assim que deve ser).
+
 ⚠️ Gotchas do código: `listarPlanos` acha o "Devocional da semana" por título
 contendo "semana" e sem `slug` (frágil; o certo é dar slug ao plano semanal);
 `cartoes.tsx`/`sobre.tsx` escrevem `{"CB"+"Rio"}`/`{"NSM"+": "}` só pra não
