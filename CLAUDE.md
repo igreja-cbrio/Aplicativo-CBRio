@@ -76,6 +76,82 @@ somar ao seu trabalho, não duplicar.
 - **ERP #2354** (mover a função da API pra `pdx1`/Oregon) está **aberto de
   propósito** — é a API inteira, e o Marcos vai mergear numa janela calma.
 
+## ⚠️⚠️ MONTAR ESCALA · por TIME, em duas etapas, num carrossel (23/09/2026)
+
+O redesenho que o Marcos pediu em vídeo (03/09), comparando com o Planning
+Center Services, e que ficou parado três semanas atrás da loja. Os pedidos dele,
+na ordem da voz: **(1)** a aba Servir em si NÃO muda — ele recusou reordenar a
+hierarquia dela, não reintroduzir; **(2)** culto em DUAS ETAPAS, tipo → data, só
+os nossos cultos; **(3)** CARROSSEL horizontal de equipes; **(4)** agrupar por
+TIME, não por cargo; **(5)** aba Ordem de Culto — **fica pra um PR próprio**;
+**(6)** NÃO criar TIMES/NOTES/FILES. Mais o que eu levantei e ele aprovou: a
+VAGA visível ("faltam 2") e manter o arrastar.
+
+### ⚠️⚠️ O que estava errado, medido (Domingo - Manhã de 27/09 · 69 escalas)
+
+- A tela agrupava pela string **`team_name` de cada linha** — e nas linhas
+  importadas do Planning Center ela é o nome da **POSIÇÃO** ("Vocal", "Chat
+  9:30", "Câmeras"), porque lá o "team" é o nosso cargo. **21 valores distintos
+  que não são time nenhum** ⇒ 21 "equipes" de uma pessoa. Era exatamente a
+  queixa do pedido 4.
+- A tela lia `resposta.equipes` pra mostrar área vazia. **Esse campo nunca
+  existiu na resposta** — o servidor manda `composicao` (equipe × posição ×
+  quantidade) desde 25/08. "Área vazia" nunca apareceu no app.
+
+### A régua · `lib/escalaTimes.ts` (pura · 14 testes · 5 mutantes)
+
+- **A que time a linha pertence, nesta ordem:** `team_name` que É nome de time
+  conhecido (a escrita mais recente — o `PATCH` do app gravava só o nome) →
+  `team_id` (as linhas do PCO) → o próprio nome (`n:`), pra não sumir.
+- **Vaga = `quantidade` − quem conta**, e **quem recusou NÃO conta** (a régua de
+  21/08 de `volCobertura.js`, repetida aqui de propósito). A pessoa recusada
+  continua listada — sumir com ela faria o supervisor perder quem repor.
+- Posição casa por `position_id`, senão pelo nome normalizado; o que não casa
+  cai em "Sem função", no fim do time. Dois itens pra mesma posição SOMAM (split).
+- Tipos de culto na ordem do **próximo culto**, não alfabética — o supervisor da
+  quarta abre a tela na quarta.
+
+### A tela · `escala-supervisor.tsx`
+
+- Etapa 1 = chips de TIPO · etapa 2 = chips de DATA (com "N esc."). Abre no
+  tipo do culto mais próximo, já com a data dele. Culto que saiu da janela volta
+  pro mais próximo do tipo.
+- Barra de TIMES (chip = nome + badge vermelho com o `faltam`, ou o total)
+  **é a navegação do carrossel E o alvo do arraste**. O carrossel é um
+  `ScrollView` horizontal `pagingEnabled`, uma página por time, cada página com
+  seu scroll vertical: cabeçalho (ÁREA · nome · `i/n`), contadores ✓ ✗ ?,
+  "faltam N"/"completa", posições com `preenchidas/alvo`, pessoas, e a linha
+  tracejada **"N vaga(s) em aberto · preencher"** que abre o Adicionar já no
+  time e na função.
+- **Arraste:** soltar num chip de time move pra lá **zerando a função**
+  ("Vocal" não existe na Integração); soltar num cabeçalho de função da página
+  aberta muda a função. `destinoDoArraste` devolve `null` no próprio time ⇒
+  nenhuma chamada. Otimista; erro recarrega.
+- Adicionar: equipe = chips dos times do culto · função = chips das posições do
+  time (com "faltam N" nas abertas) + texto livre. **Saiu o "…ou nova equipe"**:
+  time é dado do catálogo, não texto.
+- Foto real quando `foto_url` vem (a régua de 26/08 do servidor); iniciais senão.
+- ⚠️ O `remover()` segue `Alert.alert` de propósito: outra sessão migra os
+  diálogos desta tela pro `useDialogo` — não mexer nos dois ao mesmo tempo.
+
+### ⚠️ Lado do ERP (mesma leva)
+
+`POST`/`PATCH /app/voluntariado/escala` passaram a gravar **`team_id` e
+`position_id`** junto com os nomes (só equipe ATIVA resolve; mudança só de
+função não re-resolve o time). Sem isso quem o app escalava caía em "sobrando"
+na web e quem o app movia continuava no time antigo lá. A régua do app tolera as
+duas gerações de dado.
+
+### ⏳ O que NÃO está aqui
+
+Ordem de culto (pedido 5 · precisa antes conferir se o roteiro da Produção é
+dado estruturado) · o horário do time split acima do time (0 times com
+`split_por_horario` hoje) · elegibilidade por tipo de culto (0 vínculos com
+restrição). A máquina existe no banco e está desligada — ver a memória.
+
+⚠️ Nada disto foi executado em aparelho por mim: o portão (362 testes) cobre a
+RÉGUA, não a tela nem o gesto do arraste.
+
 ## ⚠️⚠️ GRUPOS · os 3 ajustes pedidos pelos LÍDERES na reunião (21/09/2026)
 
 Trazidos pelo Marcos no dia seguinte à reunião de lançamento do app pros ~100

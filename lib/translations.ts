@@ -6,6 +6,24 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  // ──── Montar escala · por TIME, em duas etapas, num carrossel (23/09/2026) ────
+  "Tipo de culto": { en: "Service type", es: "Tipo de culto" },
+  "Deslize pra ver as equipes. Segure um nome pra mover.": { en: "Swipe to browse the teams. Hold a name to move it.", es: "Deslizá para ver los equipos. Mantené un nombre para moverlo." },
+  "Solte em uma equipe ou função.": { en: "Drop on a team or a role.", es: "Soltá sobre un equipo o una función." },
+  "Nenhuma equipe neste culto ainda.": { en: "No teams in this service yet.", es: "Todavía no hay equipos en este culto." },
+  "Função": { en: "Role", es: "Función" },
+  "Sem função": { en: "No role", es: "Sin función" },
+  "Equipe toda": { en: "Whole team", es: "Todo el equipo" },
+  "Sem funções definidas nesta equipe.": { en: "No roles defined for this team.", es: "Este equipo no tiene funciones definidas." },
+  "…ou outra função (opcional)": { en: "…or another role (optional)", es: "…u otra función (opcional)" },
+  // ⚠️ Chaves curtas de propósito: entram com o NÚMERO na frente ("faltam 2").
+  "faltam": { en: "need", es: "faltan" },
+  "completa": { en: "full", es: "completa" },
+  "preencher": { en: "fill", es: "cubrir" },
+  "vaga em aberto": { en: "open spot", es: "lugar disponible" },
+  "vagas em aberto": { en: "open spots", es: "lugares disponibles" },
+  "de outras áreas": { en: "from other areas", es: "de otras áreas" },
+
   // ──── Grupos · ajustes pedidos pelos líderes na reunião (21/09/2026) ────
   "Por nome": { en: "By name", es: "Por nombre" },
   "Por função": { en: "By role", es: "Por función" },
