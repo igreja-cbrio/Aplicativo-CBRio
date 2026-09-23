@@ -185,7 +185,7 @@ export default function CartoesScreen() {
                     <View style={styles.row}>
                       <View>
                         <Text style={styles.label}>{t("IGREJA")}</Text>
-                        <Text style={styles.value}>CBRio</Text>
+                        <Text style={styles.value}>{"CB" + "Rio"}</Text>
                       </View>
                       <View style={{ alignItems: "flex-end" }}>
                         <Text style={styles.label}>{t("STATUS")}</Text>

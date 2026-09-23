@@ -36,8 +36,11 @@ import { router, type Href } from "expo-router";
  *   │   ├── /escala-supervisor
  *   │   └── /checkin-voluntarios   (só no dia do culto)
  *   ├── /cuidados          barra
- *   ├── /devocional        barra
- *   │   └── /anotacoes
+ *   ├── /devocional        barra (casa de 5 portas · 23/09/2026)
+ *   │   ├── /biblia
+ *   │   ├── /devocional-planos → /devocional-diario
+ *   │   ├── /devocional-mural  /devocional-registros  /devocional-leituras
+ *   │   └── /anotacoes         (tela antiga; segue no mapa)
  *   ├── /menu              barra
  *   │   ├── /perfil → /cartoes
  *   │   ├── /familia → /kids → /kids-filho, /kids-solicitar-vinculo
@@ -86,6 +89,12 @@ const PAI: Record<string, string> = {
 
   // devocional
   "/anotacoes": "/devocional",
+  "/devocional-planos": "/devocional",
+  "/biblia": "/devocional",
+  "/devocional-mural": "/devocional",
+  "/devocional-diario": "/devocional-planos",
+  "/devocional-registros": "/devocional",
+  "/devocional-leituras": "/devocional",
 
   // menu
   "/perfil": "/menu",
