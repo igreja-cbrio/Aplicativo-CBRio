@@ -190,6 +190,75 @@ que estava em produção — e não um operador trocado (ver a lei do mutante fi
 renomeie-o: a régua é por SUFIXO de propósito, porque é o sufixo que a casa usa
 pra folha.
 
+## ⚠️⚠️ TRÊS RELATOS DO ANDROID DO MARCOS · diálogo, fundo da folha, teclado (23/09/2026)
+
+Vieram juntos, logo depois do OTA que devolveu o Recusar: ele recusou a
+"MARIA JOANA TESTE" pela tela de gerenciar (funcionou: `devolvido`, evento
+`recusado_lider` com `origem: app`) e relatou três coisas.
+
+### 1 · "Aprovar abria uma janela quadrada e feia; o Recusar ficava bonito"
+
+O Aprovar era `Alert.alert` com botões (a caixa cinza do Android); o Recusar era
+folha da casa. Medido: **22 confirmações nativas em 15 arquivos**. Regra de
+migração — só a **confirmação de NÍVEL DE TELA** (nenhum `<Modal>` aberto no
+momento) vira `useDialogo`, porque o diálogo da casa é um Modal irmão e **no
+iPhone nasce ATRÁS de uma folha já aberta** (`grupo-visita.tsx` documenta).
+
+Migradas (10 telas): Aceitar em `grupo-inscricoes` e `grupo-membros` ·
+Remover da escala (`escala-supervisor`) · Remover a capa (`grupo-editar`) ·
+Desfazer check-in (`checkin-voluntarios`) · Desativar notificações + Solicitação
+registrada (`configuracoes`) · Remover foto (`kids-filho`) · Solicitação enviada
+(`kids-solicitar-vinculo`) · Confirmar inscrição + Ative a localização (`next`)
+· Confirme seu e-mail (`(auth)/cadastro`). Onde o alerta navegava/deslogava no
+OK, o código agora **espera o `await`** e só então navega — a tela continua
+montada até a pessoa ler.
+
+⚠️⚠️ **As que FICAM nativas estão em `lib/dialogosNativos.ts` →
+`CONFIRMACOES_NATIVAS_QUE_FICAM`, por TÍTULO e com o porquê** (folha aberta por
+baixo · três opções · SOS). `test/dialogoDaCasa.test.ts` exige que **toda**
+`Alert.alert` com botões do app esteja lá — confirmação nova sem porquê listado
+derruba o portão. Os **avisos** de um botão só (`Erro`, `Não deu`…) continuam
+nativos por enquanto: a maioria dispara com folha aberta, e é a mesma decisão de
+11/08.
+
+### 2 · "O botão ficou muito abaixo, eu poderia ter clicado em fechar sem querer"
+
+Segundo relato **no mesmo botão** (o primeiro foi 25/08, item 4). O "fechar" é o
+BACK da barra de 3 botões do Android, logo abaixo do botão de confirmar. Eram
+**cinco fórmulas diferentes** de `paddingBottom` nas folhas do app — e a tela que
+ele testava por último era sempre a que não tinha recebido o ajuste da anterior.
+
+⚠️⚠️ **Régua ÚNICA: `fundoDaFolha(insets.bottom)` em `lib/folha.ts`** —
+`max(inset, 48) + 40` (barra de 3 botões + respiro), nunca menos que 88 dp.
+Monotônica de propósito: dentro de um `<Modal>` do Android o inset do provider
+pode chegar 0. Aplicada em `grupo-membros` (5 folhas), `NextGestao`,
+`grupo-inscricoes`, `escala-supervisor` (2). O teste proíbe `styles.sheet` com
+`insets.bottom` cru. ⏳ **Se ele ainda achar baixo depois deste OTA, a causa é
+inset 0 dentro do Modal — o próximo passo é medir o inset NA JANELA da folha
+(`SafeAreaView edges={["bottom"]}` dentro do Modal), não aumentar o número.**
+
+### 3 · "No form de entrada, quando a pessoa está dizendo quem é, o teclado sobe e fica difícil de ver"
+
+`TecladoSeguro` garante que o teclado **não cobre**; nada garantia que o campo
+focado ficasse **visível** — com o herói (ícone + título + explicação) no topo,
+o campo ficava espremido na faixa que sobrava. `automaticallyAdjustKeyboardInsets`
+é iOS-only e também não rola até o campo.
+
+⚠️⚠️ **`components/ui/FormularioRolavel.tsx`** substitui a `ScrollView` nas
+**três portas** (`(auth)/login`, `(auth)/cadastro`, `completar-cadastro`). O
+`<Input>` e o `<PhoneInput>` avisam por contexto ao ganhar foco; o formulário
+mede o campo contra um View próprio (`measureLayout`, sem API interna da
+ScrollView) e rola pra deixá-lo no topo com o rótulo visível
+(`lib/rolarAteCampo.ts`). Fora de um `FormularioRolavel` o gancho é `null` e o
+`Input` se comporta como antes. Medição que falha é silenciosa (pior caso =
+comportamento antigo). ⚠️ `contentContainerStyle` vai pro View INTERNO (é ele
+que segura `padding`/`gap`); a ScrollView recebe só `flexGrow: 1`.
+⏳ **Não foi visto em aparelho** — o Marcos testa no Android depois do OTA.
+
+Mutantes novos (3): tirar o piso da folha · tirar o gancho de foco do Input ·
+devolver o Aprovar pro `Alert.alert`. `expo lint` não roda neste repo (eslint
+não está instalado) — o portão é `tsc` + `vitest` + mutantes, como sempre.
+
 ## ⚠️⚠️ A PORTA DE ENTRADA DA LOJA ESTAVA VELHA · medido (03/09/2026)
 
 Pergunta do Marcos: *"toda vez que alguém baixa o app da playstore ou appstore,

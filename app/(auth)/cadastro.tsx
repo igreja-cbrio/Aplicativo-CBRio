@@ -1,8 +1,6 @@
 import { useMemo, useState } from "react";
 import {
-  Alert,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -29,10 +27,13 @@ import {
 } from "@/lib/validators";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
+import { FormularioRolavel } from "@/components/ui/FormularioRolavel";
+import { useDialogo } from "@/components/ui/Dialogo";
 
 export default function CadastroScreen() {
   const { signUp } = useAuth();
   const t = useT();
+  const dlg = useDialogo();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
@@ -88,11 +89,13 @@ export default function CadastroScreen() {
         frequentaArea,
       });
       if (needsEmailConfirmation) {
-        Alert.alert(
+        // Diálogo da casa (23/09). Sem sessão nova não há redirect automático,
+        // então a tela fica montada até o OK — só então vai pro login.
+        await dlg.avisar(
           t("Confirme seu e-mail"),
           t("Enviamos um link de confirmação para o seu e-mail. Confirme para entrar."),
-          [{ text: "OK", onPress: () => router.replace("/(auth)/login") }]
         );
+        router.replace("/(auth)/login");
       } else {
         // ⚠️⚠️ SEM ISTO, QUEM ACABOU DE SE CADASTRAR ERA MANDADO PRA TELA DE
         // CADASTRO DE NOVO (07/08 · relato do Marcos: "preenchi todos os dados,
@@ -146,7 +149,8 @@ export default function CadastroScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <TecladoSeguro        style={styles.flex}>
-        <ScrollView
+        {/* FormularioRolavel (23/09): o foco rola até o campo — ver o componente. */}
+        <FormularioRolavel
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.scroll}>
@@ -266,8 +270,10 @@ export default function CadastroScreen() {
               {t("Entrar")}
             </Link>
           </View>
-        </ScrollView>
+        </FormularioRolavel>
       </TecladoSeguro>
+      {/* Diálogo da casa · IRMÃO do conteúdo (ver components/ui/Dialogo.tsx) */}
+      <dlg.Dialogo />
     </SafeAreaView>
   );
 }

@@ -27,6 +27,7 @@ import {
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { BRAND_FONT } from "@/lib/fonts";
 import { NextGestaoScreen } from "@/components/next/NextGestao";
+import { useDialogo } from "@/components/ui/Dialogo";
 
 // ⚠️ NEXT é o NOME do curso — marca, não texto de interface. Vive numa
 // constante em vez de literal repetido: assim o scanner de i18n não a cobra
@@ -66,6 +67,7 @@ export default function NextScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const t = useT();
+  const dlg = useDialogo();
   const { me, loading, erro, recarregar } = useNextSync();
 
   const [inscrevendo, setInscrevendo] = useState(false);
@@ -108,20 +110,21 @@ export default function NextScreen() {
 
   // ⚠️ CONFIRMA ANTES DE GRAVAR. Antes, o único aviso era um Alert DEPOIS da
   // inscrição — a pessoa descobria que estava inscrita, não decidia.
-  function confirmarInscrever() {
+  // ⚠️ Diálogo da CASA, não `Alert.alert` (23/09): o Marcos viu a caixa cinza
+  // do Android ao lado da folha bonita de Recusar. Seguro aqui porque NÃO há
+  // <Modal> aberto quando dispara — o diálogo é irmão da tela.
+  async function confirmarInscrever() {
     const quando = me?.encontros?.length
       ? `
 
 ${t("Primeiro encontro")}: ${dataComHora(me.encontros[0].data, me.encontros[0].horario)}`
       : "";
-    Alert.alert(
-      t("Confirmar sua inscrição no NEXT?"),
-      `${t("A equipe vai te receber nos encontros do NEXT.")}${quando}`,
-      [
-        { text: t("Cancelar"), style: "cancel" },
-        { text: t("Quero participar"), onPress: () => { void inscrever(); } },
-      ],
-    );
+    const ok = await dlg.confirmar({
+      titulo: t("Confirmar sua inscrição no NEXT?"),
+      mensagem: `${t("A equipe vai te receber nos encontros do NEXT.")}${quando}`,
+      acao: t("Quero participar"),
+    });
+    if (ok) await inscrever();
   }
 
   async function inscrever() {
@@ -150,14 +153,12 @@ ${t("Primeiro encontro")}: ${dataComHora(me.encontros[0].data, me.encontros[0].h
       s = r.status;
     }
     if (s !== "granted") {
-      Alert.alert(
-        t("Ative a localização"),
-        t("Pra confirmar sua presença no NEXT, precisamos da sua localização."),
-        [
-          { text: t("Cancelar"), style: "cancel" },
-          { text: t("Abrir Configurações"), onPress: () => Linking.openSettings() },
-        ]
-      );
+      const abrir = await dlg.confirmar({
+        titulo: t("Ative a localização"),
+        mensagem: t("Pra confirmar sua presença no NEXT, precisamos da sua localização."),
+        acao: t("Abrir Configurações"),
+      });
+      if (abrir) Linking.openSettings();
       return null;
     }
     try {
@@ -364,6 +365,8 @@ ${t("Primeiro encontro")}: ${dataComHora(me.encontros[0].data, me.encontros[0].h
           </>
         )}
       </ScrollView>
+      {/* Diálogo da casa · IRMÃO do conteúdo (ver components/ui/Dialogo.tsx) */}
+      <dlg.Dialogo />
     </SafeAreaView>
   );
 }
