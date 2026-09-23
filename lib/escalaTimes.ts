@@ -270,3 +270,13 @@ export function destinoDoArraste(linha: LinhaEscala, times: Time[], chaveAlvo: s
   if (chaveDoTime(linha, porNome, porId) === chaveAlvo) return null;
   return { team_name: alvo.nome };
 }
+
+/**
+ * Onde a barra de times tem que rolar pra deixar o chip do time aberto no
+ * CENTRO da tela. Pedido do Marcos (23/09): a barra acompanha o carrossel —
+ * "se eu estou em Cuidados, as opções ali em cima não podem estar mostrando
+ * Pastores". Nunca negativo: o primeiro chip fica encostado à esquerda.
+ */
+export function xParaCentralizar(chipX: number, chipLargura: number, larguraVisivel: number): number {
+  return Math.max(0, Math.round(chipX + chipLargura / 2 - larguraVisivel / 2));
+}

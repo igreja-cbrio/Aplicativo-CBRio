@@ -45,7 +45,7 @@ import {
   type EscalaServico, type EscalaItem, type ComposicaoItem, type PoolVoluntario, type VoluntarioDetalhe,
 } from "@/lib/api";
 import {
-  agruparCultosPorTipo, cultoInicial, montarTimes, resumoDoCulto, destinoDoArraste,
+  agruparCultosPorTipo, cultoInicial, montarTimes, resumoDoCulto, destinoDoArraste, xParaCentralizar,
   SEM_EQUIPE, SEM_FUNCAO, SEM_TIPO, type Time, type PosicaoDoTime,
 } from "@/lib/escalaTimes";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
@@ -137,6 +137,7 @@ export default function EscalaSupervisorScreen() {
   // ── Drag & drop: apertar e arrastar o nome pra outro time (chips de cima)
   //    ou pra outra função (cabeçalhos da página aberta) ──
   const barraRef = useRef<View>(null);
+  const barraScrollRef = useRef<ScrollView>(null);
   const barraJanela = useRef<{ x: number; y: number; h: number }>({ x: 0, y: 0, h: 0 });
   const barraScrollX = useRef(0);
   const chipLayout = useRef<Record<string, { x: number; w: number }>>({});
@@ -290,6 +291,19 @@ export default function EscalaSupervisorScreen() {
     catch { /* silencioso no pull */ }
     finally { setRefrescando(false); }
   }
+
+  // ⚠️ A barra ACOMPANHA o carrossel (pedido do Marcos, 23/09): "se eu estou em
+  // Cuidados, as opções ali em cima não podem estar mostrando Pastores". O chip
+  // do time aberto vai pro centro da barra a cada troca de página — deslizando
+  // ou tocando. A conta é pura (`xParaCentralizar`), o efeito só rola.
+  useEffect(() => {
+    const chave = times[timeIdx]?.chave;
+    const z = chave ? chipLayout.current[chave] : undefined;
+    if (!z) return;
+    const x = xParaCentralizar(z.x, z.w, larguraTela);
+    barraScrollRef.current?.scrollTo({ x, animated: true });
+    barraScrollX.current = x;
+  }, [timeIdx, times, larguraTela]);
 
   function irParaTime(idx: number) {
     setTimeIdx(idx);
@@ -587,7 +601,7 @@ export default function EscalaSupervisorScreen() {
                 <>
                   {/* Os TIMES · navegação do carrossel E alvo do arraste */}
                   <View ref={barraRef} style={[styles.barraTimes, !!dragItem && { backgroundColor: colors.primary + "0C" }]}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                    <ScrollView ref={barraScrollRef} horizontal showsHorizontalScrollIndicator={false}
                       contentContainerStyle={{ paddingHorizontal: spacing.md, gap: 8 }}
                       onScroll={e => { barraScrollX.current = e.nativeEvent.contentOffset.x; }} scrollEventThrottle={16}
                       scrollEnabled={!dragItem}>

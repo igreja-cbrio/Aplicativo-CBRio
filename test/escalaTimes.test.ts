@@ -11,7 +11,7 @@
 import { describe, expect, it } from "vitest";
 import {
   agruparCultosPorTipo, cultoInicial, contaVaga, chaveDoTime, montarTimes,
-  resumoDoCulto, destinoDoArraste, SEM_EQUIPE, SEM_FUNCAO, SEM_TIPO,
+  resumoDoCulto, destinoDoArraste, xParaCentralizar, SEM_EQUIPE, SEM_FUNCAO, SEM_TIPO,
   type ItemComposicao, type LinhaEscala,
 } from "@/lib/escalaTimes";
 
@@ -179,5 +179,15 @@ describe("escala por time · soltar o nome em cima de outro time", () => {
   it("time sem identidade (`n:`) ou chave desconhecida não é destino", () => {
     expect(destinoDoArraste(ze, times, "n:Kids")).toBeNull();
     expect(destinoDoArraste(ze, times, "t-nao-existe")).toBeNull();
+  });
+});
+
+describe("escala por time · a barra acompanha o carrossel", () => {
+  it("⚠️ MUTATION GUARD · o chip do time aberto vai pro CENTRO da barra", () => {
+    // chip em x=600, largura 100, tela 400 ⇒ centro do chip (650) − meia tela (200) = 450
+    expect(xParaCentralizar(600, 100, 400)).toBe(450);
+  });
+  it("nunca rola pra trás do começo: o primeiro chip fica encostado à esquerda", () => {
+    expect(xParaCentralizar(16, 120, 400)).toBe(0);
   });
 });
