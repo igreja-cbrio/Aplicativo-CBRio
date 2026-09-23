@@ -24,6 +24,7 @@ import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
+import { useDialogo } from "@/components/ui/Dialogo";
 
 type GrupoEdit = {
   id: string;
@@ -48,6 +49,7 @@ export default function GrupoEditarScreen() {
   const router = useRouter();
   const { isAdmin, loading: checking } = useAdminGrupo(id);
   const t = useT();
+  const dlg = useDialogo();
 
   const [grupo, setGrupo] = useState<GrupoEdit | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -135,31 +137,32 @@ export default function GrupoEditarScreen() {
     }
   }
 
-  function removerCapa() {
+  // ⚠️ Diálogo da CASA, não `Alert.alert` (23/09): o Marcos viu a caixa cinza
+  // do Android ao lado da folha bonita de Recusar. Seguro aqui porque NÃO há
+  // <Modal> aberto quando dispara — o diálogo é irmão da tela.
+  async function removerCapa() {
     if (!grupo?.foto_url) return;
-    Alert.alert(t("Remover a capa?"), t("O grupo volta a aparecer sem foto."), [
-      { text: t("Cancelar"), style: "cancel" },
-      {
-        text: t("Remover"),
-        style: "destructive",
-        onPress: async () => {
-          setMsg(null);
-          setUploading(true);
-          try {
-            await removerCapaGrupo(grupo.id);
-            setField("foto_url", null);
-            setMsg({ type: "ok", text: t("Capa removida.") });
-          } catch (e) {
-            setMsg({
-              type: "err",
-              text: e instanceof Error ? `${t("Falha ao remover a capa")}: ${e.message}` : t("Falha ao remover a capa."),
-            });
-          } finally {
-            setUploading(false);
-          }
-        },
-      },
-    ]);
+    const ok = await dlg.confirmar({
+      titulo: t("Remover a capa?"),
+      mensagem: t("O grupo volta a aparecer sem foto."),
+      acao: t("Remover"),
+      perigo: true,
+    });
+    if (!ok) return;
+    setMsg(null);
+    setUploading(true);
+    try {
+      await removerCapaGrupo(grupo.id);
+      setField("foto_url", null);
+      setMsg({ type: "ok", text: t("Capa removida.") });
+    } catch (e) {
+      setMsg({
+        type: "err",
+        text: e instanceof Error ? `${t("Falha ao remover a capa")}: ${e.message}` : t("Falha ao remover a capa."),
+      });
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function salvar() {
@@ -364,6 +367,8 @@ export default function GrupoEditarScreen() {
           <Button title={t("Salvar alterações")} onPress={salvar} loading={salvando} />
         </ScrollView>
       </TecladoSeguro>
+      {/* Diálogo da casa · IRMÃO do conteúdo (ver components/ui/Dialogo.tsx) */}
+      <dlg.Dialogo />
     </SafeAreaView>
   );
 }

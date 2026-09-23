@@ -25,6 +25,7 @@ import { maskDateBR, isValidDateBR, dateBRToISO } from "@/lib/validators";
 import { supabase } from "@/lib/supabase";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
+import { useDialogo } from "@/components/ui/Dialogo";
 
 type Parentesco = "mae" | "pai" | "outro";
 
@@ -35,6 +36,7 @@ export default function KidsSolicitarVinculoScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
+  const dlg = useDialogo();
   const { user } = useAuth();
 
   const [nome, setNome] = useState("");
@@ -198,11 +200,12 @@ export default function KidsSolicitarVinculoScreen() {
         foto_consentimento: !!fotoPath,
         foto_consentimento_versao: fotoPath ? CONSENT_VERSAO : null,
       });
-      Alert.alert(
+      // Diálogo da casa (23/09): espera o OK e só então sobe um nível.
+      await dlg.avisar(
         t("Solicitação enviada 💙"),
         t("A equipe Kids vai conferir e liberar o vínculo. Você acompanha o resultado na tela de Check-in Kids."),
-        [{ text: "OK", onPress: () => subirUmNivel() }]
       );
+      subirUmNivel();
     } catch (e) {
       Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível enviar."));
     } finally {
@@ -428,6 +431,8 @@ export default function KidsSolicitarVinculoScreen() {
           <Button title={t("Enviar solicitação")} onPress={enviar} loading={enviando} />
         </ScrollView>
       </TecladoSeguro>
+      {/* Diálogo da casa · IRMÃO do conteúdo (ver components/ui/Dialogo.tsx) */}
+      <dlg.Dialogo />
     </SafeAreaView>
   );
 }

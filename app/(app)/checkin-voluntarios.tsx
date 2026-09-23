@@ -33,6 +33,7 @@ import {
   type EscalaServico, type EscalaItem, type CheckinItem,
 } from "@/lib/api";
 import { useT } from "@/lib/i18n";
+import { useDialogo } from "@/components/ui/Dialogo";
 
 function iniciais(nome: string): string {
   const p = (nome || "").trim().split(/\s+/).filter(Boolean);
@@ -51,6 +52,7 @@ export default function CheckinVoluntariosScreen() {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
+  const dlg = useDialogo();
 
   const [cultos, setCultos] = useState<EscalaServico[]>([]);
   const [servicoSel, setServicoSel] = useState<EscalaServico | null>(null);
@@ -197,27 +199,25 @@ export default function CheckinVoluntariosScreen() {
     }
   }
 
+  // ⚠️ Diálogo da CASA, não `Alert.alert` (23/09): o Marcos viu a caixa cinza
+  // do Android ao lado da folha bonita de Recusar. Seguro aqui porque NÃO há
+  // <Modal> aberto quando dispara — o diálogo é irmão da tela.
   async function desfazer(item: EscalaItem, ck: CheckinItem) {
-    Alert.alert(
-      t("Desfazer check-in"),
-      `${item.volunteer_name} — ${t("marcado às")} ${horaBRT(ck.checked_in_at)}.`,
-      [
-        { text: t("Cancelar"), style: "cancel" },
-        {
-          text: t("Desfazer"), style: "destructive",
-          onPress: async () => {
-            // Mesmo raciocínio do marcar: some da tela na hora, volta se falhar.
-            setCheckins((atuais) => atuais.filter((c) => c.id !== ck.id));
-            try {
-              await desfazerCheckin(ck.id);
-            } catch (e: any) {
-              setCheckins((atuais) => [ck, ...atuais]);   // reverte
-              Alert.alert(t("Não deu"), e?.message || t("Não foi possível desfazer."));
-            }
-          },
-        },
-      ],
-    );
+    const ok = await dlg.confirmar({
+      titulo: t("Desfazer check-in"),
+      mensagem: `${item.volunteer_name} — ${t("marcado às")} ${horaBRT(ck.checked_in_at)}.`,
+      acao: t("Desfazer"),
+      perigo: true,
+    });
+    if (!ok) return;
+    // Mesmo raciocínio do marcar: some da tela na hora, volta se falhar.
+    setCheckins((atuais) => atuais.filter((c) => c.id !== ck.id));
+    try {
+      await desfazerCheckin(ck.id);
+    } catch (e: any) {
+      setCheckins((atuais) => [ck, ...atuais]);   // reverte
+      void dlg.avisar(t("Não deu"), e?.message || t("Não foi possível desfazer."));
+    }
   }
 
   const totalMarcados = escala.filter((e) => !!doItem(e)).length;
@@ -349,6 +349,8 @@ export default function CheckinVoluntariosScreen() {
           </>
         )}
       </ScrollView>
+      {/* Diálogo da casa · IRMÃO do conteúdo (ver components/ui/Dialogo.tsx) */}
+      <dlg.Dialogo />
     </SafeAreaView>
   );
 }

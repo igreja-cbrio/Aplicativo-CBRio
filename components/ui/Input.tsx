@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -10,6 +10,7 @@ import {
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { useRolarAteCampo } from "@/components/ui/FormularioRolavel";
 
 type Props = TextInputProps & {
   label: string;
@@ -21,9 +22,14 @@ export function Input({ label, secure, ...rest }: Props) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
   const [hidden, setHidden] = useState(!!secure);
+  // Dentro de um <FormularioRolavel>, ganhar foco rola até este campo
+  // (relato de 23/09: "quando o teclado sobe fica difícil de ver"). Fora dele,
+  // `rolar` é null e nada muda.
+  const rolar = useRolarAteCampo();
+  const raiz = useRef<View>(null);
 
   return (
-    <View style={styles.wrapper}>
+    <View ref={raiz} collapsable={false} style={styles.wrapper}>
       <Text style={styles.label}>{label}</Text>
       {/*
         ⚠️⚠️ CAMPO `multiline` ERA UMA LINHA SÓ (07/08/2026). O estilo fixava
@@ -44,6 +50,7 @@ export function Input({ label, secure, ...rest }: Props) {
           // caixa alta e some conforme cresce.
           textAlignVertical={rest.multiline ? "top" : undefined}
           {...rest}
+          onFocus={(e) => { rolar?.(raiz.current); rest.onFocus?.(e); }}
         />
         {secure && (
           <Pressable onPress={() => setHidden((v) => !v)} hitSlop={8}>

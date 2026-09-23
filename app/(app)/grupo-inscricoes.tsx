@@ -17,6 +17,8 @@ import {
   type GrupoPedido, type GrupoMeu,
 } from "@/lib/api";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
+import { fundoDaFolha } from "@/lib/folha";
+import { useDialogo } from "@/components/ui/Dialogo";
 
 const DIAS_SEMANA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 function quandoGrupo(dia: number | null, horario: string | null): string {
@@ -56,6 +58,7 @@ export default function GrupoInscricoesScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const t = useT();
+  const dlg = useDialogo();
 
   const [pedidos, setPedidos] = useState<GrupoPedido[] | null>(null);
   const [grupos, setGrupos] = useState<GrupoMeu[]>([]);
@@ -103,27 +106,24 @@ export default function GrupoInscricoesScreen() {
     try { await carregar(true); } finally { setRefrescando(false); }
   }
 
-  function aceitar(p: GrupoPedido) {
-    Alert.alert(
-      t("Aceitar inscrição"),
-      `${t("Aprovar")} ${p.nome} ${t("no grupo")} ${p.grupo_nome}?`,
-      [
-        { text: t("Cancelar"), style: "cancel" },
-        {
-          text: t("Aceitar"),
-          onPress: async () => {
-            setProcessandoId(p.id);
-            try {
-              await aprovarPedidoGrupo(p.id);
-              setPedidos((prev) => (prev || []).filter((x) => x.id !== p.id));
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-            } catch (e: any) {
-              Alert.alert(t("Erro"), e?.message || t("Não foi possível aprovar."));
-            } finally { setProcessandoId(null); }
-          },
-        },
-      ],
-    );
+  // ⚠️ Diálogo da CASA, não `Alert.alert` (23/09): o Marcos viu a caixa cinza
+  // do Android ao lado da folha bonita de Recusar. Seguro aqui porque NÃO há
+  // <Modal> aberto quando dispara — o diálogo é irmão da tela.
+  async function aceitar(p: GrupoPedido) {
+    const ok = await dlg.confirmar({
+      titulo: t("Aceitar inscrição"),
+      mensagem: `${t("Aprovar")} ${p.nome} ${t("no grupo")} ${p.grupo_nome}?`,
+      acao: t("Aceitar"),
+    });
+    if (!ok) return;
+    setProcessandoId(p.id);
+    try {
+      await aprovarPedidoGrupo(p.id);
+      setPedidos((prev) => (prev || []).filter((x) => x.id !== p.id));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    } catch (e: any) {
+      void dlg.avisar(t("Erro"), e?.message || t("Não foi possível aprovar."));
+    } finally { setProcessandoId(null); }
   }
 
   function abrirRecusa(p: GrupoPedido) {
@@ -288,7 +288,7 @@ export default function GrupoInscricoesScreen() {
       {/* Modal de recusa · motivo (molde escala-supervisor) */}
       <Modal visible={!!recusaAlvo} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setRecusaAlvo(null)}>
         <TecladoSeguro style={styles.modalWrap}>
-          <View style={[styles.sheet, { paddingBottom: spacing.md + insets.bottom }]}>
+          <View style={[styles.sheet, { paddingBottom: fundoDaFolha(insets.bottom) }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{t("Recusar inscrição")}</Text>
               <Pressable onPress={() => setRecusaAlvo(null)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
@@ -325,6 +325,8 @@ export default function GrupoInscricoesScreen() {
           </View>
         </TecladoSeguro>
       </Modal>
+      {/* Diálogo da casa · IRMÃO do conteúdo (ver components/ui/Dialogo.tsx) */}
+      <dlg.Dialogo />
     </SafeAreaView>
   );
 }

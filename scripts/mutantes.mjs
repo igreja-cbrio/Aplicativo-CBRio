@@ -806,6 +806,34 @@ const MUTANTES = [
     de: "  return [...porTipo.entries()].map(([tipo, lista]) => ({ tipo, cultos: lista }));",
     para: "  return [...porTipo.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([tipo, lista]) => ({ tipo, cultos: lista }));",
   },
+  {
+    // ⚠️ 25/08 + 23/09: dois relatos do Marcos no MESMO botão ("fica onde estão
+    // os botões do Android" · "poderia ter clicado em fechar sem querer"). A
+    // regressão é somar o inset cru — que dentro de um Modal do Android pode
+    // ser 0 — e o botão encosta na barra de navegação.
+    nome: "folha: tirar o piso do fundo (inset cru encosta o botão na barra do Android)",
+    arq: "lib/folha.ts",
+    de: "  return Math.max(inset, BARRA_NAV_ANDROID) + RESPIRO_DA_FOLHA;",
+    para: "  return inset + RESPIRO_DA_FOLHA;",
+  },
+  {
+    // ⚠️ 23/09: "quando a pessoa está dizendo quem é, quando o teclado sobe
+    // fica difícil de ver". A regressão é o <Input> parar de avisar o
+    // formulário no foco — TecladoSeguro continua, mas ninguém rola até o campo.
+    nome: "input: perder o gancho de foco (o formulário não rola até o campo)",
+    arq: "components/ui/Input.tsx",
+    de: "          onFocus={(e) => { rolar?.(raiz.current); rest.onFocus?.(e); }}",
+    para: "",
+  },
+  {
+    // ⚠️ 23/09: "abria uma janela quadrada e feia". A regressão é alguém
+    // devolver o Aprovar pro Alert.alert com botões — a lista de confirmações
+    // nativas por título é o que pega.
+    nome: "grupo-membros: Aprovar voltar pra Alert.alert (janela quadrada)",
+    arq: "app/(app)/grupo-membros.tsx",
+    de: "    const ok = await dlg.confirmar({\n      titulo: t(\"Aceitar inscrição\"),\n      mensagem: `${t(\"Aprovar\")} ${p.nome}?`,",
+    para: "    Alert.alert(t(\"Aceitar inscrição\"), `${t(\"Aprovar\")} ${p.nome}?`, [{ text: t(\"Cancelar\"), style: \"cancel\" }]);\n    const ok = await dlg.confirmar({\n      titulo: t(\"Aceitar inscrição\"),\n      mensagem: `${t(\"Aprovar\")} ${p.nome}?`,",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

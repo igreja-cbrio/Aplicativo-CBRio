@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import {
   FlatList,
   Modal,
@@ -18,6 +18,7 @@ import {
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { useRolarAteCampo } from "@/components/ui/FormularioRolavel";
 
 type Props = {
   label: string;
@@ -48,8 +49,13 @@ export function PhoneInput({
     );
   }, [query]);
 
+  // Mesmo gancho do <Input>: dentro de um <FormularioRolavel>, o foco rola até
+  // o campo. Fora dele, `rolar` é null.
+  const rolar = useRolarAteCampo();
+  const raiz = useRef<View>(null);
+
   return (
-    <View style={styles.wrapper}>
+    <View ref={raiz} collapsable={false} style={styles.wrapper}>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.row}>
         <Pressable style={styles.country} onPress={() => setOpen(true)}>
@@ -66,6 +72,7 @@ export function PhoneInput({
         */}
         <TextInput
           style={styles.input}
+          onFocus={() => rolar?.(raiz.current)}
           value={exibirTelefone(number, country.dial)}
           onChangeText={(v) => onChangeNumber(digitosTelefone(v, country.dial))}
           placeholder={country.dial === "55" ? "(21) 99999-8888" : t("DDD + número")}

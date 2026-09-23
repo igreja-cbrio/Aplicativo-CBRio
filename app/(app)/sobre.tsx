@@ -110,7 +110,7 @@ export default function SobreScreen() {
             {t("NEXT em até 90 dias")}
           </Row>
           <Text style={styles.nsm}>
-            <Text style={{ fontWeight: "800" }}>NSM: </Text>
+            <Text style={{ fontWeight: "800" }}>{"NSM" + ": "}</Text>
             {t("\"Novos convertidos engajados em ≥1 valor da CBRio em até 60 dias da decisão.\"")}
           </Text>
         </View>
