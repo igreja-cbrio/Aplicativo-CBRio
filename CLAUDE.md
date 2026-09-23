@@ -153,6 +153,43 @@ casado, homem/mulher). **Espera a régra do Marcos** sobre o que acontece com
 essa pessoa se ela nunca se inscrever — sem isso a base enche de cadastro pela
 metade.
 
+## ⚠️⚠️ GERENCIAR GRUPO · o botão "Recusar" NÃO FAZIA NADA há 7 semanas (23/09/2026)
+
+*"A opção de recusar a Maria não funciona, não consigo apertar."* (Marcos,
+Android, tentando desfazer o pedido de demonstração da reunião de 20/09.)
+
+**Não era Android, não era toque, não era permissão.** Em `grupo-membros.tsx` o
+botão "Recusar" do card de pendentes fazia `setRecusaAlvo(p)`, o handler
+`confirmarRecusa` continuava inteiro no arquivo… e o **`<Modal
+visible={!!recusaAlvo}>` tinha sido apagado no refactor f246407 (05/08,
+"hierarquia visual v2")**. Estado gravado, folha nenhuma. O `tsc` não reclama
+(a variável É lida, pelo handler morto), o lint não reclama, e o líder vê um
+botão que "não aperta".
+
+Medido antes de mexer: das recusas de líder registradas em produção, **UMA só
+veio do app** (Jane, 21/08) — e veio da OUTRA tela, `grupo-inscricoes.tsx`, que
+tem a folha. Todas as demais foram pelo link do WhatsApp. Ou seja: a tela que
+todo líder usa pra gerenciar o grupo nunca recusou ninguém desde 05/08.
+
+**Conserto**: a folha voltou, no molde exato da folha de saída vizinha
+(`TecladoSeguro` + `fundoSeguro`, mesmo texto da `grupo-inscricoes`).
+
+### ⚠️⚠️ A régua nova: FOLHA ÓRFÃ (`test/folhaOrfa.test.ts`)
+
+Todo estado `*Alvo` / `*Aberto` / `*Aberta` cujo setter é chamado com algo que
+não é `null`/`false` (alguém ABRE) precisa ser **lido em alguma linha** fora da
+declaração e fora do `const p = X;` do handler. `visible={!!X}`, `visivel={X}`,
+`prop={X}`, `{X && …}`, `!X ? … :` e `if (X)` valem — a régua não impõe a
+forma da folha, só que exista uma. Comentário citando o estado **não** vale
+(passa por `semComentarios`). Varre `app/` e `components/` inteiros.
+
+O mutante em `scripts/mutantes.mjs` é a **AUSÊNCIA do bloco** — byte a byte o
+que estava em produção — e não um operador trocado (ver a lei do mutante fiel).
+
+⚠️ Se um dia um estado `*Alvo` legitimamente só alimentar lógica (sem render),
+renomeie-o: a régua é por SUFIXO de propósito, porque é o sufixo que a casa usa
+pra folha.
+
 ## ⚠️⚠️ A PORTA DE ENTRADA DA LOJA ESTAVA VELHA · medido (03/09/2026)
 
 Pergunta do Marcos: *"toda vez que alguém baixa o app da playstore ou appstore,

@@ -1351,6 +1351,42 @@ export default function GrupoMembrosScreen() {
         </TecladoSeguro>
       </Modal>
 
+      {/* Modal de recusa de PEDIDO · motivo (mesmo molde da folha de saída e da
+          tela grupo-inscricoes). ⚠️⚠️ Este bloco SUMIU no refactor f246407
+          (05/08) e ninguém notou por 7 semanas: o botão "Recusar" do card de
+          pendentes gravava `recusaAlvo` e nada abria — "não consigo apertar"
+          (Marcos, Android, 23/09). Só a tela grupo-inscricoes recusava de fato.
+          O teste em __tests__ trava que TODO `setRecusaAlvo(p)` tenha um
+          `<Modal visible={!!recusaAlvo}>` no mesmo arquivo. */}
+      <Modal visible={!!recusaAlvo} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setRecusaAlvo(null)}>
+        <TecladoSeguro style={styles.modalWrap}>
+          <View style={[styles.sheet, { paddingBottom: fundoSeguro }]}>
+            <View style={styles.sheetHead}>
+              <Text style={styles.sheetTitle}>{t("Recusar inscrição")}</Text>
+              <Pressable onPress={() => setRecusaAlvo(null)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </Pressable>
+            </View>
+            {recusaAlvo && <Text style={[styles.muted, { marginBottom: spacing.xs }]}>{t("Recusar a inscrição de")} {recusaAlvo.nome}?</Text>}
+            <Text style={[styles.muted, { marginBottom: spacing.sm }]}>
+              {t("O pedido volta pra equipe de grupos, que cuida do próximo passo com a pessoa. Ela não recebe aviso automático.")}
+            </Text>
+            <Text style={styles.sheetLabel}>{t("Motivo (opcional)")}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder={t("Ex.: grupo lotado, pessoa já em outro grupo…")}
+              placeholderTextColor={colors.textMuted}
+              value={motivo}
+              onChangeText={setMotivo}
+              multiline
+            />
+            <Pressable style={[styles.btn, styles.btnRecusarSolido, { marginTop: spacing.md }]} disabled={!!processandoId} onPress={confirmarRecusa} accessibilityRole="button">
+              {processandoId ? <ActivityIndicator color="#fff" size="small" /> : <Text style={[styles.btnTxt, { color: "#fff" }]}>{t("Confirmar recusa")}</Text>}
+            </Pressable>
+          </View>
+        </TecladoSeguro>
+      </Modal>
+
       {/* ═══ Gerenciar um encontro que JÁ PASSOU (25/08) ═══ */}
       {/* ⚠️⚠️ É o MESMO modal do box "Próximo encontro", em `modo="passado"`.
           As duas telas escrevem no MESMO endpoint (`/agenda`) e a única
