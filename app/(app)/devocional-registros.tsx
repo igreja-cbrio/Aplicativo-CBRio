@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
+import { useDialogo } from "@/components/ui/Dialogo";
 import { excluirRegistro, listarMeusRegistros, salvarRegistroPessoal, type RegistroDevocional } from "@/lib/devocional";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { useMembro } from "@/lib/useMembro";
@@ -24,8 +25,13 @@ export default function Registros() {
     try { await salvarRegistroPessoal({ membroId: membro.membroId, origem: params.origem ?? "biblia", referencia, textoBiblico: params.textoBiblico, comentario, itemId: params.itemId }); setReferencia(""); setComentario(""); setEditando(false); await carregar(); }
     catch (e) { Alert.alert(t("Não foi possível salvar"), e instanceof Error ? e.message : t("Tente novamente.")); } finally { setSalvando(false); }
   }
-  function remover(registro: RegistroDevocional) {
-    Alert.alert(t("Excluir anotação?"), t("Essa ação não pode ser desfeita."), [{ text: t("Cancelar"), style: "cancel" }, { text: t("Excluir"), style: "destructive", onPress: async () => { await excluirRegistro(registro); await carregar(); } }]);
+  // Confirmação pelo diálogo da casa (components/ui/Dialogo.tsx), não pelo Alert
+  // nativo: é a régua de test/dialogoDaCasa.test.ts — e o portão do OTA a cobra.
+  const dlg = useDialogo();
+  async function remover(registro: RegistroDevocional) {
+    if (!(await dlg.confirmar({ titulo: t("Excluir anotação?"), mensagem: t("Essa ação não pode ser desfeita."), acao: t("Excluir"), perigo: true }))) return;
+    try { await excluirRegistro(registro); await carregar(); }
+    catch (e) { Alert.alert(t("Não foi possível excluir"), e instanceof Error ? e.message : t("Tente novamente.")); }
   }
   return <SafeAreaView style={s.safe} edges={["top", "left", "right"]}><Stack.Screen options={{ headerShown: false }} />
     <View style={s.header}><Pressable onPress={() => params.referencia ? router.back() : subirUmNivel()} hitSlop={12} style={s.back}><Ionicons name="chevron-back" size={24} color={c.text} /></Pressable><Text style={s.headerTitle}>{t("Anotações e Marcações")}</Text><Pressable onPress={() => setEditando(v => !v)} hitSlop={10} style={s.back}><Ionicons name={editando ? "close" : "add"} size={25} color={c.primary} /></Pressable></View>
@@ -38,6 +44,7 @@ export default function Registros() {
         <Pressable onPress={() => remover(r)} style={s.delete}><Ionicons name="trash-outline" size={16} color={c.danger ?? "#B45151"} /><Text style={s.deleteText}>{t("Excluir")}</Text></Pressable>
       </View>)}
     </ScrollView>
+    <dlg.Dialogo />
   </SafeAreaView>;
 }
 const css = (c: any) => StyleSheet.create({
