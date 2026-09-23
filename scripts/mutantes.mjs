@@ -761,6 +761,51 @@ const MUTANTES = [
 `,
     para: "",
   },
+  // ═══ MONTAR ESCALA POR TIME (23/09/2026) · a régua do carrossel ═══
+  {
+    // ⚠️⚠️ O bug de 21/08 do servidor, agora na régua do app: quem RECUSOU
+    // contando como vaga preenchida. O supervisor veria "Vocal 2/2" com uma
+    // pessoa que acabou de dizer que não vai — e não reporia.
+    nome: "escalaTimes: quem recusou preenche a vaga",
+    arq: "lib/escalaTimes.ts",
+    de: '  return status !== "declined";',
+    para: "  return true;",
+  },
+  {
+    // ⚠️⚠️ O que estava em produção até 23/09: agrupar pela string `team_name`.
+    // Nas linhas do Planning Center ela é a POSIÇÃO ("Vocal", "Chat 9:30") —
+    // 21 "equipes" de uma pessoa no Domingo - Manhã de 27/09. Sem esta linha o
+    // `team_id` deixa de resolver o time e cada nome vira um time.
+    nome: "escalaTimes: ignorar o team_id (cada posição do PCO vira um time)",
+    arq: "lib/escalaTimes.ts",
+    de: "  if (linha.team_id && porId.has(linha.team_id)) return linha.team_id;\n",
+    para: "",
+  },
+  {
+    // O PATCH do app grava só `team_name`. Se o nome deixar de vencer o
+    // `team_id` velho, quem foi movido pelo app aparece no time de ONDE saiu.
+    nome: "escalaTimes: team_id velho vence o nome recém-gravado (movido volta pro time antigo)",
+    arq: "lib/escalaTimes.ts",
+    de: "  const pelaNome = n ? porNome.get(n) : undefined;",
+    para: "  const pelaNome = undefined;",
+  },
+  {
+    // Soltar o nome no PRÓPRIO time chamaria o servidor, que gravaria
+    // `team_name = "Banda"` numa linha do PCO cujo `team_name` era a posição —
+    // apagando a posição de origem em silêncio, a cada toque longo.
+    nome: "escalaTimes: soltar no próprio time chama o servidor",
+    arq: "lib/escalaTimes.ts",
+    de: "  if (chaveDoTime(linha, porNome, porId) === chaveAlvo) return null;\n",
+    para: "",
+  },
+  {
+    // A etapa 1 abre no tipo do culto MAIS PRÓXIMO. Em ordem alfabética o
+    // supervisor da quarta à noite abriria a tela em "CBKIDS - Manhã Domingo".
+    nome: "escalaTimes: tipos em ordem alfabética em vez da ordem do próximo culto",
+    arq: "lib/escalaTimes.ts",
+    de: "  return [...porTipo.entries()].map(([tipo, lista]) => ({ tipo, cultos: lista }));",
+    para: "  return [...porTipo.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([tipo, lista]) => ({ tipo, cultos: lista }));",
+  },
   {
     // ⚠️ 25/08 + 23/09: dois relatos do Marcos no MESMO botão ("fica onde estão
     // os botões do Android" · "poderia ter clicado em fechar sem querer"). A

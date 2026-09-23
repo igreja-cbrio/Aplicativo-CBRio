@@ -196,8 +196,32 @@ export type EscalaItem = {
   // Planning Center, que o servidor já descarta.
   area?: string | null;
   foto_url?: string | null;
+  // ⚠️⚠️ `team_id`/`position_id` são o que diz o TIME de verdade (23/09/2026).
+  // Nas 1.000+ linhas importadas do Planning Center, `team_name` é o nome da
+  // POSIÇÃO ("Vocal", "Chat 9:30") — agrupar por ele fazia a tela mostrar 21
+  // "equipes" de uma pessoa. A régua que resolve isso é `lib/escalaTimes`.
+  team_id?: string | null;
+  position_id?: string | null;
 };
-export type EscalaResposta = { escalas: EscalaItem[]; equipes: string[] };
+/** Um item da composição do culto: o ALVO (equipe × posição × quantas). */
+export type ComposicaoItem = {
+  team_id: string | null;
+  team_name: string;
+  area: string | null;
+  position_id: string | null;
+  position_name: string | null;
+  quantidade: number;
+};
+// ⚠️ O campo `equipes` que a tela lia até 23/09 NUNCA existiu na resposta — o
+// servidor manda `composicao` (desde 25/08), e por isso "área vazia" nunca
+// apareceu no app. Ver `GET /app/voluntariado/escala/:serviceId` no ERP.
+export type EscalaResposta = {
+  escalas: EscalaItem[];
+  composicao?: ComposicaoItem[];
+  areas_supervisionadas?: string[];
+  /** Itens da composição escondidos por não serem da área desta pessoa. */
+  ocultos?: number;
+};
 export type PoolVoluntario = { id: string; full_name: string; planning_center_id: string | null };
 
 export function getSupervisorInfo() {
@@ -244,8 +268,15 @@ export function adicionarNaEscala(body: { service_id: string; volunteer_id: stri
 export function removerDaEscala(id: string) {
   return apiDelete<{ ok: boolean }>(`/app/voluntariado/escala/${id}`);
 }
-export function moverNaEscala(id: string, team_name: string | null) {
-  return apiPatch<EscalaItem>(`/app/voluntariado/escala/${id}`, { team_name });
+/**
+ * Move de equipe e/ou muda a função. `position_name` só vai no corpo quando
+ * foi pedido: o servidor trata `undefined` como "não mexe" e `null` como
+ * "apaga a função".
+ */
+export function moverNaEscala(id: string, team_name: string | null, position_name?: string | null) {
+  const body: { team_name: string | null; position_name?: string | null } = { team_name };
+  if (position_name !== undefined) body.position_name = position_name;
+  return apiPatch<EscalaItem>(`/app/voluntariado/escala/${id}`, body);
 }
 export type VoluntarioDetalhe = {
   id: string;

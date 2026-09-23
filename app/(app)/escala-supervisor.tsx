@@ -1,11 +1,36 @@
+// ============================================================================
+// MONTAR ESCALA · por TIME, em duas etapas, num carrossel (23/09/2026)
+//
+// ⚠️⚠️ O redesenho pedido pelo Marcos em vídeo (03/09/2026), comparando com o
+// Planning Center Services. Os pedidos dele, na ordem em que ele falou:
+//   1. a aba Servir em si NÃO muda (ele recusou reordenar a hierarquia dela);
+//   2. escolher o culto em DUAS ETAPAS — o TIPO ("Domingo - Manhã") e depois a
+//      DATA. Só os nossos cultos (`vol_services`), não os do Services;
+//   3. CARROSSEL HORIZONTAL de equipes ("sempre mostrando que existe uma nova
+//      equipe aqui") — a tela antiga "descia muito";
+//   4. agrupar por TIME, não por cargo ("hoje tá vendo adultos, baixistas");
+//   5. a aba ORDEM DE CULTO (fica pra um PR próprio · leitura da Produção);
+//   6. NÃO criar as abas TIMES, NOTES e FILES.
+// Mais o que eu levantei e ele aprovou: a VAGA visível ("faltam 2", como o
+// "2 Needed" do Services) e manter o arrastar pra trocar de equipe — que o
+// Services não tem.
+//
+// ⚠️⚠️ A régua mora em `lib/escalaTimes.ts` (pura, no portão, com mutantes):
+// a que time cada linha pertence, quantas vagas faltam, o que soltar o nome em
+// cima de um time significa. Esta tela só DESENHA o que ela devolve.
+//
+// ⚠️ O dado do TIME sempre esteve no servidor: `GET /escala/:serviceId` manda
+// `composicao` (equipe × posição × quantidade) desde 25/08 e `team_id` em cada
+// linha. A tela lia um campo `equipes` que nunca existiu na resposta.
+// ============================================================================
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator, Alert, Modal, Platform, Pressable,
-  RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Alert, Image, Modal, Pressable,
+  RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions,
+  type NativeSyntheticEvent, type NativeScrollEvent,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import * as Haptics from "expo-haptics";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -17,8 +42,12 @@ import { Linking } from "react-native";
 import {
   getEscalaServicos, getEscala, buscarEscalaPool, adicionarNaEscala, removerDaEscala, moverNaEscala,
   getVoluntarioDetalhe,
-  type EscalaServico, type EscalaItem, type PoolVoluntario, type VoluntarioDetalhe,
+  type EscalaServico, type EscalaItem, type ComposicaoItem, type PoolVoluntario, type VoluntarioDetalhe,
 } from "@/lib/api";
+import {
+  agruparCultosPorTipo, cultoInicial, montarTimes, resumoDoCulto, destinoDoArraste,
+  SEM_EQUIPE, SEM_FUNCAO, SEM_TIPO, type Time, type PosicaoDoTime,
+} from "@/lib/escalaTimes";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { useT } from "@/lib/i18n";
 import { fundoDaFolha } from "@/lib/folha";
@@ -31,17 +60,6 @@ function waLink(tel: string | null): string | null {
   if (d.length <= 11 && !d.startsWith("55")) d = "55" + d;
   return `https://wa.me/${d}`;
 }
-
-// ⚠️⚠️ NÃO É RÓTULO — É SENTINELA DE DADO (07/08/2026).
-// `"Sem equipe"` é a CHAVE do agrupamento (`e.team_name || SEM_EQUIPE`), a
-// COMPARAÇÃO do drag&drop (`alvo === atualTeam`) e o PAYLOAD que vai pro
-// servidor (`team_name: team === SEM_EQUIPE ? undefined : team`). Envolver isto
-// em `t()` faria, em inglês, o agrupamento comparar "No team" com "Sem equipe"
-// (o arraste moveria pra lugar nenhum) e o `adicionarNaEscala` GRAVARIA uma
-// equipe chamada "No team" no banco. É corrupção de dado nascida de um
-// "conserto" de tradução — por isso a constante existe, e a tradução só entra
-// na RENDERIZAÇÃO (`rotuloEquipe`).
-const SEM_EQUIPE = "Sem equipe";
 
 const DIA_MS = 86400000;
 // ⚠️ Recebe o tradutor por PARÂMETRO: `useT()` é hook e não pode ser chamado
@@ -72,11 +90,16 @@ function iniciais(nome: string): string {
   return ((p[0][0] || "") + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
 }
 
+/** Onde o dedo está durante o arraste: um TIME (chip de cima) ou uma POSIÇÃO da página aberta. */
+type AlvoArraste = { tipo: "time"; chave: string } | { tipo: "posicao"; time: string; chave: string };
+const mesmoAlvo = (a: AlvoArraste | null, b: AlvoArraste | null) =>
+  a === b || (!!a && !!b && a.tipo === b.tipo && a.chave === b.chave && (a.tipo === "time" || (b.tipo === "posicao" && a.time === b.time)));
+
 export default function EscalaSupervisorScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { width: larguraTela } = useWindowDimensions();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const router = useRouter();
   const t = useT();
   const dlg = useDialogo();
 
@@ -84,18 +107,24 @@ export default function EscalaSupervisorScreen() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
+  // Etapa 1 (tipo) → etapa 2 (data) → o culto.
+  const [tipoSel, setTipoSel] = useState<string | null>(null);
   const [servicoSel, setServicoSel] = useState<EscalaServico | null>(null);
   const [escala, setEscala] = useState<EscalaItem[]>([]);
-  const [equipesDoCulto, setEquipesDoCulto] = useState<string[]>([]);
+  const [composicao, setComposicao] = useState<ComposicaoItem[]>([]);
+  const [ocultos, setOcultos] = useState(0);
   const [carregandoEscala, setCarregandoEscala] = useState(false);
   const [refrescando, setRefrescando] = useState(false);
-  const [recolhidos, setRecolhidos] = useState<Set<string>>(new Set());
+
+  // O carrossel: qual time está na tela.
+  const [timeIdx, setTimeIdx] = useState(0);
+  const pagerRef = useRef<ScrollView>(null);
 
   // Modal de adicionar
   const [addOpen, setAddOpen] = useState(false);
-  const [addTeam, setAddTeam] = useState<string>("");
-  const [novaEquipe, setNovaEquipe] = useState("");
-  const [posicao, setPosicao] = useState("");
+  const [addTime, setAddTime] = useState<string>("");     // chave do time
+  const [addPosicao, setAddPosicao] = useState<string>(""); // nome da função (chip)
+  const [outraFuncao, setOutraFuncao] = useState("");
   const [busca, setBusca] = useState("");
   const [resultados, setResultados] = useState<PoolVoluntario[]>([]);
   const [buscando, setBuscando] = useState(false);
@@ -105,15 +134,21 @@ export default function EscalaSupervisorScreen() {
   const buscaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const buscaSeq = useRef(0);
 
-  // ── Drag & drop: apertar e arrastar o nome pra outra equipe ──
-  const scrollWrapRef = useRef<View>(null);
-  const scrollTopRef = useRef(0);
-  const scrollYRef = useRef(0);
-  const teamLayoutRef = useRef<Record<string, { y: number; h: number }>>({});
+  // ── Drag & drop: apertar e arrastar o nome pra outro time (chips de cima)
+  //    ou pra outra função (cabeçalhos da página aberta) ──
+  const barraRef = useRef<View>(null);
+  const barraJanela = useRef<{ x: number; y: number; h: number }>({ x: 0, y: 0, h: 0 });
+  const barraScrollX = useRef(0);
+  const chipLayout = useRef<Record<string, { x: number; w: number }>>({});
+  const paginaRef = useRef<View>(null);
+  const paginaTop = useRef(0);
+  const paginaScrollY = useRef<Record<string, number>>({});
+  const posLayout = useRef<Record<string, Record<string, { y: number; h: number }>>>({});
   const dragItemRef = useRef<EscalaItem | null>(null);
-  const hoverRef = useRef<string | null>(null);
+  const hoverRef = useRef<AlvoArraste | null>(null);
+  const timeAbertoRef = useRef<string | null>(null);
   const [dragItem, setDragItem] = useState<EscalaItem | null>(null);
-  const [hoverTeam, setHoverTeam] = useState<string | null>(null);
+  const [hover, setHover] = useState<AlvoArraste | null>(null);
   // Ficha do voluntário
   const [detalhe, setDetalhe] = useState<VoluntarioDetalhe | null>(null);
   const [detalheOpen, setDetalheOpen] = useState(false);
@@ -122,10 +157,28 @@ export default function EscalaSupervisorScreen() {
   const ghostY = useSharedValue(0);
   const ghostStyle = useAnimatedStyle(() => ({ transform: [{ translateX: ghostX.value - 120 }, { translateY: ghostY.value - 22 }] }));
 
-  function teamNoPonto(absY: number): string | null {
-    const contentY = absY - scrollTopRef.current + scrollYRef.current;
-    for (const [team, z] of Object.entries(teamLayoutRef.current)) {
-      if (contentY >= z.y && contentY <= z.y + z.h) return team;
+  // ── A árvore: tipos → cultos · times → posições → pessoas ──
+  const grupos = useMemo(() => agruparCultosPorTipo(servicos), [servicos]);
+  const cultosDoTipo = useMemo(() => grupos.find(g => g.tipo === tipoSel)?.cultos ?? [], [grupos, tipoSel]);
+  const times = useMemo(() => montarTimes(composicao, escala), [composicao, escala]);
+  const resumo = useMemo(() => resumoDoCulto(times), [times]);
+  const timeAberto: Time | undefined = times[Math.min(timeIdx, Math.max(0, times.length - 1))];
+  timeAbertoRef.current = timeAberto?.chave ?? null;
+
+  function alvoNoPonto(absX: number, absY: number): AlvoArraste | null {
+    const b = barraJanela.current;
+    if (b.h > 0 && absY >= b.y && absY <= b.y + b.h) {
+      const contentX = absX - b.x + barraScrollX.current;
+      for (const [chave, z] of Object.entries(chipLayout.current)) {
+        if (contentX >= z.x && contentX <= z.x + z.w) return { tipo: "time", chave };
+      }
+      return null;
+    }
+    const tc = timeAbertoRef.current;
+    if (!tc) return null;
+    const contentY = absY - paginaTop.current + (paginaScrollY.current[tc] || 0);
+    for (const [chave, z] of Object.entries(posLayout.current[tc] || {})) {
+      if (contentY >= z.y && contentY <= z.y + z.h) return { tipo: "posicao", time: tc, chave };
     }
     return null;
   }
@@ -133,23 +186,64 @@ export default function EscalaSupervisorScreen() {
     dragItemRef.current = item; setDragItem(item);
     ghostX.value = ax; ghostY.value = ay;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    scrollWrapRef.current?.measureInWindow?.((_x: number, y: number) => { scrollTopRef.current = y; });
+    barraRef.current?.measureInWindow?.((x: number, y: number, _w: number, h: number) => { barraJanela.current = { x, y, h }; });
+    paginaRef.current?.measureInWindow?.((_x: number, y: number) => { paginaTop.current = y; });
   }
-  function atualizarHover(absY: number) {
-    const t = teamNoPonto(absY);
-    if (t !== hoverRef.current) { hoverRef.current = t; setHoverTeam(t); }
+  function atualizarHover(absX: number, absY: number) {
+    const a = alvoNoPonto(absX, absY);
+    if (!mesmoAlvo(a, hoverRef.current)) { hoverRef.current = a; setHover(a); }
   }
   async function soltarDrag() {
     const item = dragItemRef.current; const alvo = hoverRef.current;
     dragItemRef.current = null; hoverRef.current = null;
-    setDragItem(null); setHoverTeam(null);
-    if (!item || !alvo) return;
-    const atualTeam = item.team_name || SEM_EQUIPE;
-    if (alvo === atualTeam) return;
-    setEscala(prev => prev.map(e => e.id === item.id ? { ...e, team_name: alvo === SEM_EQUIPE ? null : alvo } : e));
+    setDragItem(null); setHover(null);
+    if (!item || !alvo || !servicoSel) return;
+
+    let patch: { team_name: string; position_name?: string | null; team_id: string | null; position_id: string | null } | null = null;
+    if (alvo.tipo === "time") {
+      const destino = destinoDoArraste(item, times, alvo.chave);
+      const time = times.find(x => x.chave === alvo.chave);
+      if (!destino || !time) return;
+      // Trocar de time zera a função: "Vocal" não existe na Integração.
+      patch = { team_name: destino.team_name, position_name: null, team_id: time.team_id, position_id: null };
+    } else {
+      const time = times.find(x => x.chave === alvo.time);
+      const pos = time?.posicoes.find(p => p.chave === alvo.chave);
+      if (!time || !pos || time.chave.startsWith("n:")) return;
+      const jaAli = pos.pessoas.some(p => p.id === item.id);
+      if (jaAli) return;
+      patch = { team_name: time.nome, position_name: pos.nome, team_id: time.team_id, position_id: pos.position_id };
+    }
+    const { team_id, position_id, ...corpo } = patch;
+    setEscala(prev => prev.map(e => e.id === item.id ? { ...e, ...corpo, team_id, position_id } : e));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    try { await moverNaEscala(item.id, alvo === SEM_EQUIPE ? null : alvo); }
-    catch (e: any) { Alert.alert(t("Erro"), e?.message || t("Erro ao mover")); if (servicoSel) carregarEscala(servicoSel.id); }
+    try { await moverNaEscala(item.id, corpo.team_name, corpo.position_name); }
+    catch (e: any) { Alert.alert(t("Erro"), e?.message || t("Erro ao mover")); carregarEscala(servicoSel.id); }
+  }
+
+  const carregarEscala = useCallback(async (serviceId: string) => {
+    setCarregandoEscala(true);
+    try {
+      const resposta = await getEscala(serviceId);
+      setEscala(resposta.escalas || []);
+      setComposicao(resposta.composicao || []);
+      setOcultos(resposta.ocultos || 0);
+    }
+    catch (e: any) { Alert.alert(t("Erro"), e?.message || t("Erro ao carregar a escala")); }
+    finally { setCarregandoEscala(false); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function selecionar(s: EscalaServico) {
+    setServicoSel(s);
+    setTimeIdx(0);
+    pagerRef.current?.scrollTo({ x: 0, animated: false });
+    carregarEscala(s.id);
+  }
+  function escolherTipo(tipo: string) {
+    setTipoSel(tipo);
+    const c = cultoInicial(grupos, tipo);
+    if (c) selecionar(c);
   }
 
   const carregarServicos = useCallback(async (autoSel = false) => {
@@ -158,7 +252,12 @@ export default function EscalaSupervisorScreen() {
       const lista = r.servicos || [];
       setServicos(lista);
       setErro(null);
-      if (autoSel && lista.length && !servicoSel) selecionar(lista[0]); // culto mais próximo
+      if (autoSel && lista.length && !servicoSel) {
+        // Abre no tipo do culto MAIS PRÓXIMO, já com a data dele escolhida.
+        const g = agruparCultosPorTipo(lista);
+        const c = cultoInicial(g, null);
+        if (c) { setTipoSel(g[0].tipo); selecionar(c); }
+      }
     } catch (e: any) {
       setErro(e?.message || t("Erro ao carregar cultos"));
     } finally { setCarregando(false); }
@@ -169,22 +268,14 @@ export default function EscalaSupervisorScreen() {
   // pessoa volta pra esta tela esperando a versão de lá.
   useFocusEffect(useCallback(() => { carregarServicos(true); }, [carregarServicos]));
 
-  const carregarEscala = useCallback(async (serviceId: string) => {
-    setCarregandoEscala(true);
-    try {
-      const resposta = await getEscala(serviceId);
-      setEscala(resposta.escalas || []);
-      setEquipesDoCulto(resposta.equipes || []);
-    }
-    catch (e: any) { Alert.alert(t("Erro"), e?.message || t("Erro ao carregar a escala")); }
-    finally { setCarregandoEscala(false); }
-  }, []);
-
-  function selecionar(s: EscalaServico) {
-    setServicoSel(s);
-    setRecolhidos(new Set());
-    carregarEscala(s.id);
-  }
+  // Se o culto escolhido sumiu da janela (passou), volta pro mais próximo do tipo.
+  useEffect(() => {
+    if (!servicoSel || !servicos.length) return;
+    if (servicos.some(s => s.id === servicoSel.id)) return;
+    const c = cultoInicial(grupos, tipoSel) ?? cultoInicial(grupos, null);
+    if (c) { setTipoSel((c.service_type_name || "").trim() || SEM_TIPO); selecionar(c); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [servicos]);
 
   async function refrescar() {
     if (!servicoSel) return;
@@ -192,50 +283,34 @@ export default function EscalaSupervisorScreen() {
     try {
       const resposta = await getEscala(servicoSel.id);
       setEscala(resposta.escalas || []);
-      setEquipesDoCulto(resposta.equipes || []);
+      setComposicao(resposta.composicao || []);
+      setOcultos(resposta.ocultos || 0);
       await carregarServicos();
     }
     catch { /* silencioso no pull */ }
     finally { setRefrescando(false); }
   }
 
-  const grupos = useMemo(() => {
-    const m = new Map<string, EscalaItem[]>();
-    // A composição do culto vem antes das escalas existentes: uma área vazia
-    // continua visível e o supervisor pode adicionar a primeira pessoa nela.
-    for (const equipe of equipesDoCulto) m.set(equipe, []);
-    for (const e of escala) {
-      const k = e.team_name || SEM_EQUIPE;
-      const arr = m.get(k) || [];
-      arr.push(e); m.set(k, arr);
-    }
-    const arr = [...m.entries()];
-    for (const [, lista] of arr) lista.sort((a, b) => a.volunteer_name.localeCompare(b.volunteer_name, "pt-BR"));
-    arr.sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
-    return arr;
-  }, [escala, equipesDoCulto]);
-
-  const equipes = useMemo(() => grupos.map(([t]) => t).filter(t => t !== SEM_EQUIPE), [grupos]);
-  const resumo = useMemo(() => ({
-    total: escala.length,
-    conf: escala.filter(e => e.confirmation_status === "confirmed").length,
-    rec: escala.filter(e => e.confirmation_status === "declined").length,
-  }), [escala]);
-
-  // Já escalados NA EQUIPE destino (permite a mesma pessoa em outra equipe).
-  const teamAtual = novaEquipe.trim() || addTeam;
-  const jaNaEquipe = useMemo(() => {
-    const set = new Set<string>();
-    for (const e of escala) if ((e.team_name || SEM_EQUIPE) === teamAtual && e.volunteer_id) set.add(e.volunteer_id);
-    return set;
-  }, [escala, teamAtual]);
-
-  /** ⚠️ A ÚNICA porta que traduz a sentinela — e só pra MOSTRAR. */
-  const rotuloEquipe = (team: string) => (team === SEM_EQUIPE ? t("Sem equipe") : team);
-
-  function toggle(team: string) {
-    setRecolhidos(prev => { const n = new Set(prev); n.has(team) ? n.delete(team) : n.add(team); return n; });
+  function irParaTime(idx: number) {
+    setTimeIdx(idx);
+    pagerRef.current?.scrollTo({ x: idx * larguraTela, animated: true });
   }
+  function aoParar(e: NativeSyntheticEvent<NativeScrollEvent>) {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / Math.max(1, larguraTela));
+    if (idx !== timeIdx) setTimeIdx(Math.max(0, Math.min(times.length - 1, idx)));
+  }
+
+  /** ⚠️ A ÚNICA porta que traduz as sentinelas — e só pra MOSTRAR. */
+  const rotuloTime = (nome: string) => (nome === SEM_EQUIPE ? t("Sem equipe") : nome);
+  const rotuloTipo = (tipo: string) => (tipo === SEM_TIPO ? t("Culto") : tipo);
+
+  // Já escalados NO TIME destino (permite a mesma pessoa em outro time).
+  const timeDoAdd = times.find(x => x.chave === addTime);
+  const jaNoTime = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of timeDoAdd?.posicoes ?? []) for (const e of p.pessoas) if (e.volunteer_id) set.add(e.volunteer_id);
+    return set;
+  }, [timeDoAdd]);
 
   // Busca com debounce (300ms) + guarda de sequência (ignora resposta obsoleta).
   function onBusca(q: string) {
@@ -257,24 +332,28 @@ export default function EscalaSupervisorScreen() {
     }, 300);
   }
 
-  function abrirAdd(team?: string) {
-    setAddTeam(team || SEM_EQUIPE);
-    setNovaEquipe(""); setPosicao(""); setBusca(""); setResultados([]); setBuscaErro(false);
+  /** Abre o "Adicionar" já no time (e na função) de onde a pessoa tocou — a vaga. */
+  function abrirAdd(time?: Time, posicao?: PosicaoDoTime) {
+    setAddTime(time?.chave ?? timeAberto?.chave ?? "");
+    setAddPosicao(posicao?.nome ?? "");
+    setOutraFuncao(""); setBusca(""); setResultados([]); setBuscaErro(false);
     setAddOpen(true);
   }
 
   async function adicionar(vol: PoolVoluntario) {
     if (!servicoSel) return;
-    const team = teamAtual;
+    const time = timeDoAdd;
+    const funcao = outraFuncao.trim() || addPosicao;
     setSalvandoId(vol.id);
     try {
       const novo = await adicionarNaEscala({
         service_id: servicoSel.id, volunteer_id: vol.id,
-        team_name: team === SEM_EQUIPE ? undefined : team,
-        position_name: posicao.trim() || undefined,
+        team_name: time && time.nome !== SEM_EQUIPE ? time.nome : undefined,
+        position_name: funcao || undefined,
       });
-      // Otimista: usa a resposta, sem refetch bloqueante.
-      setEscala(prev => [...prev, novo]);
+      // Otimista: usa a resposta, sem refetch bloqueante. O servidor ainda não
+      // devolve `team_id`/`position_id` — a régua resolve pelo NOME.
+      setEscala(prev => [...prev, { ...novo, team_id: novo.team_id ?? time?.team_id ?? null }]);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setBusca(""); setResultados([]);
     } catch (e: any) {
@@ -310,9 +389,125 @@ export default function EscalaSupervisorScreen() {
   const statusInfo = (s: string | null) =>
     // ⚠️ `"confirmed"`/`"declined"` são ENUM DO BANCO e ficam CRUS. Traduzir a
     // comparação faria o resumo contar 0 confirmados. Só o rótulo é traduzível.
-    s === "confirmed" ? { cor: (colors as any).success || "#22c55e", label: t("confirmado") }
-    : s === "declined" ? { cor: (colors as any).danger || "#ef4444", label: t("recusou") }
+    s === "confirmed" ? { cor: colors.success, label: t("confirmado") }
+    : s === "declined" ? { cor: colors.danger, label: t("recusou") }
     : { cor: colors.textMuted, label: t("pendente") };
+
+  const rotuloVaga = (n: number) => `${n} ${n === 1 ? t("vaga em aberto") : t("vagas em aberto")}`;
+
+  // ── Uma linha de pessoa (com o arraste) ──
+  function renderPessoa(item: EscalaItem) {
+    const si = statusInfo(item.confirmation_status);
+    const pan = Gesture.Pan().activateAfterLongPress(250)
+      .onStart(e => { runOnJS(iniciarDrag)(item, e.absoluteX, e.absoluteY); })
+      .onUpdate(e => { ghostX.value = e.absoluteX; ghostY.value = e.absoluteY; runOnJS(atualizarHover)(e.absoluteX, e.absoluteY); })
+      .onFinalize(() => { runOnJS(soltarDrag)(); });
+    const detalheTxt = item.confirmation_status === "declined" && item.recusa_motivo ? ` · ${item.recusa_motivo}` : "";
+    return (
+      <GestureDetector key={item.id} gesture={pan}>
+        <View style={[styles.pessoa, dragItem?.id === item.id && { opacity: 0.35 }]}>
+          <Ionicons name="reorder-three" size={18} color={colors.textMuted} />
+          <Pressable style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10 }} onPress={() => abrirDetalhe(item.volunteer_id)} accessibilityRole="button" accessibilityLabel={`${t("Ver ficha de")} ${item.volunteer_name}`}>
+            {item.foto_url ? (
+              <Image source={{ uri: item.foto_url }} style={styles.avatar} accessibilityIgnoresInvertColors />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: si.cor + "22" }]}>
+                <Text style={[styles.avatarTxt, { color: si.cor }]}>{iniciais(item.volunteer_name)}</Text>
+              </View>
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.pessoaNome} numberOfLines={1}>{item.volunteer_name}</Text>
+              <Text style={[styles.pequeno, { color: si.cor }]} numberOfLines={1}>{si.label}{detalheTxt}</Text>
+            </View>
+          </Pressable>
+          {removendoId === item.id ? <ActivityIndicator color={colors.textMuted} />
+            : <Pressable onPress={() => remover(item)} hitSlop={14} accessibilityRole="button" accessibilityLabel={`${t("Remover")} ${item.volunteer_name} ${t("da escala")}`}>
+                <Ionicons name="close-circle" size={22} color={colors.textMuted} />
+              </Pressable>}
+        </View>
+      </GestureDetector>
+    );
+  }
+
+  // ── Uma página do carrossel: o TIME, com posições → pessoas → vaga ──
+  function renderTime(time: Time, idx: number) {
+    const podeEscrever = !time.chave.startsWith("n:") || time.nome === SEM_EQUIPE;
+    return (
+      <View key={time.chave} style={{ width: larguraTela }}>
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: 110, gap: 8 }}
+          keyboardShouldPersistTaps="handled"
+          onScroll={e => { paginaScrollY.current[time.chave] = e.nativeEvent.contentOffset.y; }}
+          scrollEventThrottle={16}
+          scrollEnabled={!dragItem}
+          refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.primary} />}
+        >
+          <View style={styles.teamCard}>
+            <View style={styles.teamHead}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                {!!time.area && <Text style={styles.teamArea} numberOfLines={1}>{time.area.toUpperCase()}</Text>}
+                <Text style={styles.teamNome} numberOfLines={1}>{rotuloTime(time.nome)}</Text>
+              </View>
+              <Text style={styles.paginaTxt}>{idx + 1}/{times.length}</Text>
+            </View>
+            <View style={styles.contadores}>
+              <View style={styles.contador}><Ionicons name="checkmark-circle" size={15} color={colors.success} /><Text style={[styles.contadorTxt, { color: colors.success }]}>{time.confirmados}</Text></View>
+              <View style={styles.contador}><Ionicons name="close-circle" size={15} color={colors.danger} /><Text style={[styles.contadorTxt, { color: colors.danger }]}>{time.recusados}</Text></View>
+              <View style={styles.contador}><Ionicons name="help-circle" size={15} color={colors.warning} /><Text style={[styles.contadorTxt, { color: colors.warning }]}>{time.pendentes}</Text></View>
+              <View style={{ flex: 1 }} />
+              {time.alvo > 0 && (
+                time.faltam > 0
+                  ? <View style={[styles.faltamBadge, { backgroundColor: colors.danger + "1F" }]}><Text style={[styles.faltamTxt, { color: colors.danger }]}>{t("faltam")} {time.faltam}</Text></View>
+                  : <View style={[styles.faltamBadge, { backgroundColor: colors.success + "1F" }]}><Text style={[styles.faltamTxt, { color: colors.success }]}>{t("completa")}</Text></View>
+              )}
+            </View>
+
+            {time.posicoes.length === 0 && (
+              <Text style={[styles.muted, { padding: spacing.md }]}>{t("Ninguém escalado ainda. Toque em “Adicionar” pra começar.")}</Text>
+            )}
+
+            {time.posicoes.map(pos => {
+              const alvoDrop = !!dragItem && hover?.tipo === "posicao" && hover.chave === pos.chave && hover.time === time.chave;
+              const semFuncao = pos.chave === SEM_FUNCAO;
+              if (semFuncao && pos.pessoas.length === 0) return null;
+              return (
+                <View key={pos.chave}
+                  onLayout={e => {
+                    const m = posLayout.current[time.chave] || (posLayout.current[time.chave] = {});
+                    m[pos.chave] = { y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height };
+                  }}
+                  style={[styles.posBloco, alvoDrop && { backgroundColor: colors.primary + "12" }]}>
+                  <View style={styles.posHead}>
+                    <Text style={[styles.posNome, alvoDrop && { color: colors.primary }]} numberOfLines={1}>
+                      {semFuncao ? t("Sem função") : (pos.nome || t("Equipe toda"))}
+                    </Text>
+                    {pos.alvo > 0 && (
+                      <Text style={[styles.posContagem, pos.faltam > 0 && { color: colors.danger }]}>{pos.preenchidas}/{pos.alvo}</Text>
+                    )}
+                  </View>
+                  {pos.pessoas.map(renderPessoa)}
+                  {pos.faltam > 0 && podeEscrever && (
+                    <Pressable style={styles.vaga} onPress={() => abrirAdd(time, pos)} accessibilityRole="button" accessibilityLabel={`${rotuloVaga(pos.faltam)}, ${pos.nome || rotuloTime(time.nome)}`}>
+                      <Ionicons name="add" size={16} color={colors.danger} />
+                      <Text style={[styles.pequeno, { color: colors.danger, flex: 1 }]}>{rotuloVaga(pos.faltam)}</Text>
+                      <Text style={[styles.pequeno, { color: colors.textMuted }]}>{t("preencher")}</Text>
+                    </Pressable>
+                  )}
+                </View>
+              );
+            })}
+
+            {podeEscrever && (
+              <Pressable onPress={() => abrirAdd(time)} style={styles.addInline} accessibilityRole="button">
+                <Ionicons name="add" size={16} color={colors.primary} />
+                <Text style={[styles.pequeno, { color: colors.primary }]}>{t("Adicionar a")} {rotuloTime(time.nome)}</Text>
+              </Pressable>
+            )}
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -336,107 +531,96 @@ export default function EscalaSupervisorScreen() {
         </View>
       ) : (
         <>
-          {/* Seletor de culto · chips horizontais (compacto) */}
-          <View style={styles.cultoBar}>
+          {/* Etapa 1 · o TIPO de culto */}
+          <View style={styles.seletor}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.md, gap: 8 }}>
-              {servicos.length === 0 && <Text style={styles.muted}>{t("Nenhum culto próximo.")}</Text>}
-              {servicos.map(s => {
-                const ativo = servicoSel?.id === s.id;
+              {grupos.length === 0 && <Text style={styles.muted}>{t("Nenhum culto próximo.")}</Text>}
+              {grupos.map(g => {
+                const ativo = tipoSel === g.tipo;
                 return (
-                  <Pressable key={s.id} onPress={() => selecionar(s)} accessibilityRole="button"
-                    accessibilityLabel={`${s.service_type_name || t("Culto")}, ${fmtData(s.scheduled_at, t)}, ${s.escalados || 0} ${t("escalados")}`}
-                    style={[styles.cultoChip, ativo && { borderColor: colors.primary, backgroundColor: colors.primary }]}>
-                    <Text style={[styles.cultoChipNome, ativo && { color: "#fff" }]} numberOfLines={1}>{s.service_type_name || t("Culto")}</Text>
-                    <Text style={[styles.cultoChipData, ativo && { color: "#fff" }]}>{fmtData(s.scheduled_at, t)} · {s.escalados || 0} {t("esc.")}</Text>
+                  <Pressable key={g.tipo} onPress={() => escolherTipo(g.tipo)} accessibilityRole="button" accessibilityState={{ selected: ativo }}
+                    accessibilityLabel={`${t("Tipo de culto")} ${rotuloTipo(g.tipo)}`}
+                    style={[styles.tipoChip, ativo && { borderColor: colors.primary, backgroundColor: colors.primary }]}>
+                    <Text style={[styles.tipoChipTxt, ativo && { color: "#fff" }]} numberOfLines={1}>{rotuloTipo(g.tipo)}</Text>
                   </Pressable>
                 );
               })}
             </ScrollView>
           </View>
+          {/* Etapa 2 · a DATA dentro do tipo */}
+          {cultosDoTipo.length > 0 && (
+            <View style={[styles.seletor, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.md, gap: 8 }}>
+                {cultosDoTipo.map(s => {
+                  const ativo = servicoSel?.id === s.id;
+                  return (
+                    <Pressable key={s.id} onPress={() => selecionar(s)} accessibilityRole="button" accessibilityState={{ selected: ativo }}
+                      accessibilityLabel={`${fmtData(s.scheduled_at, t)}, ${s.escalados || 0} ${t("escalados")}`}
+                      style={[styles.dataChip, ativo && { borderColor: colors.primary, backgroundColor: colors.primary + "14" }]}>
+                      <Text style={[styles.dataChipTxt, ativo && { color: colors.primary }]}>{fmtData(s.scheduled_at, t)}</Text>
+                      <Text style={styles.dataChipSub}>{s.escalados || 0} {t("esc.")}</Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
 
           {!servicoSel ? (
             <View style={styles.center}><Text style={styles.muted}>{t("Escolha um culto acima pra montar a escala.")}</Text></View>
           ) : carregandoEscala && !refrescando ? (
             <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
           ) : (
-            <View ref={scrollWrapRef} style={{ flex: 1 }}>
-            <ScrollView
-              contentContainerStyle={{ padding: spacing.md, paddingBottom: 100, gap: 8 }}
-              keyboardShouldPersistTaps="handled"
-              automaticallyAdjustKeyboardInsets
-              onScroll={e => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
-              scrollEventThrottle={16}
-              scrollEnabled={!dragItem}
-              refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.primary} />}
-            >
-              {/* Resumo de confirmações */}
-              {escala.length > 0 && (
-                <View style={styles.resumo}>
-                  <Text style={styles.resumoTxt}>{resumo.total} {t("escalados")}</Text>
-                  <Text style={[styles.resumoTxt, { color: statusInfo("confirmed").cor }]}>{resumo.conf} {t("confirmados")}</Text>
-                  {resumo.rec > 0 && <Text style={[styles.resumoTxt, { color: statusInfo("declined").cor }]}>{resumo.rec} {t("recusaram")}</Text>}
-                </View>
-              )}
-              {escala.length > 0 && (
-                <Text style={[styles.pequeno, { color: colors.textMuted, paddingHorizontal: 2 }]}>
-                  {t("Segure um nome e arraste pra mudar de equipe.")}
-                </Text>
-              )}
+            <View style={{ flex: 1 }}>
+              {/* Resumo do culto */}
+              <View style={styles.resumo}>
+                <Text style={styles.resumoTxt}>{resumo.total} {t("escalados")}</Text>
+                <Text style={[styles.resumoTxt, { color: colors.success }]}>{resumo.confirmados} {t("confirmados")}</Text>
+                {resumo.recusados > 0 && <Text style={[styles.resumoTxt, { color: colors.danger }]}>{resumo.recusados} {t("recusaram")}</Text>}
+                {resumo.faltam > 0 && <Text style={[styles.resumoTxt, { color: colors.danger, fontWeight: "800" }]}>{t("faltam")} {resumo.faltam}</Text>}
+                {ocultos > 0 && <Text style={styles.resumoTxt}>{ocultos} {t("de outras áreas")}</Text>}
+              </View>
 
-              {grupos.length === 0 ? (
-                <Text style={styles.muted}>{t("Ninguém escalado ainda. Toque em “Adicionar” pra começar.")}</Text>
-              ) : grupos.map(([team, lista]) => {
-                const aberto = !recolhidos.has(team);
-                const conf = lista.filter(x => x.confirmation_status === "confirmed").length;
-                const alvoDrop = !!dragItem && hoverTeam === team && (dragItem.team_name || SEM_EQUIPE) !== team;
-                return (
-                  <View key={team}
-                    onLayout={e => { teamLayoutRef.current[team] = { y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height }; }}
-                    style={[styles.teamCard, alvoDrop && { borderColor: colors.primary, borderWidth: 2, backgroundColor: colors.primary + "12" }]}>
-                    <Pressable style={styles.teamHead} onPress={() => toggle(team)} accessibilityRole="button" accessibilityLabel={`${t("Equipe")} ${rotuloEquipe(team)}, ${aberto ? t("recolher") : t("expandir")}`}>
-                      <Ionicons name={aberto ? "chevron-down" : "chevron-forward"} size={18} color={colors.textMuted} />
-                      <Text style={styles.teamNome} numberOfLines={1}>{rotuloEquipe(team)}</Text>
-                      <View style={styles.badge}><Text style={styles.badgeTxt}>{conf}/{lista.length}</Text></View>
-                    </Pressable>
-                    {aberto && (
-                      <View>
-                        {lista.map(item => {
-                          const si = statusInfo(item.confirmation_status);
-                          const pan = Gesture.Pan().activateAfterLongPress(250)
-                            .onStart(e => { runOnJS(iniciarDrag)(item, e.absoluteX, e.absoluteY); })
-                            .onUpdate(e => { ghostX.value = e.absoluteX; ghostY.value = e.absoluteY; runOnJS(atualizarHover)(e.absoluteY); })
-                            .onFinalize(() => { runOnJS(soltarDrag)(); });
-                          return (
-                            <GestureDetector key={item.id} gesture={pan}>
-                              <View style={[styles.pessoa, dragItem?.id === item.id && { opacity: 0.35 }]}>
-                                <Ionicons name="reorder-three" size={18} color={colors.textMuted} />
-                                <Pressable style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10 }} onPress={() => abrirDetalhe(item.volunteer_id)} accessibilityRole="button" accessibilityLabel={`${t("Ver ficha de")} ${item.volunteer_name}`}>
-                                  <View style={[styles.avatar, { backgroundColor: si.cor + "22" }]}>
-                                    <Text style={[styles.avatarTxt, { color: si.cor }]}>{iniciais(item.volunteer_name)}</Text>
-                                  </View>
-                                  <View style={{ flex: 1 }}>
-                                    <Text style={styles.pessoaNome} numberOfLines={1}>{item.volunteer_name}</Text>
-                                    <Text style={[styles.pequeno, { color: si.cor }]}>{si.label}{item.confirmation_status === "declined" && item.recusa_motivo ? ` · ${item.recusa_motivo}` : (item.position_name ? ` · ${item.position_name}` : "")}</Text>
-                                  </View>
-                                </Pressable>
-                                {removendoId === item.id ? <ActivityIndicator color={colors.textMuted} />
-                                  : <Pressable onPress={() => remover(item)} hitSlop={14} accessibilityRole="button" accessibilityLabel={`${t("Remover")} ${item.volunteer_name} ${t("da escala")}`}>
-                                      <Ionicons name="close-circle" size={22} color={colors.textMuted} />
-                                    </Pressable>}
-                              </View>
-                            </GestureDetector>
-                          );
-                        })}
-                        <Pressable onPress={() => abrirAdd(team)} style={styles.addInline} accessibilityRole="button">
-                          <Ionicons name="add" size={16} color={colors.primary} />
-                          <Text style={[styles.pequeno, { color: colors.primary }]}>{t("Adicionar a")} {rotuloEquipe(team)}</Text>
-                        </Pressable>
-                      </View>
-                    )}
+              {times.length === 0 ? (
+                <View style={styles.center}><Text style={styles.muted}>{t("Nenhuma equipe neste culto ainda.")}</Text></View>
+              ) : (
+                <>
+                  {/* Os TIMES · navegação do carrossel E alvo do arraste */}
+                  <View ref={barraRef} style={[styles.barraTimes, !!dragItem && { backgroundColor: colors.primary + "0C" }]}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={{ paddingHorizontal: spacing.md, gap: 8 }}
+                      onScroll={e => { barraScrollX.current = e.nativeEvent.contentOffset.x; }} scrollEventThrottle={16}
+                      scrollEnabled={!dragItem}>
+                      {times.map((tm, i) => {
+                        const ativo = i === timeIdx;
+                        const alvoDrop = !!dragItem && hover?.tipo === "time" && hover.chave === tm.chave;
+                        return (
+                          <Pressable key={tm.chave} onPress={() => irParaTime(i)} accessibilityRole="button" accessibilityState={{ selected: ativo }}
+                            accessibilityLabel={`${t("Equipe")} ${rotuloTime(tm.nome)}${tm.faltam > 0 ? `, ${t("faltam")} ${tm.faltam}` : ""}`}
+                            onLayout={e => { chipLayout.current[tm.chave] = { x: e.nativeEvent.layout.x, w: e.nativeEvent.layout.width }; }}
+                            style={[styles.timeChip, ativo && { borderColor: colors.primary, backgroundColor: colors.primary + "14" }, alvoDrop && { borderColor: colors.primary, borderWidth: 2, backgroundColor: colors.primary + "2A" }]}>
+                            <Text style={[styles.timeChipTxt, (ativo || alvoDrop) && { color: colors.primary }]} numberOfLines={1}>{rotuloTime(tm.nome)}</Text>
+                            {tm.faltam > 0
+                              ? <View style={[styles.timeChipBadge, { backgroundColor: colors.danger }]}><Text style={styles.timeChipBadgeTxt}>{tm.faltam}</Text></View>
+                              : <Text style={[styles.pequeno, { color: colors.textMuted }]}>{tm.total}</Text>}
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
                   </View>
-                );
-              })}
-            </ScrollView>
+                  <Text style={[styles.pequeno, styles.dica]} numberOfLines={1}>
+                    {dragItem ? t("Solte em uma equipe ou função.") : t("Deslize pra ver as equipes. Segure um nome pra mover.")}
+                  </Text>
+
+                  {/* O carrossel */}
+                  <View ref={paginaRef} style={{ flex: 1 }}>
+                    <ScrollView ref={pagerRef} horizontal pagingEnabled showsHorizontalScrollIndicator={false}
+                      onMomentumScrollEnd={aoParar} scrollEnabled={!dragItem} keyboardShouldPersistTaps="handled">
+                      {times.map(renderTime)}
+                    </ScrollView>
+                  </View>
+                </>
+              )}
             </View>
           )}
 
@@ -450,8 +634,8 @@ export default function EscalaSupervisorScreen() {
             </Animated.View>
           )}
 
-          {servicoSel && !carregandoEscala && (
-            <Pressable style={styles.fab} onPress={() => abrirAdd()} accessibilityRole="button" accessibilityLabel={t("Adicionar voluntário")}>
+          {servicoSel && !carregandoEscala && !dragItem && (
+            <Pressable style={styles.fab} onPress={() => abrirAdd(timeAberto)} accessibilityRole="button" accessibilityLabel={t("Adicionar voluntário")}>
               <Ionicons name="person-add" size={20} color="#fff" />
               <Text style={styles.fabTxt}>{t("Adicionar")}</Text>
             </Pressable>
@@ -513,7 +697,7 @@ export default function EscalaSupervisorScreen() {
         </View>
       </Modal>
 
-      {/* Modal de adicionar */}
+      {/* Modal de adicionar · já vem no TIME (e na FUNÇÃO) da vaga tocada */}
       <Modal visible={addOpen} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setAddOpen(false)}>
         <TecladoSeguro style={styles.modalWrap}>
           <View style={[styles.sheet, { paddingBottom: fundoDaFolha(insets.bottom) }]}>
@@ -524,22 +708,36 @@ export default function EscalaSupervisorScreen() {
 
             <Text style={styles.sheetLabel}>{t("Equipe")}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
-              {[...equipes, SEM_EQUIPE].map(equipe => {
-                const ativo = !novaEquipe.trim() && addTeam === equipe;
+              {times.filter(tm => !tm.chave.startsWith("n:") || tm.nome === SEM_EQUIPE).map(tm => {
+                const ativo = addTime === tm.chave;
                 return (
-                  <Pressable key={equipe} onPress={() => { setAddTeam(equipe); setNovaEquipe(""); }}
+                  <Pressable key={tm.chave} onPress={() => { setAddTime(tm.chave); setAddPosicao(""); }} accessibilityRole="button" accessibilityState={{ selected: ativo }}
                     style={[styles.teamPick, ativo && { borderColor: colors.primary, backgroundColor: colors.primary + "18" }]}>
-                    <Text style={[styles.pequeno, { color: ativo ? colors.primary : colors.text }]}>{rotuloEquipe(equipe)}</Text>
+                    <Text style={[styles.pequeno, { color: ativo ? colors.primary : colors.text }]}>{rotuloTime(tm.nome)}</Text>
                   </Pressable>
                 );
               })}
             </ScrollView>
-            <View style={{ flexDirection: "row", gap: 8, marginTop: 6 }}>
-              <TextInput style={[styles.input, { flex: 1 }]} placeholder={t("…ou nova equipe")} placeholderTextColor={colors.textMuted}
-                value={novaEquipe} onChangeText={setNovaEquipe} />
-              <TextInput style={[styles.input, { flex: 1 }]} placeholder={t("Função (opcional)")} placeholderTextColor={colors.textMuted}
-                value={posicao} onChangeText={setPosicao} />
-            </View>
+
+            <Text style={[styles.sheetLabel, { marginTop: 6 }]}>{t("Função")}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+              {(timeDoAdd?.posicoes ?? []).filter(p => p.nome).map(p => {
+                const ativo = !outraFuncao.trim() && addPosicao === p.nome;
+                return (
+                  <Pressable key={p.chave} onPress={() => { setAddPosicao(ativo ? "" : (p.nome || "")); setOutraFuncao(""); }} accessibilityRole="button" accessibilityState={{ selected: ativo }}
+                    style={[styles.teamPick, ativo && { borderColor: colors.primary, backgroundColor: colors.primary + "18" }, p.faltam > 0 && !ativo && { borderColor: colors.danger + "88" }]}>
+                    <Text style={[styles.pequeno, { color: ativo ? colors.primary : colors.text }]}>
+                      {p.nome}{p.faltam > 0 ? ` · ${t("faltam")} ${p.faltam}` : ""}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+              {(timeDoAdd?.posicoes ?? []).filter(p => p.nome).length === 0 && (
+                <Text style={styles.muted}>{t("Sem funções definidas nesta equipe.")}</Text>
+              )}
+            </ScrollView>
+            <TextInput style={[styles.input, { marginTop: 6 }]} placeholder={t("…ou outra função (opcional)")} placeholderTextColor={colors.textMuted}
+              value={outraFuncao} onChangeText={setOutraFuncao} />
 
             <View style={styles.searchBox}>
               <Ionicons name="search" size={18} color={colors.textMuted} />
@@ -560,7 +758,7 @@ export default function EscalaSupervisorScreen() {
               ) : (!buscando && resultados.length === 0) ? (
                 <Text style={[styles.muted, { padding: spacing.md, textAlign: "center" }]}>{t("Nenhum voluntário encontrado.")}</Text>
               ) : resultados.map(v => {
-                const escalado = v.id ? jaNaEquipe.has(v.id) : false;
+                const escalado = v.id ? jaNoTime.has(v.id) : false;
                 return (
                   <Pressable key={v.id} style={styles.resultado} disabled={!!salvandoId || escalado} onPress={() => adicionar(v)} accessibilityRole="button" accessibilityLabel={`${t("Adicionar")} ${v.full_name}`}>
                     <View style={[styles.avatar, { backgroundColor: colors.primary + "22" }]}>
@@ -592,22 +790,43 @@ function makeStyles(c: Palette) {
     muted: { color: c.textMuted, fontSize: font.size.sm },
     pequeno: { fontSize: font.size.sm },
     retry: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.full, borderWidth: 1, borderColor: c.primary },
-    cultoBar: { paddingVertical: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
-    cultoChip: { minWidth: 150, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface },
-    cultoChipNome: { color: c.text, fontSize: font.size.sm, fontWeight: "700" },
-    cultoChipData: { color: c.textMuted, fontSize: font.size.sm - 1, marginTop: 2 },
-    resumo: { flexDirection: "row", flexWrap: "wrap", gap: 12, paddingHorizontal: 4, paddingBottom: 2 },
+    // Etapas 1 e 2
+    seletor: { paddingVertical: spacing.xs + 2 },
+    tipoChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.full, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface },
+    tipoChipTxt: { color: c.text, fontSize: font.size.sm, fontWeight: "700" },
+    dataChip: { minWidth: 118, paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface },
+    dataChipTxt: { color: c.text, fontSize: font.size.sm, fontWeight: "700" },
+    dataChipSub: { color: c.textMuted, fontSize: font.size.sm - 1, marginTop: 1 },
+    // Resumo + barra de times
+    resumo: { flexDirection: "row", flexWrap: "wrap", gap: 12, paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: 4 },
     resumoTxt: { color: c.textMuted, fontSize: font.size.sm, fontWeight: "600" },
-    teamCard: { backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, overflow: "hidden" },
-    teamHead: { flexDirection: "row", alignItems: "center", gap: 8, padding: spacing.md },
-    teamNome: { color: c.text, fontSize: font.size.md, fontWeight: "700", flex: 1 },
-    badge: { backgroundColor: c.surfaceAlt, borderRadius: radius.full, paddingHorizontal: 8, paddingVertical: 2 },
-    badgeTxt: { color: c.textMuted, fontSize: font.size.sm - 1, fontWeight: "600" },
-    pessoa: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: spacing.md, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
+    barraTimes: { paddingVertical: spacing.xs + 2, borderRadius: radius.md },
+    timeChip: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: radius.full, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, maxWidth: 220 },
+    timeChipTxt: { color: c.text, fontSize: font.size.sm, fontWeight: "700", flexShrink: 1 },
+    timeChipBadge: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, alignItems: "center", justifyContent: "center" },
+    timeChipBadgeTxt: { color: "#fff", fontSize: font.size.sm - 2, fontWeight: "800" },
+    dica: { color: c.textMuted, paddingHorizontal: spacing.md, paddingBottom: 4 },
+    // A página do time
+    teamCard: { backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, overflow: "hidden", marginTop: 4 },
+    teamHead: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: 4 },
+    teamArea: { color: c.textMuted, fontSize: font.size.sm - 2, fontWeight: "700", letterSpacing: 0.8 },
+    teamNome: { color: c.text, fontSize: font.size.lg, fontWeight: "800" },
+    paginaTxt: { color: c.textMuted, fontSize: font.size.sm - 1, fontWeight: "600" },
+    contadores: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
+    contador: { flexDirection: "row", alignItems: "center", gap: 3 },
+    contadorTxt: { fontSize: font.size.sm, fontWeight: "700" },
+    faltamBadge: { borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 3 },
+    faltamTxt: { fontSize: font.size.sm - 1, fontWeight: "800" },
+    posBloco: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
+    posHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, paddingHorizontal: spacing.md, paddingTop: 10, paddingBottom: 2 },
+    posNome: { color: c.textMuted, fontSize: font.size.sm - 1, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase", flex: 1 },
+    posContagem: { color: c.textMuted, fontSize: font.size.sm - 1, fontWeight: "700" },
+    vaga: { flexDirection: "row", alignItems: "center", gap: 6, marginHorizontal: spacing.md, marginVertical: 6, paddingHorizontal: 10, paddingVertical: 8, borderRadius: radius.sm, borderWidth: 1, borderStyle: "dashed", borderColor: c.danger + "88" },
+    pessoa: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: spacing.md, paddingVertical: 8 },
     avatar: { height: 34, width: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
     avatarTxt: { fontSize: font.size.sm - 1, fontWeight: "700" },
     pessoaNome: { color: c.text, fontSize: font.size.sm },
-    addInline: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: spacing.md, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
+    addInline: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: spacing.md, paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
     fab: { position: "absolute", right: spacing.md, bottom: spacing.lg, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: c.primary, paddingHorizontal: 16, paddingVertical: 12, borderRadius: radius.full, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
     fabTxt: { color: "#fff", fontWeight: "700", fontSize: font.size.sm },
     modalWrap: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" },
