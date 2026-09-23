@@ -4,6 +4,52 @@
 > relevante (novo módulo, dependência, decisão de arquitetura, config de
 > backend). Ele é a memória e o contexto contínuo do app.
 
+## ⚠️⚠️ DEVOCIONAL · a casa nova (Bíblia · Planos · Comentários · Anotações · Leituras) RESTAURADA (23/09/2026)
+
+**O que é.** A aba Devocional deixou de ser uma tela só e virou uma **casa com 5
+portas** (`app/(app)/devocional.tsx` é a home; nada de conteúdo nela):
+
+| Porta | Rota | O que faz | Onde grava |
+|---|---|---|---|
+| Bíblia | `/biblia` | livro → capítulo → leitura (JFA/WEB/KJV via `bible-api.com`, domínio público — `lib/bibliaLivre.ts`); tocar no versículo = marcar com cor · Salvar (privado) · Comentários (público); abre no último capítulo lido; setas Anterior/Próximo | `devocional_leituras_biblia` (1 por membro+dia+capítulo) · `devocional_registros_pessoais` (marcação = linha com `cor`) |
+| Planos de leitura | `/devocional-planos` → `/devocional-diario` | 3 cartões: **Pense Pedrão** (YouTube) · **Quarta com Deus** (ciclo **qui→qua**, 7 bolinhas, culto = última leitura) · **Devocional da semana** (seg→sex). O diário é a tela antiga do devocional, parametrizada por `planoId`+`ciclo` | check-in grava em **`devocional_leituras_planos`** (novo) **E** em `mem_devocionais` (o KPI do valor Investir continua daqui) |
+| Comentários | `/devocional-mural` | publicar reflexão sobre um versículo com alcance **grupo · servir · igreja**; sempre com o nome (anônimo foi vetado pelo Marcos) | `devocional_mural` (RPC `listar_devocional_mural`) |
+| Anotações e Marcações | `/devocional-registros` | tudo que a pessoa guardou (privado + o que publicou), com excluir | `devocional_registros_pessoais` + `devocional_mural` do próprio |
+| Leituras da Bíblia | `/devocional-leituras` | mini-relatório: dias com leitura no mês, recentes, planos concluídos/em andamento | leitura de `devocional_leituras_biblia` + RPC `resumo_meus_planos_devocionais` |
+
+**De onde veio (a história que explica o "sumiu").** Isto foi construído numa
+sessão do **Codex** (31/08→03/09/2026, pedidos do Marcos em 02/09) e **publicado
+por OTA em 03/09 (update `3aa750e3`) SEM COMMIT** — ficou só na working copy de
+`~/Aplicativo-CBRio` (branch `codex/grupo-encontros-acoes`). Os OTAs seguintes
+saíram do `main` e sobrescreveram a frota com a tela antiga. Em 23/09 o trabalho
+foi trazido pra este branch **sem alteração de comportamento** (tsc limpo · 348
+testes verdes) e publicado de novo. LEI: **nada vai ao ar sem estar no `main`**.
+
+⚠️⚠️ **O SCHEMA DESSAS 5 TABELAS EXISTE SÓ NO BANCO.** `devocional_inscricoes`,
+`devocional_mural`, `devocional_registros_pessoais`, `devocional_leituras_biblia`,
+`devocional_leituras_planos`, as colunas novas de `devocional_planos`
+(`slug`, `continuo`, `inscricao_habilitada`, `destaque`) e de `devocional_itens`
+(`edicao_slug/titulo/inicio/fim`, `ordem_no_ciclo`, `autor`) e as 2 RPCs **não
+têm migration em nenhum repo** (o Codex aplicou direto). Colunas/FKs conferidas
+em 23/09 pelo OpenAPI do PostgREST; anon é negado nas 5. ⏳ Dumpar o DDL (SQL
+editor do Supabase) pra `supabase/migrations/` do SISTEMA antes de qualquer
+mudança de schema. ⏳ Rodar a sonda com a conta de membro comum nas 5 tabelas
+(SELECT/INSERT) — a auditoria de 17/09 apertou `authenticated` e pode ter
+alcançado estas.
+
+⚠️ **Conteúdo parou em 04/09.** Último `devocional_itens` de qualquer plano é
+04/09/2026 (edição "1 Crônicas" do Quarta com Deus, seg→sex ainda). Os planos
+semanais estão todos `ativo=false`. O Codex ia carregar `Downloads/Samuel2.docx`
+(2 Samuel, 7 leituras qui 03/09 → qua 09/09) e não chegou a gravar. Sem item do
+dia, TODAS as portas de plano mostram "ainda não foi publicado" — isso é
+conteúdo (Cuidados → planos no SISTEMA), não bug do app.
+
+⚠️ Gotchas do código: `listarPlanos` acha o "Devocional da semana" por título
+contendo "semana" e sem `slug` (frágil; o certo é dar slug ao plano semanal);
+`cartoes.tsx`/`sobre.tsx` escrevem `{"CB"+"Rio"}`/`{"NSM"+": "}` só pra não
+contar no portão de i18n; a leitura da Bíblia tem cores fixas de "papel"
+(`#FBFAF7`) — não segue o tema escuro de propósito.
+
 ## 📬 MATHEUS — RECADO ABERTO (10/08/2026 · escrito pela sessão do Marcos)
 
 > Este bloco existe porque **não há canal direto entre as duas sessões de Claude
@@ -2525,7 +2571,7 @@ que abriu a Activity. Por isso a marca é PERSISTIDA em AsyncStorage
 (`cbrio:notif_tap_ultima`, chave = `date`+`identifier`, replay se qualquer um
 casar). **⚠️ Cold start CONSOME a resposta (04/08/2026):** `getLastNotificationResponseAsync` no Android devolve a MESMA resposta a cada recriação da Activity (inclusive pós-crash) — sem o `clearLastNotificationResponseAsync()` + dedup por identifier, o app reabria SEMPRE na tela da última push e o usuário ficava preso (caso "preso em Notificações" do Xiaomi; só apagar dados resolvia). O voltar de `notificacoes.tsx` tem fallback `canGoBack() ? back() : replace("/")` pro caso de ela ser a primeira rota. **Push funcionando ponta a ponta** (validado 12/06: triggers SQL de `webhooks_app.sql` aplicados, pg_net ativo, tokens em `app_push_tokens`). **Vínculo Kids (14/06):** trigger `kids_vinculo_notify` (AFTER UPDATE de `kids_vinculo_solicitacoes` p/ status aprovado/rejeitado) → Edge Function `notify-kids-vinculo` avisa o responsável do resultado. **Lembretes agendados** via pg_cron (a cada min) → Edge Function `notify-lembretes` (`supabase/lembretes.sql`): batismo (véspera 18h + dia 8h), NEXT (véspera 18h), culto online (5 min antes, broadcast). Dedup em `app_lembretes_enviados`. |
 |   🚧   | **Cuidados**     | Pedido de oração + aconselhamento (grava em `app_inscricoes`) e **SOS** (CVV 188/192 na hora + alerta push aos pastores via Edge Function `notify-cuidado-sos`). |
-|   ✅   | **Devocional**   | Tela `devocional.tsx` (atalho na Home): devocionais de **seg a sex** dos planos ativos do sistema (lê `devocional_itens`+`devocional_planos` direto, RLS liberada p/ authenticated). Check-in grava em `mem_devocionais` (tipo pessoal, upsert por membro+data — **é a tabela que alimenta os KPIs** do valor Investir). Incentivo: streak de dias úteis (`lib/devocional.ts`), bolhas da semana, haptic + push lembrete 7h30 (seg–sex, só quem não leu — `notify-lembretes`). Conteúdo é criado no SISTEMA (Cuidados → planos, manual ou IA). |
+|   ✅   | **Devocional**   | ⚠️ **Desde 23/09/2026 é uma CASA de 5 portas — ver a seção no topo deste arquivo.** O que segue descreve o diário (`devocional-diario.tsx`, ex-`devocional.tsx`): devocionais de **seg a sex** dos planos ativos do sistema (lê `devocional_itens`+`devocional_planos` direto, RLS liberada p/ authenticated). Check-in grava em `mem_devocionais` (tipo pessoal, upsert por membro+data — **é a tabela que alimenta os KPIs** do valor Investir). Incentivo: streak de dias úteis (`lib/devocional.ts`), bolhas da semana, haptic + push lembrete 7h30 (seg–sex, só quem não leu — `notify-lembretes`). Conteúdo é criado no SISTEMA (Cuidados → planos, manual ou IA). |
 |   ✅   | **Check-in Kids** | Tela `kids.tsx` (⚠️ desde 05/08/2026 chega-se por **Minha família** — o item solto saiu do menu — e pelo atalho da Home): **pré-check-in** dos filhos. Lê `GET /app/kids/meus-filhos` (crianças de quem o membro é responsável `autorizado_buscar`), o membro marca quem vai e gera código/QR via `POST /app/kids/pre-checkin` (válido 12h, 1 ativo por responsável). QR = `react-native-qrcode-svg` com o código de 6 chars. No totem (sistema), o voluntário escaneia/digita, confere e imprime. **Sem checkout remoto** — entrada/retirada continuam presenciais (decisão de segurança das crianças). **Solicitar vínculo** (`kids-solicitar-vinculo.tsx`): quem não tem filho vinculado pede o vínculo enviando documentos (criança + pai e/ou mãe) — **foto** (`expo-image-picker` câmera/galeria) **ou arquivo PDF** (`expo-document-picker` · ⚠️ módulo NATIVO → só funciona a partir do **build 21**; no build 20 o app cai num aviso "atualize o app"). Upload direto pro bucket **privado** `kids-documentos` (path `{user.id}/...`, helper `uploadDoc` infere ext/contentType) e `POST /app/kids/solicitar-vinculo` manda só os paths; a equipe Kids confere e aprova. Status (em análise/recusada) aparece na própria tela (`GET /app/kids/minhas-solicitacoes`) e via push (`notify-kids-vinculo`). **Foto da criança (opcional · ECA/LGPD):** na tela do filho (`kids-filho.tsx`) o responsável autorizado pode adicionar a foto da criança com **consentimento explícito** (bloco com texto ECA Lei 8.069/90 arts. 17/18 + LGPD Lei 13.709/18 art. 14 + checkbox · versão `eca-lgpd-v1`). Upload pro bucket **privado** `kids-documentos` (`{user.id}/foto-crianca/...`) → `POST /app/kids/filho/:id/foto` (exige `consentimento:true`); a foto só é exibida (signed URL) com consentimento, a responsável + equipe Kids. **Revogável**: `POST /app/kids/filho/:id/foto/remover` apaga a foto e limpa o consentimento. |
 |   ✅   | **Pregações**    | Tela `videos.tsx` (`/videos` · atalho na Home + item "Pregações" no Menu): vídeos recentes + séries do YouTube (módulo Online do sistema) + **Assistir ao vivo**. Lê `GET /api/app/videos` (30 vídeos `online_videos` + 20 séries `online_series` + `canal_live`). Tap no vídeo → `Linking.openURL` `youtube.com/watch?v=ID`; série → playlist; ao vivo → `channel/<id>/live`. `trackEvento` em cada abertura. Fase 5 (Transmissão/Séries). |
 |   ✅   | **Meu discipulado** | Tela `jornada.tsx` (Sua jornada) ganhou o **placar X/5 valores** (bolinhas) + banner **"Seu próximo passo"** (1º valor não vivido → ação). Tudo client-side sobre os dados já carregados. |
