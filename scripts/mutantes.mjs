@@ -722,6 +722,45 @@ const MUTANTES = [
     de: "    if (entrada.batismoIndisponivel) {",
     para: "    if (false) {",
   },
+  {
+    // ⚠️⚠️ A folha de recusa de PEDIDO sumiu do arquivo no refactor f246407
+    // (05/08/2026) e ficou 7 semanas sem ninguém notar: o botão "Recusar" do
+    // card de pendentes gravava `recusaAlvo` e NADA abria ("não consigo
+    // apertar" — Marcos, Android, 23/09). Este mutante é a AUSÊNCIA da folha,
+    // byte a byte o que estava em produção — não um operador trocado.
+    nome: "grupo-membros: botão Recusar sem folha (estado gravado e nunca lido)",
+    arq: "app/(app)/grupo-membros.tsx",
+    de: `      <Modal visible={!!recusaAlvo} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setRecusaAlvo(null)}>
+        <TecladoSeguro style={styles.modalWrap}>
+          <View style={[styles.sheet, { paddingBottom: fundoSeguro }]}>
+            <View style={styles.sheetHead}>
+              <Text style={styles.sheetTitle}>{t("Recusar inscrição")}</Text>
+              <Pressable onPress={() => setRecusaAlvo(null)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </Pressable>
+            </View>
+            {recusaAlvo && <Text style={[styles.muted, { marginBottom: spacing.xs }]}>{t("Recusar a inscrição de")} {recusaAlvo.nome}?</Text>}
+            <Text style={[styles.muted, { marginBottom: spacing.sm }]}>
+              {t("O pedido volta pra equipe de grupos, que cuida do próximo passo com a pessoa. Ela não recebe aviso automático.")}
+            </Text>
+            <Text style={styles.sheetLabel}>{t("Motivo (opcional)")}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder={t("Ex.: grupo lotado, pessoa já em outro grupo…")}
+              placeholderTextColor={colors.textMuted}
+              value={motivo}
+              onChangeText={setMotivo}
+              multiline
+            />
+            <Pressable style={[styles.btn, styles.btnRecusarSolido, { marginTop: spacing.md }]} disabled={!!processandoId} onPress={confirmarRecusa} accessibilityRole="button">
+              {processandoId ? <ActivityIndicator color="#fff" size="small" /> : <Text style={[styles.btnTxt, { color: "#fff" }]}>{t("Confirmar recusa")}</Text>}
+            </Pressable>
+          </View>
+        </TecladoSeguro>
+      </Modal>
+`,
+    para: "",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a
