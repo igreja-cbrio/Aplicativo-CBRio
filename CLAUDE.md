@@ -4,6 +4,19 @@
 > relevante (novo módulo, dependência, decisão de arquitetura, config de
 > backend). Ele é a memória e o contexto contínuo do app.
 
+## ⚠️ DEVOCIONAL · voltar da leitura abria "Plano não encontrado" (24/09/2026 · 3ª leva)
+
+Relato do Marcos: *"quando eu aperto o botão de voltar dentro de uma leitura, ele
+abre uma tela escrito 'Plano não encontrado'"*. `subirUmNivel` fazia
+`navigate("/devocional-plano")` **sem `planoId`** — o pai certo, sem saber qual
+plano. O mesmo valia pro "Próximo dia" e pro back físico do Android.
+
+- **`PARAMS_QUE_SOBEM` + `paramsDoPai`** em `lib/hierarquia.ts`: a rota filha
+  declara QUAIS parâmetros o pai precisa; só esses sobem (o `itemId` do dia não
+  vai junto). O layout passa `useGlobalSearchParams()` pro `registrarRotaAtual`.
+- ⚠️ Tela nova cujo pai depende de parâmetro = **uma linha** nesse mapa, ao lado
+  da linha do `PAI`. Sem ela o pai abre vazio. Teste + mutante no portão.
+
 ## ⚠️⚠️ DEVOCIONAL · o check-in caía em 42P10 há 15 dias · papel, parágrafos e A−/A+ (24/09/2026 · 2ª leva)
 
 Relato do Marcos testando o Valores de Cristo no aparelho: *"apertei para me

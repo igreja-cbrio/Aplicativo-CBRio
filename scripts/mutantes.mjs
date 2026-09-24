@@ -49,7 +49,7 @@ const MUTANTES = [
   {
     nome: "hierarquia: voltar no histórico (router.back) em vez de subir",
     arq: "lib/hierarquia.ts",
-    de: "  router.navigate(pai as Href);",
+    de: '  router.navigate((Object.keys(params).length ? { pathname: pai, params } : pai) as Href);',
     para: "  router.back();",
   },
   {
@@ -897,6 +897,12 @@ const MUTANTES = [
     arq: "lib/paragrafos.ts",
     de: "    if (anterior && ABREVIACAO_FINAL.test(anterior)) saida[saida.length - 1] = `${anterior} ${p}`;",
     para: "    if (false) saida[saida.length - 1] = `${anterior} ${p}`;",
+  },
+  {
+    nome: "hierarquia: o pai deixa de herdar o planoId (voltar da leitura abre 'Plano não encontrado')",
+    arq: "lib/hierarquia.ts",
+    de: '  "/devocional-plano-dia": ["planoId"],',
+    para: '  "/devocional-plano-dia": [],',
   },
 ];
 
