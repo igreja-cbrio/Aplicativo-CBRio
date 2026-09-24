@@ -329,3 +329,29 @@ export function filtrarPool<T extends { full_name: string }>(pool: T[], q: strin
   if (!alvo) return pool;
   return pool.filter((p) => semAcento(p.full_name || "").includes(alvo));
 }
+
+/**
+ * Divide a lista do time em "quem é DESSA vaga" e "resto do time" (pedido do
+ * Marcos, 24/09: "estou escalando um saxofonista: primeiro os saxofonistas da
+ * igreja, abaixo outras pessoas do time"). A ORDEM de cada metade é a que veio
+ * (a preferência de semana) — só separa, não reordena.
+ *
+ * Casa pelo `position_id` da vaga ou, sem id, pelo NOME sem acento/caixa —
+ * a composição do culto e o vínculo do time nem sempre apontam pro mesmo id.
+ * Sem vaga (a pessoa tocou em "Adicionar" no time, sem função, ou digitou uma
+ * função livre) devolve tudo em `resto` — não há o que separar.
+ */
+export function dividirPorVaga<T extends { posicoes?: { id: string; name: string | null }[] }>(
+  pool: T[],
+  vaga: { id?: string | null; nome?: string | null } | null | undefined,
+): { daVaga: T[]; resto: T[] } {
+  const id = vaga?.id ? String(vaga.id) : null;
+  const nome = vaga?.nome ? semAcento(vaga.nome) : "";
+  if (!id && !nome) return { daVaga: [], resto: pool };
+  const daVaga: T[] = []; const resto: T[] = [];
+  for (const p of pool) {
+    const tem = (p.posicoes ?? []).some((f) => (id && String(f.id) === id) || (!!nome && semAcento(f.name || "") === nome));
+    (tem ? daVaga : resto).push(p);
+  }
+  return { daVaga, resto };
+}

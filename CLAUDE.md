@@ -173,6 +173,22 @@ somar ao seu trabalho, não duplicar.
 - **ERP #2354** (mover a função da API pra `pdx1`/Oregon) está **aberto de
   propósito** — é a API inteira, e o Marcos vai mergear numa janela calma.
 
+## ⚠️ SERVIR · o "Adicionar" separa QUEM É DA VAGA do resto do time (24/09/2026)
+
+Pedido do Marcos: *"estou escalando um saxofonista, aparecem primeiro separados os
+saxofonistas da igreja, abaixo aparece outras pessoas do time"*. Par do ERP #3034
+(`escala-pool?team_id=` devolve `posicoes: [{id, name}]` por pessoa).
+
+- **`lib/escalaTimes.dividirPorVaga(pool, vaga)`** (pura · 5 testes · 1 mutante):
+  casa pelo `position_id` da vaga OU pelo nome sem acento; **só separa, não
+  reordena** — a preferência de semana continua mandando dentro de cada seção.
+  Sem vaga em foco (Adicionar no time, ou função digitada livre) não separa nada.
+- Na tela: cabeçalho `"Sax · 3"` → os da vaga; `"Outras pessoas do time · 40"` → o
+  resto. Quando ninguém do time tem a função, o cabeçalho diz isso em vez de sumir.
+  A linha da pessoa virou `renderCandidato` (uma só, usada pelas 2 seções e pela
+  busca geral).
+- ⚠️ Pessoa sem `posicoes` (servidor antigo) cai no resto — nunca some.
+
 ## ⚠️⚠️ SERVIR · "PESSOAS DO SERVIR" — o ADMIN vincula pessoa × time × cultos pelo app (24/09/2026)
 
 Pedido do Marcos depois de aplicar as migrations do #3027: *"para as pessoas que

@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 import {
   agruparCultosPorTipo, cultoInicial, contaVaga, chaveDoTime, montarTimes,
   resumoDoCulto, destinoDoArraste, xParaCentralizar, SEM_EQUIPE, SEM_FUNCAO, SEM_TIPO,
-  semanaDoCulto, ehDomingo, filtrarPool,
+  semanaDoCulto, ehDomingo, filtrarPool, dividirPorVaga,
   type ItemComposicao, type LinhaEscala,
 } from "@/lib/escalaTimes";
 
@@ -241,5 +241,37 @@ describe("filtrarPool · filtra pelo nome mantendo a ordem do servidor", () => {
   });
   it("preserva a ordem (a preferência) entre os que sobram", () => {
     expect(filtrarPool(pool, "a").map(p => p.id)).toEqual(["c", "e", "a"]);
+  });
+});
+
+describe("dividirPorVaga · quem é da vaga primeiro, resto do time depois", () => {
+  const SAX = "p-sax"; const VOCAL = "p-vocal";
+  const pool = [
+    { id: "a", full_name: "Ana", posicoes: [{ id: VOCAL, name: "Vocal" }] },
+    { id: "b", full_name: "Bia", posicoes: [{ id: SAX, name: "Sax" }] },
+    { id: "c", full_name: "Caio", posicoes: [] },
+    { id: "d", full_name: "Dora", posicoes: [{ id: SAX, name: "Sax" }, { id: VOCAL, name: "Vocal" }] },
+  ];
+  it("casa pelo id da vaga e preserva a ordem dentro de cada metade", () => {
+    const r = dividirPorVaga(pool, { id: SAX, nome: "Sax" });
+    expect(r.daVaga.map(p => p.id)).toEqual(["b", "d"]);
+    expect(r.resto.map(p => p.id)).toEqual(["a", "c"]);
+  });
+  it("sem id casa pelo nome, sem acento e sem caixa", () => {
+    const r = dividirPorVaga(pool, { id: null, nome: "VOCAL" });
+    expect(r.daVaga.map(p => p.id)).toEqual(["a", "d"]);
+  });
+  it("sem vaga não separa nada — tudo em resto, na ordem", () => {
+    expect(dividirPorVaga(pool, null).resto.map(p => p.id)).toEqual(["a", "b", "c", "d"]);
+    expect(dividirPorVaga(pool, { id: null, nome: "" }).daVaga).toEqual([]);
+  });
+  it("ninguém do time com a função: daVaga vazio, ninguém somiu", () => {
+    const r = dividirPorVaga(pool, { id: "p-bateria", nome: "Bateria" });
+    expect(r.daVaga).toEqual([]);
+    expect(r.resto.length).toBe(4);
+  });
+  it("pessoa sem `posicoes` (servidor antigo) cai no resto", () => {
+    const r = dividirPorVaga<{ id: string; full_name: string; posicoes?: { id: string; name: string | null }[] }>([{ id: "x", full_name: "X" }], { id: SAX, nome: "Sax" });
+    expect(r.resto.length).toBe(1);
   });
 });
