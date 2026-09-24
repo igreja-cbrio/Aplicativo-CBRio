@@ -223,6 +223,21 @@ somar ao seu trabalho, não duplicar.
 - **ERP #2354** (mover a função da API pra `pdx1`/Oregon) está **aberto de
   propósito** — é a API inteira, e o Marcos vai mergear numa janela calma.
 
+## ⚠️⚠️ SERVIR · "Pessoas do Servir" abre pra LÍDER, recortada aos times dele (24/09/2026)
+
+Decisão do Marcos: em vez de dar **admin** aos líderes do staff (que daria escala e
+estrutura de TODOS os times), abrir a tela pra quem é **Líder**, só nos times que
+lidera. Par do ERP #3040.
+
+- **Card**: acende com `gere_pessoas` de `/voluntariado/supervisor` (admin OU líder de
+  time/área **sem recorte** de subárea/rodízio). Fallback `papel === "admin"` pra
+  servidor antigo. Leitor e supervisor de turno (as concessões da Ariel) não veem.
+- **Ficha** (`escopo: "lider"`): vínculos e "Vincular a um time seu" só com os times
+  dele; os outros times da pessoa são **DECLARADOS** (`vinculos_fora`), nunca somem
+  calados. Domingo de preferência só se a pessoa está num time dele
+  (`pode_rodizio`) — senão os chips ficam apagados com o porquê.
+- ⚠️ A trava é o servidor (`exigirGestorServir` + `_gerenciaTime` em cada escrita).
+
 ## ⚠️ SERVIR · o "Adicionar" separa QUEM É DA VAGA do resto do time (24/09/2026)
 
 Pedido do Marcos: *"estou escalando um saxofonista, aparecem primeiro separados os

@@ -6,6 +6,14 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  // ── Servir · Pessoas do Servir pra LÍDER (24/09/2026) ──
+  "Vincule pessoas aos seus times e diga em quais cultos elas servem.": { en: "Link people to your teams and set which services they serve in.", es: "Vinculá personas a tus equipos y decí en qué cultos sirven." },
+  "Busque alguém pra ver os times dela nos times que você lidera, vincular e dizer em quais cultos ela serve.": { en: "Search someone to see them in the teams you lead, link them and set which services they serve in.", es: "Buscá a alguien para verlo en los equipos que liderás, vincularlo y decir en qué cultos sirve." },
+  "Vincule a pessoa a um time seu pra poder ajustar o domingo dela.": { en: "Link the person to one of your teams to set their Sunday.", es: "Vinculá a la persona a uno de tus equipos para ajustar su domingo." },
+  "Ainda não está em nenhum time seu.": { en: "Not on any of your teams yet.", es: "Todavía no está en ninguno de tus equipos." },
+  "Serve também em 1 função de outro time, que você não lidera.": { en: "Also serves in 1 role on another team you don't lead.", es: "También sirve en 1 función de otro equipo que no liderás." },
+  "Serve também em {n} funções de outros times, que você não lidera.": { en: "Also serves in {n} roles on other teams you don't lead.", es: "También sirve en {n} funciones de otros equipos que no liderás." },
+  "Vincular a um time seu": { en: "Link to one of your teams", es: "Vincular a uno de tus equipos" },
   "Outras pessoas do time": { en: "Other people on the team", es: "Otras personas del equipo" },
   "ninguém do time tem essa função ainda": { en: "nobody on the team has this role yet", es: "nadie del equipo tiene esa función todavía" },
   // ── Servir · Pessoas do Servir (admin · 24/09/2026) ──
