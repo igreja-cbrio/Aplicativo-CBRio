@@ -280,3 +280,52 @@ export function destinoDoArraste(linha: LinhaEscala, times: Time[], chaveAlvo: s
 export function xParaCentralizar(chipX: number, chipLargura: number, larguraVisivel: number): number {
   return Math.max(0, Math.round(chipX + chipLargura / 2 - larguraVisivel / 2));
 }
+
+// ── Preferência de semana (24/09/2026 · pedido do Marcos) ─────────────────────
+// "cada um tem um domingo de preferência e ao clicar para escalar naquela
+// posição, ele filtra as pessoas que estão naquele time priorizando quem
+// colocou aquele domingo como rodízio". O SERVIDOR ordena a lista do time; a
+// tela só precisa saber de que semana é o culto (pra dizer "quem prefere o 4º
+// domingo vem primeiro") e filtrar localmente pelo nome enquanto a pessoa digita.
+
+/** Data/hora de Brasília a partir do ISO. BRT é UTC−3 sem horário de verão desde 2019. */
+function partesBRT(iso: string | null | undefined): { dia: number; semanaDia: number } | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const brt = new Date(d.getTime() - 3 * 3600 * 1000);
+  return { dia: brt.getUTCDate(), semanaDia: brt.getUTCDay() };
+}
+
+/**
+ * Semana do mês (1..4) do culto, no fuso da casa. A 5ª ocorrência vira 1ª —
+ * decisão do Matheus (25/08): "repete o 1º". É a mesma conta do servidor
+ * (`rodizioCulto.semanaDoRodizio`); divergir aqui faria a tela anunciar uma
+ * semana e a lista vir ordenada por outra.
+ */
+export function semanaDoCulto(iso: string | null | undefined): number | null {
+  const p = partesBRT(iso);
+  if (!p) return null;
+  const ord = Math.ceil(p.dia / 7);
+  return ord > 4 ? 1 : ord;
+}
+
+/** O culto cai num domingo (no fuso da casa)? Decide se a tela fala "domingo" ou "semana do mês". */
+export function ehDomingo(iso: string | null | undefined): boolean {
+  const p = partesBRT(iso);
+  return !!p && p.semanaDia === 0;
+}
+
+function semAcento(s: string): string {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+/**
+ * Filtra a lista do time pelo nome, sem acento e sem caixa, PRESERVANDO A
+ * ORDEM que o servidor mandou (a preferência). Busca vazia devolve tudo.
+ */
+export function filtrarPool<T extends { full_name: string }>(pool: T[], q: string): T[] {
+  const alvo = semAcento(q || "");
+  if (!alvo) return pool;
+  return pool.filter((p) => semAcento(p.full_name || "").includes(alvo));
+}

@@ -173,6 +173,41 @@ somar ao seu trabalho, não duplicar.
 - **ERP #2354** (mover a função da API pra `pdx1`/Oregon) está **aberto de
   propósito** — é a API inteira, e o Marcos vai mergear numa janela calma.
 
+## ⚠️⚠️ SERVIR · LEITOR só lê, lista do TIME ordenada pela PREFERÊNCIA de domingo, "Meu domingo de preferência" (24/09/2026)
+
+Par do ERP #3027 (papéis `leitor|lider|admin` + escopo por time/dia do culto +
+`vol_profiles.rodizio_semana`). Pedido do Marcos (23/09): *"cada um tem um
+domingo de preferência e ao clicar para escalar naquela posição, ele filtra as
+pessoas que estão naquele time priorizando quem colocou aquele domingo como
+rodízio"*.
+
+- **Leitor** (`somente_leitura` em `/voluntariado/supervisor`, `escala/servicos`
+  e `escala/:id`): a `escala-supervisor.tsx` esconde FAB, "Adicionar a", vaga
+  "preencher", botão de remover e o arraste (`Gesture.Pan().enabled(false)`), e
+  mostra a faixa "Você acompanha esta escala como leitor". O card da aba Servir
+  vira "Ver escalas" e o card de check-in some. ⚠️ É cortesia — a trava é o
+  servidor (403 `somente_leitura`).
+- **"Adicionar" já no time** (`abrirAdd` → `carregarPoolDoTime(team_id)`):
+  `buscarEscalaPool("", { service_id, team_id })` traz as pessoas do TIME já
+  **ordenadas pelo servidor** (prefere esta semana → sem preferência → outra).
+  Digitar filtra **localmente** (`filtrarPool`, sem acento, preservando a ordem).
+  "Buscar fora do time" volta pra busca geral de 2+ letras. ⚠️ **Preferência
+  ORDENA, nunca filtra** — todo mundo do time continua na lista. Linha da pessoa
+  diz "prefere este domingo" / "prefere o 2º domingo" (ou "semana do mês" quando
+  o culto não é domingo — `ehDomingo`).
+- **`lib/escalaTimes.ts`**: `semanaDoCulto` (BRT = UTC−3 fixo; **5ª vira 1ª**
+  como `rodizioCulto.semanaDoRodizio` do servidor — divergir faria a tela
+  anunciar uma semana e a lista vir por outra) · `ehDomingo` · `filtrarPool`.
+  2 mutantes novos (5ª→1ª · acento). 99/99.
+- **`components/voluntariado/DomingoPreferido.tsx`** na aba Servir (abaixo da
+  Disponibilidade, só pra quem tem `vol_profile`): chips Nenhum · 1º–4º, salva
+  no toque via `PATCH /app/voluntariado/me/rodizio`; texto diz que **não é
+  bloqueio**. Só aparece quando `/me` manda `rodizio_semana` (servidor antigo
+  não manda ⇒ `undefined` ⇒ sem card).
+- ⏳ Nada rodou em aparelho. ⏳ As 2 migrations do ERP (`20260924120000` ·
+  `20260924120100`) são do Marcos aplicar; sem elas o servidor responde no
+  formato antigo e o app se comporta como antes (todo mundo líder, sem preferência).
+
 ## ⚠️⚠️ MONTAR ESCALA · por TIME, em duas etapas, num carrossel (23/09/2026)
 
 O redesenho que o Marcos pediu em vídeo (03/09), comparando com o Planning
