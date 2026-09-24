@@ -173,6 +173,30 @@ somar ao seu trabalho, não duplicar.
 - **ERP #2354** (mover a função da API pra `pdx1`/Oregon) está **aberto de
   propósito** — é a API inteira, e o Marcos vai mergear numa janela calma.
 
+## ⚠️⚠️ SERVIR · "PESSOAS DO SERVIR" — o ADMIN vincula pessoa × time × cultos pelo app (24/09/2026)
+
+Pedido do Marcos depois de aplicar as migrations do #3027: *"para as pessoas que
+forem admin, uma opção na aba de servir de buscar as pessoas que tem no app, clicar
+no perfil, vincular ele em um time, selecionar quais cultos ele vai servir naquele
+time"*. Par do ERP #3031 (rotas `/app/voluntariado/admin/*`, só `papel === 'admin'`).
+
+- **Porta:** card "Pessoas do Servir" na aba Servir, só com `papel === "admin"` em
+  `/voluntariado/supervisor` (Marcos e Matheus). A trava é o servidor (403).
+- **Tela `app/(app)/servir-pessoas.tsx`:** busca (2+ letras) → linha com os times da
+  pessoa → folha com: **Domingo de preferência** (chips) · **Times** (um card por
+  time; funções em linhas com × pra tirar — `is_active=false`, reversível, com
+  diálogo da casa; chips de **cultos em que serve** naquele time) · **Vincular a um
+  time** (chip do time → função opcional → botão).
+- ⚠️⚠️ **Cultos são por (PESSOA, TIME):** um PATCH em qualquer linha do time espalha
+  pra todas (lei do servidor). Todos marcados = NULL = "serve em todos". **Desmarcar
+  o último é BLOQUEADO na tela** — no servidor viraria NULL (= todos), o oposto do
+  gesto; a tela avisa "use o × ao lado da função".
+- ⚠️ `agir()` serializa as ações (uma por vez, `ocupado`) e recarrega a ficha depois
+  de cada uma — a lista da busca é atualizada a partir da ficha, sem nova busca.
+- ⚠️ Gotcha do portão i18n: `fn: () => Promise<void>` conta como string solta
+  (`>Promise<` casa o regex de JSX). Escrever `() => void | Promise<void>`.
+- ⏳ Nada rodou em aparelho.
+
 ## ⚠️⚠️ SERVIR · LEITOR só lê, lista do TIME ordenada pela PREFERÊNCIA de domingo, "Meu domingo de preferência" (24/09/2026)
 
 Par do ERP #3027 (papéis `leitor|lider|admin` + escopo por time/dia do culto +
