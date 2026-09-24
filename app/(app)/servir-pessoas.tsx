@@ -9,7 +9,8 @@
 //   · "em quais cultos serve" é por (PESSOA, TIME) — marcar todos = qualquer culto;
 //   · tirar do time é reversível (is_active=false), por isso confirma e não avisa duas vezes;
 //   · a preferência de domingo é da pessoa, não do time.
-// A porta (card na aba Servir) só aparece com `papel === "admin"`; a trava é o servidor (403).
+// A porta (card na aba Servir) aparece com `gere_pessoas` (admin OU líder de time/área
+// sem recorte · 24/09). O LÍDER vê e mexe só nos times que lidera; a trava é o servidor (403).
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -140,7 +141,7 @@ export default function ServirPessoasScreen() {
   }
 
   function mudarSemana(n: number | null) {
-    if (!aberta || !det || det.pessoa.rodizio_semana === n) return;
+    if (!aberta || !det || det.pessoa.rodizio_semana === n || det.pode_rodizio === false) return;
     void agir(`semana:${n ?? "x"}`, () => salvarRodizioDe(aberta.id, n).then(() => {}), t("Erro ao salvar a preferência"));
   }
 
@@ -157,7 +158,7 @@ export default function ServirPessoasScreen() {
       </View>
 
       <View style={{ paddingHorizontal: spacing.md }}>
-        <Text style={styles.muted}>{t("Busque alguém pra ver os times dela, vincular a um time e dizer em quais cultos ela serve.")}</Text>
+        <Text style={styles.muted}>{t("Busque alguém pra ver os times dela nos times que você lidera, vincular e dizer em quais cultos ela serve.")}</Text>
         <View style={styles.searchBox}>
           <Ionicons name="search" size={18} color={colors.textMuted} />
           <TextInput style={styles.searchInput} placeholder={t("Buscar pessoa pelo nome…")} placeholderTextColor={colors.textMuted}
@@ -219,7 +220,10 @@ export default function ServirPessoasScreen() {
 
                 {/* Domingo de preferência */}
                 <Text style={styles.secao}>{t("Domingo de preferência")}</Text>
-                <View style={styles.chips}>
+                {det.pode_rodizio === false && (
+                  <Text style={[styles.muted, { marginBottom: 6 }]}>{t("Vincule a pessoa a um time seu pra poder ajustar o domingo dela.")}</Text>
+                )}
+                <View style={[styles.chips, det.pode_rodizio === false && { opacity: 0.45 }]} pointerEvents={det.pode_rodizio === false ? "none" : "auto"}>
                   <Pressable onPress={() => mudarSemana(null)} accessibilityRole="button" accessibilityState={{ selected: det.pessoa.rodizio_semana === null }}
                     style={[styles.chip, det.pessoa.rodizio_semana === null && styles.chipAtivo]}>
                     <Text style={[styles.chipTxt, det.pessoa.rodizio_semana === null && styles.chipTxtAtivo]}>{t("Nenhum")}</Text>
@@ -237,7 +241,16 @@ export default function ServirPessoasScreen() {
 
                 {/* Times atuais */}
                 <Text style={styles.secao}>{t("Times")}</Text>
-                {porTime.length === 0 && <Text style={styles.muted}>{t("Ainda não está em nenhum time.")}</Text>}
+                {porTime.length === 0 && (
+                  <Text style={styles.muted}>{det.escopo === "lider" ? t("Ainda não está em nenhum time seu.") : t("Ainda não está em nenhum time.")}</Text>
+                )}
+                {/* Recorte do LÍDER: os outros times dela ficam escondidos, mas DITOS —
+                    sumir em silêncio pareceria "ela não serve em mais nada". */}
+                {(det.vinculos_fora ?? 0) > 0 && (
+                  <Text style={[styles.pequeno, { color: colors.textMuted, marginBottom: 6 }]}>
+                    {(det.vinculos_fora === 1 ? t("Serve também em 1 função de outro time, que você não lidera.") : t("Serve também em {n} funções de outros times, que você não lidera.")).replace("{n}", String(det.vinculos_fora))}
+                  </Text>
+                )}
                 {porTime.map(g => (
                   <View key={g.team_id} style={styles.cardTime}>
                     <Text style={styles.cardTimeNome}>{g.nome}</Text>
@@ -271,7 +284,7 @@ export default function ServirPessoasScreen() {
                 ))}
 
                 {/* Vincular a um time */}
-                <Text style={styles.secao}>{t("Vincular a um time")}</Text>
+                <Text style={styles.secao}>{det.escopo === "lider" ? t("Vincular a um time seu") : t("Vincular a um time")}</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
                   {det.times.map(tm => {
                     const ativo = timeNovo === tm.id;

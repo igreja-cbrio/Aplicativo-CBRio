@@ -187,6 +187,8 @@ export type SupervisorInfo = {
   /** Todas as concessões desta pessoa são de LEITOR: a tela esconde os botões de escrever (o servidor trava de todo jeito). */
   somente_leitura?: boolean;
   papel?: PapelServir | null;
+  /** Gerencia a estrutura de algum time (admin ou líder de time/área sem recorte) — acende "Pessoas do Servir". */
+  gere_pessoas?: boolean;
 };
 export type EscalaServico = { id: string; service_type_name: string | null; scheduled_at: string | null; escalados?: number };
 export type EscalaItem = {
@@ -454,7 +456,13 @@ export type AdminVinculo = {
 };
 export type AdminPessoaDetalhe = {
   pessoa: { id: string; full_name: string; avatar_url: string | null; telefone: string | null; rodizio_semana: number | null };
+  /** admin vê tudo; lider vê só os times que lidera. */
+  escopo?: "admin" | "lider";
   vinculos: AdminVinculo[];
+  /** Vínculos em times que ESTA pessoa não lidera (escondidos, mas declarados). */
+  vinculos_fora?: number;
+  /** Pode mexer no domingo de preferência (líder só se a pessoa está num time dele). */
+  pode_rodizio?: boolean;
   times: { id: string; name: string; area: string | null; posicoes: { id: string; name: string }[] }[];
   tipos: { id: string; name: string; recurrence_day: number | null; recurrence_time: string | null }[];
 };

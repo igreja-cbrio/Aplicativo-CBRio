@@ -71,7 +71,8 @@ export default function VoluntariadoScreen() {
         const sup = !!r?.supervisor;
         setEhSupervisor(sup);
         setSoLeitura(!!r?.somente_leitura);
-        setEhAdmin(r?.papel === "admin");
+        // Admin OU líder de time (24/09): a tela recorta aos times dele.
+        setEhAdmin(r?.gere_pessoas === true || r?.papel === "admin");
         if (!sup) return;
         // Só pergunta os cultos se a pessoa é supervisora — pra não gastar
         // requisição na abertura da aba de quem não usa isso.
@@ -333,7 +334,7 @@ export default function VoluntariadoScreen() {
               <Ionicons name="people" size={22} color={colors.brandPale} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.supervisorTitulo}>{t("Pessoas do Servir")}</Text>
-                <Text style={styles.supervisorTxt}>{t("Vincule pessoas a times e diga em quais cultos elas servem.")}</Text>
+                <Text style={styles.supervisorTxt}>{t("Vincule pessoas aos seus times e diga em quais cultos elas servem.")}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
             </Pressable>
