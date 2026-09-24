@@ -44,12 +44,16 @@ export function normalizarVoluntariadoMe(raw: unknown): VoluntariadoMe {
     inscricao: normalizarInscricao(obj?.inscricao),
     voluntario_ativo,
     ...(obj?.escalas ? { escalas: obj.escalas } : {}),
+    // Só entra quando o servidor mandou — servidor antigo não tem o campo e a
+    // tela trata `undefined` como "não sei", não como "sem preferência".
+    ...(obj && "rodizio_semana" in obj ? { rodizio_semana: normalizarSemana(obj.rodizio_semana) } : {}),
   } as VoluntariadoMe;
 }
 
 type Cru = {
   voluntario_ativo?: unknown;
   inscricao?: unknown;
+  rodizio_semana?: unknown;
   escalas?: VoluntariadoMe["escalas"];
 };
 
@@ -82,4 +86,10 @@ function normalizarInscricao(v: unknown): VoluntariadoMe["inscricao"] {
       : null,
     integrado_em: typeof o.integrado_em === "string" ? o.integrado_em : null,
   } as VoluntariadoMe["inscricao"];
+}
+
+/** 1..4 vira número; qualquer outra coisa (null, "", 0, 7, "x") vira null. */
+function normalizarSemana(v: unknown): number | null {
+  const n = typeof v === "number" ? v : typeof v === "string" && v.trim() ? Number(v) : NaN;
+  return Number.isInteger(n) && n >= 1 && n <= 4 ? n : null;
 }

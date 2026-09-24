@@ -790,6 +790,23 @@ const MUTANTES = [
     para: "  const pelaNome = undefined;",
   },
   {
+    // A 5ª semana do mês tem que virar 1ª como no servidor (`semanaDoRodizio`).
+    // Sem isso a tela diz "quem prefere o 5º domingo vem primeiro" — um domingo
+    // que ninguém pode escolher — enquanto a lista veio ordenada pelo 1º.
+    nome: "escalaTimes: a 5ª semana não vira 1ª (tela e servidor discordam)",
+    arq: "lib/escalaTimes.ts",
+    de: "  return ord > 4 ? 1 : ord;",
+    para: "  return ord;",
+  },
+  {
+    // Filtrar com acento faria "edu" não achar "Édu" — a pessoa está no time,
+    // o líder digita o nome e a lista fica vazia.
+    nome: "escalaTimes: filtro do time sensível a acento",
+    arq: "lib/escalaTimes.ts",
+    de: '  return s.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().trim();',
+    para: "  return s.toLowerCase().trim();",
+  },
+  {
     // Soltar o nome no PRÓPRIO time chamaria o servidor, que gravaria
     // `team_name = "Banda"` numa linha do PCO cujo `team_name` era a posição —
     // apagando a posição de origem em silêncio, a cada toque longo.
