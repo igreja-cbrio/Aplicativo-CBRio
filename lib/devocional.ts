@@ -63,6 +63,48 @@ export async function itensDoPlano(planoId: string): Promise<ItemEdicao[]> {
   return (data ?? []) as ItemEdicao[];
 }
 
+/**
+ * Planos oferecidos no carrossel "Planos sugeridos" da home do Devocional
+ * (24/09/2026): ativos E com inscrição habilitada, com a contagem de dias.
+ * ⚠️ Plano CONTÍNUO (Quarta com Deus, semana) não tem "N dias" — a contagem
+ * só é buscada pros de inscrição, que são pequenos (o Valores de Cristo tem 5).
+ */
+export type PlanoSugerido = PlanoDevocional & { total_dias: number | null };
+export async function planosSugeridos(membroId: string | null): Promise<PlanoSugerido[]> {
+  const planos = (await listarPlanos(membroId)).filter((p) => p.inscricao_habilitada);
+  const porInscricao = planos.filter((p) => !p.continuo).map((p) => p.id);
+  const contagem = new Map<string, number>();
+  if (porInscricao.length) {
+    const { data, error } = await supabase.from("devocional_itens").select("plano_id").in("plano_id", porInscricao);
+    if (error) throw error;
+    for (const r of data ?? []) contagem.set(r.plano_id, (contagem.get(r.plano_id) ?? 0) + 1);
+  }
+  return planos.map((p) => ({ ...p, total_dias: p.continuo ? null : contagem.get(p.id) ?? 0 }));
+}
+
+/** Um plano pelo id, com `inscrito` do membro. `null` se não existe ou está inativo. */
+export async function planoPorId(planoId: string, membroId: string | null): Promise<PlanoDevocional | null> {
+  return (await listarPlanos(membroId)).find((p) => p.id === planoId) ?? null;
+}
+
+/** Ids dos itens DESTE plano que o membro já leu (devocional_leituras_planos). */
+export async function leiturasDoPlano(membroId: string, planoId: string): Promise<string[]> {
+  const { data, error } = await supabase.from("devocional_leituras_planos")
+    .select("item_id, devocional_itens!inner(plano_id)")
+    .eq("membro_id", membroId).eq("devocional_itens.plano_id", planoId);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => r.item_id as string);
+}
+
+/** Um item pelo id (conteúdo completo do dia). */
+export async function itemDoPlano(itemId: string): Promise<ItemEdicao | null> {
+  const { data, error } = await supabase.from("devocional_itens")
+    .select("id,plano_id,data,titulo,passagem,passagem_texto,reflexao,aplicacao,oracao,edicao_slug,edicao_titulo,edicao_inicio,edicao_fim,ordem_no_ciclo,autor")
+    .eq("id", itemId).maybeSingle();
+  if (error) throw error;
+  return (data as ItemEdicao | null) ?? null;
+}
+
 export async function listarMural(): Promise<PostMural[]> {
   const { data, error } = await supabase.rpc("listar_devocional_mural", { p_limite: 60 });
   if (error) throw error;

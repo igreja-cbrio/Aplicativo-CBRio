@@ -834,6 +834,23 @@ const MUTANTES = [
     de: "    const ok = await dlg.confirmar({\n      titulo: t(\"Aceitar inscrição\"),\n      mensagem: `${t(\"Aprovar\")} ${p.nome}?`,",
     para: "    Alert.alert(t(\"Aceitar inscrição\"), `${t(\"Aprovar\")} ${p.nome}?`, [{ text: t(\"Cancelar\"), style: \"cancel\" }]);\n    const ok = await dlg.confirmar({\n      titulo: t(\"Aceitar inscrição\"),\n      mensagem: `${t(\"Aprovar\")} ${p.nome}?`,",
   },
+  {
+    // Plano por INSCRIÇÃO (24/09/2026): sem esta guarda TODO dia não lido vira
+    // "atual" e a pessoa abre o dia 5 antes do 1 — a régua "um dia por vez" some
+    // sem erro nenhum (a tela só desenha o que a régua devolve).
+    nome: "planoRitmo: liberar todos os dias não lidos de uma vez",
+    arq: "lib/planoRitmo.ts",
+    de: "    if (!atualDefinido) { atualDefinido = true; return { item, numero: i + 1, estado: \"atual\" as const }; }",
+    para: "    if (true) { return { item, numero: i + 1, estado: \"atual\" as const }; }",
+  },
+  {
+    // A ordem vem de ordem_no_ciclo, nunca da ordem em que o banco devolve —
+    // com a data sentinela (2000-01-0N) o `order(\"data\", desc)` do lib traria o dia 5 primeiro.
+    nome: "planoRitmo: não ordenar por ordem_no_ciclo",
+    arq: "lib/planoRitmo.ts",
+    de: "  return [...itens].sort((a, b) => {",
+    para: "  return [...itens].filter(() => true); const _x = (a: ItemOrdenavel, b: ItemOrdenavel) => {",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

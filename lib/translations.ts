@@ -6,6 +6,24 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  // ──── Devocional · Planos sugeridos + plano por inscrição (24/09/2026) ────
+  "PLANOS SUGERIDOS": { en: "SUGGESTED PLANS", es: "PLANES SUGERIDOS" },
+  "Não foi possível carregar os planos.": { en: "Could not load the plans.", es: "No se pudieron cargar los planes." },
+  "Nenhum plano aberto para inscrição no momento.": { en: "No plan is open for enrollment right now.", es: "No hay planes abiertos para inscripción en este momento." },
+  "Contínuo": { en: "Ongoing", es: "Continuo" },
+  "Em breve": { en: "Coming soon", es: "Próximamente" },
+  "Plano de leitura": { en: "Reading plan", es: "Plan de lectura" },
+  "Plano não encontrado.": { en: "Plan not found.", es: "Plan no encontrado." },
+  "Você concluiu este plano 🎉": { en: "You finished this plan 🎉", es: "Terminaste este plan 🎉" },
+  "Dia": { en: "Day", es: "Día" },
+  "Começar este plano": { en: "Start this plan", es: "Comenzar este plan" },
+  "Começar pelo dia 1": { en: "Start with day 1", es: "Comenzar por el día 1" },
+  "Continuar leitura": { en: "Continue reading", es: "Continuar la lectura" },
+  "Leia o dia anterior primeiro": { en: "Read the previous day first", es: "Leé primero el día anterior" },
+  "Este dia ainda não foi publicado.": { en: "This day hasn't been published yet.", es: "Este día todavía no fue publicado." },
+  "Você já leu este dia. 💙": { en: "You've already read this day. 💙", es: "Ya leíste este día. 💙" },
+  "Li este devocional": { en: "I read this devotional", es: "Leí este devocional" },
+  "Voltar ao plano e abrir o próximo dia": { en: "Back to the plan to open the next day", es: "Volver al plan y abrir el próximo día" },
   // ──── Montar escala · por TIME, em duas etapas, num carrossel (23/09/2026) ────
   "Tipo de culto": { en: "Service type", es: "Tipo de culto" },
   "Deslize pra ver as equipes. Segure um nome pra mover.": { en: "Swipe to browse the teams. Hold a name to move it.", es: "Deslizá para ver los equipos. Mantené un nombre para moverlo." },

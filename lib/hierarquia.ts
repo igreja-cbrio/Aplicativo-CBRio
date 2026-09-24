@@ -39,6 +39,7 @@ import { router, type Href } from "expo-router";
  *   ├── /devocional        barra (casa de 5 portas · 23/09/2026)
  *   │   ├── /biblia
  *   │   ├── /devocional-planos → /devocional-diario
+ *   │   ├── /devocional-plano → /devocional-plano-dia   (plano por inscrição · 24/09/2026)
  *   │   ├── /devocional-mural  /devocional-registros  /devocional-leituras
  *   │   └── /anotacoes         (tela antiga; segue no mapa)
  *   ├── /menu              barra
@@ -93,6 +94,11 @@ const PAI: Record<string, string> = {
   "/biblia": "/devocional",
   "/devocional-mural": "/devocional",
   "/devocional-diario": "/devocional-planos",
+  // Plano POR INSCRIÇÃO (24/09/2026 · carrossel "Planos sugeridos" da home):
+  // a tela do plano volta pra home do Devocional; o dia volta pro plano, que é
+  // onde o dia seguinte aparece liberado.
+  "/devocional-plano": "/devocional",
+  "/devocional-plano-dia": "/devocional-plano",
   "/devocional-registros": "/devocional",
   "/devocional-leituras": "/devocional",
 

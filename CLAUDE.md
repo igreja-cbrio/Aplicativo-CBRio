@@ -4,6 +4,53 @@
 > relevante (novo módulo, dependência, decisão de arquitetura, config de
 > backend). Ele é a memória e o contexto contínuo do app.
 
+## ⚠️ DEVOCIONAL · "Planos sugeridos" + plano POR INSCRIÇÃO (24/09/2026)
+
+Pedido do Marcos: *"abaixo do bloco guardar e revisitar, uma nova sessão de
+planos sugeridos, seria um carrossel com os planos, aí você clica nele e se
+inscreve. Coloque uma devocional de 'Valores de Cristo', 1 dia para cada valor
+da igreja, 5 dias usando como base Atos 2:42."*
+
+**Dois tipos de plano convivem em `devocional_planos`, e a diferença é a
+coluna `continuo`:**
+
+| tipo | exemplo | quem manda no "hoje" | tela |
+|---|---|---|---|
+| por CALENDÁRIO (`continuo=true`) | Devocional da semana · Quarta com Deus | a DATA do item = hoje | `/devocional-diario` |
+| por INSCRIÇÃO (`continuo=false`) | **Valores de Cristo** (5 dias) | a pessoa: dia N abre depois do N-1 lido | `/devocional-plano` → `/devocional-plano-dia` |
+
+- **A home** (`devocional.tsx`) ganhou o carrossel `PLANOS SUGERIDOS` =
+  `planosSugeridos()` (ativo + `inscricao_habilitada`), com badge "Inscrito" e
+  o ritmo ("5 dias" · "Contínuo"). Contínuo abre o diário; por inscrição abre
+  a tela do plano. Erro **não vira lista vazia** (caixa com "Tentar de novo").
+- ⚠️⚠️ **Os itens do plano por inscrição têm `data` SENTINELA `2000-01-0N`.**
+  É o que faz o push das 7h30 (`notify-lembretes` · `data = hoje`) e o
+  Devocional da semana **não os enxergarem** — eles não são "o devocional de
+  hoje" de ninguém. A ORDEM vem de **`ordem_no_ciclo`**; `itensDoPlano` ordena
+  por `data desc` (herança do diário), então **nunca desenhar a lista sem passar
+  por `ordenarItensDoPlano`** (`lib/planoRitmo.ts`).
+- **A régua é PURA em `lib/planoRitmo.ts`** (`diasDoPlano` · `progressoDoPlano`
+  · `podeAbrirDia`, no portão, **2 mutantes**): `lido` · `atual` (o PRIMEIRO
+  não lido — único que abre) · `bloqueado`. Lido fora de ordem segue lido; o
+  atual é sempre o primeiro buraco. "No seu ritmo" = pode ler 2 dias no mesmo
+  dia; o que não pode é pular.
+- **O check-in é o MESMO `checkInDevocional`** do diário: grava
+  `devocional_leituras_planos` (libera o dia seguinte) **e** `mem_devocionais`
+  (o KPI do valor Investir, upsert por membro+dia+tipo — ler 2 dias no mesmo dia
+  atualiza o `devocional_item_id` daquele dia, o KPI conta 1). Segunda régua
+  aqui divergiria.
+- `leiturasDoPlano` filtra pelo embed `devocional_itens!inner(plano_id)` —
+  a UNIQUE `(membro_id, item_id)` de `devocional_leituras_planos` é o que torna
+  o check-in idempotente.
+- Conteúdo do **Valores de Cristo** (plano `acd9f8df…`, slug
+  `valores-de-cristo`, `destaque=true`): 5 itens em Atos 2.42–47, um valor por
+  dia (Seguir Jesus · Conectar · Investir tempo com Deus · Servir ·
+  Generosidade), com `gerado_por_ia=true` e `autor='CBRio'`. Texto bíblico em
+  Almeida (domínio público) — a bible-api não devolve Atos 2. Criado por script
+  direto no banco (24/09), sem migration: **é DADO, não schema**.
+- ⚠️ `subirUmNivel` de `/devocional-plano-dia` volta pro plano (é lá que o dia
+  seguinte aparece liberado) e o plano volta pra home do Devocional.
+
 ## ⚠️⚠️ DEVOCIONAL · a casa nova (Bíblia · Planos · Comentários · Anotações · Leituras) RESTAURADA (23/09/2026)
 
 **O que é.** A aba Devocional deixou de ser uma tela só e virou uma **casa com 5
