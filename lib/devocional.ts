@@ -292,19 +292,27 @@ export async function checkInDevocional(
     { onConflict: "membro_id,item_id", ignoreDuplicates: true }
   );
   if (erroLeitura) throw erroLeitura;
-  const { error } = await supabase.from("mem_devocionais").upsert(
-    {
-      membro_id: membroId,
-      data_devocional: hojeISO(),
-      tipo: "pessoal",
-      devocional_item_id: itemId,
-      concluida: true,
-      observacoes: observacoes?.trim() || null,
-    },
-    { onConflict: "membro_id,data_devocional,tipo" }
-  );
+  // ⚠️⚠️ NUNCA `upsert` em mem_devocionais (24/09/2026 · o "não foi possível
+  // registrar" do Marcos). O índice único `uq_mem_devocionais_dia` virou
+  // PARCIAL em 09/09 (`WHERE deleted_at IS NULL`, pra o soft-delete liberar a
+  // chave) — e `ON CONFLICT` do PostgREST NÃO infere índice parcial: todo
+  // check-in caía em 42P10, do plano E do diário. A idempotência aqui é
+  // select → update/insert; corrida de um mesmo membro em dois toques é
+  // inofensiva (o 2º cai no update).
+  const hoje = hojeISO();
+  const { data: existente, error: erroBusca } = await supabase.from("mem_devocionais")
+    .select("id").eq("membro_id", membroId).eq("data_devocional", hoje).eq("tipo", "pessoal")
+    .is("deleted_at", null).limit(1).maybeSingle();
+  if (erroBusca) throw erroBusca;
+  const linha = { devocional_item_id: itemId, concluida: true, observacoes: observacoes?.trim() || null };
+  const { error } = existente
+    ? await supabase.from("mem_devocionais").update(linha).eq("id", existente.id)
+    : await supabase.from("mem_devocionais").insert({ membro_id: membroId, data_devocional: hoje, tipo: "pessoal", ...linha });
   if (error) throw error;
 }
+
+// Régua pura em lib/erroMensagem.ts (entra no portão sem arrastar o supabase).
+export { mensagemDoErro } from "./erroMensagem";
 
 /**
  * Sequência (streak) de DIAS ÚTEIS consecutivos com check-in, contando

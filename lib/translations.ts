@@ -24,6 +24,8 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Você já leu este dia. 💙": { en: "You've already read this day. 💙", es: "Ya leíste este día. 💙" },
   "Li este devocional": { en: "I read this devotional", es: "Leí este devocional" },
   "Voltar ao plano e abrir o próximo dia": { en: "Back to the plan to open the next day", es: "Volver al plan y abrir el próximo día" },
+  "Aumentar letra": { en: "Increase text size", es: "Aumentar letra" },
+  "Diminuir letra": { en: "Decrease text size", es: "Disminuir letra" },
   // ──── Montar escala · por TIME, em duas etapas, num carrossel (23/09/2026) ────
   "Tipo de culto": { en: "Service type", es: "Tipo de culto" },
   "Deslize pra ver as equipes. Segure um nome pra mover.": { en: "Swipe to browse the teams. Hold a name to move it.", es: "Deslizá para ver los equipos. Mantené un nombre para moverlo." },
