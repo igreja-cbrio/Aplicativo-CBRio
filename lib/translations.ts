@@ -6,6 +6,31 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  // ── Servir · Pessoas do Servir (admin · 24/09/2026) ──
+  "Pessoas do Servir": { en: "People in Serve", es: "Personas de Servir" },
+  "Vincule pessoas a times e diga em quais cultos elas servem.": { en: "Link people to teams and set which services they serve in.", es: "Vinculá personas a equipos y decí en qué cultos sirven." },
+  "Busque alguém pra ver os times dela, vincular a um time e dizer em quais cultos ela serve.": { en: "Search someone to see their teams, link them to a team and set which services they serve in.", es: "Buscá a alguien para ver sus equipos, vincularlo a un equipo y decir en qué cultos sirve." },
+  "Buscar pessoa pelo nome…": { en: "Search person by name…", es: "Buscar persona por nombre…" },
+  "Nenhuma pessoa encontrada.": { en: "Nobody found.", es: "No se encontró a nadie." },
+  "Abrir": { en: "Open", es: "Abrir" },
+  "Sem time": { en: "No team", es: "Sin equipo" },
+  "Erro ao carregar a pessoa": { en: "Error loading the person", es: "Error al cargar la persona" },
+  "Sem nome": { en: "No name", es: "Sin nombre" },
+  "Domingo de preferência": { en: "Preferred Sunday", es: "Domingo de preferencia" },
+  "Times": { en: "Teams", es: "Equipos" },
+  "Ainda não está em nenhum time.": { en: "Not on any team yet.", es: "Todavía no está en ningún equipo." },
+  "Sem função definida": { en: "No role set", es: "Sin función definida" },
+  "Tirar do time": { en: "Remove from team", es: "Quitar del equipo" },
+  "Erro ao tirar do time": { en: "Error removing from team", es: "Error al quitar del equipo" },
+  "Serve em todos os cultos": { en: "Serves in every service", es: "Sirve en todos los cultos" },
+  "Serve só nestes cultos:": { en: "Serves only in these services:", es: "Sirve solo en estos cultos:" },
+  "Pelo menos um culto": { en: "At least one service", es: "Al menos un culto" },
+  "Pra tirar a pessoa do time, use o × ao lado da função.": { en: "To remove the person from the team, use the × next to the role.", es: "Para quitar a la persona del equipo, usá la × al lado de la función." },
+  "Erro ao salvar os cultos": { en: "Error saving the services", es: "Error al guardar los cultos" },
+  "Vincular a um time": { en: "Link to a team", es: "Vincular a un equipo" },
+  "Vincular a": { en: "Link to", es: "Vincular a" },
+  "Erro ao vincular ao time": { en: "Error linking to team", es: "Error al vincular al equipo" },
+  "Erro ao salvar a preferência": { en: "Error saving the preference", es: "Error al guardar la preferencia" },
   // ──── Devocional · Planos sugeridos + plano por inscrição (24/09/2026) ────
   "PLANOS SUGERIDOS": { en: "SUGGESTED PLANS", es: "PLANES SUGERIDOS" },
   "Não foi possível carregar os planos.": { en: "Could not load the plans.", es: "No se pudieron cargar los planes." },

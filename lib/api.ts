@@ -441,6 +441,41 @@ export function salvarRodizioSemana(semana: number | null) {
   return apiPatch<{ rodizio_semana: number | null }>("/app/voluntariado/me/rodizio", { semana });
 }
 
+// ===== ADMIN do Servir · pessoas × times × cultos (só papel admin; o servidor trava com 403) =====
+export type AdminPessoa = { id: string; full_name: string; avatar_url: string | null; rodizio_semana: number | null; times: string[] };
+export type AdminVinculo = {
+  id: string; team_id: string; team_name: string | null; team_area: string | null;
+  position_id: string | null; position_name: string | null;
+  /** null = serve em TODOS os cultos deste time. */
+  service_type_ids: string[] | null;
+  is_active: boolean;
+};
+export type AdminPessoaDetalhe = {
+  pessoa: { id: string; full_name: string; avatar_url: string | null; telefone: string | null; rodizio_semana: number | null };
+  vinculos: AdminVinculo[];
+  times: { id: string; name: string; area: string | null; posicoes: { id: string; name: string }[] }[];
+  tipos: { id: string; name: string; recurrence_day: number | null; recurrence_time: string | null }[];
+};
+export function buscarPessoasServir(q: string) {
+  return apiGet<AdminPessoa[]>(`/app/voluntariado/admin/pessoas?q=${encodeURIComponent(q)}`);
+}
+export function getPessoaServir(id: string) {
+  return apiGet<AdminPessoaDetalhe>(`/app/voluntariado/admin/pessoas/${id}`);
+}
+export function vincularAoTime(body: { volunteer_profile_id: string; team_id: string; position_id?: string }) {
+  return apiPost<AdminVinculo>("/app/voluntariado/admin/vinculos", body);
+}
+/** `service_type_ids` vale pra PESSOA no TIME inteiro (o servidor espalha); marcar todos grava "todos". */
+export function atualizarVinculo(id: string, body: { service_type_ids?: string[] | null; position_id?: string | null }) {
+  return apiPatch<AdminVinculo>(`/app/voluntariado/admin/vinculos/${id}`, body);
+}
+export function tirarDoTime(id: string) {
+  return apiDelete<{ ok: true; id: string }>(`/app/voluntariado/admin/vinculos/${id}`);
+}
+export function salvarRodizioDe(pessoaId: string, semana: number | null) {
+  return apiPatch<{ rodizio_semana: number | null }>(`/app/voluntariado/admin/pessoas/${pessoaId}/rodizio`, { semana });
+}
+
 // ===== /app/grupos/* (líder/supervisor aprova inscrições do grupo) =====
 export type GrupoPapel = {
   lider: boolean;

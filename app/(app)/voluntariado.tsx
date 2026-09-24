@@ -59,6 +59,8 @@ export default function VoluntariadoScreen() {
   const [ehSupervisor, setEhSupervisor] = useState(false);
   // LEITOR (24/09): abre a Montar escala e só lê — o card diz isso e o check-in some.
   const [soLeitura, setSoLeitura] = useState(false);
+  // ADMIN (24/09): gerencia pessoas × times × cultos pelo app (`/servir-pessoas`).
+  const [ehAdmin, setEhAdmin] = useState(false);
   // ⚠️ O card de check-in só existe se HOJE tem culto — a régua é a MESMA do
   // servidor (`lib/janelaCheckin`, no portão), porque o backend responde 403
   // fora da janela. Mostrar o card sempre faria o supervisor tocar e levar erro.
@@ -69,6 +71,7 @@ export default function VoluntariadoScreen() {
         const sup = !!r?.supervisor;
         setEhSupervisor(sup);
         setSoLeitura(!!r?.somente_leitura);
+        setEhAdmin(r?.papel === "admin");
         if (!sup) return;
         // Só pergunta os cultos se a pessoa é supervisora — pra não gastar
         // requisição na abertura da aba de quem não usa isso.
@@ -320,6 +323,17 @@ export default function VoluntariadoScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.supervisorTitulo}>{soLeitura ? t("Ver escalas") : t("Montar escala")}</Text>
                 <Text style={styles.supervisorTxt}>{soLeitura ? t("Você acompanha as escalas do seu time, sem alterar.") : t("Você é supervisor · monte e veja as escalas da sua área.")}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </Pressable>
+          )}
+
+          {ehAdmin && (
+            <Pressable style={styles.supervisorCard} onPress={() => router.push("/servir-pessoas" as any)}>
+              <Ionicons name="people" size={22} color={colors.brandPale} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.supervisorTitulo}>{t("Pessoas do Servir")}</Text>
+                <Text style={styles.supervisorTxt}>{t("Vincule pessoas a times e diga em quais cultos elas servem.")}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
             </Pressable>
