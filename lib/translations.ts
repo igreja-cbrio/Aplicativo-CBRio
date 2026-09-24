@@ -51,6 +51,8 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Você já leu este dia. 💙": { en: "You've already read this day. 💙", es: "Ya leíste este día. 💙" },
   "Li este devocional": { en: "I read this devotional", es: "Leí este devocional" },
   "Voltar ao plano e abrir o próximo dia": { en: "Back to the plan to open the next day", es: "Volver al plan y abrir el próximo día" },
+  "Aumentar letra": { en: "Increase text size", es: "Aumentar letra" },
+  "Diminuir letra": { en: "Decrease text size", es: "Disminuir letra" },
   // ── Servir · papéis + domingo de preferência (24/09/2026) ──
   "Você acompanha esta escala como leitor, sem alterar.": { en: "You're viewing this schedule as a reader — no changes.", es: "Estás viendo esta escala como lector, sin cambios." },
   "Pessoas do time": { en: "People on the team", es: "Personas del equipo" },

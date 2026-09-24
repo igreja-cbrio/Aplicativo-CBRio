@@ -34,6 +34,10 @@ import {
   type CheckinDevocional,
 } from "@/lib/devocional";
 import { compartilharDevocional } from "@/lib/devocionalShare";
+import { mensagemDoErro } from "@/lib/devocional";
+import { useFonteLeitura } from "@/lib/useFonteLeitura";
+import { ControleFonte } from "@/components/devocional/ControleFonte";
+import { PassagemBiblica, TextoDevocional } from "@/components/devocional/TextoLeitura";
 
 const DIAS_SEMANA_LABEL = ["Seg", "Ter", "Qua", "Qui", "Sex"];
 const DIAS_QUARTA_LABEL = ["Qui", "Sex", "Sáb", "Dom", "Seg", "Ter", "Qua"];
@@ -45,6 +49,7 @@ export default function DevocionalDiarioScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
   const { membro } = useMembro();
+  const fonte = useFonteLeitura();
   const { planoId, titulo, ciclo } = useLocalSearchParams<{ planoId?: string; titulo?: string; ciclo?: string }>();
   const ehPlanoQuarta = ciclo === "quinta-quarta";
 
@@ -142,11 +147,11 @@ export default function DevocionalDiarioScreen() {
       // log de runtime na Vercel — sem esta linha, a falha só aparece quando alguém
       // reporta (foi o que aconteceu em 12/08). `reason` é a mensagem do PostgREST
       // (código + texto do banco), nunca dado da pessoa.
-      trackEvento("devocional_checkin_erro", {
-        screen: "devocional",
-        reason: e instanceof Error ? e.message : String(e),
-      });
-      Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível registrar."));
+      // `mensagemDoErro`: o erro do PostgREST é objeto plano, não Error — com
+      // `String(e)` a telemetria gravava "[object Object]" (24/09).
+      const motivo = mensagemDoErro(e);
+      trackEvento("devocional_checkin_erro", { screen: "devocional", reason: motivo });
+      Alert.alert(t("Não foi possível registrar."), motivo);
     }
     setSalvando(false);
   }
@@ -205,6 +210,7 @@ export default function DevocionalDiarioScreen() {
           >
             <Ionicons name="bookmark-outline" size={20} color={colors.brandMid} />
           </Pressable>
+          <ControleFonte passo={fonte.passo} mudar={fonte.mudar} cor={colors.text} fundo={colors.surface} />
         </View>
 
         {/* Progresso do ciclo do plano */}
@@ -277,35 +283,33 @@ export default function DevocionalDiarioScreen() {
             {itensHoje.map((item) => (
               <View key={item.id} style={styles.cardDevocional}>
                 <Text style={styles.devTitulo}>{item.titulo}</Text>
-                {item.passagem && <Text style={styles.passagemRef}>{item.passagem}</Text>}
+                {item.passagem && !item.passagem_texto && <Text style={styles.passagemRef}>{item.passagem}</Text>}
+                {/* Passagem em "papel" (estética da aba Bíblia) + texto em
+                    parágrafos curtos, com o A−/A+ (24/09/2026). */}
                 {item.passagem_texto && (
-                  <Pressable
-                    style={styles.passagemBox}
-                    onPress={() => setVersoSelecionado(versoSelecionado === item.id ? null : item.id)}
-                    accessibilityRole="button"
-                    accessibilityLabel={t("Selecionar versículo")}
-                  >
-                    <Text style={styles.passagemTxt}>“{item.passagem_texto}”</Text>
+                  <PassagemBiblica referencia={item.passagem} texto={item.passagem_texto} passo={fonte.passo} selecionado={versoSelecionado === item.id} onPress={() => setVersoSelecionado(versoSelecionado === item.id ? null : item.id)}>
                     {versoSelecionado === item.id && <View style={styles.verseActions}>
-                      <Pressable style={styles.verseAction} onPress={() => router.navigate({ pathname: "/devocional-registros", params: { referencia: item.passagem ?? "", textoBiblico: item.passagem_texto, origem: "devocional", itemId: item.id } })}><Ionicons name="bookmark-outline" size={17} color={colors.primary} /><Text style={styles.compartilharVersiculo}>{t("Salvar")}</Text></Pressable>
-                      <Pressable style={styles.verseAction} onPress={() => router.navigate({ pathname: "/devocional-mural", params: { referencia: item.passagem ?? "", textoBiblico: item.passagem_texto, itemId: item.id } })}><Ionicons name="chatbubble-outline" size={17} color={colors.primary} /><Text style={styles.compartilharVersiculo}>{t("Comentários")}</Text></Pressable>
-                      <Pressable style={styles.verseAction} onPress={async () => { if (!membro?.membroId) return; await salvarRegistroPessoal({ membroId: membro.membroId, origem: "devocional", referencia: item.passagem ?? "", textoBiblico: item.passagem_texto ?? undefined, cor: "amarelo", itemId: item.id }); setVersoSelecionado(null); Alert.alert(t("Marcação salva")); }}><Ionicons name="color-fill-outline" size={17} color={colors.primary} /><Text style={styles.compartilharVersiculo}>{t("Marcar")}</Text></Pressable>
+                      <Pressable style={styles.verseAction} onPress={() => router.navigate({ pathname: "/devocional-registros", params: { referencia: item.passagem ?? "", textoBiblico: item.passagem_texto, origem: "devocional", itemId: item.id } })}><Ionicons name="bookmark-outline" size={17} color="#263234" /><Text style={styles.compartilharVersiculo}>{t("Salvar")}</Text></Pressable>
+                      <Pressable style={styles.verseAction} onPress={() => router.navigate({ pathname: "/devocional-mural", params: { referencia: item.passagem ?? "", textoBiblico: item.passagem_texto, itemId: item.id } })}><Ionicons name="chatbubble-outline" size={17} color="#263234" /><Text style={styles.compartilharVersiculo}>{t("Comentários")}</Text></Pressable>
+                      <Pressable style={styles.verseAction} onPress={async () => { if (!membro?.membroId) return; await salvarRegistroPessoal({ membroId: membro.membroId, origem: "devocional", referencia: item.passagem ?? "", textoBiblico: item.passagem_texto ?? undefined, cor: "amarelo", itemId: item.id }); setVersoSelecionado(null); Alert.alert(t("Marcação salva")); }}><Ionicons name="color-fill-outline" size={17} color="#263234" /><Text style={styles.compartilharVersiculo}>{t("Marcar")}</Text></Pressable>
                     </View>}
-                  </Pressable>
+                  </PassagemBiblica>
                 )}
-                <Text style={styles.reflexao}>{item.reflexao}</Text>
-                {item.aplicacao && (
-                  <>
-                    <Text style={styles.secao}>{t("Pra viver hoje")}</Text>
-                    <Text style={styles.reflexao}>{item.aplicacao}</Text>
-                  </>
-                )}
-                {item.oracao && (
-                  <>
-                    <Text style={styles.secao}>{t("Oração")}</Text>
-                    <Text style={[styles.reflexao, { fontStyle: "italic" }]}>{item.oracao}</Text>
-                  </>
-                )}
+                <View style={styles.corpo}>
+                  <TextoDevocional texto={item.reflexao} passo={fonte.passo} cor={colors.text} />
+                  {item.aplicacao && (
+                    <>
+                      <Text style={styles.secao}>{t("Pra viver hoje")}</Text>
+                      <TextoDevocional texto={item.aplicacao} passo={fonte.passo} cor={colors.text} />
+                    </>
+                  )}
+                  {item.oracao && (
+                    <>
+                      <Text style={styles.secao}>{t("Oração")}</Text>
+                      <TextoDevocional texto={item.oracao} passo={fonte.passo} cor={colors.text} italico />
+                    </>
+                  )}
+                </View>
               </View>
             ))}
 
@@ -440,8 +444,10 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
       marginBottom: 12,
     },
     passagemTxt: { color: colors.text, fontSize: 15, lineHeight: 23, fontStyle: "italic" },
-    compartilharVersiculo: { color: colors.primary, fontSize: 11, fontWeight: "700" },
-    verseActions: { flexDirection: "row", gap: 14, marginTop: 10, paddingTop: 9, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+    compartilharVersiculo: { color: "#263234", fontSize: 11, fontWeight: "800" },
+    // Ações do versículo vivem DENTRO do papel da passagem — cores fixas do papel, não do tema.
+    verseActions: { flexDirection: "row", gap: 18, marginTop: 12, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#DDD8CE" },
+    corpo: { marginTop: 14 },
     verseAction: { flexDirection: "row", alignItems: "center", gap: 4 },
     secao: { color: colors.text, fontSize: 15, fontWeight: "800", marginTop: 14, marginBottom: 4 },
     reflexao: { color: colors.text, fontSize: 15, lineHeight: 23, opacity: 0.92 },

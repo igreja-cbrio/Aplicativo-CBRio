@@ -10,9 +10,12 @@ import { useT } from "@/lib/i18n";
 import { useMembro } from "@/lib/useMembro";
 import { useDialogo } from "@/components/ui/Dialogo";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { ControleFonte } from "@/components/devocional/ControleFonte";
+import { PassagemBiblica, TextoDevocional } from "@/components/devocional/TextoLeitura";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { trackEvento } from "@/lib/telemetria";
-import { checkInDevocional, itemDoPlano, leiturasDoPlano, salvarRegistroPessoal, type ItemEdicao } from "@/lib/devocional";
+import { useFonteLeitura } from "@/lib/useFonteLeitura";
+import { checkInDevocional, itemDoPlano, leiturasDoPlano, mensagemDoErro, salvarRegistroPessoal, type ItemEdicao } from "@/lib/devocional";
 import { compartilharDevocional } from "@/lib/devocionalShare";
 
 /**
@@ -20,11 +23,14 @@ import { compartilharDevocional } from "@/lib/devocionalShare";
  * O check-in grava em devocional_leituras_planos (o que libera o dia seguinte
  * em /devocional-plano) E em mem_devocionais (o KPI do valor Investir) — a
  * mesma `checkInDevocional` do diário; segunda régua aqui divergiria.
+ * A passagem sai em "papel" (a estética da aba Bíblia) e o texto em
+ * parágrafos curtos, com A−/A+ compartilhado com a Bíblia (24/09/2026).
  */
 export default function PlanoDiaScreen() {
   const c = useColors(), s = useMemo(() => css(c), [c]), t = useT();
   const { membro } = useMembro();
   const dlg = useDialogo();
+  const fonte = useFonteLeitura();
   const { planoId, itemId, numero, total, titulo } = useLocalSearchParams<{ planoId?: string; itemId?: string; numero?: string; total?: string; titulo?: string }>();
   const [item, setItem] = useState<ItemEdicao | null>(null);
   const [lido, setLido] = useState(false);
@@ -65,8 +71,10 @@ export default function PlanoDiaScreen() {
       setTimeout(() => setCelebra(false), 4000);
     } catch (e) {
       // Grava DIRETO no Supabase — sem telemetria a falha só aparece quando alguém reporta.
-      trackEvento("devocional_checkin_erro", { screen: "devocional-plano-dia", reason: e instanceof Error ? e.message : String(e) });
-      Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível registrar."));
+      // `reason` = código + texto do PostgREST (nunca dado da pessoa).
+      const motivo = mensagemDoErro(e);
+      trackEvento("devocional_checkin_erro", { screen: "devocional-plano-dia", reason: motivo });
+      Alert.alert(t("Não foi possível registrar."), motivo);
     }
     setSalvando(false);
   }
@@ -75,7 +83,7 @@ export default function PlanoDiaScreen() {
     if (!item) return;
     setCompartilhando(true);
     try { Haptics.selectionAsync(); await compartilharDevocional(item); }
-    catch (e) { Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível compartilhar.")); }
+    catch (e) { Alert.alert(t("Erro"), mensagemDoErro(e) || t("Não foi possível compartilhar.")); }
     setCompartilhando(false);
   }
 
@@ -85,27 +93,26 @@ export default function PlanoDiaScreen() {
     <View style={s.header}>
       <Pressable onPress={() => subirUmNivel()} hitSlop={12} style={s.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}><Ionicons name="chevron-back" size={24} color={c.text} /></Pressable>
       <Text style={s.headerTitle} numberOfLines={1}>{titulo || t("Plano de leitura")}</Text>
-      <View style={s.back} />
+      <ControleFonte passo={fonte.passo} mudar={fonte.mudar} cor={c.text} fundo={c.surface} />
     </View>
     {loading ? <ActivityIndicator color={c.primary} style={{ marginTop: 40 }} />
       : falhou ? <ErrorState onRetry={load} />
       : !item ? <View style={s.vazio}><Ionicons name="book-outline" size={32} color={c.textMuted} /><Text style={s.vazioTxt}>{t("Este dia ainda não foi publicado.")}</Text></View>
       : <ScrollView contentContainerStyle={s.content}>
         {n && tot ? <Text style={s.dataLabel}>{t("Dia")} {n} {t("de")} {tot}</Text> : null}
+        <Text style={s.devTitulo}>{item.titulo}</Text>
+        {item.passagem_texto && <PassagemBiblica referencia={item.passagem} texto={item.passagem_texto} passo={fonte.passo} selecionado={versoSelecionado} onPress={() => setVersoSelecionado(!versoSelecionado)}>
+          {versoSelecionado && <View style={s.verseActions}>
+            <Pressable style={s.verseAction} onPress={() => router.navigate({ pathname: "/devocional-registros", params: { referencia: item.passagem ?? "", textoBiblico: item.passagem_texto ?? "", origem: "devocional", itemId: item.id } })}><Ionicons name="bookmark-outline" size={18} color="#263234" /><Text style={s.verseTxt}>{t("Salvar")}</Text></Pressable>
+            <Pressable style={s.verseAction} onPress={() => router.navigate({ pathname: "/devocional-mural", params: { referencia: item.passagem ?? "", textoBiblico: item.passagem_texto ?? "", itemId: item.id } })}><Ionicons name="chatbubble-outline" size={18} color="#263234" /><Text style={s.verseTxt}>{t("Comentários")}</Text></Pressable>
+            <Pressable style={s.verseAction} onPress={async () => { if (!membro?.membroId) return; await salvarRegistroPessoal({ membroId: membro.membroId, origem: "devocional", referencia: item.passagem ?? "", textoBiblico: item.passagem_texto ?? undefined, cor: "amarelo", itemId: item.id }); setVersoSelecionado(false); Alert.alert(t("Marcação salva")); }}><Ionicons name="color-fill-outline" size={18} color="#263234" /><Text style={s.verseTxt}>{t("Marcar")}</Text></Pressable>
+          </View>}
+        </PassagemBiblica>}
+        {!item.passagem_texto && !!item.passagem && <Text style={s.passagemRef}>{item.passagem}</Text>}
         <View style={s.card}>
-          <Text style={s.devTitulo}>{item.titulo}</Text>
-          {item.passagem && <Text style={s.passagemRef}>{item.passagem}</Text>}
-          {item.passagem_texto && <Pressable style={s.passagemBox} onPress={() => setVersoSelecionado(!versoSelecionado)} accessibilityRole="button" accessibilityLabel={t("Selecionar versículo")}>
-            <Text style={s.passagemTxt}>“{item.passagem_texto}”</Text>
-            {versoSelecionado && <View style={s.verseActions}>
-              <Pressable style={s.verseAction} onPress={() => router.navigate({ pathname: "/devocional-registros", params: { referencia: item.passagem ?? "", textoBiblico: item.passagem_texto ?? "", origem: "devocional", itemId: item.id } })}><Ionicons name="bookmark-outline" size={17} color={c.primary} /><Text style={s.verseTxt}>{t("Salvar")}</Text></Pressable>
-              <Pressable style={s.verseAction} onPress={() => router.navigate({ pathname: "/devocional-mural", params: { referencia: item.passagem ?? "", textoBiblico: item.passagem_texto ?? "", itemId: item.id } })}><Ionicons name="chatbubble-outline" size={17} color={c.primary} /><Text style={s.verseTxt}>{t("Comentários")}</Text></Pressable>
-              <Pressable style={s.verseAction} onPress={async () => { if (!membro?.membroId) return; await salvarRegistroPessoal({ membroId: membro.membroId, origem: "devocional", referencia: item.passagem ?? "", textoBiblico: item.passagem_texto ?? undefined, cor: "amarelo", itemId: item.id }); setVersoSelecionado(false); Alert.alert(t("Marcação salva")); }}><Ionicons name="color-fill-outline" size={17} color={c.primary} /><Text style={s.verseTxt}>{t("Marcar")}</Text></Pressable>
-            </View>}
-          </Pressable>}
-          <Text style={s.reflexao}>{item.reflexao}</Text>
-          {item.aplicacao && <><Text style={s.secao}>{t("Pra viver hoje")}</Text><Text style={s.reflexao}>{item.aplicacao}</Text></>}
-          {item.oracao && <><Text style={s.secao}>{t("Oração")}</Text><Text style={[s.reflexao, { fontStyle: "italic" }]}>{item.oracao}</Text></>}
+          <TextoDevocional texto={item.reflexao} passo={fonte.passo} cor={c.text} />
+          {item.aplicacao && <><Text style={s.secao}>{t("Pra viver hoje")}</Text><TextoDevocional texto={item.aplicacao} passo={fonte.passo} cor={c.text} /></>}
+          {item.oracao && <><Text style={s.secao}>{t("Oração")}</Text><TextoDevocional texto={item.oracao} passo={fonte.passo} cor={c.text} italico /></>}
         </View>
         {lido
           ? <View style={s.feito}><Ionicons name="checkmark-circle" size={22} color={c.success} /><Text style={s.feitoTxt}>{celebra ? t("Leitura registrada! 🎉") : t("Você já leu este dia. 💙")}</Text></View>
@@ -125,14 +132,13 @@ export default function PlanoDiaScreen() {
 
 const css = (c: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: c.background },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 14 }, back: { width: 32, minHeight: 32, justifyContent: "center" }, headerTitle: { flex: 1, textAlign: "center", color: c.text, fontSize: 18, fontWeight: "800" },
+  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 14, gap: 8 }, back: { width: 32, minHeight: 32, justifyContent: "center" }, headerTitle: { flex: 1, textAlign: "center", color: c.text, fontSize: 18, fontWeight: "800" },
   content: { paddingHorizontal: 20, paddingBottom: 72 },
   dataLabel: { color: c.textMuted, fontSize: 12, fontWeight: "700", marginBottom: 6, letterSpacing: .6 },
-  card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 16, padding: 18, marginBottom: 16 },
-  devTitulo: { color: c.text, fontSize: 20, fontWeight: "800", marginBottom: 2 }, passagemRef: { color: c.brandMid, fontSize: 14, fontWeight: "700", marginBottom: 10 },
-  passagemBox: { borderLeftWidth: 3, borderLeftColor: c.primary, paddingLeft: 12, marginBottom: 12 }, passagemTxt: { color: c.text, fontSize: 15, lineHeight: 23, fontStyle: "italic" },
-  verseActions: { flexDirection: "row", gap: 14, marginTop: 10, paddingTop: 9, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border }, verseAction: { flexDirection: "row", alignItems: "center", gap: 4 }, verseTxt: { color: c.primary, fontSize: 11, fontWeight: "700" },
-  secao: { color: c.text, fontSize: 15, fontWeight: "800", marginTop: 14, marginBottom: 4 }, reflexao: { color: c.text, fontSize: 15, lineHeight: 23, opacity: .92 },
+  devTitulo: { color: c.text, fontSize: 22, fontWeight: "800", lineHeight: 28, marginBottom: 14 }, passagemRef: { color: c.brandMid, fontSize: 14, fontWeight: "700", marginBottom: 10 },
+  verseActions: { flexDirection: "row", gap: 18, marginTop: 12, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#DDD8CE" }, verseAction: { flexDirection: "row", alignItems: "center", gap: 5 }, verseTxt: { color: "#263234", fontSize: 11, fontWeight: "800" },
+  card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 16, padding: 18, marginTop: 14, marginBottom: 16 },
+  secao: { color: c.text, fontSize: 15, fontWeight: "800", marginTop: 16, marginBottom: 6 },
   botao: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: c.primary, borderRadius: 999, paddingVertical: 15 }, botaoTxt: { color: "#fff", fontSize: 15, fontWeight: "700" },
   feito: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 16, paddingVertical: 16, paddingHorizontal: 14 }, feitoTxt: { color: c.text, fontSize: 14, fontWeight: "600", flex: 1 },
   proximo: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 14, marginTop: 8 }, proximoTxt: { color: c.primary, fontSize: 14, fontWeight: "800" },

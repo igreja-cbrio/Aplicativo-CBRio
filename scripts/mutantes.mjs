@@ -876,6 +876,28 @@ const MUTANTES = [
     de: "  return [...itens].sort((a, b) => {",
     para: "  return [...itens].filter(() => true); const _x = (a: ItemOrdenavel, b: ItemOrdenavel) => {",
   },
+  {
+    // O índice único de mem_devocionais é PARCIAL desde 09/09; ON CONFLICT não o
+    // infere (42P10). Voltar ao upsert é reabrir 15 dias de check-in perdido.
+    nome: "devocional: voltar ao upsert em mem_devocionais (42P10 no check-in)",
+    arq: "lib/devocional.ts",
+    de: "    : await supabase.from(\"mem_devocionais\").insert({ membro_id: membroId, data_devocional: hoje, tipo: \"pessoal\", ...linha });",
+    para: "    : await supabase.from(\"mem_devocionais\").upsert({ membro_id: membroId, data_devocional: hoje, tipo: \"pessoal\", ...linha }, { onConflict: \"membro_id,data_devocional,tipo\" });",
+  },
+  {
+    // Sem o clamp, PASSOS_FONTE[n] vira undefined ⇒ fontSize NaN ⇒ o texto some.
+    nome: "fonteLeitura: A+ sem travar na ponta (fontSize NaN)",
+    arq: "lib/fonteLeitura.ts",
+    de: "  return Math.min(PASSOS_FONTE.length - 1, Math.max(0, base + direcao));",
+    para: "  return base + direcao;",
+  },
+  {
+    // "Pr. Pedrão" viraria fim de frase e o parágrafo quebraria no meio do nome.
+    nome: "paragrafos: tratar abreviação (Pr.) como fim de frase",
+    arq: "lib/paragrafos.ts",
+    de: "    if (anterior && ABREVIACAO_FINAL.test(anterior)) saida[saida.length - 1] = `${anterior} ${p}`;",
+    para: "    if (false) saida[saida.length - 1] = `${anterior} ${p}`;",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

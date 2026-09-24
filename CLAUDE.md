@@ -4,6 +4,56 @@
 > relevante (novo módulo, dependência, decisão de arquitetura, config de
 > backend). Ele é a memória e o contexto contínuo do app.
 
+## ⚠️⚠️ DEVOCIONAL · o check-in caía em 42P10 há 15 dias · papel, parágrafos e A−/A+ (24/09/2026 · 2ª leva)
+
+Relato do Marcos testando o Valores de Cristo no aparelho: *"apertei para me
+inscrever e consegui, mas quando apertei para registrar a leitura deu erro 'não
+foi possível registrar'"*. A telemetria tinha o evento — com `reason:
+"[object Object]"`, porque o erro do PostgREST é objeto plano, não `Error`.
+Reproduzido com service role: **`42P10 there is no unique or exclusion
+constraint matching the ON CONFLICT specification`**.
+
+⚠️⚠️ **LEI: `mem_devocionais` NÃO aceita `upsert`.** O índice único
+`uq_mem_devocionais_dia` virou **PARCIAL** em 09/09 (`WHERE deleted_at IS
+NULL`, migration `20260909140000` do ERP, pra o soft-delete liberar a chave) —
+e o `ON CONFLICT` do PostgREST **não infere índice parcial**. Desde então
+**todo check-in do devocional falhava**, do diário e do plano: a 1ª metade
+(`devocional_leituras_planos`) gravava, a 2ª (`mem_devocionais`, o KPI do
+Investir) estourava. Ninguém viu porque o conteúdo semanal parou em 04/09 e
+não havia check-in pra fazer. Agora `checkInDevocional` faz **select →
+update/insert**; `test/checkinSemUpsert.test.ts` é guarda estática (com
+mutante) de que nenhum bloco `from("mem_devocionais")` chama `upsert`.
+⚠️ Vale pra qualquer tabela cujo unique seja parcial — antes de `upsert`,
+conferir se o índice tem `WHERE`.
+
+- **`lib/erroMensagem.ts` · `mensagemDoErro(e)`**: a telemetria e o Alert
+  passam a carregar `code · message · details` do PostgREST. `String(e)` num
+  objeto plano é o que escondeu a causa.
+- **Passagem bíblica em "papel"** (`components/devocional/TextoLeitura.tsx` ·
+  `PassagemBiblica`): fundo `#FBFAF7`, serifa, cores FIXAS — a mesma estética
+  e a mesma decisão da aba Bíblia (não segue o tema escuro). As ações do
+  versículo (Salvar · Comentários · Marcar) vivem dentro do papel.
+- **Parágrafos curtos** (`lib/paragrafos.ts`, puro, no portão): linha em
+  branco do autor sempre separa; bloco com 4+ frases é partido de 2 em 2.
+  ⚠️ Corta só em fim de frase + MAIÚSCULA, e **"Pr.", "Dr.", "Ap."** não são
+  fim de frase (mutante). A reflexão do plano continua um bloco no banco — a
+  quebra é de LEITURA.
+- **A−/A+ das telas de leitura** (`lib/fonteLeitura.ts` puro + hook
+  `useFonteLeitura` + `components/devocional/ControleFonte`): passos
+  `0.85 · 1 · 1.15 · 1.3 · 1.5`, travado nas pontas (mutante), persistido em
+  `cbrio.fonteLeitura` e **compartilhado** entre Bíblia, diário e dia do
+  plano. ⚠️ É SEPARADO da escala global de Configurações (`cbrio.fontScale`,
+  que multiplica todo `<Text>` e só vale ao reabrir) — as duas se multiplicam.
+  `fontSize` e `lineHeight` escalam juntos.
+- `FONTE_SERIF` (`lib/fonteSerif.ts`): Georgia no iOS, `serif` no Android —
+  "Georgia" não existe no Android e caía na Roboto em silêncio (a Bíblia já
+  fazia isso). Fica em arquivo próprio porque importa `react-native`, e
+  `fonteLeitura.ts` é puro pro portão.
+- ⏳ **O check-in do Marcos de 24/09 (dia 1) está pela metade no banco**: a
+  leitura do plano existe, a linha de `mem_devocionais` não (o script
+  `insere_checkin.js` da sessão faz o INSERT; eu fui barrado de escrever em
+  produção). Na tela ele aparece como lido, então ninguém vai tocar de novo.
+
 ## ⚠️ DEVOCIONAL · "Planos sugeridos" + plano POR INSCRIÇÃO (24/09/2026)
 
 Pedido do Marcos: *"abaixo do bloco guardar e revisitar, uma nova sessão de

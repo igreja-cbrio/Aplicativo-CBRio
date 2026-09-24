@@ -9,10 +9,17 @@ import { listarMarcacoesBiblia, registrarLeituraBiblia, removerMarcacoesBiblia, 
 import { subirUmNivel } from "@/lib/hierarquia";
 import { useMembro } from "@/lib/useMembro";
 import { useT } from "@/lib/i18n";
+import { useFonteLeitura } from "@/lib/useFonteLeitura";
+import { escalar } from "@/lib/fonteLeitura";
+import { FONTE_SERIF } from "@/lib/fonteSerif";
+import { ControleFonte } from "@/components/devocional/ControleFonte";
 
 const CORES = [{ nome: "amarelo" as const, cor: "#F8E59A" }, { nome: "azul" as const, cor: "#BFDDEA" }, { nome: "verde" as const, cor: "#CDE2C2" }, { nome: "rosa" as const, cor: "#EAC6D2" }];
 export default function Biblia() {
   const colors = useColors(), styles = useMemo(() => css(colors), [colors]), t = useT(), { membro } = useMembro();
+  // A−/A+ da leitura (24/09/2026): compartilhado com o devocional, persistido no aparelho.
+  const fonte = useFonteLeitura();
+  const tamVerso = escalar({ fontSize: 19, lineHeight: 32 }, fonte.passo);
   const [livro, setLivro] = useState<LivroBiblico | null>(null), [capitulo, setCapitulo] = useState<number | null>(null);
   const [versiculos, setVersiculos] = useState<VersiculoLivre[]>([]), [selecionados, setSelecionados] = useState<number[]>([]);
   const [busca, setBusca] = useState(""), [carregando, setCarregando] = useState(false);
@@ -102,7 +109,7 @@ export default function Biblia() {
         <Pressable style={styles.locationButton} onPress={() => { setCapitulo(null); setVersiculos([]); setSelecionados([]); }}><Text style={styles.locationText}>{livro?.nome} {capitulo}</Text><Ionicons name="chevron-down" size={15} color="#263234" /></Pressable>
         <Pressable style={styles.versionButton} onPress={() => setVersoesAbertas(true)}><Text style={styles.versionText}>{versao.sigla}</Text><Ionicons name="chevron-down" size={14} color="#263234" /></Pressable>
       </View> : <Text style={styles.headerTitle} numberOfLines={1}>{titulo}</Text>}
-      <View style={styles.back} />
+      {capitulo ? <ControleFonte passo={fonte.passo} mudar={fonte.mudar} papel /> : <View style={styles.back} />}
     </View>
     <ScrollView ref={scrollRef} contentContainerStyle={[styles.content, Boolean(capitulo) && styles.readerContent]} showsVerticalScrollIndicator={!capitulo}>
       {!livro && <BookList busca={busca} setBusca={setBusca} livros={livrosFiltrados} abrir={setLivro} s={styles} c={colors} t={t} />}
@@ -111,7 +118,7 @@ export default function Biblia() {
       {capitulo && !carregando && <View style={styles.reading}><Text style={styles.chapterNumber}>{capitulo}</Text>{versiculos.map(v => {
         const ativo = selecionados.includes(v.verse);
         const marcada = CORES.find(x => x.nome === marcacoes[v.verse])?.cor;
-        return <Pressable key={v.verse} onPress={() => alternar(v.verse)} style={[styles.verse, marcada ? { backgroundColor: marcada } : undefined, ativo && styles.verseSelected]}><Text style={styles.verseText}><Text style={[styles.verseNumber, ativo && styles.verseNumberSelected]}>{v.verse} </Text>{v.text.trim()}</Text></Pressable>;
+        return <Pressable key={v.verse} onPress={() => alternar(v.verse)} style={[styles.verse, marcada ? { backgroundColor: marcada } : undefined, ativo && styles.verseSelected]}><Text style={[styles.verseText, { fontSize: tamVerso.fontSize, lineHeight: tamVerso.lineHeight }]}><Text style={[styles.verseNumber, ativo && styles.verseNumberSelected]}>{v.verse} </Text>{v.text.trim()}</Text></Pressable>;
       })}<Text style={styles.translation}>{versao.nome} · {t("domínio público")}</Text></View>}
     </ScrollView>
     {selecionados.length > 0 && <View style={styles.actions}>
@@ -145,8 +152,8 @@ const css = (c: any) => StyleSheet.create({
   search: { flexDirection: "row", alignItems: "center", gap: 9, backgroundColor: c.surface, borderRadius: 14, paddingHorizontal: 13, marginVertical: 7, borderWidth: 1, borderColor: c.border }, searchInput: { flex: 1, color: c.text, height: 48, fontSize: 15 },
   testament: { color: c.text, fontSize: 18, fontWeight: "900", marginTop: 18, marginBottom: 3 }, book: { paddingVertical: 13, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border }, bookText: { color: c.text, fontSize: 16, fontWeight: "600" },
   chapters: { flexDirection: "row", flexWrap: "wrap", gap: 9, marginTop: 8 }, chapter: { width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: c.surface, borderWidth: 1, borderColor: c.border }, chapterText: { color: c.text, fontSize: 15, fontWeight: "700" },
-  reading: { paddingTop: 9 }, chapterNumber: { color: "#2D3B3D", fontFamily: "Georgia", fontSize: 58, lineHeight: 66, marginBottom: 7 }, verse: { borderRadius: 8, paddingHorizontal: 4, paddingVertical: 3, marginHorizontal: -4 }, verseSelected: { backgroundColor: "#DDECF1" },
-  verseText: { color: "#252827", fontFamily: "Georgia", fontSize: 19, lineHeight: 32 }, verseNumber: { color: "#738083", fontFamily: "Gotham-Bold", fontSize: 10 }, verseNumberSelected: { color: c.primary }, translation: { color: "#8B8A84", fontSize: 11, textAlign: "center", marginTop: 28 },
+  reading: { paddingTop: 9 }, chapterNumber: { color: "#2D3B3D", fontFamily: FONTE_SERIF, fontSize: 58, lineHeight: 66, marginBottom: 7 }, verse: { borderRadius: 8, paddingHorizontal: 4, paddingVertical: 3, marginHorizontal: -4 }, verseSelected: { backgroundColor: "#DDECF1" },
+  verseText: { color: "#252827", fontFamily: FONTE_SERIF, fontSize: 19, lineHeight: 32 }, verseNumber: { color: "#738083", fontFamily: "Gotham-Bold", fontSize: 10 }, verseNumberSelected: { color: c.primary }, translation: { color: "#8B8A84", fontSize: 11, textAlign: "center", marginTop: 28 },
   actions: { position: "absolute", left: 12, right: 12, bottom: 78, minHeight: 74, borderRadius: 20, backgroundColor: "#fff", flexDirection: "row", alignItems: "center", paddingHorizontal: 13, gap: 10, shadowColor: "#000", shadowOpacity: .15, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 9, borderWidth: 1, borderColor: "#E1DED7" },
   colors: { flexDirection: "row", gap: 7 }, color: { width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: "rgba(0,0,0,.12)" }, removeMark: { width: 96, alignItems: "center", justifyContent: "center", gap: 3 }, removeMarkText: { color: "#A44343", fontSize: 9, lineHeight: 11, fontWeight: "800", textAlign: "center" }, actionRule: { width: StyleSheet.hairlineWidth, height: 38, backgroundColor: "#DDD8CE" }, action: { alignItems: "center", justifyContent: "center", gap: 3, flex: 1 }, actionText: { color: "#263234", fontSize: 10, fontWeight: "800" },
   chapterNav: { position: "absolute", left: 12, right: 12, bottom: 12, height: 54, borderRadius: 17, backgroundColor: "#F1EFEA", flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 10, borderWidth: 1, borderColor: "#DDD8CE" }, chapterArrow: { flexDirection: "row", alignItems: "center", minWidth: 82, minHeight: 42 }, chapterArrowDisabled: { opacity: .25 }, chapterArrowText: { color: "#263234", fontSize: 11, fontWeight: "800" }, chapterPosition: { color: "#667173", fontSize: 11, fontWeight: "700" },
