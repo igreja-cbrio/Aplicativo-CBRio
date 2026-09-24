@@ -179,7 +179,15 @@ export async function apiDelete<T>(path: string): Promise<T> {
 }
 
 // ===== Supervisor de área · montar escala pelo app =====
-export type SupervisorInfo = { supervisor: boolean; areas: string[] };
+/** leitor só lê · lider (= editor) altera · admin é o geral sem recorte. */
+export type PapelServir = "leitor" | "lider" | "admin";
+export type SupervisorInfo = {
+  supervisor: boolean;
+  areas: string[];
+  /** Todas as concessões desta pessoa são de LEITOR: a tela esconde os botões de escrever (o servidor trava de todo jeito). */
+  somente_leitura?: boolean;
+  papel?: PapelServir | null;
+};
 export type EscalaServico = { id: string; service_type_name: string | null; scheduled_at: string | null; escalados?: number };
 export type EscalaItem = {
   id: string;
@@ -221,14 +229,28 @@ export type EscalaResposta = {
   areas_supervisionadas?: string[];
   /** Itens da composição escondidos por não serem da área desta pessoa. */
   ocultos?: number;
+  somente_leitura?: boolean;
+  papel?: PapelServir | null;
 };
-export type PoolVoluntario = { id: string; full_name: string; planning_center_id: string | null };
+export type PoolVoluntario = {
+  id: string;
+  full_name: string;
+  planning_center_id: string | null;
+  /** Semana do mês (1..4) que a pessoa prefere servir · null = não declarou. */
+  rodizio_semana?: number | null;
+  /** A preferência dela bate com a semana do culto pedido — o servidor já ordenou por isso. */
+  prefere_este_culto?: boolean;
+  /** Veio da lista do TIME (team_id), não da busca geral. */
+  do_time?: boolean;
+  /** As funções desta pessoa NESTE time (uma por vínculo). Só vem com `team_id`. */
+  posicoes?: { id: string; name: string | null }[];
+};
 
 export function getSupervisorInfo() {
   return apiGet<SupervisorInfo>("/app/voluntariado/supervisor");
 }
 export function getEscalaServicos() {
-  return apiGet<{ areas: string[]; servicos: EscalaServico[] }>("/app/voluntariado/escala/servicos");
+  return apiGet<{ areas: string[]; servicos: EscalaServico[]; somente_leitura?: boolean; papel?: PapelServir | null }>("/app/voluntariado/escala/servicos");
 }
 export function getEscala(serviceId: string) {
   return apiGet<EscalaResposta>(`/app/voluntariado/escala/${serviceId}`);
@@ -259,8 +281,18 @@ export function desfazerCheckin(id: string) {
   return apiDelete<{ ok: true; id: string; volunteer_name: string | null }>(`/app/voluntariado/checkin/${id}`);
 }
 
-export function buscarEscalaPool(q: string) {
-  return apiGet<PoolVoluntario[]>(`/app/voluntariado/escala-pool?q=${encodeURIComponent(q)}`);
+/**
+ * Sem `team_id`: busca geral pelo nome (2+ letras). Com `team_id` + `service_id`
+ * (24/09): as PESSOAS DO TIME, já ordenadas pelo servidor — quem prefere a
+ * semana deste culto primeiro, depois quem não declarou, depois os outros.
+ * A preferência ORDENA, nunca filtra.
+ */
+export function buscarEscalaPool(q: string, opts?: { service_id?: string; team_id?: string }) {
+  const qs = new URLSearchParams();
+  if (q) qs.set("q", q);
+  if (opts?.service_id) qs.set("service_id", opts.service_id);
+  if (opts?.team_id) qs.set("team_id", opts.team_id);
+  return apiGet<PoolVoluntario[]>(`/app/voluntariado/escala-pool?${qs.toString()}`);
 }
 export function adicionarNaEscala(body: { service_id: string; volunteer_id: string; team_name?: string; position_name?: string }) {
   return apiPost<EscalaItem>("/app/voluntariado/escala", body);
@@ -388,6 +420,8 @@ export type VoluntariadoMe = {
     integrado_em: string | null;
   } | null;
   voluntario_ativo: boolean;
+  /** Semana do mês (1..4) que a pessoa prefere servir · null = não declarou. */
+  rodizio_semana?: number | null;
   escalas?: Array<{
     id: string;
     data: string;
@@ -402,6 +436,46 @@ export async function getVoluntariadoMe(): Promise<VoluntariadoMe> {
   // ausente chegava `undefined` e a tela de Servir mandava quem serve pro
   // formulário. A conferência vive em `lib/voluntariadoMe.ts` (pura, no portão).
   return normalizarVoluntariadoMe(await apiGet<unknown>("/app/voluntariado/me"));
+}
+
+/** A pessoa declara a semana do mês que prefere servir (1..4) ou tira (null). Preferência, não bloqueio. */
+export function salvarRodizioSemana(semana: number | null) {
+  return apiPatch<{ rodizio_semana: number | null }>("/app/voluntariado/me/rodizio", { semana });
+}
+
+// ===== ADMIN do Servir · pessoas × times × cultos (só papel admin; o servidor trava com 403) =====
+export type AdminPessoa = { id: string; full_name: string; avatar_url: string | null; rodizio_semana: number | null; times: string[] };
+export type AdminVinculo = {
+  id: string; team_id: string; team_name: string | null; team_area: string | null;
+  position_id: string | null; position_name: string | null;
+  /** null = serve em TODOS os cultos deste time. */
+  service_type_ids: string[] | null;
+  is_active: boolean;
+};
+export type AdminPessoaDetalhe = {
+  pessoa: { id: string; full_name: string; avatar_url: string | null; telefone: string | null; rodizio_semana: number | null };
+  vinculos: AdminVinculo[];
+  times: { id: string; name: string; area: string | null; posicoes: { id: string; name: string }[] }[];
+  tipos: { id: string; name: string; recurrence_day: number | null; recurrence_time: string | null }[];
+};
+export function buscarPessoasServir(q: string) {
+  return apiGet<AdminPessoa[]>(`/app/voluntariado/admin/pessoas?q=${encodeURIComponent(q)}`);
+}
+export function getPessoaServir(id: string) {
+  return apiGet<AdminPessoaDetalhe>(`/app/voluntariado/admin/pessoas/${id}`);
+}
+export function vincularAoTime(body: { volunteer_profile_id: string; team_id: string; position_id?: string }) {
+  return apiPost<AdminVinculo>("/app/voluntariado/admin/vinculos", body);
+}
+/** `service_type_ids` vale pra PESSOA no TIME inteiro (o servidor espalha); marcar todos grava "todos". */
+export function atualizarVinculo(id: string, body: { service_type_ids?: string[] | null; position_id?: string | null }) {
+  return apiPatch<AdminVinculo>(`/app/voluntariado/admin/vinculos/${id}`, body);
+}
+export function tirarDoTime(id: string) {
+  return apiDelete<{ ok: true; id: string }>(`/app/voluntariado/admin/vinculos/${id}`);
+}
+export function salvarRodizioDe(pessoaId: string, semana: number | null) {
+  return apiPatch<{ rodizio_semana: number | null }>(`/app/voluntariado/admin/pessoas/${pessoaId}/rodizio`, { semana });
 }
 
 // ===== /app/grupos/* (líder/supervisor aprova inscrições do grupo) =====

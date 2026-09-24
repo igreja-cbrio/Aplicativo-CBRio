@@ -33,6 +33,7 @@ type EscalaApi = {
 type CheckinHist = { id: string; checked_in_at: string | null; servico: string | null; data: string | null };
 type EscalasResp = { escalas: EscalaApi[]; historico: CheckinHist[]; vol_profile_id: string | null };
 import { Disponibilidade } from "@/components/voluntariado/Disponibilidade";
+import { DomingoPreferido } from "@/components/voluntariado/DomingoPreferido";
 import { isValidCPF, maskCPF, onlyDigits } from "@/lib/validators";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -56,6 +57,10 @@ export default function VoluntariadoScreen() {
   const { membro, loading } = useMembro();
   const router = useRouter();
   const [ehSupervisor, setEhSupervisor] = useState(false);
+  // LEITOR (24/09): abre a Montar escala e só lê — o card diz isso e o check-in some.
+  const [soLeitura, setSoLeitura] = useState(false);
+  // ADMIN (24/09): gerencia pessoas × times × cultos pelo app (`/servir-pessoas`).
+  const [ehAdmin, setEhAdmin] = useState(false);
   // ⚠️ O card de check-in só existe se HOJE tem culto — a régua é a MESMA do
   // servidor (`lib/janelaCheckin`, no portão), porque o backend responde 403
   // fora da janela. Mostrar o card sempre faria o supervisor tocar e levar erro.
@@ -65,6 +70,8 @@ export default function VoluntariadoScreen() {
       .then(async (r) => {
         const sup = !!r?.supervisor;
         setEhSupervisor(sup);
+        setSoLeitura(!!r?.somente_leitura);
+        setEhAdmin(r?.papel === "admin");
         if (!sup) return;
         // Só pergunta os cultos se a pessoa é supervisora — pra não gastar
         // requisição na abertura da aba de quem não usa isso.
@@ -314,8 +321,19 @@ export default function VoluntariadoScreen() {
             <Pressable style={styles.supervisorCard} onPress={() => router.push("/escala-supervisor" as any)}>
               <Ionicons name="calendar" size={22} color={colors.brandPale} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.supervisorTitulo}>{t("Montar escala")}</Text>
-                <Text style={styles.supervisorTxt}>{t("Você é supervisor · monte e veja as escalas da sua área.")}</Text>
+                <Text style={styles.supervisorTitulo}>{soLeitura ? t("Ver escalas") : t("Montar escala")}</Text>
+                <Text style={styles.supervisorTxt}>{soLeitura ? t("Você acompanha as escalas do seu time, sem alterar.") : t("Você é supervisor · monte e veja as escalas da sua área.")}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </Pressable>
+          )}
+
+          {ehAdmin && (
+            <Pressable style={styles.supervisorCard} onPress={() => router.push("/servir-pessoas" as any)}>
+              <Ionicons name="people" size={22} color={colors.brandPale} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.supervisorTitulo}>{t("Pessoas do Servir")}</Text>
+                <Text style={styles.supervisorTxt}>{t("Vincule pessoas a times e diga em quais cultos elas servem.")}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
             </Pressable>
@@ -325,7 +343,7 @@ export default function VoluntariadoScreen() {
               mexer nessa funcionalidade nos dias de culto"). Fora da janela o
               card não existe — e o servidor recusa de todo jeito, então isto é
               cortesia, não a trava. */}
-          {ehSupervisor && temCultoHoje && (
+          {ehSupervisor && !soLeitura && temCultoHoje && (
             <Pressable style={styles.supervisorCard} onPress={() => router.push("/checkin-voluntarios" as any)}>
               <Ionicons name="checkmark-done" size={22} color={colors.brandPale} />
               <View style={{ flex: 1 }}>
@@ -470,6 +488,9 @@ export default function VoluntariadoScreen() {
               </SecaoRecolhivel>
 
               {volProfileId && <Disponibilidade volProfileId={volProfileId} />}
+              {/* Domingo de preferência (24/09): quem monta a escala vê esta pessoa
+                  primeiro nos cultos dessa semana. `undefined` = servidor antigo. */}
+              {volProfileId && me?.rodizio_semana !== undefined && <DomingoPreferido inicial={me?.rodizio_semana ?? null} />}
 
               {historico.length > 0 && (
                 <SecaoRecolhivel titulo={t("Histórico de check-in")} resumo={String(historico.length)}>

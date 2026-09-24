@@ -223,6 +223,81 @@ somar ao seu trabalho, não duplicar.
 - **ERP #2354** (mover a função da API pra `pdx1`/Oregon) está **aberto de
   propósito** — é a API inteira, e o Marcos vai mergear numa janela calma.
 
+## ⚠️ SERVIR · o "Adicionar" separa QUEM É DA VAGA do resto do time (24/09/2026)
+
+Pedido do Marcos: *"estou escalando um saxofonista, aparecem primeiro separados os
+saxofonistas da igreja, abaixo aparece outras pessoas do time"*. Par do ERP #3034
+(`escala-pool?team_id=` devolve `posicoes: [{id, name}]` por pessoa).
+
+- **`lib/escalaTimes.dividirPorVaga(pool, vaga)`** (pura · 5 testes · 1 mutante):
+  casa pelo `position_id` da vaga OU pelo nome sem acento; **só separa, não
+  reordena** — a preferência de semana continua mandando dentro de cada seção.
+  Sem vaga em foco (Adicionar no time, ou função digitada livre) não separa nada.
+- Na tela: cabeçalho `"Sax · 3"` → os da vaga; `"Outras pessoas do time · 40"` → o
+  resto. Quando ninguém do time tem a função, o cabeçalho diz isso em vez de sumir.
+  A linha da pessoa virou `renderCandidato` (uma só, usada pelas 2 seções e pela
+  busca geral).
+- ⚠️ Pessoa sem `posicoes` (servidor antigo) cai no resto — nunca some.
+
+## ⚠️⚠️ SERVIR · "PESSOAS DO SERVIR" — o ADMIN vincula pessoa × time × cultos pelo app (24/09/2026)
+
+Pedido do Marcos depois de aplicar as migrations do #3027: *"para as pessoas que
+forem admin, uma opção na aba de servir de buscar as pessoas que tem no app, clicar
+no perfil, vincular ele em um time, selecionar quais cultos ele vai servir naquele
+time"*. Par do ERP #3031 (rotas `/app/voluntariado/admin/*`, só `papel === 'admin'`).
+
+- **Porta:** card "Pessoas do Servir" na aba Servir, só com `papel === "admin"` em
+  `/voluntariado/supervisor` (Marcos e Matheus). A trava é o servidor (403).
+- **Tela `app/(app)/servir-pessoas.tsx`:** busca (2+ letras) → linha com os times da
+  pessoa → folha com: **Domingo de preferência** (chips) · **Times** (um card por
+  time; funções em linhas com × pra tirar — `is_active=false`, reversível, com
+  diálogo da casa; chips de **cultos em que serve** naquele time) · **Vincular a um
+  time** (chip do time → função opcional → botão).
+- ⚠️⚠️ **Cultos são por (PESSOA, TIME):** um PATCH em qualquer linha do time espalha
+  pra todas (lei do servidor). Todos marcados = NULL = "serve em todos". **Desmarcar
+  o último é BLOQUEADO na tela** — no servidor viraria NULL (= todos), o oposto do
+  gesto; a tela avisa "use o × ao lado da função".
+- ⚠️ `agir()` serializa as ações (uma por vez, `ocupado`) e recarrega a ficha depois
+  de cada uma — a lista da busca é atualizada a partir da ficha, sem nova busca.
+- ⚠️ Gotcha do portão i18n: `fn: () => Promise<void>` conta como string solta
+  (`>Promise<` casa o regex de JSX). Escrever `() => void | Promise<void>`.
+- ⏳ Nada rodou em aparelho.
+
+## ⚠️⚠️ SERVIR · LEITOR só lê, lista do TIME ordenada pela PREFERÊNCIA de domingo, "Meu domingo de preferência" (24/09/2026)
+
+Par do ERP #3027 (papéis `leitor|lider|admin` + escopo por time/dia do culto +
+`vol_profiles.rodizio_semana`). Pedido do Marcos (23/09): *"cada um tem um
+domingo de preferência e ao clicar para escalar naquela posição, ele filtra as
+pessoas que estão naquele time priorizando quem colocou aquele domingo como
+rodízio"*.
+
+- **Leitor** (`somente_leitura` em `/voluntariado/supervisor`, `escala/servicos`
+  e `escala/:id`): a `escala-supervisor.tsx` esconde FAB, "Adicionar a", vaga
+  "preencher", botão de remover e o arraste (`Gesture.Pan().enabled(false)`), e
+  mostra a faixa "Você acompanha esta escala como leitor". O card da aba Servir
+  vira "Ver escalas" e o card de check-in some. ⚠️ É cortesia — a trava é o
+  servidor (403 `somente_leitura`).
+- **"Adicionar" já no time** (`abrirAdd` → `carregarPoolDoTime(team_id)`):
+  `buscarEscalaPool("", { service_id, team_id })` traz as pessoas do TIME já
+  **ordenadas pelo servidor** (prefere esta semana → sem preferência → outra).
+  Digitar filtra **localmente** (`filtrarPool`, sem acento, preservando a ordem).
+  "Buscar fora do time" volta pra busca geral de 2+ letras. ⚠️ **Preferência
+  ORDENA, nunca filtra** — todo mundo do time continua na lista. Linha da pessoa
+  diz "prefere este domingo" / "prefere o 2º domingo" (ou "semana do mês" quando
+  o culto não é domingo — `ehDomingo`).
+- **`lib/escalaTimes.ts`**: `semanaDoCulto` (BRT = UTC−3 fixo; **5ª vira 1ª**
+  como `rodizioCulto.semanaDoRodizio` do servidor — divergir faria a tela
+  anunciar uma semana e a lista vir por outra) · `ehDomingo` · `filtrarPool`.
+  2 mutantes novos (5ª→1ª · acento). 99/99.
+- **`components/voluntariado/DomingoPreferido.tsx`** na aba Servir (abaixo da
+  Disponibilidade, só pra quem tem `vol_profile`): chips Nenhum · 1º–4º, salva
+  no toque via `PATCH /app/voluntariado/me/rodizio`; texto diz que **não é
+  bloqueio**. Só aparece quando `/me` manda `rodizio_semana` (servidor antigo
+  não manda ⇒ `undefined` ⇒ sem card).
+- ⏳ Nada rodou em aparelho. ⏳ As 2 migrations do ERP (`20260924120000` ·
+  `20260924120100`) são do Marcos aplicar; sem elas o servidor responde no
+  formato antigo e o app se comporta como antes (todo mundo líder, sem preferência).
+
 ## ⚠️⚠️ MONTAR ESCALA · por TIME, em duas etapas, num carrossel (23/09/2026)
 
 O redesenho que o Marcos pediu em vídeo (03/09), comparando com o Planning

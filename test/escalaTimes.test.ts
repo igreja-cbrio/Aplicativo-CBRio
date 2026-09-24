@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import {
   agruparCultosPorTipo, cultoInicial, contaVaga, chaveDoTime, montarTimes,
   resumoDoCulto, destinoDoArraste, xParaCentralizar, SEM_EQUIPE, SEM_FUNCAO, SEM_TIPO,
+  semanaDoCulto, ehDomingo, filtrarPool, dividirPorVaga,
   type ItemComposicao, type LinhaEscala,
 } from "@/lib/escalaTimes";
 
@@ -189,5 +190,88 @@ describe("escala por time · a barra acompanha o carrossel", () => {
   });
   it("nunca rola pra trás do começo: o primeiro chip fica encostado à esquerda", () => {
     expect(xParaCentralizar(16, 120, 400)).toBe(0);
+  });
+});
+
+describe("semanaDoCulto · a semana do mês no fuso da casa", () => {
+  it("27/09 é o 4º domingo; 06/09 é o 1º", () => {
+    expect(semanaDoCulto("2026-09-27T12:30:00Z")).toBe(4);
+    expect(semanaDoCulto("2026-09-06T12:30:00Z")).toBe(1);
+  });
+  it("a 5ª ocorrência vira 1ª (decisão do Matheus: repete o 1º)", () => {
+    expect(semanaDoCulto("2026-08-30T11:30:00Z")).toBe(1);
+  });
+  it("conta o dia em Brasília, não em UTC: 04/10 02:30Z ainda é 03/10 à noite", () => {
+    expect(semanaDoCulto("2026-10-04T02:30:00Z")).toBe(1);
+    expect(semanaDoCulto("2026-10-04T12:30:00Z")).toBe(1);
+  });
+  it("sem data ou data inválida → null", () => {
+    expect(semanaDoCulto(null)).toBeNull();
+    expect(semanaDoCulto("")).toBeNull();
+    expect(semanaDoCulto("nao-e-data")).toBeNull();
+  });
+});
+
+describe("ehDomingo", () => {
+  it("domingo 27/09 sim; quarta 30/09 23:00Z (20:00 BRT) não", () => {
+    expect(ehDomingo("2026-09-27T12:30:00Z")).toBe(true);
+    expect(ehDomingo("2026-09-30T23:00:00Z")).toBe(false);
+  });
+  it("00:30Z de segunda ainda é domingo 21:30 em Brasília", () => {
+    expect(ehDomingo("2026-09-28T00:30:00Z")).toBe(true);
+  });
+  it("sem data → false", () => {
+    expect(ehDomingo(null)).toBe(false);
+  });
+});
+
+describe("filtrarPool · filtra pelo nome mantendo a ordem do servidor", () => {
+  const pool = [
+    { id: "c", full_name: "Caio" },
+    { id: "e", full_name: "Édu Lima" },
+    { id: "a", full_name: "Ana" },
+  ];
+  it("busca vazia devolve a mesma lista, na mesma ordem", () => {
+    expect(filtrarPool(pool, "")).toBe(pool);
+    expect(filtrarPool(pool, "   ").map(p => p.id)).toEqual(["c", "e", "a"]);
+  });
+  it("sem acento e sem caixa: 'edu' acha 'Édu Lima'", () => {
+    expect(filtrarPool(pool, "edu").map(p => p.id)).toEqual(["e"]);
+    expect(filtrarPool(pool, "LIMA").map(p => p.id)).toEqual(["e"]);
+  });
+  it("preserva a ordem (a preferência) entre os que sobram", () => {
+    expect(filtrarPool(pool, "a").map(p => p.id)).toEqual(["c", "e", "a"]);
+  });
+});
+
+describe("dividirPorVaga · quem é da vaga primeiro, resto do time depois", () => {
+  const SAX = "p-sax"; const VOCAL = "p-vocal";
+  const pool = [
+    { id: "a", full_name: "Ana", posicoes: [{ id: VOCAL, name: "Vocal" }] },
+    { id: "b", full_name: "Bia", posicoes: [{ id: SAX, name: "Sax" }] },
+    { id: "c", full_name: "Caio", posicoes: [] },
+    { id: "d", full_name: "Dora", posicoes: [{ id: SAX, name: "Sax" }, { id: VOCAL, name: "Vocal" }] },
+  ];
+  it("casa pelo id da vaga e preserva a ordem dentro de cada metade", () => {
+    const r = dividirPorVaga(pool, { id: SAX, nome: "Sax" });
+    expect(r.daVaga.map(p => p.id)).toEqual(["b", "d"]);
+    expect(r.resto.map(p => p.id)).toEqual(["a", "c"]);
+  });
+  it("sem id casa pelo nome, sem acento e sem caixa", () => {
+    const r = dividirPorVaga(pool, { id: null, nome: "VOCAL" });
+    expect(r.daVaga.map(p => p.id)).toEqual(["a", "d"]);
+  });
+  it("sem vaga não separa nada — tudo em resto, na ordem", () => {
+    expect(dividirPorVaga(pool, null).resto.map(p => p.id)).toEqual(["a", "b", "c", "d"]);
+    expect(dividirPorVaga(pool, { id: null, nome: "" }).daVaga).toEqual([]);
+  });
+  it("ninguém do time com a função: daVaga vazio, ninguém somiu", () => {
+    const r = dividirPorVaga(pool, { id: "p-bateria", nome: "Bateria" });
+    expect(r.daVaga).toEqual([]);
+    expect(r.resto.length).toBe(4);
+  });
+  it("pessoa sem `posicoes` (servidor antigo) cai no resto", () => {
+    const r = dividirPorVaga<{ id: string; full_name: string; posicoes?: { id: string; name: string | null }[] }>([{ id: "x", full_name: "X" }], { id: SAX, nome: "Sax" });
+    expect(r.resto.length).toBe(1);
   });
 });
