@@ -11,7 +11,7 @@
 // ============================================================================
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { estadoVoluntariado, volEncerrado } from "@/lib/volStatus";
-import { rotaPai, ehRaiz, subirUmNivel } from "@/lib/hierarquia";
+import { rotaPai, ehRaiz, subirUmNivel, paramsDoPai } from "@/lib/hierarquia";
 import { acaoDaBarra, ehRotaDeBarra, irParaBarra, ROTAS_BARRA } from "@/lib/nav";
 import { hojeBRT, diaBRT } from "@/lib/dataBRT";
 import { diaDoInstanteBRT, ehDiaDoCulto, cultosDeHoje } from "@/lib/janelaCheckin";
@@ -163,6 +163,13 @@ describe("hierarquia · a árvore do `cd ..`", () => {
   it("query string não muda o pai (deep link com ?id= tem que subir igual)", () => {
     expect(rotaPai("/grupo-detalhe?id=abc-123")).toBe("/meu-grupo");
     expect(rotaPai("/evento?id=xyz")).toBe("/inscricoes");
+  });
+
+  it("voltar da leitura do dia leva o planoId pro plano (senão: 'Plano não encontrado')", () => {
+    expect(paramsDoPai("/devocional-plano-dia", { planoId: "p1", itemId: "i9", numero: "2" })).toEqual({ planoId: "p1" });
+    expect(paramsDoPai("/devocional-plano-dia", { planoId: ["p1"] })).toEqual({ planoId: "p1" });
+    expect(paramsDoPai("/devocional-plano-dia", {})).toEqual({});
+    expect(paramsDoPai("/kids-filho", { id: "x" })).toEqual({});
   });
 
   it("rota fora do mapa cai na Home (destino previsível, não adivinhação)", () => {

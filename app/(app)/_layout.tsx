@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Stack, router, usePathname } from "expo-router";
+import { Stack, router, useGlobalSearchParams, usePathname } from "expo-router";
 import { AppState, BackHandler, Platform, View } from "react-native";
 import { MembroProvider } from "@/contexts/MembroContext";
 import { CadastroGate } from "@/components/auth/CadastroGate";
@@ -73,6 +73,7 @@ export default function AppLayout() {
   const colors = useColors();
   const t = useT();
   const pathname = usePathname();
+  const paramsGlobais = useGlobalSearchParams();
 
   const telaDeBarra = Object.prototype.hasOwnProperty.call(TELAS_BARRA, pathname);
   // Onboarding é a única tela sem casca: quem está completando o cadastro não
@@ -87,7 +88,7 @@ export default function AppLayout() {
   // A seta de voltar é `cd ..` (lib/hierarquia.ts). As ~29 telas com seta
   // própria chamam `subirUmNivel()` sem argumento, então quem sabe onde a
   // pessoa está é este layout — o único lugar que já observa o pathname.
-  registrarRotaAtual(pathname);
+  registrarRotaAtual(pathname, paramsGlobais);
 
   // ⚠️ BOTÃO FÍSICO DO ANDROID = MESMA ÁRVORE DA SETA (pedido do Marcos ·
   // 05/08/2026: "faça o botao fisico ser igual ao da seta"). Sem isto o hardware

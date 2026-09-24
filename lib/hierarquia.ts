@@ -156,10 +156,34 @@ export function ehRaiz(rota: string): boolean {
 // registra aqui a cada troca de tela. É seguro por ser UI de thread única com
 // uma rota ativa por vez.
 let rotaAtual = "/";
+let paramsAtuais: Record<string, unknown> = {};
 
 /** Chamado pelo layout a cada navegação. Não usar em telas. */
-export function registrarRotaAtual(rota: string) {
+export function registrarRotaAtual(rota: string, params?: Record<string, unknown>) {
   rotaAtual = rota || "/";
+  paramsAtuais = params ?? {};
+}
+
+// ⚠️⚠️ PAI QUE PRECISA DE PARÂMETRO (24/09/2026 · relato do Marcos: "quando eu
+// aperto voltar dentro de uma leitura, abre 'Plano não encontrado'"). A seta
+// fazia `navigate("/devocional-plano")` SEM `planoId`, e a tela do plano não
+// tem como adivinhar qual plano era. A rota filha declara aqui QUAIS dos seus
+// parâmetros o pai precisa; só esses sobem (o `itemId` do dia não pode ir junto,
+// senão o plano seria outra instância). Parâmetro ausente simplesmente não sobe.
+const PARAMS_QUE_SOBEM: Record<string, string[]> = {
+  "/devocional-plano-dia": ["planoId"],
+};
+
+/** Os parâmetros que o pai herda da rota atual (vazio na maioria). */
+export function paramsDoPai(rota: string, params: Record<string, unknown>): Record<string, string> {
+  const chaves = PARAMS_QUE_SOBEM[(rota || "/").split("?")[0]] ?? [];
+  const saida: Record<string, string> = {};
+  for (const k of chaves) {
+    const v = params?.[k];
+    const txt = Array.isArray(v) ? v[0] : v;
+    if (typeof txt === "string" && txt) saida[k] = txt;
+  }
+  return saida;
 }
 
 // ⚠️ RETORNO TÁTIL NO PONTO ÚNICO (11/08/2026 · "melhore a navegação de quando
@@ -183,6 +207,8 @@ function tatil() {
 /** Sobe um nível na árvore — o `cd ..` do app. */
 export function subirUmNivel(rota?: string) {
   tatil();
-  const pai = rotaPai(rota ?? rotaAtual);
-  router.navigate(pai as Href);
+  const origem = rota ?? rotaAtual;
+  const pai = rotaPai(origem);
+  const params = paramsDoPai(origem, paramsAtuais);
+  router.navigate((Object.keys(params).length ? { pathname: pai, params } : pai) as Href);
 }
