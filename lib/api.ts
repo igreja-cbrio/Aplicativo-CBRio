@@ -242,6 +242,8 @@ export type PoolVoluntario = {
   prefere_este_culto?: boolean;
   /** Veio da lista do TIME (team_id), não da busca geral. */
   do_time?: boolean;
+  /** As funções desta pessoa NESTE time (uma por vínculo). Só vem com `team_id`. */
+  posicoes?: { id: string; name: string | null }[];
 };
 
 export function getSupervisorInfo() {

@@ -799,6 +799,14 @@ const MUTANTES = [
     para: "  return ord;",
   },
   {
+    // Sem a separação, a tela volta a mostrar o time inteiro misturado — e o
+    // líder procurando um saxofonista rola 117 nomes da Banda.
+    nome: "escalaTimes: a vaga deixa de separar quem tem a função",
+    arq: "lib/escalaTimes.ts",
+    de: "    (tem ? daVaga : resto).push(p);",
+    para: "    resto.push(p);",
+  },
+  {
     // Filtrar com acento faria "edu" não achar "Édu" — a pessoa está no time,
     // o líder digita o nome e a lista fica vazia.
     nome: "escalaTimes: filtro do time sensível a acento",

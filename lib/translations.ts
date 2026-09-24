@@ -6,6 +6,8 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Outras pessoas do time": { en: "Other people on the team", es: "Otras personas del equipo" },
+  "ninguém do time tem essa função ainda": { en: "nobody on the team has this role yet", es: "nadie del equipo tiene esa función todavía" },
   // ── Servir · Pessoas do Servir (admin · 24/09/2026) ──
   "Pessoas do Servir": { en: "People in Serve", es: "Personas de Servir" },
   "Vincule pessoas a times e diga em quais cultos elas servem.": { en: "Link people to teams and set which services they serve in.", es: "Vinculá personas a equipos y decí en qué cultos sirven." },

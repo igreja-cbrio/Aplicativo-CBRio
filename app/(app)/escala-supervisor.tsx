@@ -46,7 +46,7 @@ import {
 } from "@/lib/api";
 import {
   agruparCultosPorTipo, cultoInicial, montarTimes, resumoDoCulto, destinoDoArraste, xParaCentralizar,
-  semanaDoCulto, ehDomingo, filtrarPool,
+  semanaDoCulto, ehDomingo, filtrarPool, dividirPorVaga,
   SEM_EQUIPE, SEM_FUNCAO, SEM_TIPO, type Time, type PosicaoDoTime,
 } from "@/lib/escalaTimes";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
@@ -344,6 +344,12 @@ export default function EscalaSupervisorScreen() {
   // Fora do time (ou time sem id): a busca geral de sempre.
   const noTime = !foraDoTime && !!timeDoAdd?.team_id && poolTime !== null;
   const listaAdd = noTime ? filtrarPool(poolTime ?? [], busca) : resultados;
+  // A VAGA em foco (chip de função escolhido, sem texto livre): separa "quem é
+  // dessa função" do "resto do time". Pedido do Marcos (24/09): "estou escalando
+  // um saxofonista — primeiro os saxofonistas, abaixo outras pessoas do time".
+  const posicaoDoAdd = addPosicao && !outraFuncao.trim() ? (timeDoAdd?.posicoes ?? []).find(p => p.nome === addPosicao) : undefined;
+  const vagaEmFoco = noTime && addPosicao && !outraFuncao.trim() ? { id: posicaoDoAdd?.position_id ?? null, nome: addPosicao } : null;
+  const secoesAdd = dividirPorVaga(listaAdd, vagaEmFoco);
   const semanaCulto = semanaDoCulto(servicoSel?.scheduled_at ?? null);
   const cultoDeDomingo = ehDomingo(servicoSel?.scheduled_at ?? null);
   const rotuloPreferencia = (v: PoolVoluntario) => {
@@ -452,6 +458,26 @@ export default function EscalaSupervisorScreen() {
     : { cor: colors.textMuted, label: t("pendente") };
 
   const rotuloVaga = (n: number) => `${n} ${n === 1 ? t("vaga em aberto") : t("vagas em aberto")}`;
+
+  // ── Uma linha do "Adicionar" (usada pelas duas seções e pela busca geral) ──
+  function renderCandidato(v: PoolVoluntario) {
+    const escalado = v.id ? jaNoTime.has(v.id) : false;
+    const pref = rotuloPreferencia(v);
+    return (
+      <Pressable key={v.id} style={styles.resultado} disabled={!!salvandoId || escalado} onPress={() => adicionar(v)} accessibilityRole="button" accessibilityLabel={`${t("Adicionar")} ${v.full_name}`}>
+        <View style={[styles.avatar, { backgroundColor: colors.primary + "22" }]}>
+          <Text style={[styles.avatarTxt, { color: colors.primary }]}>{iniciais(v.full_name)}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.pessoaNome} numberOfLines={1}>{v.full_name}</Text>
+          {pref && <Text style={[styles.pequeno, { color: v.prefere_este_culto ? colors.success : colors.textMuted }]} numberOfLines={1}>{pref}</Text>}
+        </View>
+        {salvandoId === v.id ? <ActivityIndicator color={colors.primary} />
+          : escalado ? <Text style={[styles.pequeno, { color: colors.textMuted }]}>{t("nesta equipe")}</Text>
+          : <Ionicons name="add-circle" size={24} color={colors.primary} />}
+      </Pressable>
+    );
+  }
 
   // ── Uma linha de pessoa (com o arraste) ──
   function renderPessoa(item: EscalaItem) {
@@ -842,24 +868,20 @@ export default function EscalaSupervisorScreen() {
                 </Pressable>
               ) : (!buscando && listaAdd.length === 0) ? (
                 <Text style={[styles.muted, { padding: spacing.md, textAlign: "center" }]}>{noTime ? t("Ninguém do time com esse nome.") : t("Nenhum voluntário encontrado.")}</Text>
-              ) : listaAdd.map(v => {
-                const escalado = v.id ? jaNoTime.has(v.id) : false;
-                const pref = rotuloPreferencia(v);
-                return (
-                  <Pressable key={v.id} style={styles.resultado} disabled={!!salvandoId || escalado} onPress={() => adicionar(v)} accessibilityRole="button" accessibilityLabel={`${t("Adicionar")} ${v.full_name}`}>
-                    <View style={[styles.avatar, { backgroundColor: colors.primary + "22" }]}>
-                      <Text style={[styles.avatarTxt, { color: colors.primary }]}>{iniciais(v.full_name)}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.pessoaNome} numberOfLines={1}>{v.full_name}</Text>
-                      {pref && <Text style={[styles.pequeno, { color: v.prefere_este_culto ? colors.success : colors.textMuted }]} numberOfLines={1}>{pref}</Text>}
-                    </View>
-                    {salvandoId === v.id ? <ActivityIndicator color={colors.primary} />
-                      : escalado ? <Text style={[styles.pequeno, { color: colors.textMuted }]}>{t("nesta equipe")}</Text>
-                      : <Ionicons name="add-circle" size={24} color={colors.primary} />}
-                  </Pressable>
-                );
-              })}
+              ) : vagaEmFoco ? (
+                <>
+                  <Text style={styles.secaoAdd}>
+                    {secoesAdd.daVaga.length
+                      ? `${vagaEmFoco.nome} · ${secoesAdd.daVaga.length}`
+                      : `${vagaEmFoco.nome} · ${t("ninguém do time tem essa função ainda")}`}
+                  </Text>
+                  {secoesAdd.daVaga.map(renderCandidato)}
+                  {secoesAdd.resto.length > 0 && (
+                    <Text style={[styles.secaoAdd, { marginTop: spacing.sm }]}>{t("Outras pessoas do time")} · {secoesAdd.resto.length}</Text>
+                  )}
+                  {secoesAdd.resto.map(renderCandidato)}
+                </>
+              ) : listaAdd.map(renderCandidato)}
             </ScrollView>
           </View>
         </TecladoSeguro>
@@ -888,6 +910,7 @@ function makeStyles(c: Palette) {
     dataChipSub: { color: c.textMuted, fontSize: font.size.sm - 1, marginTop: 1 },
     // Resumo + barra de times
     leituraBanner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: spacing.md, paddingVertical: 6 },
+    secaoAdd: { color: c.textMuted, fontSize: font.size.sm - 1, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.4, paddingTop: 6, paddingBottom: 2 },
     poolTopo: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
     resumo: { flexDirection: "row", flexWrap: "wrap", gap: 12, paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: 4 },
     resumoTxt: { color: c.textMuted, fontSize: font.size.sm, fontWeight: "600" },
