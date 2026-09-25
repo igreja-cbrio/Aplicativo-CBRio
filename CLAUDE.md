@@ -4,6 +4,31 @@
 > relevante (novo módulo, dependência, decisão de arquitetura, config de
 > backend). Ele é a memória e o contexto contínuo do app.
 
+## ⚠️⚠️ DEVOCIONAL · VÍDEO na leitura + SEMANAS no plano longo (25/09/2026)
+
+Pedido do Marcos: *"subir vídeos nas devocionais, ter uma boa visualização,
+colocar fullscreen; para devocionais mais longos do que uma semana, separar ali
+em cima em semana 1, 2, 3… e quando todos de uma semana são finalizados eles vão
+para o próximo"*. Par do ERP #3052 (upload no "Editar item").
+
+- **Player = `<video>` do HTML no WebView** (`components/devocional/VideoDevocional.tsx`
+  + régua pura `lib/videoDevocional.ts`). ⚠️ `react-native-webview` está em
+  TODOS os binários publicados (entrou 08/06); `expo-video` seria nativo e não
+  sairia por OTA. Aparece acima da passagem, no diário e no dia do plano.
+- **"Tela cheia" é um Modal NOSSO** (player ocupando a tela, tempo passado de um
+  player pro outro), não o fullscreen do player — o do WebView varia por
+  plataforma. ⚠️ O app é travado em RETRATO: girar pra paisagem exige
+  `expo-screen-orientation` (nativo ⇒ build de loja).
+- ⚠️⚠️ **`video_url` chega por migration do ERP (`20260925120000`).** Pedir
+  coluna inexistente recusa a query INTEIRA (42703) e o devocional sumiria, então
+  `comVideo()` em `lib/devocional.ts` pede com vídeo e, se `faltaColuna`, repete
+  sem ele. Só 42703 com o nome da coluna conta (mutante).
+- `videoSeguro`: só `https` sem aspas/`<>` — a URL vai DENTRO do HTML.
+- **Semanas** (`semanasDoPlano`/`semanaEmFoco` em `lib/planoRitmo.ts`): por
+  POSIÇÃO (dias 1–7, 8–14…), só com mais de 7 dias. A tela abre na 1ª semana não
+  completa; quando o foco muda, a escolha manual é descartada — é isso que "vai
+  pro próximo" sozinho (mutante).
+
 ## ⚠️ DEVOCIONAL · voltar da leitura abria "Plano não encontrado" (24/09/2026 · 3ª leva)
 
 Relato do Marcos: *"quando eu aperto o botão de voltar dentro de uma leitura, ele

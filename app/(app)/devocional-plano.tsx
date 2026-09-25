@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router, useLocalSearchParams } from "expo-router";
@@ -13,7 +13,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { trackEvento } from "@/lib/telemetria";
 import { inscreverNoPlano, itensDoPlano, leiturasDoPlano, planoPorId, type ItemEdicao, type PlanoDevocional } from "@/lib/devocional";
-import { diasDoPlano, podeAbrirDia, progressoDoPlano, type DiaDoPlano } from "@/lib/planoRitmo";
+import { diasDoPlano, podeAbrirDia, progressoDoPlano, semanaEmFoco, semanasDoPlano, type DiaDoPlano } from "@/lib/planoRitmo";
 
 /**
  * Plano de leitura POR INSCRIÇÃO (24/09/2026 · "Valores de Cristo"): a pessoa
@@ -55,6 +55,15 @@ export default function PlanoScreen() {
   const dias = useMemo(() => diasDoPlano(itens, lidos), [itens, lidos]);
   const progresso = useMemo(() => progressoDoPlano(dias), [dias]);
   const atual = dias.find((d) => d.estado === "atual") ?? null;
+  // Semanas (plano com mais de 7 dias · 25/09/2026). A tela abre na 1ª semana
+  // não completa; quando o leitor fecha uma semana, o foco muda e a escolha
+  // manual é descartada — é isso que o leva "pro próximo" sozinho.
+  const semanas = useMemo(() => semanasDoPlano(dias), [dias]);
+  const emFoco = semanaEmFoco(semanas);
+  const [semanaEscolhida, setSemanaEscolhida] = useState<number | null>(null);
+  useEffect(() => { setSemanaEscolhida(null); }, [emFoco]);
+  const semanaAberta = semanas.find((x) => x.numero === (semanaEscolhida ?? emFoco)) ?? null;
+  const diasVisiveis = semanaAberta ? semanaAberta.dias : dias;
 
   function abrirDia(d: DiaDoPlano<ItemEdicao>) {
     if (!podeAbrirDia(d.estado)) return;
@@ -107,9 +116,20 @@ export default function PlanoScreen() {
               <Ionicons name="book-outline" size={16} color="#fff" /><Text style={s.botaoTxt}>{progresso.lidos === 0 ? t("Começar pelo dia 1") : t("Continuar leitura")}</Text>
             </Pressable>}
         </View>
+        {semanas.length > 0 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.semanas}>
+          {semanas.map((sem) => {
+            const ativa = sem.numero === semanaAberta?.numero;
+            return <Pressable key={sem.numero} onPress={() => setSemanaEscolhida(sem.numero)} style={[s.semana, ativa && s.semanaAtiva]} accessibilityRole="tab" accessibilityState={{ selected: ativa }}>
+              <Text style={[s.semanaTxt, ativa && s.semanaTxtAtiva]}>{t("Semana")} {sem.numero}</Text>
+              {sem.completa
+                ? <Ionicons name="checkmark-circle" size={15} color={ativa ? "#fff" : c.primary} />
+                : <Text style={[s.semanaSub, ativa && s.semanaTxtAtiva]}>{sem.lidos}/{sem.dias.length}</Text>}
+            </Pressable>;
+          })}
+        </ScrollView>}
         {dias.length === 0
           ? <Text style={s.vazioTxt}>{t("Este plano ainda não tem uma leitura publicada.")}</Text>
-          : dias.map((d) => {
+          : diasVisiveis.map((d) => {
             const aberto = plano.inscrito && podeAbrirDia(d.estado);
             return <Pressable key={d.item.id} onPress={() => aberto && abrirDia(d)} disabled={!aberto} style={({ pressed }) => [s.dia, d.estado === "atual" && plano.inscrito && s.diaAtual, !aberto && s.diaBloqueado, pressed && aberto && s.pressed]} accessibilityRole="button">
               <View style={[s.diaNum, d.estado === "lido" && s.diaNumLido]}>
@@ -139,5 +159,9 @@ const css = (c: any) => StyleSheet.create({
   dia: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: c.surface, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: c.border }, diaAtual: { borderColor: c.primary }, diaBloqueado: { opacity: .7 }, pressed: { opacity: .72 },
   diaNum: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: c.background, borderWidth: 1.5, borderColor: c.border }, diaNumLido: { backgroundColor: c.primary, borderColor: c.primary }, diaNumTxt: { color: c.primary, fontWeight: "800", fontSize: 14 },
   flex: { flex: 1 }, diaEyebrow: { color: c.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: .8 }, diaTitulo: { color: c.text, fontSize: 15, fontWeight: "700", lineHeight: 20, marginTop: 2 }, diaHint: { color: c.textMuted, fontSize: 11, marginTop: 3 },
+  semanas: { gap: 8, paddingVertical: 2, paddingRight: 4 },
+  semana: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface },
+  semanaAtiva: { backgroundColor: c.primary, borderColor: c.primary },
+  semanaTxt: { color: c.text, fontSize: 14, fontWeight: "800" }, semanaSub: { color: c.textMuted, fontSize: 12, fontWeight: "700" }, semanaTxtAtiva: { color: "#fff" },
   vazio: { alignItems: "center", gap: 8, paddingVertical: 48, paddingHorizontal: 16 }, vazioTxt: { color: c.textMuted, fontSize: 14, textAlign: "center", lineHeight: 20 },
 });

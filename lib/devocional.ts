@@ -1,4 +1,19 @@
 import { supabase } from "./supabase";
+import { faltaColuna } from "./videoDevocional";
+
+// ⚠️ `video_url` (25/09/2026) chega por migration do ERP que o Marcos aplica.
+// Pedir coluna inexistente faz o PostgREST recusar a query INTEIRA (42703) —
+// o devocional sumiria. Então pede com vídeo; se a coluna não existe, repete
+// sem ela e não tenta mais nesta sessão.
+let videoNoBanco = true;
+async function comVideo<R extends { error: unknown }>(rodar: (extra: string) => PromiseLike<R>): Promise<R> {
+  if (videoNoBanco) {
+    const r = await rodar(",video_url");
+    if (!faltaColuna(r.error, "video_url")) return r;
+    videoNoBanco = false;
+  }
+  return rodar("");
+}
 
 export type DevocionalItem = {
   id: string;
@@ -10,6 +25,7 @@ export type DevocionalItem = {
   reflexao: string;
   aplicacao: string | null;
   oracao: string | null;
+  video_url?: string | null;
 };
 
 export type CheckinDevocional = {
@@ -56,11 +72,11 @@ export async function inscreverNoPlano(planoId: string, membroId: string): Promi
 }
 
 export async function itensDoPlano(planoId: string): Promise<ItemEdicao[]> {
-  const { data, error } = await supabase.from("devocional_itens")
-    .select("id,plano_id,data,titulo,passagem,passagem_texto,reflexao,aplicacao,oracao,edicao_slug,edicao_titulo,edicao_inicio,edicao_fim,ordem_no_ciclo,autor")
-    .eq("plano_id", planoId).order("data", { ascending: false }).limit(180);
+  const { data, error } = await comVideo((extra) => supabase.from("devocional_itens")
+    .select("id,plano_id,data,titulo,passagem,passagem_texto,reflexao,aplicacao,oracao,edicao_slug,edicao_titulo,edicao_inicio,edicao_fim,ordem_no_ciclo,autor" + extra)
+    .eq("plano_id", planoId).order("data", { ascending: false }).limit(180));
   if (error) throw error;
-  return (data ?? []) as ItemEdicao[];
+  return (data ?? []) as unknown as ItemEdicao[];
 }
 
 /**
@@ -98,11 +114,11 @@ export async function leiturasDoPlano(membroId: string, planoId: string): Promis
 
 /** Um item pelo id (conteúdo completo do dia). */
 export async function itemDoPlano(itemId: string): Promise<ItemEdicao | null> {
-  const { data, error } = await supabase.from("devocional_itens")
-    .select("id,plano_id,data,titulo,passagem,passagem_texto,reflexao,aplicacao,oracao,edicao_slug,edicao_titulo,edicao_inicio,edicao_fim,ordem_no_ciclo,autor")
-    .eq("id", itemId).maybeSingle();
+  const { data, error } = await comVideo((extra) => supabase.from("devocional_itens")
+    .select("id,plano_id,data,titulo,passagem,passagem_texto,reflexao,aplicacao,oracao,edicao_slug,edicao_titulo,edicao_inicio,edicao_fim,ordem_no_ciclo,autor" + extra)
+    .eq("id", itemId).maybeSingle());
   if (error) throw error;
-  return (data as ItemEdicao | null) ?? null;
+  return (data as unknown as ItemEdicao | null) ?? null;
 }
 
 export async function listarMural(): Promise<PostMural[]> {
@@ -247,15 +263,15 @@ export async function semanaDevocional(membroId: string | null, cicloQuarta = fa
   const inicio = cicloQuarta ? quintaDoCiclo(hojeISO()) : segundaDaSemana(hojeISO());
   const fim = somaDias(inicio, cicloQuarta ? 6 : 4);
 
-  const { data: itens, error } = await supabase
+  const { data: itens, error } = await comVideo((extra) => supabase
     .from("devocional_itens")
     .select(
-      "id, plano_id, data, titulo, passagem, passagem_texto, reflexao, aplicacao, oracao, devocional_planos!inner(ativo)"
+      "id, plano_id, data, titulo, passagem, passagem_texto, reflexao, aplicacao, oracao, devocional_planos!inner(ativo)" + extra
     )
     .eq("devocional_planos.ativo", true)
     .gte("data", inicio)
     .lte("data", fim)
-    .order("data", { ascending: true });
+    .order("data", { ascending: true }));
   if (error) throw error;
 
   let checkins: CheckinDevocional[] = [];

@@ -904,6 +904,18 @@ const MUTANTES = [
     de: '  "/devocional-plano-dia": ["planoId"],',
     para: '  "/devocional-plano-dia": [],',
   },
+  {
+    nome: "planoRitmo: a tela sempre abre na semana 1 (não avança ao fechar uma semana)",
+    arq: "lib/planoRitmo.ts",
+    de: '  return (semanas.find((s) => !s.completa) ?? semanas[semanas.length - 1]).numero;',
+    para: '  return semanas[0].numero;',
+  },
+  {
+    nome: "videoDevocional: qualquer erro vira 'falta a coluna' (esconde 42501 e outros)",
+    arq: "lib/videoDevocional.ts",
+    de: '  return !!e && e.code === "42703" && typeof e.message === "string" && e.message.includes(coluna);',
+    para: '  return !!e;',
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a
