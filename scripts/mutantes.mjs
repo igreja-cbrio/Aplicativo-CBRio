@@ -916,6 +916,18 @@ const MUTANTES = [
     de: '  return !!e && e.code === "42703" && typeof e.message === "string" && e.message.includes(coluna);',
     para: '  return !!e;',
   },
+  {
+    nome: "planoRitmo: calendário deixa de trancar o futuro (leitura de amanhã abre hoje)",
+    arq: "lib/planoRitmo.ts",
+    de: '      estado: (set.has(item.id) ? "lido" : item.data <= hoje ? "atual" : "bloqueado") as EstadoDia,',
+    para: '      estado: (set.has(item.id) ? "lido" : "atual") as EstadoDia,',
+  },
+  {
+    nome: "videoDevocional: o player deixa o frame principal navegar pro YouTube (sai do app)",
+    arq: "lib/videoDevocional.ts",
+    de: '  if (isTopFrame === false) return true;',
+    para: '  if (isTopFrame !== true) return true;',
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

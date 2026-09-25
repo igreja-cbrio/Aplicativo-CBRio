@@ -62,6 +62,13 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Semana": { en: "Week", es: "Semana" },
   "Tela cheia": { en: "Full screen", es: "Pantalla completa" },
   "Não foi possível carregar o vídeo. Confira sua internet e tente de novo.": { en: "Couldn't load the video. Check your connection and try again.", es: "No se pudo cargar el video. Revisa tu conexión e inténtalo de nuevo." },
+  "Semana de": { en: "Week of", es: "Semana del" },
+  "Você leu toda esta edição 🎉": { en: "You read this whole edition 🎉", es: "Leíste toda esta edición 🎉" },
+  "leituras nesta edição": { en: "readings in this edition", es: "lecturas en esta edición" },
+  "Ler a leitura de hoje": { en: "Read today's reading", es: "Leer la lectura de hoy" },
+  "Abre em": { en: "Opens on", es: "Abre el" },
+  "Com vídeo": { en: "With video", es: "Con video" },
+  "Voltar ao plano": { en: "Back to the plan", es: "Volver al plan" },
   "Aumentar letra": { en: "Increase text size", es: "Aumentar letra" },
   "Diminuir letra": { en: "Decrease text size", es: "Disminuir letra" },
   // ── Servir · papéis + domingo de preferência (24/09/2026) ──

@@ -26,8 +26,8 @@ export default function DevocionalHome() {
   // Plano por CALENDÁRIO (contínuo) abre o diário; plano por INSCRIÇÃO abre a
   // tela do plano, onde a pessoa se inscreve e lê um dia por vez.
   function abrirPlano(p: PlanoSugerido) {
-    if (p.continuo) router.navigate({ pathname: "/devocional-diario", params: { planoId: p.id, titulo: p.titulo, ciclo: p.slug === "quarta-com-deus" ? "quinta-quarta" : "segunda-sexta" } });
-    else router.navigate({ pathname: "/devocional-plano", params: { planoId: p.id } });
+    // Todo plano abre na mesma tela (25/09/2026); o ritmo vem do dado.
+    router.navigate({ pathname: "/devocional-plano", params: { planoId: p.id } });
   }
   return <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
     <Stack.Screen options={{ headerShown: false }} />

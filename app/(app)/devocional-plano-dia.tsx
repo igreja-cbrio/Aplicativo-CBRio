@@ -122,7 +122,7 @@ export default function PlanoDiaScreen() {
             {salvando ? <ActivityIndicator color="#fff" /> : <><Ionicons name="checkmark" size={18} color="#fff" /><Text style={s.botaoTxt}>{t("Li este devocional")}</Text></>}
           </Pressable>}
         {lido && n && tot && n < tot && <Pressable onPress={() => subirUmNivel()} style={s.proximo} accessibilityRole="button">
-          <Text style={s.proximoTxt}>{t("Voltar ao plano e abrir o próximo dia")}</Text><Ionicons name="arrow-forward" size={16} color={c.primary} />
+          <Text style={s.proximoTxt}>{t("Voltar ao plano")}</Text><Ionicons name="arrow-forward" size={16} color={c.primary} />
         </Pressable>}
         <Pressable onPress={compartilhar} disabled={compartilhando} style={s.compartilhar} accessibilityRole="button">
           {compartilhando ? <ActivityIndicator color={c.brandMid} /> : <><Ionicons name="share-outline" size={18} color={c.brandMid} /><Text style={s.compartilharTxt}>{t("Compartilhar")}</Text></>}
