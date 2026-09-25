@@ -4,6 +4,35 @@
 > relevante (novo módulo, dependência, decisão de arquitetura, config de
 > backend). Ele é a memória e o contexto contínuo do app.
 
+## ⚠️⚠️ DEVOCIONAL · UMA tela pra TODO plano + YouTube dentro do app (25/09/2026 · 2ª leva)
+
+Pedido do Marcos: *"essa nossa estética de Valores de Cristo universal para
+todos os planos, inclusive o de Quarta com Deus"* e *"não quero link do YouTube,
+quero que a pessoa clique para ver mas não saia do app"*.
+
+- **Todo plano abre em `/devocional-plano`** (home do Devocional, carrossel e
+  `/devocional-planos`). `/devocional-diario` ficou sem porta — segue no mapa só
+  por link antigo.
+- ⚠️⚠️ **O RITMO vem do DADO** (`ritmoDoPlano`): datas sentinela (ano 2000) =
+  no seu ritmo (inscrição, dia N depois do N-1, semanas por posição); datas reais
+  = CALENDÁRIO. **Não é `continuo`**: as edições antigas do Devocional da semana
+  têm `continuo=false` e datas reais.
+- Calendário (`edicoesDoCalendario`/`edicaoEmFoco`): abas = EDIÇÕES
+  (`edicao_slug`, senão a semana da data), mais nova primeiro; hoje e antes
+  abrem (atraso NÃO tranca), futuro trancado com "Abre em DD/MM" (mutante).
+  Sem inscrição — o diário nunca pediu. Foco = edição de hoje → a última que
+  começou. Comparação de STRING `YYYY-MM-DD`, com o hoje do APARELHO
+  (`hojeISO`), como o check-in.
+- **YouTube** (`idDoYoutube` + IFrame API em `htmlDoVideo`): toca embutido.
+  ⚠️⚠️ A página do WebView carrega com `baseUrl: https://cbrio.org` — sem
+  origem o YouTube responde "Erro 153". ⚠️ `navegacaoPermitida` barra o frame
+  PRINCIPAL de navegar pra fora (tocar no logo não abre o YouTube; mutante);
+  `setSupportMultipleWindows={false}` pro `_blank` do Android cair na mesma
+  régua. Pausar/retomar entre inline e tela cheia por `window.pausar/irPara`,
+  iguais nos dois players.
+- O dia do plano diz "Voltar ao plano" (no calendário o próximo pode estar
+  trancado — prometer "o próximo dia" mentiria).
+
 ## ⚠️⚠️ DEVOCIONAL · VÍDEO na leitura + SEMANAS no plano longo (25/09/2026)
 
 Pedido do Marcos: *"subir vídeos nas devocionais, ter uma boa visualização,

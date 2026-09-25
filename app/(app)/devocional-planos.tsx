@@ -21,7 +21,7 @@ export default function Planos() {
   const semana = planos.find(p => !p.slug && p.titulo.toLowerCase().includes("semana"));
   function abrirPlano(plano?: PlanoDevocional) {
     if (!plano) return Alert.alert(t("Plano indisponível"), t("Este plano ainda não tem uma leitura publicada."));
-    router.navigate({ pathname: "/devocional-diario", params: { planoId: plano.id, titulo: plano.titulo, ciclo: plano.slug === "quarta-com-deus" ? "quinta-quarta" : "segunda-sexta" } });
+    router.navigate({ pathname: "/devocional-plano", params: { planoId: plano.id } });
   }
   async function abrirPense() {
     if (!pense) return Alert.alert(t("Conteúdo indisponível"), t("O Pense mais recente ainda não carregou."));

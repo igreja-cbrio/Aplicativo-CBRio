@@ -4,7 +4,7 @@ import WebView, { type WebViewProps } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useT } from "@/lib/i18n";
-import { htmlDoVideo, videoSeguro } from "@/lib/videoDevocional";
+import { htmlDoVideo, idDoYoutube, navegacaoPermitida, ORIGEM_DO_PLAYER, videoSeguro } from "@/lib/videoDevocional";
 
 /**
  * Vídeo do devocional (25/09/2026 · pedido do Marcos: "subir vídeos nas
@@ -21,13 +21,17 @@ import { htmlDoVideo, videoSeguro } from "@/lib/videoDevocional";
  * `expo-screen-orientation`, que é nativo ⇒ build de loja. Vídeo deitado fica
  * com faixa preta; vídeo em pé (celular) ocupa a tela.
  *
+ * ⚠️ Link do YouTube toca EMBUTIDO (IFrame API) e a navegação do frame
+ * principal é barrada (`navegacaoPermitida`): tocar no logo não abre o YouTube.
+ *
  * O tempo passa de um player pro outro (o inline posta `currentTime`), pra quem
  * abre a tela cheia no meio não recomeçar do zero.
  */
 export function VideoDevocional({ url }: { url: string | null | undefined }) {
   const t = useT();
   const insets = useSafeAreaInsets();
-  const seguro = videoSeguro(url);
+  // Link do YouTube (toca embutido, sem sair do app) ou arquivo nosso (https).
+  const seguro = idDoYoutube(url) ? (url as string).trim() : videoSeguro(url);
   const inline = useRef<WebView>(null);
   const tempo = useRef(0);
   const [cheia, setCheia] = useState<number | null>(null);
@@ -46,14 +50,14 @@ export function VideoDevocional({ url }: { url: string | null | undefined }) {
   }
 
   function abrirCheia() {
-    inline.current?.injectJavaScript("try{document.getElementById('v').pause()}catch(e){};true;");
+    inline.current?.injectJavaScript("window.pausar&&window.pausar();true;");
     setCheia(tempo.current);
   }
 
   function fecharCheia() {
     const s = Math.floor(tempo.current);
     setCheia(null);
-    inline.current?.injectJavaScript(`try{document.getElementById('v').currentTime=${s}}catch(e){};true;`);
+    inline.current?.injectJavaScript(`window.irPara&&window.irPara(${s});true;`);
   }
 
   const propsComuns: Partial<WebViewProps> = {
@@ -65,11 +69,13 @@ export function VideoDevocional({ url }: { url: string | null | undefined }) {
     scrollEnabled: false,
     bounces: false,
     style: s.web,
+    setSupportMultipleWindows: false,
+    onShouldStartLoadWithRequest: (req) => navegacaoPermitida(req.url, req.isTopFrame),
   };
 
   return <View style={s.wrap}>
     <View style={s.quadro}>
-      <WebView ref={inline} source={{ html: htmlInline }} {...propsComuns}
+      <WebView ref={inline} source={{ html: htmlInline, baseUrl: ORIGEM_DO_PLAYER }} {...propsComuns}
         onMessage={(e) => lerMensagem(e.nativeEvent.data, (v) => { tempo.current = v; })} />
       <Pressable onPress={abrirCheia} style={s.expandir} hitSlop={10} accessibilityRole="button" accessibilityLabel={t("Tela cheia")}>
         <Ionicons name="expand" size={18} color="#fff" />
@@ -80,7 +86,7 @@ export function VideoDevocional({ url }: { url: string | null | undefined }) {
     <Modal visible={cheia != null} animationType="fade" onRequestClose={fecharCheia} supportedOrientations={["portrait", "landscape"]} statusBarTranslucent>
       <StatusBar hidden />
       <View style={s.cheia}>
-        {cheia != null && <WebView source={{ html: htmlCheia }} {...propsComuns}
+        {cheia != null && <WebView source={{ html: htmlCheia, baseUrl: ORIGEM_DO_PLAYER }} {...propsComuns}
           onMessage={(e) => lerMensagem(e.nativeEvent.data, (v) => { tempo.current = v; })} />}
         <Pressable onPress={fecharCheia} style={[s.fechar, { top: insets.top + 12 }]} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
           <Ionicons name="close" size={24} color="#fff" />
