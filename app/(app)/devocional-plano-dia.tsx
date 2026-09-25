@@ -12,6 +12,7 @@ import { useDialogo } from "@/components/ui/Dialogo";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { ControleFonte } from "@/components/devocional/ControleFonte";
 import { PassagemBiblica, TextoDevocional } from "@/components/devocional/TextoLeitura";
+import { VideoDevocional } from "@/components/devocional/VideoDevocional";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { trackEvento } from "@/lib/telemetria";
 import { useFonteLeitura } from "@/lib/useFonteLeitura";
@@ -101,6 +102,7 @@ export default function PlanoDiaScreen() {
       : <ScrollView contentContainerStyle={s.content}>
         {n && tot ? <Text style={s.dataLabel}>{t("Dia")} {n} {t("de")} {tot}</Text> : null}
         <Text style={s.devTitulo}>{item.titulo}</Text>
+        <VideoDevocional url={item.video_url} />
         {item.passagem_texto && <PassagemBiblica referencia={item.passagem} texto={item.passagem_texto} passo={fonte.passo} selecionado={versoSelecionado} onPress={() => setVersoSelecionado(!versoSelecionado)}>
           {versoSelecionado && <View style={s.verseActions}>
             <Pressable style={s.verseAction} onPress={() => router.navigate({ pathname: "/devocional-registros", params: { referencia: item.passagem ?? "", textoBiblico: item.passagem_texto ?? "", origem: "devocional", itemId: item.id } })}><Ionicons name="bookmark-outline" size={18} color="#263234" /><Text style={s.verseTxt}>{t("Salvar")}</Text></Pressable>

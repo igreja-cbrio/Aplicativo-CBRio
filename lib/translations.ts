@@ -59,6 +59,9 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Você já leu este dia. 💙": { en: "You've already read this day. 💙", es: "Ya leíste este día. 💙" },
   "Li este devocional": { en: "I read this devotional", es: "Leí este devocional" },
   "Voltar ao plano e abrir o próximo dia": { en: "Back to the plan to open the next day", es: "Volver al plan y abrir el próximo día" },
+  "Semana": { en: "Week", es: "Semana" },
+  "Tela cheia": { en: "Full screen", es: "Pantalla completa" },
+  "Não foi possível carregar o vídeo. Confira sua internet e tente de novo.": { en: "Couldn't load the video. Check your connection and try again.", es: "No se pudo cargar el video. Revisa tu conexión e inténtalo de nuevo." },
   "Aumentar letra": { en: "Increase text size", es: "Aumentar letra" },
   "Diminuir letra": { en: "Decrease text size", es: "Disminuir letra" },
   // ── Servir · papéis + domingo de preferência (24/09/2026) ──

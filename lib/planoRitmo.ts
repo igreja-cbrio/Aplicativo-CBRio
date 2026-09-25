@@ -50,3 +50,35 @@ export function progressoDoPlano(dias: { estado: EstadoDia }[]): { lidos: number
 export function podeAbrirDia(estado: EstadoDia): boolean {
   return estado !== "bloqueado";
 }
+
+// ── SEMANAS do plano longo (25/09/2026 · pedido do Marcos) ──────────────────
+// "Para devocionais mais longos do que uma semana, separar em cima em semana 1,
+// 2, 3… e quando todos de uma semana são finalizados eles vão para o próximo."
+// A semana é por POSIÇÃO no plano (dias 1–7, 8–14…), não pelo calendário: o
+// plano por inscrição é "no seu ritmo", então a data não diz nada.
+export const DIAS_POR_SEMANA = 7;
+export type SemanaDoPlano<T extends ItemOrdenavel> = {
+  numero: number; dias: DiaDoPlano<T>[]; lidos: number; completa: boolean;
+};
+
+/** Agrupa os dias em semanas de 7. Plano de até 7 dias não tem semanas ([]). */
+export function semanasDoPlano<T extends ItemOrdenavel>(dias: DiaDoPlano<T>[], tamanho = DIAS_POR_SEMANA): SemanaDoPlano<T>[] {
+  if (dias.length <= tamanho) return [];
+  const semanas: SemanaDoPlano<T>[] = [];
+  for (let i = 0; i < dias.length; i += tamanho) {
+    const bloco = dias.slice(i, i + tamanho);
+    const lidos = bloco.filter((d) => d.estado === "lido").length;
+    semanas.push({ numero: semanas.length + 1, dias: bloco, lidos, completa: lidos === bloco.length });
+  }
+  return semanas;
+}
+
+/**
+ * A semana que a tela abre: a PRIMEIRA ainda não completa. É isso que faz o
+ * leitor "ir pro próximo" sozinho quando fecha uma semana. Tudo lido ⇒ a
+ * última (onde ele terminou), nunca uma semana que não existe.
+ */
+export function semanaEmFoco(semanas: { numero: number; completa: boolean }[]): number {
+  if (semanas.length === 0) return 1;
+  return (semanas.find((s) => !s.completa) ?? semanas[semanas.length - 1]).numero;
+}
