@@ -11,6 +11,8 @@ import { idReservaBatismo } from '../lib/batismoReserva';
 import { apiGet, apiPost, criarInscricaoApi } from '../lib/api';
 import { captureCampusSession, setCampusSession } from '../lib/campusSession';
 import { campusSalvo, salvarCampus, validarContextoCampus } from '../lib/campus';
+import { getBatismoGestao, editarPessoaBatismo } from '../lib/batismoGestao';
+import { meuBatismo, listarFotosBatismo, fazerCheckin } from '../lib/batismo';
 import { getCulto, proximosCultos } from '../lib/cultos';
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 function deferred<T>() { let resolve: (value: T) => void; const promise = new Promise<T>(done => { resolve = done; }); return { promise, resolve: (value: T) => resolve(value) }; }
@@ -99,4 +101,18 @@ describe('reserva de batismo do app',()=>{
   expect(fetcher.mock.calls[0][1].headers['X-Campus-Id']).toBe('sede');
   await criarInscricaoApi({tipo:'contato'});expect(fetcher.mock.calls[1][0]).toMatch(/\/app\/inscricoes$/);
  });
+});
+
+
+it('histórico e fotos de batismo usam inscrição própria na API, nunca pasta por data',async()=>{
+ const fetcher=vi.fn().mockResolvedValueOnce(json({id:'inscricao'})).mockResolvedValueOnce(json([{nome:'foto',url:'assinada'}])).mockResolvedValueOnce(json({ok:true,checkin_em:'agora'}));vi.stubGlobal('fetch',fetcher);
+ await meuBatismo('membro-cliente-ignorado');await listarFotosBatismo('inscricao');await fazerCheckin('inscricao');
+ expect(fetcher.mock.calls.map(c=>c[0])).toEqual(['https://www.cbrio.org/api/app/campus/batismo/me','https://www.cbrio.org/api/app/campus/batismo/inscricao/fotos','https://www.cbrio.org/api/app/campus/batismo/inscricao/checkin']);
+});
+
+it('gestão carrega e edita com campus capturado sem reaproveitar resposta após troca', async () => {
+ const response=deferred<Response>();const fetcher=vi.fn().mockReturnValueOnce(response.promise).mockResolvedValue(json({id:'inscricao'}));vi.stubGlobal('fetch',fetcher);
+ const request=getBatismoGestao('2099-09-27');await vi.waitFor(()=>expect(fetcher).toHaveBeenCalledOnce());
+ expect(fetcher.mock.calls[0][1].headers['X-Campus-Id']).toBe('sede');setCampusSession('pessoa','outro');response.resolve(json({pessoas:[{nome:'Pessoa da Sede'}]}));await expect(request).rejects.toThrow('campus');
+ await editarPessoaBatismo('inscricao',{observacoes:'Local'});expect(fetcher.mock.calls[1][1].headers['X-Campus-Id']).toBe('outro');
 });

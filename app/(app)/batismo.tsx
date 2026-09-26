@@ -14,11 +14,14 @@ import {
   Text,
   View,
 } from "react-native";
-import { Stack, useRouter } from "expo-router";
+import { eventoDoBatismo } from "@/lib/batismoDestino";
+import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as FileSystem from "expo-file-system/legacy";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { captureCampusSession } from "@/lib/campusSession";
 import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
@@ -60,11 +63,14 @@ export default function BatismoScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const params=useLocalSearchParams<{evento_id?:string|string[]}>();
+  const eventoId=eventoDoBatismo(params);
   const t = useT();
   const { membro, loading: loadingMembro } = useMembro();
 
   const [batismo, setBatismo] = useState<MeuBatismo | null>(null);
   const [podeGerenciar, setPodeGerenciar] = useState<boolean | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [fotos, setFotos] = useState<FotoBatismo[]>([]);
   const [fotosLoading, setFotosLoading] = useState(false);
@@ -77,31 +83,18 @@ export default function BatismoScreen() {
   const [salvandoIgreja, setSalvandoIgreja] = useState(false);
 
   const carregar = useCallback(async () => {
-    const papel = await getBatismoPapel().catch(() => ({ pode_gerenciar: false }));
-    setPodeGerenciar(!!papel.pode_gerenciar);
-    if (papel.pode_gerenciar) {
-      setCarregando(false);
-      return;
-    }
-    if (!membro?.membroId) {
-      setCarregando(false);
-      return;
-    }
-    setCarregando(true);
-    const b = await meuBatismo(membro.membroId);
-    setBatismo(b);
-    setCarregando(false);
-    if (b?.data_batismo) {
-      setFotosLoading(true);
-      const fs = await listarFotosBatismo(b.data_batismo);
-      setFotos(fs);
-      setFotosLoading(false);
-    }
-    // Status "já sou batizado" do membro
-    const ant = await getBatismoAnterior(membro.membroId);
-    setBatismoAnt(ant);
-    setIgrejaTxt(ant.igreja_batismo_anterior ?? "");
-  }, [membro?.membroId]);
+    const scope=captureCampusSession(); setErro(null); setCarregando(true); setFotos([]);
+    try {
+      if(params.evento_id!==undefined && !eventoId) throw new Error(t("Evento inválido."));
+      const papel=await getBatismoPapel().catch(()=>({pode_gerenciar:false}));scope.assertCurrent();
+      setPodeGerenciar(!!papel.pode_gerenciar && !eventoId);
+      if((papel.pode_gerenciar && !eventoId) || !membro?.membroId) return;
+      const b=await meuBatismo(membro.membroId,eventoId);scope.assertCurrent();setBatismo(b);
+      if(b?.data_batismo) {setFotosLoading(true); const fs=await listarFotosBatismo(b.id);scope.assertCurrent();setFotos(fs);}
+      const ant=await getBatismoAnterior(membro.membroId);scope.assertCurrent();setBatismoAnt(ant);setIgrejaTxt(ant.igreja_batismo_anterior ?? "");
+    } catch(e) {setPodeGerenciar(false);setBatismo(null);setFotos([]);setErro(e instanceof Error?e.message:t("Não foi possível carregar. Verifique sua conexão."));}
+    finally {scope.release();setCarregando(false);setFotosLoading(false);}
+  }, [membro?.membroId,eventoId,params.evento_id]);
 
   // ⚠️ RECARREGA AO FOCAR (05/08/2026): o web e o app leem o MESMO banco, mas
   // só refletia o que o web mudou se a tela fosse remontada. Aprovar um pedido,
@@ -179,7 +172,7 @@ export default function BatismoScreen() {
 
         {loadingMembro || carregando || podeGerenciar === null ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />
-        ) : !membro?.membroId ? (
+        ) : erro ? <ErrorState texto={erro} onRetry={()=>void carregar()} /> : !membro?.membroId ? (
           <Vazio
             icon="link-outline"
             titulo={t("Vincule seu perfil")}
@@ -486,7 +479,7 @@ function BatismoConteudo({
           ) : (
             <FlatList
               data={fotos}
-              keyExtractor={(f) => f.nome}
+              keyExtractor={(f) => `${f.origem || "campus"}:${f.nome}`}
               numColumns={3}
               scrollEnabled={false}
               columnWrapperStyle={{ gap: 6 }}

@@ -1,3 +1,4 @@
+import { destinoBatismo } from "./batismoDestino";
 import { router } from "expo-router";
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -91,7 +92,7 @@ export function attachNotifTapListener(): () => void {
         router.navigate("/meu-grupo");
         return;
       case "batismo":
-        router.navigate("/batismo");
+        router.navigate(destinoBatismo(data));
         return;
       case "culto": {
         const cultoId = (data as { culto_id?: string }).culto_id;

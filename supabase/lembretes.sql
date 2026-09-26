@@ -33,6 +33,14 @@ select cron.schedule(
   $$delete from public.app_lembretes_enviados where enviado_em < now() - interval '60 days'$$
 );
 
+-- Job principal: a cada minuto. Antes de publicar a Edge protegida, guardar a
+-- service role no Supabase Vault com nome cbrio_notify_service_role (SQL Editor,
+-- nunca no repositório) e atualizar o cron com este SQL. Não aplicar parcialmente.
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM vault.decrypted_secrets WHERE name='cbrio_notify_service_role') THEN
+    RAISE EXCEPTION 'Configure o segredo cbrio_notify_service_role no Vault antes de atualizar o cron.';
+  END IF;
+END $$;
 -- Job principal: a cada minuto
 select cron.schedule(
   'app-lembretes',
@@ -41,7 +49,10 @@ select cron.schedule(
   select net.http_post(
     url := 'https://hhntwfawfnxvuobhdfkb.supabase.co/functions/v1/notify-lembretes',
     body := '{}'::jsonb,
-    headers := '{"Content-Type": "application/json"}'::jsonb
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name='cbrio_notify_service_role')
+    )
   )
   $$
 );

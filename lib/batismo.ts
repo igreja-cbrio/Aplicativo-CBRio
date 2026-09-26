@@ -1,3 +1,4 @@
+import { apiGet, apiPost } from "./api";
 import { supabase } from "./supabase";
 
 export type MeuBatismo = {
@@ -19,34 +20,16 @@ export type MeuBatismo = {
  *  - ignora rows antigas de totem com status='realizado' e data nula.
  *  - ignora 'cancelado'.
  */
-export async function meuBatismo(membroId: string): Promise<MeuBatismo | null> {
-  const { data } = await supabase
-    .from("batismo_inscricoes")
-    .select("id, status, data_batismo, nome, sobrenome, tamanho_camisa, eh_crianca, observacoes, checkin_em")
-    .eq("membro_id", membroId)
-    .is("deleted_at", null)
-    .neq("status", "cancelado")
-    .order("created_at", { ascending: false });
-  const lista = (data as MeuBatismo[]) ?? [];
-
-  // Prioridade: pendente -> realizado com data -> nada
-  const pendente = lista.find((b) => b.status === "pendente");
-  if (pendente) return pendente;
-  const realizadoComData = lista.find((b) => b.status === "realizado" && b.data_batismo);
-  if (realizadoComData) return realizadoComData;
-  return null;
+export async function meuBatismo(_membroId: string, eventoId?: string | null): Promise<MeuBatismo | null> {
+  return apiGet<MeuBatismo | null>(`/app/campus/batismo/me${eventoId ? `?evento_id=${encodeURIComponent(eventoId)}` : ""}`);
 }
 
-/** Faz o check-in via RPC (server-side valida data + status + propriedade). */
-export async function fazerCheckin(inscricaoId: string): Promise<
-  { ok: true; ja_checkado?: boolean; checkin_em: string }
-  | { ok: false; erro: string }
+/** Check-in da inscrição própria, confirmado e serializado no servidor. */
+export async function fazerCheckin(inscricaoId:string): Promise<
+ {ok:true;ja_checkado?:boolean;checkin_em:string}|{ok:false;erro:string}
 > {
-  const { data, error } = await supabase.rpc("app_batismo_checkin", {
-    p_inscricao: inscricaoId,
-  });
-  if (error) return { ok: false, erro: error.message };
-  return data as { ok: true; ja_checkado?: boolean; checkin_em: string } | { ok: false; erro: string };
+ try {return await apiPost(`/app/campus/batismo/${encodeURIComponent(inscricaoId)}/checkin`,{});}
+ catch(e){return {ok:false,erro:e instanceof Error?e.message:"Não foi possível registrar o check-in."};}
 }
 
 export type BatismoAnterior = {
@@ -78,23 +61,12 @@ export async function desmarcarBatismoAnterior(): Promise<void> {
 }
 
 export type FotoBatismo = {
+  origem?: "campus" | "legado";
   nome: string;
   url: string;
 };
 
-/**
- * Lista as fotos do dia do batismo (path no storage: batismos/YYYY-MM-DD/...).
- * Marketing sobe via dashboard. URLs públicas (bucket é público pra leitura).
- */
-export async function listarFotosBatismo(dataIso: string): Promise<FotoBatismo[]> {
-  const folder = dataIso;
-  const { data } = await supabase.storage
-    .from("batismos")
-    .list(folder, { limit: 200, sortBy: { column: "name", order: "asc" } });
-  return (data ?? [])
-    .filter((f) => f.name && !f.name.endsWith("/"))
-    .map((f) => ({
-      nome: f.name,
-      url: supabase.storage.from("batismos").getPublicUrl(`${folder}/${f.name}`).data.publicUrl,
-    }));
+/** URLs assinadas após confirmar a propriedade da inscrição, nunca por data isolada. */
+export async function listarFotosBatismo(inscricaoId: string): Promise<FotoBatismo[]> {
+  return apiGet<FotoBatismo[]>(`/app/campus/batismo/${encodeURIComponent(inscricaoId)}/fotos`);
 }

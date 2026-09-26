@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -19,6 +19,7 @@ import { useColors } from '@/contexts/ThemeContext';
 import { useT } from '@/lib/i18n';
 import { font, radius, spacing, type Palette } from '@/constants/theme';
 import { BRAND_FONT } from '@/lib/fonts';
+import { captureCampusSession } from '@/lib/campusSession';
 import { TecladoSeguro } from '@/components/ui/TecladoSeguro';
 import {
   adicionarPessoaBatismo,
@@ -61,6 +62,7 @@ function dataCurta(iso: string): { dia: string; mes: string; semana: string } {
 }
 
 function dataLonga(iso: string): string {
+  if (!iso) return "";
   return new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR', {
     weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
   });
@@ -97,13 +99,15 @@ export function BatismoGestaoScreen() {
   const [processando, setProcessando] = useState<string | null>(null);
   const [editando, setEditando] = useState<BatismoPessoaGestao | null | 'nova'>(null);
 
-  const carregar = useCallback(async (data?: string, silencioso = false) => {
+  const requisicao = useRef(0);
+  const carregar = useCallback(async (data?: string | null, silencioso = false) => {
+    const atual = ++requisicao.current;
     if (!silencioso) setErro(null);
     try {
       const r = await getBatismoGestao(data);
-      setEstado(r);
+      if (atual === requisicao.current) setEstado(r);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : t('Erro ao carregar o Batismo.'));
+      if (atual === requisicao.current) { setEstado(null); setErro(e instanceof Error ? e.message : t('Erro ao carregar o Batismo.')); }
     }
   }, [t]);
 
@@ -150,22 +154,27 @@ export function BatismoGestaoScreen() {
 
   function aprovar(p: BatismoPessoaGestao) {
     if (!estado?.data) return;
+    if (!p.horario_culto) { setEditando(p); return; }
+    const scope = captureCampusSession();
+    const data = estado.data;
     Alert.alert(
       t('Aprovar para este Batismo?'),
-      `${p.nome} ${p.sobrenome || ''}\n${dataLonga(estado.data)}`,
+      `${p.nome} ${p.sobrenome || ''}\n${dataLonga(estado.data || '')}`,
       [
-        { text: t('Cancelar'), style: 'cancel' },
+        { text: t('Cancelar'), style: 'cancel', onPress: () => scope.release() },
         {
           text: t('Aprovar'),
           onPress: async () => {
             setProcessando(p.id);
             try {
-              await aprovarPessoaBatismo(p.id, { data_batismo: estado.data, horario_culto: p.horario_culto });
+              scope.assertCurrent();
+              await aprovarPessoaBatismo(p.id, { data_batismo: data, horario_culto: p.horario_culto });
+              scope.assertCurrent();
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
               await carregar(estado.data, true);
             } catch (e) {
               Alert.alert(t('Não foi possível aprovar'), e instanceof Error ? e.message : t('Tente novamente.'));
-            } finally { setProcessando(null); }
+            } finally { scope.release(); setProcessando(null); }
           },
         },
       ],
@@ -173,21 +182,24 @@ export function BatismoGestaoScreen() {
   }
 
   function retirar(p: BatismoPessoaGestao) {
+    const scope = captureCampusSession();
     Alert.alert(
       t('Retirar deste Batismo?'),
       t('A pessoa sairá da lista do dia, mas o histórico ficará preservado no sistema.'),
       [
-        { text: t('Cancelar'), style: 'cancel' },
+        { text: t('Cancelar'), style: 'cancel', onPress: () => scope.release() },
         {
           text: t('Retirar'), style: 'destructive',
           onPress: async () => {
             setProcessando(p.id);
             try {
+              scope.assertCurrent();
               await retirarPessoaBatismo(p.id);
+              scope.assertCurrent();
               await carregar(estado?.data, true);
             } catch (e) {
               Alert.alert(t('Não foi possível retirar'), e instanceof Error ? e.message : t('Tente novamente.'));
-            } finally { setProcessando(null); }
+            } finally { scope.release(); setProcessando(null); }
           },
         },
       ],
@@ -228,7 +240,7 @@ export function BatismoGestaoScreen() {
             </View>
             <View style={styles.drop}><Ionicons name='water' size={22} color='#fff' /></View>
           </View>
-          <Text style={styles.heroDate}>{dataLonga(estado.data)}</Text>
+          <Text style={styles.heroDate}>{estado.data ? dataLonga(estado.data) : t('Nenhuma data de Batismo disponível.')}</Text>
           <View style={styles.stats}>
             <Stat valor={estado.resumo.previstos} label={t('previstos')} styles={styles} />
             <View style={styles.statDiv} />
@@ -243,7 +255,7 @@ export function BatismoGestaoScreen() {
             <Text style={styles.sectionLabel}>{t('Dia do Batismo')}</Text>
             <Text style={styles.sectionHint}>{t('A data mais próxima já vem selecionada')}</Text>
           </View>
-          <Pressable style={styles.addMini} onPress={() => setEditando('nova')} accessibilityRole='button'>
+          <Pressable style={styles.addMini} disabled={!estado.data || !estado.horarios.length} onPress={() => setEditando('nova')} accessibilityRole='button'>
             <Ionicons name='person-add' size={17} color='#fff' />
             <Text style={styles.addMiniTxt}>{t('Adicionar')}</Text>
           </Pressable>
@@ -330,7 +342,7 @@ export function BatismoGestaoScreen() {
 
       <PessoaModal
         alvo={editando}
-        dataPadrao={estado.data}
+        dataPadrao={estado.data || ''}
         horarios={estado.horarios}
         onClose={() => setEditando(null)}
         onSaved={async () => { setEditando(null); await carregar(estado.data, true); }}
@@ -441,6 +453,10 @@ function PessoaModal({ alvo, dataPadrao, horarios, onClose, onSaved, colors, sty
   const set = (campo: keyof FormPessoa) => (v: string) => setForm(s => ({ ...s, [campo]: v }));
 
   async function salvar() {
+    if (!form.data_batismo || !form.horario_culto) {
+      Alert.alert(t('Confira os dados'), t('Selecione a data e o horário do batismo.'));
+      return;
+    }
     if (!form.nome.trim() || !form.sobrenome.trim()) {
       Alert.alert(t('Confira os dados'), t('Nome e sobrenome são obrigatórios.'));
       return;
@@ -474,7 +490,6 @@ function PessoaModal({ alvo, dataPadrao, horarios, onClose, onSaved, colors, sty
           <Campo label={t('Data do Batismo')} hint='AAAA-MM-DD' value={form.data_batismo} onChange={set('data_batismo')} styles={styles} />
           <Text style={styles.fieldLabel}>{t('Horário')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            <Pressable onPress={() => set('horario_culto')('')} style={[styles.option, !form.horario_culto && styles.optionActive]}><Text style={[styles.optionTxt, !form.horario_culto && styles.optionTxtActive]}>{t('Sem horário')}</Text></Pressable>
             {horarios.map(h => <Pressable key={h.horario} onPress={() => set('horario_culto')(h.horario)} style={[styles.option, form.horario_culto === h.horario && styles.optionActive]}><Text style={[styles.optionTxt, form.horario_culto === h.horario && styles.optionTxtActive]}>{h.label}</Text></Pressable>)}
           </ScrollView>
           <Campo label={t('Tamanho da camisa')} hint='P, M, G…' value={form.tamanho_camisa} onChange={set('tamanho_camisa')} styles={styles} />
