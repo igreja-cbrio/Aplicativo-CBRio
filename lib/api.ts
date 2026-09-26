@@ -387,7 +387,7 @@ export function buscarGruposPublico(): Promise<GrupoPublico[]> {
 export type InscricaoQualquer = InscricaoVoluntariado | InscricaoGrupo | (Record<string, unknown> & { tipo: string });
 
 export function criarInscricaoApi(body: InscricaoQualquer): Promise<{ ok: boolean; message?: string }> {
-  return apiPost<{ ok: boolean; message?: string }>("/app/inscricoes", body);
+  return apiPost<{ ok: boolean; message?: string }>(body.tipo === "batismo" ? "/app/campus/batismo/inscricoes" : "/app/inscricoes", body);
 }
 
 import { normalizarVoluntariadoMe } from "./voluntariadoMe";

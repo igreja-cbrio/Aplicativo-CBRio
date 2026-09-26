@@ -6,6 +6,9 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Escolha a data, o horário e a camisa e aceite os termos para continuar.": { en: "Choose a date, time and shirt size, and accept the terms to continue.", es: "Elegí la fecha, el horario y la talla, y aceptá los términos para continuar." },
+  "Datas indisponíveis": { en: "Dates unavailable", es: "Fechas no disponibles" },
+  "Tamanho da camisa": { en: "Shirt size", es: "Talla de camiseta" },
   "Campus": { en: "Campus", es: "Campus" },
   "Escolha a unidade cuja agenda você quer acompanhar. Seu cadastro permanece o mesmo.": { en: "Choose the campus whose schedule you want to follow. Your profile stays the same.", es: "Elegí la sede cuya agenda querés seguir. Tu registro sigue siendo el mismo." },
   "Carregando campus…": { en: "Loading campus…", es: "Cargando campus…" },
