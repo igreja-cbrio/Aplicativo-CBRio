@@ -4,6 +4,16 @@
 > relevante (novo módulo, dependência, decisão de arquitetura, config de
 > backend). Ele é a memória e o contexto contínuo do app.
 
+## Multicampus · implementação em andamento (26/09/2026)
+
+- Branch `codex/multicampus-app`, base `origin/main` em `1c53b04`.
+- Depende do backend ERP PR #3067: https://github.com/igreja-cbrio/SISTEMA_INTEGRADO_CBRIO/pull/3067.
+- Objetivo desta PR: seleção de campus operacional pelo membro, contexto/cache por usuário e campus, agenda por API com projeção pública segura.
+- A escolha do membro não concede permissões de funcionário nem altera seu cadastro-base.
+- Contratos: `/app/campus/contexto`, `/app/campus/agenda?dias=7` e `/app/campus/agenda/:id`; header `X-Campus-Id` validado no servidor.
+- Não publicar OTA nem mergear antes do backend compatível e das validações. Nenhuma migration ou alteração em produção executada nesta branch.
+- Continuidade: implementar transporte/contexto/agenda, testes de troca e cache, `npm run verificar`, revisar diff e atualizar esta seção com o resultado real.
+
 ## ⚠️⚠️ DEVOCIONAL · UMA tela pra TODO plano + YouTube dentro do app (25/09/2026 · 2ª leva)
 
 Pedido do Marcos: *"essa nossa estética de Valores de Cristo universal para
