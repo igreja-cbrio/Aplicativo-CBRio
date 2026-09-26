@@ -12,7 +12,11 @@
 - A escolha do membro não concede permissões de funcionário nem altera seu cadastro-base.
 - Contratos: `/app/campus/contexto`, `/app/campus/agenda?dias=7` e `/app/campus/agenda/:id`; header `X-Campus-Id` validado no servidor.
 - Não publicar OTA nem mergear antes do backend compatível e das validações. Nenhuma migration ou alteração em produção executada nesta branch.
-- Continuidade: implementar transporte/contexto/agenda, testes de troca e cache, `npm run verificar`, revisar diff e atualizar esta seção com o resultado real.
+- Implementado: `CampusProvider` + barreira que desmonta a árvore ao trocar usuário/campus; escolha em Configurações (oculta na preparação); preferência por usuário no AsyncStorage; retry e saída em falha.
+- `lib/api.ts`: geração capturada antes de obter JWT, header validado de seleção, cancelamento/recusa de respostas antigas em todos os verbos e upload. Portas públicas não herdam campus privado.
+- `lib/cultos.ts`: agenda e detalhe sem consulta direta à tabela `cultos`; cache da agenda por usuário/campus/dia. Dados pessoais do membro mantêm suas regras próprias.
+- `npm run verificar`: TypeScript, 450 testes (9 novos de campus), cobertura de i18n e 110/110 mutantes passaram. Validação nativa em aparelho ainda não executada; backend da PR ERP precisa estar disponível antes de release.
+- Continuidade: concluir CI/mutantes, validar seleção/retorno de background/deep link em dispositivo contra backend de ensaio, revisar os demais módulos e versões antigas antes de ativar outro campus.
 
 ## ⚠️⚠️ DEVOCIONAL · UMA tela pra TODO plano + YouTube dentro do app (25/09/2026 · 2ª leva)
 

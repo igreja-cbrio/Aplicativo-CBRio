@@ -1,3 +1,4 @@
+import { CampusPicker } from "@/components/app/CampusAccess";
 import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -228,6 +229,8 @@ export default function ConfiguracoesScreen() {
           <Text style={styles.title}>{t("Configurações")}</Text>
           <View style={{ width: 24 }} />
         </View>
+
+        <CampusPicker />
 
         {/* APARÊNCIA */}
         <Section title={t("Aparência")} colors={colors} styles={styles}>

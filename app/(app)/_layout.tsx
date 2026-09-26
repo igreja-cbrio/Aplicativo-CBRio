@@ -1,3 +1,5 @@
+import { CampusProvider } from "@/contexts/CampusContext";
+import { CampusAccess } from "@/components/app/CampusAccess";
 import { useEffect, useRef } from "react";
 import { Stack, router, useGlobalSearchParams, usePathname } from "expo-router";
 import { AppState, BackHandler, Platform, View } from "react-native";
@@ -69,7 +71,7 @@ const TELAS_BARRA: Record<string, string> = {
   "/menu": "Menu",
 };
 
-export default function AppLayout() {
+function AppLayoutContent() {
   const colors = useColors();
   const t = useT();
   const pathname = usePathname();
@@ -195,4 +197,8 @@ export default function AppLayout() {
       </CadastroGate>
     </MembroProvider>
   );
+}
+
+export default function AppLayout() {
+  return <CampusProvider><CampusAccess><AppLayoutContent /></CampusAccess></CampusProvider>;
 }
