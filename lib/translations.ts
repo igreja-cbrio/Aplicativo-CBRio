@@ -1129,6 +1129,9 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "dias": { en: "days", es: "días" },
   "dia": { en: "day", es: "día" },
   "Sempre no 4º domingo do mês.": { en: "Always on the 4th Sunday of the month.", es: "Siempre el 4º domingo del mes." },
+  // ⚠️ A chave acima fica para bundles antigos; a tela usa a de baixo desde
+  // 26/09/2026 — as datas vêm do cadastro e PODEM não ser o 4º domingo.
+  "Geralmente no 4º domingo do mês.": { en: "Usually on the 4th Sunday of the month.", es: "Generalmente el 4º domingo del mes." },
   "Tamanho da camisa (opcional)": { en: "Shirt size (optional)", es: "Talla de camiseta (opcional)" },
   "Horário do culto": { en: "Service time", es: "Horario del culto" },
   "Escolha em qual culto você quer ser batizado(a).": {

@@ -928,6 +928,25 @@ const MUTANTES = [
     de: '  if (isTopFrame === false) return true;',
     para: '  if (isTopFrame !== true) return true;',
   },
+  {
+    // ⚠️⚠️ A inscrição do app não passa pelo endpoint: grava em `app_inscricoes`
+    // e o gatilho do banco lê `dados->>'data_batismo'` (ERP · 20260925121000).
+    // Sem esta linha o seletor de datas renderiza e o banco grava a PRIMEIRA
+    // data assim mesmo — que era o defeito de antes de 25/09/2026, e ele é
+    // silencioso: a tela diz novembro, o banco grava setembro, nada quebra.
+    nome: "batismo: a data escolhida sumir do payload (o seletor vira enfeite)",
+    arq: "app/(app)/inscricao-batismo.tsx",
+    de: "          data_batismo: dataEscolhida,\n",
+    para: "",
+  },
+  {
+    // ⚠️ Com UMA data o seletor é ruído (o banner "Próximo batismo: X" já diz
+    // tudo). `> 0` mostraria um radio de um item em toda inscrição.
+    nome: "batismo: seletor de data aparecer com uma data só",
+    arq: "app/(app)/inscricao-batismo.tsx",
+    de: "      {datas.length > 1 && (",
+    para: "      {datas.length > 0 && (",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

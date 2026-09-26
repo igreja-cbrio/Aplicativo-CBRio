@@ -249,7 +249,12 @@ ${t("Próximo batismo")}: ${formatProximoBatismo(proxDt)}` : "";
               : diasFalta === 1
               ? t("Amanhã")
               : `${t("Em")} ${diasFalta} ${t("dias")}`}
-            {"  ·  "}{t("Sempre no 4º domingo do mês.")}
+            {/* ⚠️ "Sempre" virou "Geralmente" (26/09/2026): as datas vêm do
+                cadastro (`batismo_eventos`) desde o #177 e PODEM não ser o 4º
+                domingo — em dez/2024 o batismo foi antecipado para o 3º.
+                Afirmar uma regra que o próprio sistema já não segue é o tipo
+                de frase que faz alguém aparecer no domingo errado. */}
+            {"  ·  "}{t("Geralmente no 4º domingo do mês.")}
           </Text>
         </View>
       </View>
