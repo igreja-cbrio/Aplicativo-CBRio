@@ -912,6 +912,13 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "A equipe vai falar com você sobre os próximos passos.": { en: "The team will talk to you about the next steps.", es: "El equipo hablará contigo sobre los próximos pasos." },
   "Confirmar inscrição": { en: "Confirm registration", es: "Confirmar inscripción" },
 
+  // ────── Escolher a data do batismo (25/09/2026 · web PR #3063) ──────
+  "Data do batismo": { en: "Baptism date", es: "Fecha del bautismo" },
+  "Escolha em qual mês você quer ser batizado(a).": { en: "Choose in which month you want to be baptized.", es: "Elige en qué mes querés bautizarte." },
+  "sem vaga": { en: "no spots", es: "sin cupo" },
+  "vaga(s)": { en: "spot(s)", es: "cupo(s)" },
+  "vagas abertas": { en: "spots open", es: "cupos abiertos" },
+
   // ───────────────── Onda C · acabamento (10/08/2026) ─────────────────
   "Minha família": { en: "My family", es: "Mi familia" },
 
