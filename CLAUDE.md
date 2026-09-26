@@ -50,7 +50,8 @@ Update "feat(batismo): escolha da data de batismo no aplicativo" (madrugada de
 26/09). Pelo estado do checkout principal `~/Aplicativo-CBRio` — branch
 `claude/ledger-android-vc9` em `14a34c1` (base de 21/09) com a tela editada
 SEM COMMIT — foi dali que ele saiu: a frota recebeu a escolha de data e
-**perdeu #171–#177** (Devocionais, Servir, Grupos) por alguns minutos. O #177
+**perdeu #160–#177** — 18 PRs, tudo desde 21/09 (Devocionais, Servir,
+Grupos, Next…) — por alguns minutos. O #177
 reaplicou a mudança sobre a main atual e o OTA corretivo ("fix(app): restaura
 base atual com datas de batismo") saiu em seguida. É a mesma armadilha do
 Devocional de 03/09 (update `3aa750e3` sem commit).
