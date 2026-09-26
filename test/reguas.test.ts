@@ -2536,3 +2536,81 @@ describe("data que a chamada registra", () => {
     expect(chamadaEhHoje("2026-09-15", hoje)).toBe(false);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ⚠️⚠️ BATISMO · A DATA ESCOLHIDA TEM QUE VIAJAR NO PAYLOAD (26/09/2026)
+//
+//  Matheus, 25/09/2026: *"preciso que na inscrição de batismo tenha como
+//  escolher o mês... isso deve refletir tanto no formulário público quanto no
+//  app dos membros."* Entregue no #177 (par do ERP #3063). Esta guarda existe
+//  porque o defeito que ela trava é SILENCIOSO.
+//
+//  ⚠️⚠️ O DEFEITO: a inscrição do app NÃO passa pelo endpoint — grava em
+//  `app_inscricoes` e o gatilho `fn_app_inscricoes_fanout` cria a linha do
+//  batismo. Até 25/09 ele carimbava `fn_proximo_quarto_domingo()` FIXO: a
+//  pessoa lia uma data no banner e era inscrita noutra, sem erro nenhum. O
+//  gatilho foi corrigido no ERP (migration 20260925121000) e passou a ler
+//  `dados->>'data_batismo'`. Se o app parar de mandar o campo, o seletor volta
+//  a ser enfeite — e ninguém percebe, porque nada quebra.
+// ════════════════════════════════════════════════════════════════════════════
+describe("batismo · escolher a data (#177 · 26/09/2026)", () => {
+  const raiz = process.cwd();
+  const ler = (rel: string): string => {
+    try { return readFileSync(join(raiz, rel), "utf8"); } catch { return ""; }
+  };
+  const TELA = "app/(app)/inscricao-batismo.tsx";
+  // ⚠️ Sem comentário: a explicação cita o código errado como exemplo, e a
+  // contagem crua leria a explicação como uso (armadilha de 11/08).
+  const src = () => semComentarios(ler(TELA));
+
+  it("⚠️⚠️ MUTATION GUARD · a data escolhida vai no corpo da inscrição", () => {
+    const s = src();
+    expect(s, "a tela não existe mais").not.toBe("");
+    expect(s, "data_batismo sumiu do payload — o seletor virou enfeite")
+      .toContain("data_batismo: dataEscolhida");
+  });
+
+  it("as datas vêm do SERVIDOR (`datas` de /public/batismo/horarios), não de conta no aparelho", () => {
+    const s = src();
+    expect(s).toContain("/public/batismo/horarios");
+    expect(s).toContain("r?.datas");
+    // ⚠️ A cópia local do 4º domingo (`proximoBatismo()`) continua como RESERVA
+    // do banner antes de a resposta chegar. O que ela não pode voltar a ser é a
+    // fonte da data ENVIADA.
+    expect(s, "voltou a mandar a data calculada no aparelho").not.toContain("data_batismo: proxDt");
+    expect(s).not.toContain("data_batismo: proximoBatismo");
+  });
+
+  it("⚠️ o seletor só aparece com MAIS DE UMA data (com uma, o banner já responde)", () => {
+    expect(src()).toContain("datas.length > 1 &&");
+  });
+
+  it("⚠️ data de calendário é montada por componentes LOCAIS, nunca new Date('YYYY-MM-DD')", () => {
+    const s = src();
+    expect(s).toContain("isoParaDataLocal(");
+    // `new Date('2026-09-27')` é meia-noite UTC = 21h do dia anterior no Rio:
+    // o cartão do domingo 27 diria "sábado, 26".
+    expect(s).not.toMatch(/new Date\(\w+\.data_batismo/);
+    expect(s).not.toMatch(/new Date\(dataEscolhida/);
+  });
+
+  it("a tela não afirma mais que é SEMPRE o 4º domingo", () => {
+    const s = src();
+    expect(s).not.toContain('t("Sempre no 4º domingo do mês.")');
+    expect(s).toContain('t("Geralmente no 4º domingo do mês.")');
+  });
+
+  it("as frases da tela estão traduzidas (o portão de i18n)", () => {
+    const tr = ler("lib/translations.ts");
+    for (const frase of [
+      "Data do batismo",
+      "Escolha em qual mês você quer ser batizado(a).",
+      "sem vaga",
+      "vaga(s)",
+      "vagas abertas",
+      "Geralmente no 4º domingo do mês.",
+    ]) {
+      expect(tr, `falta tradução: ${frase}`).toContain(`"${frase}"`);
+    }
+  });
+});
