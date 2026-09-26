@@ -15,7 +15,7 @@
 - Implementado: `CampusProvider` + barreira que desmonta a árvore ao trocar usuário/campus; escolha em Configurações (oculta na preparação); preferência por usuário no AsyncStorage; retry e saída em falha.
 - `lib/api.ts`: geração capturada antes de obter JWT, header validado de seleção, cancelamento/recusa de respostas antigas em todos os verbos e upload. Portas públicas não herdam campus privado.
 - `lib/cultos.ts`: agenda e detalhe sem consulta direta à tabela `cultos`; cache da agenda por usuário/campus/dia. Dados pessoais do membro mantêm suas regras próprias.
-- `npm run verificar`: TypeScript, 450 testes (9 novos de campus), cobertura de i18n e 110/110 mutantes passaram. Validação nativa em aparelho ainda não executada; backend da PR ERP precisa estar disponível antes de release.
+- `npm run verificar`: TypeScript, 450 testes (9 novos de campus), cobertura de i18n e 110/110 mutantes passaram. Exportação Expo para Android e iOS concluída em `/tmp/cbrio-app-multicampus-export`. Validação nativa em aparelho ainda não executada; backend da PR ERP precisa estar disponível antes de release.
 - Continuidade: concluir CI/mutantes, validar seleção/retorno de background/deep link em dispositivo contra backend de ensaio, revisar os demais módulos e versões antigas antes de ativar outro campus.
 
 ## ⚠️⚠️ DEVOCIONAL · UMA tela pra TODO plano + YouTube dentro do app (25/09/2026 · 2ª leva)
