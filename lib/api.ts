@@ -8,6 +8,7 @@
 // Use api.get / api.post sempre que precisar falar com o backend.
 
 import { supabase } from "./supabase";
+import { captureCampusSession } from "./campusSession";
 import type { Marcadores } from "./marcadoresJornada";
 
 // Usar `www.` direto: cbrio.org -> www.cbrio.org redireciona 307 e
@@ -85,58 +86,49 @@ async function erroDaResposta(resp: Response): Promise<ErroApi> {
   return err;
 }
 
-export async function apiGet<T>(path: string, opts?: { auth?: boolean }): Promise<T> {
-  const headers: Record<string, string> = { Accept: "application/json" };
-  if (opts?.auth !== false) Object.assign(headers, await authHeaders());
-  const resp = await fetch(`${BASE}${path}`, { headers });
-  if (!resp.ok) {
-    // ⚠️ `apiGet` era o ÚNICO dos quatro verbos que lançava SEM o status
-    // (post/patch/put/delete já anexavam) — quem quisesse distinguir 401 de 429
-    // de 500 numa leitura só tinha a string da mensagem pra olhar.
-    throw await erroDaResposta(resp);
-  }
-  return resp.json();
+type ApiOptions = { auth?: boolean; campus?: boolean; campusId?: string | null; signal?: AbortSignal };
+
+async function requestJson<T>(path: string, method: string, body?: unknown, opts?: ApiOptions): Promise<T> {
+  const useAuth = opts?.auth !== false;
+  const scope = useAuth && opts?.campus !== false && !path.startsWith('/public/') ? captureCampusSession() : null;
+  try {
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (useAuth) Object.assign(headers, await authHeaders());
+    scope?.assertCurrent();
+    const campusId = opts?.campus === false ? opts.campusId : scope?.campusId;
+    if (useAuth && campusId && !path.startsWith('/public/')) headers['X-Campus-Id'] = campusId;
+    const multipart = body instanceof FormData;
+    if (body !== undefined && !multipart) headers['Content-Type'] = 'application/json';
+    const response = await fetch(`${BASE}${path}`, {
+      method, headers, signal: scope?.signal || opts?.signal,
+      ...(body !== undefined ? { body: multipart ? body : JSON.stringify(body) } : {}),
+    });
+    scope?.assertCurrent();
+    if (!response.ok) {
+      const error = await erroDaResposta(response);
+      scope?.assertCurrent();
+      throw error;
+    }
+    let result: T;
+    try { result = await response.json(); }
+    catch (error) { if (method === 'GET') throw error; result = {} as T; }
+    scope?.assertCurrent();
+    return result;
+  } catch (error) { scope?.assertCurrent(); throw error; }
+  finally { scope?.release(); }
 }
 
-export async function apiPost<T>(
-  path: string,
-  body: unknown,
-  opts?: { auth?: boolean }
-): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  };
-  if (opts?.auth !== false) Object.assign(headers, await authHeaders());
-  const resp = await fetch(`${BASE}${path}`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  });
-  if (!resp.ok) {
-    throw await erroDaResposta(resp);
-  }
-  return resp.json().catch(() => ({}) as T);
+export function apiGet<T>(path: string, opts?: ApiOptions): Promise<T> {
+  return requestJson<T>(path, 'GET', undefined, opts);
 }
-
-export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
-  const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json", ...(await authHeaders()) };
-  const resp = await fetch(`${BASE}${path}`, { method: "PATCH", headers, body: JSON.stringify(body) });
-  if (!resp.ok) {
-    throw await erroDaResposta(resp);
-  }
-  return resp.json().catch(() => ({}) as T);
+export function apiPost<T>(path: string, body: unknown, opts?: ApiOptions): Promise<T> {
+  return requestJson<T>(path, 'POST', body, opts);
 }
-
-/** PUT — mesmo desenho do apiPatch (o app não tinha; a rota de função de
- *  participante de grupo é PUT no backend, espelhando a do web). */
-export async function apiPut<T>(path: string, body: unknown): Promise<T> {
-  const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json", ...(await authHeaders()) };
-  const resp = await fetch(`${BASE}${path}`, { method: "PUT", headers, body: JSON.stringify(body) });
-  if (!resp.ok) {
-    throw await erroDaResposta(resp);
-  }
-  return resp.json().catch(() => ({}) as T);
+export function apiPatch<T>(path: string, body: unknown): Promise<T> {
+  return requestJson<T>(path, 'PATCH', body);
+}
+export function apiPut<T>(path: string, body: unknown): Promise<T> {
+  return requestJson<T>(path, 'PUT', body);
 }
 
 /**
@@ -159,23 +151,13 @@ export async function apiUpload<T>(
   campo: string,
   arquivo: { uri: string; name: string; type: string },
 ): Promise<T> {
-  const headers: Record<string, string> = { Accept: "application/json", ...(await authHeaders()) };
   const form = new FormData();
   form.append(campo, arquivo as unknown as Blob);
-  const resp = await fetch(`${BASE}${path}`, { method: "POST", headers, body: form });
-  if (!resp.ok) {
-    throw await erroDaResposta(resp);
-  }
-  return resp.json().catch(() => ({}) as T);
+  return requestJson<T>(path, 'POST', form);
 }
 
-export async function apiDelete<T>(path: string): Promise<T> {
-  const headers: Record<string, string> = { Accept: "application/json", ...(await authHeaders()) };
-  const resp = await fetch(`${BASE}${path}`, { method: "DELETE", headers });
-  if (!resp.ok) {
-    throw await erroDaResposta(resp);
-  }
-  return resp.json().catch(() => ({}) as T);
+export function apiDelete<T>(path: string): Promise<T> {
+  return requestJson<T>(path, 'DELETE');
 }
 
 // ===== Supervisor de área · montar escala pelo app =====
@@ -405,7 +387,7 @@ export function buscarGruposPublico(): Promise<GrupoPublico[]> {
 export type InscricaoQualquer = InscricaoVoluntariado | InscricaoGrupo | (Record<string, unknown> & { tipo: string });
 
 export function criarInscricaoApi(body: InscricaoQualquer): Promise<{ ok: boolean; message?: string }> {
-  return apiPost<{ ok: boolean; message?: string }>("/app/inscricoes", body);
+  return apiPost<{ ok: boolean; message?: string }>(body.tipo === "batismo" ? "/app/campus/batismo/inscricoes" : "/app/inscricoes", body);
 }
 
 import { normalizarVoluntariadoMe } from "./voluntariadoMe";

@@ -6,6 +6,16 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Selecione a data e o horário do batismo.": { en: "Choose the baptism date and time.", es: "Elegí la fecha y el horario del bautismo." },
+  "Nenhuma data de Batismo disponível.": { en: "No baptism date is available.", es: "No hay fechas de bautismo disponibles." },
+  "Evento inválido.": { en: "Invalid event.", es: "Evento inválido." },
+  "Escolha a data, o horário e a camisa e aceite os termos para continuar.": { en: "Choose a date, time and shirt size, and accept the terms to continue.", es: "Elegí la fecha, el horario y la talla, y aceptá los términos para continuar." },
+  "Datas indisponíveis": { en: "Dates unavailable", es: "Fechas no disponibles" },
+  "Tamanho da camisa": { en: "Shirt size", es: "Talla de camiseta" },
+  "Campus": { en: "Campus", es: "Campus" },
+  "Escolha a unidade cuja agenda você quer acompanhar. Seu cadastro permanece o mesmo.": { en: "Choose the campus whose schedule you want to follow. Your profile stays the same.", es: "Elegí la sede cuya agenda querés seguir. Tu registro sigue siendo el mismo." },
+  "Carregando campus…": { en: "Loading campus…", es: "Cargando campus…" },
+  "Escolha o campus para continuar.": { en: "Choose a campus to continue.", es: "Elegí un campus para continuar." },
   // ── Servir · Pessoas do Servir pra LÍDER (24/09/2026) ──
   "Vincule pessoas aos seus times e diga em quais cultos elas servem.": { en: "Link people to your teams and set which services they serve in.", es: "Vinculá personas a tus equipos y decí en qué cultos sirven." },
   "Busque alguém pra ver os times dela nos times que você lidera, vincular e dizer em quais cultos ela serve.": { en: "Search someone to see them in the teams you lead, link them and set which services they serve in.", es: "Buscá a alguien para verlo en los equipos que liderás, vincularlo y decir en qué cultos sirve." },

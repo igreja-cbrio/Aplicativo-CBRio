@@ -1,7 +1,8 @@
 import { criarInscricaoApi } from "./api";
 
 /**
- * Inscrições do app vão pelo endpoint genérico do backend CBRio:
+ * Batismo usa /app/campus/batismo/inscricoes com reserva atômica por campus.
+ * Os demais tipos mantêm o endpoint genérico do backend CBRio:
  *   POST https://cbrio.org/api/app/inscricoes
  * O corpo é JSON plano com `tipo` no nível raiz + os demais campos juntos.
  * O backend cria o registro em app_inscricoes (e dispara as triggers que

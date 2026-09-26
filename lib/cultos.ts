@@ -1,7 +1,7 @@
-import { supabase } from "./supabase";
+import { captureCampusSession } from "./campusSession";
 import { cacheSWR } from "./cache";
 import { apiGet } from "./api";
-import { diaBRT, hojeBRT } from "./dataBRT";
+import { hojeBRT } from "./dataBRT";
 
 export type CultoUpcoming = {
   id: string;
@@ -14,45 +14,13 @@ export type CultoUpcoming = {
 };
 
 async function buscarProximosCultos(diasFrente: number): Promise<CultoUpcoming[]> {
-  // ⚠️ DATA EM BRT, não UTC (ver lib/dataBRT.ts): das 21h do Rio o dia UTC já
-  // virou e o culto da noite (quarta é 20h) saía da lista durante o culto.
-  const { data, error } = await supabase
-    .from("cultos")
-    .select("id, nome, data, hora, vol_service_types(color, has_online_stream, has_kids)")
-    .gte("data", hojeBRT())
-    .lte("data", diaBRT(diasFrente))
-    .is("deleted_at", null)
-    .order("data", { ascending: true })
-    .order("hora", { ascending: true });
-  if (error) throw error;
-  type Row = {
-    id: string;
-    nome: string | null;
-    data: string;
-    hora: string;
-    vol_service_types?:
-      | { color: string | null; has_online_stream: boolean | null; has_kids: boolean | null }
-      | { color: string | null; has_online_stream: boolean | null; has_kids: boolean | null }[]
-      | null;
-  };
-  return ((data as Row[] | null) ?? []).map((r) => {
-    const st = Array.isArray(r.vol_service_types) ? r.vol_service_types[0] : r.vol_service_types;
-    return {
-      id: r.id,
-      nome: r.nome,
-      data: r.data,
-      hora: r.hora,
-      cor: st?.color ?? null,
-      has_online: st?.has_online_stream ?? null,
-      has_kids: st?.has_kids ?? null,
-    };
-  });
+  return apiGet<CultoUpcoming[]>(`/app/campus/agenda?dias=${encodeURIComponent(diasFrente)}`);
 }
 
 /**
- * Cultos a partir de hoje (até 7 dias por padrão), ordenados. Iguais
- * entre usuários -> cache local (SWR, TTL 10 min). A chave inclui a data
- * de hoje, então o cache vira sozinho de um dia pro outro. `forcar`
+ * Cultos a partir de hoje (até 7 dias por padrão), ordenados. O cache local
+ * (SWR, TTL 10 min) inclui usuário, campus e data em BRT; nunca reutiliza
+ * a agenda de outra unidade ou conta. `forcar`
  * ignora o cache (pull-to-refresh).
  */
 export async function proximosCultos(
@@ -61,12 +29,17 @@ export async function proximosCultos(
 ): Promise<CultoUpcoming[]> {
   // Mesma régua da query (BRT): chave em UTC virava 3h antes e o cache pedia
   // uma janela diferente da que a query usa.
-  const hojeKey = hojeBRT();
-  return cacheSWR(
-    `cultos:${diasFrente}:${hojeKey}`,
-    () => buscarProximosCultos(diasFrente),
-    { forcar }
-  );
+  const scope = captureCampusSession();
+  try {
+    if (!scope.userId || !scope.campusId) throw new Error('Escolha o campus para consultar a agenda.');
+    const resultado = await cacheSWR(
+      `cultos:${scope.cacheKey}:${diasFrente}:${hojeBRT()}`,
+      async () => { scope.assertCurrent(); return buscarProximosCultos(diasFrente); },
+      { forcar }
+    );
+    scope.assertCurrent();
+    return resultado;
+  } finally { scope.release(); }
 }
 
 export type CultoAoVivo = {
@@ -128,35 +101,7 @@ export type CultoDetalhe = {
 };
 
 export async function getCulto(id: string): Promise<CultoDetalhe | null> {
-  const { data } = await supabase
-    .from("cultos")
-    .select(
-      "id, nome, data, hora, youtube_video_id, vol_service_types(name, description, has_online_stream, has_kids, color)"
-    )
-    .eq("id", id)
-    // `cultos` é soft-deletable — culto apagado não abre por link antigo.
-    .is("deleted_at", null)
-    .maybeSingle();
-  if (!data) return null;
-  const raw = data as unknown as {
-    id: string;
-    nome: string | null;
-    data: string;
-    hora: string;
-    youtube_video_id: string | null;
-    vol_service_types?: CultoDetalhe["service_type"] | CultoDetalhe["service_type"][] | null;
-  };
-  const st = Array.isArray(raw.vol_service_types)
-    ? raw.vol_service_types[0] ?? null
-    : raw.vol_service_types ?? null;
-  return {
-    id: raw.id,
-    nome: raw.nome,
-    data: raw.data,
-    hora: raw.hora,
-    youtube_video_id: raw.youtube_video_id,
-    service_type: st,
-  };
+  return apiGet<CultoDetalhe | null>(`/app/campus/agenda/${encodeURIComponent(id)}`);
 }
 
 const DOW_LONG = [

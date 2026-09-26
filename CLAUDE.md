@@ -4,6 +4,27 @@
 > relevante (novo módulo, dependência, decisão de arquitetura, config de
 > backend). Ele é a memória e o contexto contínuo do app.
 
+## Multicampus · implementação em andamento (26/09/2026)
+
+- Branch `codex/multicampus-app`, base `origin/main` em `1c53b04`.
+- Depende do backend ERP PR #3067: https://github.com/igreja-cbrio/SISTEMA_INTEGRADO_CBRIO/pull/3067.
+- Objetivo desta PR: seleção de campus operacional, contexto/cache por usuário e campus, agenda pública segura e Batismo (inscrição, histórico próprio, fotos, gestão e notificações) por APIs com escopo validado.
+- A escolha do membro não concede permissões de funcionário nem altera seu cadastro-base.
+- Contratos: `/app/campus/contexto`, `/app/campus/agenda?dias=7` e `/app/campus/agenda/:id`; header `X-Campus-Id` validado no servidor.
+- Não publicar OTA nem mergear antes do backend compatível e das validações. Nenhuma migration ou alteração em produção executada nesta branch.
+- Implementado: `CampusProvider` + barreira que desmonta a árvore ao trocar usuário/campus; escolha em Configurações (oculta na preparação); preferência por usuário no AsyncStorage; retry e saída em falha.
+- `lib/api.ts`: geração capturada antes de obter JWT, header validado de seleção, cancelamento/recusa de respostas antigas em todos os verbos e upload. Portas públicas não herdam campus privado.
+- `lib/cultos.ts`: agenda e detalhe sem consulta direta à tabela `cultos`; cache da agenda por usuário/campus/dia. Dados pessoais do membro mantêm suas regras próprias.
+- Batismo: GET `/app/campus/batismo/horarios` e POST `/app/campus/batismo/inscricoes` dedicados. Data/horário por IDs do servidor, consentimento canônico obrigatório e reserva atômica; identidade confirmada por profiles.membro_id. UUID de retry persistido por usuário/campus/evento, sem fallback de data calculada. Depende das migrations 050000 e 070000 do ERP.
+- Histórico próprio, check-in e fotos: GET `/app/campus/batismo/me`, GET `/app/campus/batismo/:id/fotos` e POST `/app/campus/batismo/:id/checkin`. O backend exige profiles.membro_id confirmado; histórico próprio pode atravessar campi pela inscrição do membro, nunca apenas pela data. Fotos usam URLs assinadas de 15 minutos, sem acesso direto ao bucket. Dados globais pessoais de batismo anterior continuam próprios no cadastro central.
+- Gestão `/app/batismo/papel` e `/app/batismo/gestao*`: permissão Batismo existente MAIS vínculo ERP de campus (ou administração geral estrita). Catálogo público do membro não concede gestão. CRUD usa reserva atômica e matcher canônico; edição de contato acumula secundários. Respostas antigas e confirmações abertas antes da troca de campus são recusadas.
+- Edge `notify-batismo-fotos` agora exige Authorization service role + campus_id/evento_id. `notify-lembretes` exige a mesma autenticação e o ramo Batismo pagina atos locais, exclui cancelados/excluídos e deduplica por campus/evento/pessoa. Notificações abrem evento_id; o servidor revalida a inscrição própria. Não confiar em metadata de push como autorização.
+- `npm run verificar`: TypeScript, **465 testes (19 arquivos)** e i18n passaram neste checkpoint. Expo Android/iOS exportado em `/tmp/cbrio-app-multicampus-export` (8,49 MB/8,48 MB). Os 110/110 mutantes passaram no checkpoint anterior `aefd7c2`; não foram repetidos depois desta expansão. Validação nativa em aparelho ainda pendente.
+- **Gate de rollout:** preparar migrations ERP (incluindo 120000), backend dedicado e App compatível; NÃO publicar o backend que recusa `/app/inscricoes` tipo batismo antes da atualização compatível do App, salvo uma bridge segura e revisada. Versões antigas recebem 409 pedindo atualização. Nenhum fluxo de produção foi alterado aqui.
+- **Gate cron/Edge:** antes de publicar `notify-lembretes`, guardar a service role no Supabase Vault como `cbrio_notify_service_role` e atualizar o job com `supabase/lembretes.sql` (o job antigo não envia Authorization). Sem esse passo a Edge nova recusará o cron. Não colocar segredo no Git. Publicar a Edge de fotos coordenadamente com o backend que envia campus/evento e service role.
+- **Gate de privacidade:** bucket novo batismos-campi privado; legado batismos ainda depende do cutover explícito `backend/scripts/multicampus/cutover-batismo-storage.sql` na PR ERP, fora de migrations automáticas. Leituras novas já usam URL assinada; não afirmar isolamento histórico enquanto o bucket legado permanecer público.
+- Continuidade: validar seleção/retorno de background/deep link em dispositivo contra backend de ensaio, concluir consumidores ERP restantes (Entradas/Next/cron), revisar os demais módulos e versões antigas antes de ativar outro campus. Não mover cutovers destrutivos para migrations automáticas sem revisão e autorização. PR draft permanece aberta: https://github.com/igreja-cbrio/Aplicativo-CBRio/pull/178.
+
 ## ⚠️⚠️ DEVOCIONAL · UMA tela pra TODO plano + YouTube dentro do app (25/09/2026 · 2ª leva)
 
 Pedido do Marcos: *"essa nossa estética de Valores de Cristo universal para

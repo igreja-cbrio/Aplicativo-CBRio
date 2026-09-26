@@ -1,3 +1,4 @@
+import { destinoBatismo } from "@/lib/batismoDestino";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -130,7 +131,7 @@ export default function NotificacoesScreen() {
       case "grupo_saida":
         router.navigate("/meu-grupo"); return;
       case "batismo":
-        router.navigate("/batismo"); return;
+        router.navigate(destinoBatismo(data)); return;
       case "devocional":
         router.navigate("/devocional"); return;
       case "comunicado":

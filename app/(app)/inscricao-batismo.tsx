@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
 import { FormScaffold } from "@/components/inscricoes/FormScaffold";
+import { captureCampusSession } from "@/lib/campusSession";
+import { idReservaBatismo } from "@/lib/batismoReserva";
 import { apiGet } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
@@ -16,19 +18,18 @@ import { useDialogo } from "@/components/ui/Dialogo";
 import { criarInscricao } from "@/lib/inscricoes";
 import { dateBRToISO, isValidDateBR, maskDateBR } from "@/lib/validators";
 import {
-  proximoBatismo,
   formatProximoBatismo,
   diasAteProximoBatismo,
 } from "@/lib/proximoBatismo";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
-/** Espelho do que `GET /public/batismo/horarios` devolve (utils/batismoHorario no ERP). */
-type HorarioBatismo = { horario: string; label: string; vagas_restantes: number | null };
+/** Catálogo autenticado do campus; disponibilidade e IDs vêm do servidor. */
+type HorarioBatismo = { horario_id: string; horario: string; label: string; vagas_restantes: number | null };
 
 /** ⚠️ Uma DATA aberta pra batismo, com os horários dela. Campo `datas` do endpoint
  *  (25/09/2026 · web PR #3063). Servidor antigo não devolve — a tela recua para
  *  a data única do topo (`data_batismo`), como sempre foi. */
-type DataAberta = { data_batismo: string; horarios: HorarioBatismo[] };
+type DataAberta = { evento_id: string; data_batismo: string; horarios: HorarioBatismo[] };
 
 // ⚠️ 'YYYY-MM-DD' → Date LOCAL. `new Date('2026-09-27')` é meia-noite UTC = 21h
 // do dia anterior no Rio, e o banner mostraria "sábado, 26 de setembro" para a
@@ -48,24 +49,15 @@ export default function InscricaoBatismoScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
   const dlg = useDialogo();
-  const proxDtCliente = useMemo(() => proximoBatismo(), []);
-  // ⚠️⚠️ As DATAS abertas de batismo vindas do SERVIDOR (25/09/2026 · web PR #3063).
-  // Antes o app calculava sozinho pela fórmula do 4º domingo e usava sempre a
-  // "próxima" — quem queria o mês seguinte não tinha caminho. Agora o servidor
-  // devolve as 3 próximas e a pessoa escolhe.
-  // ⚠️ `proxDtCliente` fica como REDE: se o servidor não devolver `datas` (bundle
-  // antigo do backend, offline, timeout), o banner ainda mostra alguma data em
-  // vez de ficar em branco.
   const [datas, setDatas] = useState<DataAberta[]>([]);
   const [dataEscolhida, setDataEscolhida] = useState<string | null>(null);
   const dataEscolhidaDt = useMemo(
     () => (dataEscolhida ? isoParaDataLocal(dataEscolhida) : null),
     [dataEscolhida]
   );
-  // A data que o banner e a mensagem de confirmação usam: a escolhida se veio
-  // do servidor; senão a calculada no cliente.
-  const proxDt = dataEscolhidaDt || proxDtCliente;
-  const diasFalta = useMemo(() => diasAteProximoBatismo(proxDt), [proxDt]);
+  // Banner e confirmação só exibem uma data validada pelo catálogo do campus.
+  const proxDt = dataEscolhidaDt;
+  const diasFalta = useMemo(() => proxDt ? diasAteProximoBatismo(proxDt) : null, [proxDt]);
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [email, setEmail] = useState("");
@@ -75,27 +67,27 @@ export default function InscricaoBatismoScreen() {
   const [deficienciaDesc, setDeficienciaDesc] = useState("");
   const [obs, setObs] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [termos, setTermos] = useState("");
+  const [aceitaTermos, setAceitaTermos] = useState(false);
+  const [catalogoPronto, setCatalogoPronto] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
   const [grupoUrl, setGrupoUrl] = useState<string | null>(null);
   const [horarios, setHorarios] = useState<HorarioBatismo[]>([]);
   const [horarioSel, setHorarioSel] = useState<string | null>(null);
 
-  // ⚠️ A lista de horários vem do SERVIDOR (`GET /public/batismo/horarios`, a
-  // MESMA que o formulário público consome). O app NÃO decide o que está aberto
-  // nem quanta vaga sobra — é a lei "quem decide o que é válido é o backend".
-  // A resposta já esconde fechado e lotado; se falhar, o seletor simplesmente
-  // não aparece e a inscrição segue sem horário (o campo é opcional no
-  // servidor), em vez de travar a pessoa.
+  // Falha do catálogo bloqueia o envio; não existe reserva sem evento e horário.
   useEffect(() => {
     apiGet<{
+      termos_lgpd?: string;
       grupo_url?: string | null;
       data_batismo?: string | null;
       horarios?: HorarioBatismo[];
       datas?: DataAberta[];
-    }>("/public/batismo/horarios", { auth: false })
+    }>("/app/campus/batismo/horarios")
       .then((r) => {
         setGrupoUrl(r?.grupo_url ?? null);
+        setTermos(r.termos_lgpd || "");
         // ⚠️⚠️ Servidor NOVO (>= 25/09/2026) devolve `datas: [...]` com 3 datas
         // abertas. Servidor antigo devolve só `data_batismo`/`horarios` no topo —
         // aí a tela cai em UMA data só e o seletor de datas não aparece. Isto é
@@ -104,11 +96,13 @@ export default function InscricaoBatismoScreen() {
           ? r!.datas!
           : r?.data_batismo
           ? [{
+              evento_id: "",
               data_batismo: r.data_batismo,
               horarios: Array.isArray(r?.horarios) ? r.horarios! : [],
             }]
           : [];
         setDatas(listaDatas);
+        setCatalogoPronto(true);
         // Pré-seleciona a primeira data — que é o que a igreja anuncia no
         // púlpito e no WhatsApp. Um seletor vazio pedindo escolha dissolveria
         // esse anúncio.
@@ -121,7 +115,7 @@ export default function InscricaoBatismoScreen() {
         // servidor vai recusar com 409.
         setHorarioSel((sel) => (sel && lista.some((h) => h.horario === sel) ? sel : null));
       })
-      .catch(() => {});
+      .catch((e) => { setCatalogoPronto(false); setError(e instanceof Error ? e.message : t("Não foi possível enviar.")); });
   }, []);
 
   // ⚠️ Trocar a data TROCA os horários e limpa o que estava escolhido: "09:30"
@@ -158,7 +152,7 @@ export default function InscricaoBatismoScreen() {
   // ⚠️⚠️ CONFIRMAÇÃO ANTES DE ENVIAR (10/08/2026). O formulário disparava direto
   // e a inscrição de batismo é ato pastoral — não um toque a mais numa lista.
   // ⚠️ A pergunta cita a DATA do próximo batismo, que a tela já calculou
-  // (`proximoBatismo()`): confirmar sem saber pra quando é não é confirmar.
+  // recebeu do servidor: confirmar sem saber para quando é não é confirmar.
   function confirmarEnviar() {
     const quando = proxDt ? `
 
@@ -173,6 +167,11 @@ ${t("Próximo batismo")}: ${formatProximoBatismo(proxDt)}` : "";
 
   async function enviar() {
     setError(null);
+    const evento=datas.find(d=>d.data_batismo===dataEscolhida);
+    const horario=horarios.find(h=>h.horario===horarioSel);
+    if(!catalogoPronto || !evento?.evento_id || !horario?.horario_id || !termos || !aceitaTermos || !camisa.trim()) {
+      setError(t("Escolha a data, o horário e a camisa e aceite os termos para continuar.")); return;
+    }
     if (!nome || !telefone) {
       setError(t("Preencha pelo menos nome e telefone."));
       return;
@@ -182,11 +181,16 @@ ${t("Próximo batismo")}: ${formatProximoBatismo(proxDt)}` : "";
       return;
     }
     setEnviando(true);
+    const scope=captureCampusSession();
     try {
+      const inscricaoId=await idReservaBatismo(evento.evento_id);
+      scope.assertCurrent();
       const partes = nome.trim().split(/\s+/);
       await criarInscricao(
         "batismo",
         {
+          inscricao_id: inscricaoId,
+          evento_id: evento.evento_id, horario_id: horario.horario_id, aceita_termos: aceitaTermos,
           nome: partes[0],
           sobrenome: partes.slice(1).join(" "),
           telefone: telefone.trim(),
@@ -212,6 +216,7 @@ ${t("Próximo batismo")}: ${formatProximoBatismo(proxDt)}` : "";
     } catch (e) {
       setError(e instanceof Error ? e.message : t("Não foi possível enviar."));
     } finally {
+      scope.release();
       setEnviando(false);
     }
   }
@@ -242,9 +247,9 @@ ${t("Próximo batismo")}: ${formatProximoBatismo(proxDt)}` : "";
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.bannerLabel}>{t("Próximo batismo")}</Text>
-          <Text style={styles.bannerData}>{formatProximoBatismo(proxDt)}</Text>
+          <Text style={styles.bannerData}>{proxDt ? formatProximoBatismo(proxDt) : t("Datas indisponíveis")}</Text>
           <Text style={styles.bannerSub}>
-            {diasFalta === 0
+            {diasFalta === null ? "" : diasFalta === 0
               ? t("É hoje! 🙌")
               : diasFalta === 1
               ? t("Amanhã")
@@ -362,7 +367,7 @@ ${t("Próximo batismo")}: ${formatProximoBatismo(proxDt)}` : "";
           </View>
         </View>
       )}
-      <Input label={t("Tamanho da camisa (opcional)")} value={camisa} onChangeText={setCamisa} placeholder="P / M / G / GG" />
+      <Input label={t("Tamanho da camisa")} value={camisa} onChangeText={setCamisa} placeholder="P / M / G / GG" />
       <Checkbox
         checked={deficiencia}
         onChange={setDeficiencia}
@@ -376,6 +381,7 @@ ${t("Próximo batismo")}: ${formatProximoBatismo(proxDt)}` : "";
           placeholder={t("Conte como podemos te ajudar")}
         />
       )}
+      <Checkbox checked={aceitaTermos} onChange={setAceitaTermos} label={termos || t("Carregando…")} />
       <Input label={t("Observações (opcional)")} value={obs} onChangeText={setObs} />
     </FormScaffold>
   );

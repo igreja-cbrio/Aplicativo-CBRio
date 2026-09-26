@@ -4,11 +4,15 @@ export type BatismoPapel = {
   pode_gerenciar: boolean;
   nivel: number;
   superadmin: boolean;
+  campus_id?: string;
 };
 
 export type BatismoPessoaGestao = {
   id: string;
   membro_id: string | null;
+  igreja_id: string;
+  evento_id: string | null;
+  horario_id: string | null;
   nome: string;
   sobrenome: string | null;
   telefone: string | null;
@@ -29,10 +33,12 @@ export type BatismoPessoaGestao = {
   created_at: string;
 };
 
-export type BatismoHorarioGestao = { horario: string; label: string };
+export type BatismoHorarioGestao = { id: string; horario: string; label: string };
 
 export type BatismoGestao = {
-  data: string;
+  campus_id: string;
+  data: string | null;
+  eventos: { id: string; data: string }[];
   datas: string[];
   hoje: string;
   pessoas: BatismoPessoaGestao[];
@@ -63,7 +69,7 @@ export function getBatismoPapel(): Promise<BatismoPapel> {
   return apiGet<BatismoPapel>('/app/batismo/papel');
 }
 
-export function getBatismoGestao(data?: string): Promise<BatismoGestao> {
+export function getBatismoGestao(data?: string | null): Promise<BatismoGestao> {
   const query = data ? `?data=${encodeURIComponent(data)}` : '';
   return apiGet<BatismoGestao>(`/app/batismo/gestao${query}`);
 }

@@ -12,6 +12,8 @@
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { makeAdmin, notificar } from "../_shared/notify.ts";
 
+import { enviarLembretesBatismo, autorizarCronLembretes } from "../_shared/batismoLembretes.ts";
+
 const TZ = "America/Sao_Paulo";
 
 /** Componentes da data/hora atual no fuso de Brasília. */
@@ -74,44 +76,6 @@ async function lembreteCultoOnline(sb: SupabaseClient, hoje: string, minutosAgor
       }
     );
     console.log(`[lembretes] culto online ${c.id} -> ${userIds.length} usuários`);
-  }
-}
-
-async function lembretesBatismo(sb: SupabaseClient, hoje: string, minutosAgora: number) {
-  // Véspera às 18h (janela 18:00–18:09) e dia às 8h (08:00–08:09)
-  const casos: { quando: string; janela: [number, number]; chave: string; titulo: string; body: string }[] = [
-    {
-      quando: dataMaisDias(hoje, 1),
-      janela: [18 * 60, 18 * 60 + 9],
-      chave: "batismo-vespera",
-      titulo: "Amanhã é o seu batismo! 💙",
-      body: "Chegue 30 minutos antes, leve roupa de banho e toalha. Estamos te esperando!",
-    },
-    {
-      quando: hoje,
-      janela: [8 * 60, 8 * 60 + 9],
-      chave: "batismo-dia",
-      titulo: "Hoje é o grande dia! 🌊",
-      body: "Seu batismo é hoje. Não esqueça a toalha — e faça o check-in no app quando chegar.",
-    },
-  ];
-  for (const caso of casos) {
-    if (minutosAgora < caso.janela[0] || minutosAgora > caso.janela[1]) continue;
-    const { data: inscricoes } = await sb
-      .from("batismo_inscricoes")
-      .select("membro_id")
-      .eq("data_batismo", caso.quando)
-      .in("status", ["pendente", "confirmado"])
-      .not("membro_id", "is", null);
-    const membroIds: string[] = [];
-    for (const i of inscricoes ?? []) {
-      if (await deduplicar(sb, `${caso.chave}:${caso.quando}:${i.membro_id}`)) {
-        membroIds.push(i.membro_id as string);
-      }
-    }
-    if (!membroIds.length) continue;
-    await notificar({ membroIds }, { tipo: "batismo", titulo: caso.titulo, body: caso.body });
-    console.log(`[lembretes] ${caso.chave} ${caso.quando} -> ${membroIds.length} membros`);
   }
 }
 
@@ -275,12 +239,15 @@ async function lembreteAniversario(sb: SupabaseClient, hoje: string, minutosAgor
   console.log(`[lembretes] aniversário -> ${membroIds.length} membros`);
 }
 
-Deno.serve(async (_req) => {
+Deno.serve(async (req) => {
+  const segredo = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const negado = autorizarCronLembretes(req, segredo);
+  if (negado) return negado;
   try {
     const sb = makeAdmin();
     const { data: hoje, minutos } = agoraBRT();
     await lembreteCultoOnline(sb, hoje, minutos);
-    await lembretesBatismo(sb, hoje, minutos);
+    await enviarLembretesBatismo({ db: sb, notify: notificar }, hoje, minutos);
     await lembreteNext(sb, hoje, minutos);
     await lembreteDevocional(sb, hoje, minutos);
     await lembreteAniversario(sb, hoje, minutos);
