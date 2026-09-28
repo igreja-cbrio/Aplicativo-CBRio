@@ -8,7 +8,7 @@ vi.mock('@react-native-async-storage/async-storage', () => ({ default: {
   removeItem: vi.fn(async (key: string) => { mocks.values.delete(key); }),
 } }));
 import { idReservaBatismo } from '../lib/batismoReserva';
-import { apiGet, apiPost, criarInscricaoApi } from '../lib/api';
+import { apiGet, apiPost, criarInscricaoApi, checkinNext, getNextMe } from '../lib/api';
 import { captureCampusSession, setCampusSession } from '../lib/campusSession';
 import { campusSalvo, salvarCampus, validarContextoCampus } from '../lib/campus';
 import { getBatismoGestao, editarPessoaBatismo } from '../lib/batismoGestao';
@@ -115,4 +115,23 @@ it('gestão carrega e edita com campus capturado sem reaproveitar resposta após
  const request=getBatismoGestao('2099-09-27');await vi.waitFor(()=>expect(fetcher).toHaveBeenCalledOnce());
  expect(fetcher.mock.calls[0][1].headers['X-Campus-Id']).toBe('sede');setCampusSession('pessoa','outro');response.resolve(json({pessoas:[{nome:'Pessoa da Sede'}]}));await expect(request).rejects.toThrow('campus');
  await editarPessoaBatismo('inscricao',{observacoes:'Local'});expect(fetcher.mock.calls[1][1].headers['X-Campus-Id']).toBe('outro');
+});
+
+
+describe('NEXT local no App',()=>{
+ it('consulta a matrícula com contexto atual e aceita localização ausente sem fallback',async()=>{
+  const fetcher=vi.fn().mockResolvedValue(json({campus_id:'sede',localizacao_configurada:false,igreja:null,encontros:[],inscrito_next:true}));vi.stubGlobal('fetch',fetcher);
+  expect(await getNextMe()).toMatchObject({igreja:null,localizacao_configurada:false});expect(fetcher.mock.calls[0][1].headers['X-Campus-Id']).toBe('sede');
+ });
+ it('preserva código e distância do erro de check-in para distinguir acesso de geofence',async()=>{
+  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(json({error:'Campus não permitido',code:'campus_acesso_negado'},403)));
+  expect(await checkinNext('encontro',0,0)).toMatchObject({ok:false,status:403,code:'campus_acesso_negado',distancia_m:undefined});
+  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(json({error:'Fora do raio',distancia_m:500},403)));
+  expect(await checkinNext('encontro',0,0)).toMatchObject({ok:false,status:403,distancia_m:500});
+ });
+ it('troca durante o token do check-in não vira erro geográfico nem dispara requisição',async()=>{
+  const token=deferred<unknown>();mocks.session.mockReturnValue(token.promise);const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
+  const pending=checkinNext('encontro',0,0);setCampusSession('pessoa','outro');token.resolve({data:{session:{access_token:'novo'}}});
+  await expect(pending).rejects.toMatchObject({code:'CAMPUS_CONTEXT_CHANGED'});expect(fetcher).not.toHaveBeenCalled();
+ });
 });

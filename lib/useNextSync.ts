@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { getNextMe, type NextMe } from "./api";
+import {captureCampusSession} from "./campusSession";
+import {nextContextoMudou,nextErroExigeLimpeza} from "./nextCampus";
 
 /** Mantém a aba NEXT sincronizada: refetch ao focar, foreground e a cada 120s. */
 export function useNextSync() {
@@ -9,18 +11,26 @@ export function useNextSync() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const ativo = useRef(true);
+  const ultima=useRef(0);
 
   const recarregar = useCallback(async () => {
+    const turno=++ultima.current;
+    const scope=captureCampusSession();
     try {
       const dados = await getNextMe();
-      if (ativo.current) {
+      scope.assertCurrent();
+      if (ativo.current && turno===ultima.current) {
         setMe(dados);
         setErro(null);
       }
     } catch (e) {
-      if (ativo.current) setErro(e instanceof Error ? e.message : "Falha ao carregar.");
+      if (ativo.current && turno===ultima.current) {
+        if(nextErroExigeLimpeza(e)) setMe(null);
+        if(!nextContextoMudou(e)) setErro(e instanceof Error ? e.message : "Falha ao carregar.");
+      }
     } finally {
-      if (ativo.current) setLoading(false);
+      scope.release();
+      if (ativo.current && turno===ultima.current) setLoading(false);
     }
   }, []);
 

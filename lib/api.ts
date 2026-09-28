@@ -1048,6 +1048,8 @@ export type NextEncontro = {
 };
 
 export type NextMe = {
+  campus_id?: string;
+  localizacao_configurada?: boolean;
   inscrito_next: boolean;
   encontros: NextEncontro[];
   igreja: { lat: number; lng: number; raio_m: number } | null;
@@ -1072,6 +1074,7 @@ export function inscreverNext(): Promise<NextInscreverResp> {
 }
 
 export type NextCheckinErro = {
+  code?: string;
   ok: false;
   error: string;
   distancia_m?: number;
@@ -1095,17 +1098,12 @@ export async function checkinNext(
     );
     return { ok: true, check_in_at: data.check_in_at };
   } catch (e) {
-    const err = e as Error & { status?: number; raw?: unknown };
-    // apiPost lança Error com .status; o body veio em .message OU como JSON.
-    // O backend devolve { error, distancia_m?, needLocation? } — tenta extrair.
-    let body: Record<string, unknown> = {};
-    try {
-      body = JSON.parse(err.message) as Record<string, unknown>;
-    } catch {
-      body = { error: err.message };
-    }
+    const err = e as ErroApi & { code?: string };
+    if(err.code==='CAMPUS_CONTEXT_CHANGED') throw err;
+    const body: Record<string, unknown> = err.corpo && typeof err.corpo==='object' ? err.corpo : { error: err.message };
     return {
       ok: false,
+      code: typeof body.code==='string' ? body.code : undefined,
       error: (body.error as string) ?? err.message ?? "Falha no check-in.",
       distancia_m: typeof body.distancia_m === "number" ? body.distancia_m : undefined,
       needLocation: body.needLocation === true,
@@ -1196,6 +1194,7 @@ export type NextTurmaGestao = NextTurmaResumo & {
 };
 
 export type NextGestao = {
+  campus_id?: string;
   gerencia: boolean;
   /**
    * ⚠️ O que separa VER de AGIR. Leitura alta na matriz não escreve (é a régua

@@ -21,13 +21,16 @@ import { subirUmNivel } from "@/lib/hierarquia";
 import { Skeleton } from "@/components/anim/Skeleton";
 import { useNextSync } from "@/lib/useNextSync";
 import {
-  inscreverNext, checkinNext, getNextGestao, getNextPapel,
+  inscreverNext, checkinNext, getNextGestao,
   type NextEncontro, type NextGestao, type NextTurmaGestao,
 } from "@/lib/api";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { BRAND_FONT } from "@/lib/fonts";
 import { NextGestaoScreen } from "@/components/next/NextGestao";
 import { useDialogo } from "@/components/ui/Dialogo";
+import {useCampus} from "@/contexts/CampusContext";
+import {captureCampusSession} from "@/lib/campusSession";
+import {nextContextoMudou,nextLocalizacaoDisponivel} from "@/lib/nextCampus";
 
 // ⚠️ NEXT é o NOME do curso — marca, não texto de interface. Vive numa
 // constante em vez de literal repetido: assim o scanner de i18n não a cobra
@@ -69,41 +72,22 @@ export default function NextScreen() {
   const t = useT();
   const dlg = useDialogo();
   const { me, loading, erro, recarregar } = useNextSync();
+  const {contexto}=useCampus();
+  const campusNome=contexto?.campi.find(c=>c.id===contexto.campus_id)?.nome;
+  const localizacaoDisponivel=nextLocalizacaoDisponivel(me);
 
   const [inscrevendo, setInscrevendo] = useState(false);
   const [checkinId, setCheckinId] = useState<string | null>(null);
 
-  // ⚠️⚠️ GESTÃO DO NEXT · o gate é PERMISSÃO, não posse (03/09/2026).
-  //
-  // Antes esta seção lia `getNextPapel()`, que gateia por POSSE
-  // (`next_turmas.responsavel_id = membro.id`) — e as 44 turmas vivas têm esse
-  // campo NULO. Ou seja `responsavel` respondia `false` pra TODO MUNDO e a
-  // seção NUNCA renderizava: a tela de gestão existia e era inalcançável.
-  //
-  // ⚠️ `getNextPapel` fica como PLANO B pra backend antigo (deploy em 2
-  // etapas): sem ele, um bundle novo contra API velha esconderia a gestão de
-  // quem entra por posse. O shape de `/next/papel` é INTOCADO de propósito.
+  // O servidor decide o papel no campus atual; uma recusa não chama uma porta legada.
   const [gestao, setGestao] = useState<NextGestao | null>(null);
-  useFocusEffect(
-    useCallback(() => {
-      let vivo = true;
-      getNextGestao()
-        .then((g) => { if (vivo) setGestao(g.gerencia ? g : null); })
-        .catch(() =>
-          getNextPapel()
-            .then((p) => {
-              if (!vivo) return;
-              setGestao(
-                p.responsavel
-                  ? { gerencia: true, escreve: true, por_permissao: false, eh_responsavel: true, espera: 0, turmas: p.turmas }
-                  : null
-              );
-            })
-            .catch(() => { if (vivo) setGestao(null); })
-        );
-      return () => { vivo = false; };
-    }, [])
-  );
+  useFocusEffect(useCallback(() => {
+    let vivo=true;
+    const scope=captureCampusSession();
+    getNextGestao().then(g=>{scope.assertCurrent();if(vivo)setGestao(g.gerencia?g:null);})
+      .catch(()=>{if(vivo)setGestao(null);}).finally(()=>scope.release());
+    return()=>{vivo=false;scope.release();};
+  },[]));
   // ⚠️ Sai da gestão pra visão de membro SEM trocar de rota (estado local):
   // rota nova aqui significaria a seta de voltar competindo com o toggle.
   const [verComoMembro, setVerComoMembro] = useState(false);
@@ -114,6 +98,8 @@ export default function NextScreen() {
   // do Android ao lado da folha bonita de Recusar. Seguro aqui porque NÃO há
   // <Modal> aberto quando dispara — o diálogo é irmão da tela.
   async function confirmarInscrever() {
+    const scope=captureCampusSession();
+    try {
     const quando = me?.encontros?.length
       ? `
 
@@ -121,17 +107,22 @@ ${t("Primeiro encontro")}: ${dataComHora(me.encontros[0].data, me.encontros[0].h
       : "";
     const ok = await dlg.confirmar({
       titulo: t("Confirmar sua inscrição no NEXT?"),
-      mensagem: `${t("A equipe vai te receber nos encontros do NEXT.")}${quando}`,
+      mensagem: `${campusNome ? campusNome+"\n\n" : ""}${t("A equipe vai te receber nos encontros do NEXT.")}${quando}`,
       acao: t("Quero participar"),
     });
+    scope.assertCurrent();
     if (ok) await inscrever();
+    } catch(e) { if(!nextContextoMudou(e)) Alert.alert(t("Não foi possível inscrever"),e instanceof Error?e.message:t("Erro.")); }
+    finally { scope.release(); }
   }
 
   async function inscrever() {
+    const scope=captureCampusSession();
     setInscrevendo(true);
     try {
       const resp = await inscreverNext();
       await recarregar();
+      scope.assertCurrent();
       Alert.alert(
         t("Inscrição NEXT confirmada!"),
         resp.jaInscrito
@@ -139,17 +130,21 @@ ${t("Primeiro encontro")}: ${dataComHora(me.encontros[0].data, me.encontros[0].h
           : t("Tá feito. A equipe vai te receber muito bem.")
       );
     } catch (e) {
+      if(nextContextoMudou(e)) return;
       Alert.alert(t("Não foi possível inscrever"), e instanceof Error ? e.message : t("Erro."));
     } finally {
+      scope.release();
       setInscrevendo(false);
     }
   }
 
-  async function pedirLocalizacao(): Promise<Location.LocationObject | null> {
+  async function pedirLocalizacao(assertCurrent: () => void): Promise<Location.LocationObject | null> {
     const { status } = await Location.getForegroundPermissionsAsync();
+    assertCurrent();
     let s = status;
     if (s !== "granted") {
       const r = await Location.requestForegroundPermissionsAsync();
+      assertCurrent();
       s = r.status;
     }
     if (s !== "granted") {
@@ -158,35 +153,43 @@ ${t("Primeiro encontro")}: ${dataComHora(me.encontros[0].data, me.encontros[0].h
         mensagem: t("Pra confirmar sua presença no NEXT, precisamos da sua localização."),
         acao: t("Abrir Configurações"),
       });
+      assertCurrent();
       if (abrir) Linking.openSettings();
       return null;
     }
     try {
-      return await Location.getCurrentPositionAsync({
+      const local = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
+      assertCurrent();
+      return local;
     } catch {
+      assertCurrent();
       Alert.alert(t("Falha ao obter localização"), t("Tente novamente."));
       return null;
     }
   }
 
   async function fazerCheckin(enc: NextEncontro) {
+    if(!localizacaoDisponivel) return;
+    const scope=captureCampusSession();
     setCheckinId(enc.id);
     try {
-      const loc = await pedirLocalizacao();
+      const loc = await pedirLocalizacao(scope.assertCurrent);
+      scope.assertCurrent();
       if (!loc) return;
       const resp = await checkinNext(enc.id, loc.coords.latitude, loc.coords.longitude);
+      scope.assertCurrent();
       if (resp.ok) {
         Alert.alert(t("Presença confirmada!"), t("Te vejo já 💙"));
         await recarregar();
         return;
       }
       if (resp.needLocation) {
-        await pedirLocalizacao();
+        await pedirLocalizacao(scope.assertCurrent);
         return;
       }
-      if (resp.status === 403) {
+      if (resp.status === 403 && typeof resp.distancia_m === "number") {
         const dist = resp.distancia_m
           ? ` (${t("você está a")} ${Math.round(resp.distancia_m)}m)`
           : "";
@@ -197,7 +200,10 @@ ${t("Primeiro encontro")}: ${dataComHora(me.encontros[0].data, me.encontros[0].h
         return;
       }
       Alert.alert(t("Não foi possível confirmar"), resp.error || t("Tente novamente."));
+    } catch(e) {
+      if(!nextContextoMudou(e)) Alert.alert(t("Não foi possível confirmar"),e instanceof Error?e.message:t("Tente novamente."));
     } finally {
+      scope.release();
       setCheckinId(null);
     }
   }
@@ -221,7 +227,7 @@ ${t("Primeiro encontro")}: ${dataComHora(me.encontros[0].data, me.encontros[0].h
           </Pressable>
           <View style={{ flex: 1 }}>
             <Text style={styles.titleGestao}>{TITULO_NEXT}</Text>
-            <Text style={styles.gestaoSub}>{t("Gestão da equipe")}</Text>
+            <Text style={styles.gestaoSub}>{campusNome || t("Gestão da equipe")}</Text>
           </View>
           {/* ⚠️ A porta de volta pra visão de MEMBRO existe de propósito: quem
               lidera o NEXT também pode ter inscrição e check-in próprios, e sem
@@ -251,6 +257,8 @@ ${t("Primeiro encontro")}: ${dataComHora(me.encontros[0].data, me.encontros[0].h
           <Text style={styles.title}>{TITULO_NEXT}</Text>
           <View style={{ width: 24 }} />
         </View>
+
+        {!!campusNome && <Text style={styles.section}>{campusNome}</Text>}
 
         {loading ? (
           <View style={{ gap: spacing.md }}>
@@ -327,7 +335,7 @@ ${t("Primeiro encontro")}: ${dataComHora(me.encontros[0].data, me.encontros[0].h
             ) : (
               me.encontros.map((enc) => {
                 const confirmado = !!enc.check_in_at;
-                const podeAgora = enc.pode_checkin_hoje && !confirmado;
+                const podeAgora = localizacaoDisponivel && enc.pode_checkin_hoje && !confirmado;
                 return (
                   <View key={enc.id} style={styles.card}>
                     <View style={styles.cardHeader}>
@@ -354,7 +362,7 @@ ${t("Primeiro encontro")}: ${dataComHora(me.encontros[0].data, me.encontros[0].h
                       <View style={styles.indisponivelBox}>
                         <Ionicons name="time-outline" size={16} color={colors.textMuted} />
                         <Text style={styles.indisponivelTxt}>
-                          {t("Check-in abre no dia do encontro.")}
+                          {localizacaoDisponivel ? t("Check-in abre no dia do encontro.") : t("A localização deste campus ainda não foi configurada. Procure a equipe para confirmar sua presença.")}
                         </Text>
                       </View>
                     )}

@@ -17,7 +17,9 @@
 // ausente. Nada aqui reimplementa régua: direcionar roda a MESMA
 // `direcionarMatricula` do totem, o walk-in passa pelo matcher canônico.
 // ============================================================================
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {captureCampusSession} from '@/lib/campusSession';
+import {nextContextoMudou,nextErroExigeLimpeza} from '@/lib/nextCampus';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator, Alert, Linking, Modal, Pressable, RefreshControl,
   ScrollView, StyleSheet, Text, TextInput, View,
@@ -93,6 +95,7 @@ export function NextGestaoScreen() {
   const t = useT();
 
   const [gestao, setGestao] = useState<NextGestao | null>(null);
+  const podeVerEspera=gestao?.por_permissao===true;
   const [turmaId, setTurmaId] = useState<string | null>(null);
   const [detalhe, setDetalhe] = useState<NextTurmaDetalhe | null>(null);
   const [espera, setEspera] = useState<NextPessoaEspera[] | null>(null);
@@ -122,42 +125,68 @@ export function NextGestaoScreen() {
   // alocar da fila
   const [alocarAlvo, setAlocarAlvo] = useState<NextPessoaEspera | null>(null);
 
+  const detalheVersao=useRef(0);
+  const limparAcesso=useCallback(()=>{
+    detalheVersao.current+=1;
+    setGestao(null);setTurmaId(null);setDetalhe(null);setEspera(null);
+    setDirAlvo(null);setDirDestinos([]);setDirAreas([]);setDirHorario(null);setOpcoes(null);
+    setAlocarAlvo(null);setWalkAberto(false);setWNome('');setWSobrenome('');setWTelefone('');setWCpf('');
+  },[]);
+
   const carregarGestao = useCallback(async () => {
     setErro(null);
+    const scope=captureCampusSession();
     try {
       const g = await getNextGestao();
+      scope.assertCurrent();
+      if(!g.gerencia) {limparAcesso();return null;}
       setGestao(g);
+      if(!g.por_permissao){setAba("turma");setEspera(null);setAvisoEspera(null);}
       // ⚠️ Só escolhe turma na PRIMEIRA carga: refrescar não pode arrastar a
       // pessoa pra outra turma no meio do trabalho dela.
-      setTurmaId((atual) => atual ?? turmaSugerida(g.turmas, hojeBRT()));
+      setTurmaId((atual) => g.turmas.some(x=>x.id===atual) ? atual : turmaSugerida(g.turmas, hojeBRT()));
+      return g;
     } catch (e) {
+      if(nextContextoMudou(e)) return;
+      if(nextErroExigeLimpeza(e))limparAcesso();
       setErro((e as Error)?.message || t("Não foi possível carregar a gestão do NEXT."));
-    }
-  }, [t]);
+    } finally {scope.release();}
+  }, [t,limparAcesso]);
 
   const carregarDetalhe = useCallback(async (id: string) => {
+    const scope=captureCampusSession();
+    const versao=++detalheVersao.current;
     try {
-      setDetalhe(await getNextTurma(id));
+      const result=await getNextTurma(id);
+      scope.assertCurrent();
+      if(versao===detalheVersao.current)setDetalhe(result);
     } catch (e) {
+      if(nextContextoMudou(e) || versao!==detalheVersao.current) return;
+      if(nextErroExigeLimpeza(e))limparAcesso();
       // ⚠️ Erro no detalhe NÃO derruba a tela: o trilho de turmas e a fila
       // continuam de pé, e a mensagem diz o que faltou.
       setDetalhe(null);
       setErro((e as Error)?.message || t("Não foi possível carregar esta turma."));
-    }
-  }, [t]);
+    } finally {scope.release();}
+  }, [t,limparAcesso]);
 
   const carregarEspera = useCallback(async () => {
+    if(!podeVerEspera)return;
     setAvisoEspera(null);
+    const scope=captureCampusSession();
     try {
       const r = await getNextListaEspera();
+      scope.assertCurrent();
       setEspera(r.pessoas || []);
     } catch (e) {
+      if(nextContextoMudou(e)) return;
+      if(nextErroExigeLimpeza(e))limparAcesso();
       // ⚠️ Erro NÃO vira fila vazia — "ninguém esperando" e "não carregou"
       // levam a decisões opostas.
       setEspera(null);
       setAvisoEspera((e as Error)?.message || t("Não foi possível carregar a fila."));
-    }
-  }, [t]);
+    } finally {scope.release();}
+  }, [t,limparAcesso,podeVerEspera]);
 
   useFocusEffect(useCallback(() => { void carregarGestao(); }, [carregarGestao]));
   // ⚠️⚠️ LIMPA O DETALHE ANTES DE BUSCAR O DA TURMA NOVA. Sem isso a lista da
@@ -167,19 +196,21 @@ export function NextGestaoScreen() {
   // versão em miniatura do bug de 12/07 no web (19 nomes lançados no culto
   // errado), que a régua "o culto vem do token" existe pra impedir.
   useEffect(() => {
-    if (!turmaId) return;
+    if (!turmaId) {setDetalhe(null);return;}
     setDetalhe(null);
     void carregarDetalhe(turmaId);
   }, [turmaId, carregarDetalhe]);
   // ⚠️ A fila só é buscada quando a aba abre: ela carrega PII (telefone) e não
   // tem por que trafegar enquanto a pessoa está marcando presença.
-  useEffect(() => { if (aba === "aceitacoes" && espera === null && !avisoEspera) void carregarEspera(); }, [aba, espera, avisoEspera, carregarEspera]);
+  useEffect(() => { if (podeVerEspera && aba === "aceitacoes" && espera === null && !avisoEspera) void carregarEspera(); }, [aba, espera, avisoEspera, carregarEspera,podeVerEspera]);
 
   async function refrescar() {
     setRefrescando(true);
     try {
-      await carregarGestao();
-      if (turmaId) await carregarDetalhe(turmaId);
+      const atual=await carregarGestao();
+      if(!atual)return;
+      const selecionada=atual.turmas.some(x=>x.id===turmaId)?turmaId:turmaSugerida(atual.turmas,hojeBRT());
+      if (selecionada) await carregarDetalhe(selecionada);
       if (aba === "aceitacoes") await carregarEspera();
     } finally { setRefrescando(false); }
   }
@@ -219,13 +250,17 @@ export function NextGestaoScreen() {
     const chave = `${encontroAtual}:${m.id}`;
     const novo = presMap.get(chave) !== true;
     setProcessando(m.id);
+    const scope=captureCampusSession();
     try {
       await marcarPresencaNext(encontroAtual, m.id, novo);
+      scope.assertCurrent();
       Haptics.selectionAsync().catch(() => {});
       if (turmaId) await carregarDetalhe(turmaId);
     } catch (e) {
+      if(nextContextoMudou(e)) return;
+      if(nextErroExigeLimpeza(e))limparAcesso();
       Alert.alert(t("Não foi possível marcar presença"), (e as Error)?.message || t("Tente novamente."));
-    } finally { setProcessando(null); }
+    } finally { scope.release(); setProcessando(null); }
   }
 
   // ═══ walk-in ═══
@@ -242,6 +277,7 @@ export function NextGestaoScreen() {
       return;
     }
     setSalvandoWalk(true);
+    const scope=captureCampusSession();
     try {
       const r = await nextWalkIn(turmaId, {
         nome,
@@ -252,6 +288,7 @@ export function NextGestaoScreen() {
         // entra na turma e a chamada do dia continua sem ele.
         encontro_id: encontroAtual,
       });
+      scope.assertCurrent();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       trackEvento("next_walkin", { entity_id: turmaId, label: r.ja_inscrito ? "ja_inscrito" : "nova" });
       setWalkAberto(false);
@@ -259,6 +296,7 @@ export function NextGestaoScreen() {
       // ⚠️ DIZ quando o matcher LIGOU numa pessoa que já existia: sem isso o
       // líder acha que não funcionou e tenta de novo com outro nome — o
       // comportamento que fabrica duplicata na base.
+      scope.assertCurrent();
       Alert.alert(
         r.ja_inscrito ? t("Já estava na turma") : t("Registrado"),
         r.ja_inscrito
@@ -268,22 +306,28 @@ export function NextGestaoScreen() {
             : t("Pronto. A pessoa entrou na turma e a presença foi marcada.")
       );
     } catch (e) {
+      if(nextContextoMudou(e)) return;
+      if(nextErroExigeLimpeza(e))limparAcesso();
       const campo = (e as { corpo?: { campo?: string } })?.corpo?.campo;
       Alert.alert(campo ? t("Confira o campo") : t("Não foi possível registrar"), (e as Error)?.message || t("Erro."));
-    } finally { setSalvandoWalk(false); }
+    } finally { scope.release(); setSalvandoWalk(false); }
   }
 
   // ═══ direcionamento ═══
   async function abrirDirecionar(m: NextMatricula) {
     setDirAlvo(m); setDirDestinos([]); setDirAreas([]); setDirHorario(null);
     if (opcoes) return;
+    const scope=captureCampusSession();
     try {
-      setOpcoes(await getNextDirecionarOpcoes());
-    } catch {
+      const result=await getNextDirecionarOpcoes();
+      scope.assertCurrent();setOpcoes(result);
+    } catch (e) {
+      if(nextContextoMudou(e))return;
+      if(nextErroExigeLimpeza(e)){limparAcesso();return;}
       // ⚠️ Falha aqui NÃO fecha a folha: grupo e servir seguem possíveis. O que
       // fica bloqueado é o batismo, e a régua diz isso ao lado do botão.
       setOpcoes({ batismo: { data_batismo: null, horarios: [], indisponivel: true }, areas: [], areas_indisponivel: true });
-    }
+    } finally {scope.release();}
   }
 
   function alternar<T>(l: T[], v: T): T[] {
@@ -299,30 +343,37 @@ export function NextGestaoScreen() {
   async function salvarDirecionar() {
     if (!dirAlvo || !vereditoDir.pode) return;
     setSalvandoDir(true);
+    const scope=captureCampusSession();
     try {
       await direcionarNextMatricula(dirAlvo.id, {
         destinos: dirDestinos,
         areas: dirAreas.length ? dirAreas : undefined,
         horario_batismo: dirDestinos.includes("batismo") ? dirHorario : null,
       });
+      scope.assertCurrent();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       trackEvento("next_direcionou", { entity_id: turmaId || undefined, label: dirDestinos.join("+") });
       setDirAlvo(null);
       if (turmaId) await carregarDetalhe(turmaId);
+      scope.assertCurrent();
       Alert.alert(t("Direcionado"), t("A equipe de cada área recebe o encaminhamento."));
     } catch (e) {
+      if(nextContextoMudou(e)) return;
+      if(nextErroExigeLimpeza(e))limparAcesso();
       // ⚠️ A régua do servidor LANÇA regra de negócio com código (horário
       // ausente = 400 · lotado = 409). Propagar a mensagem dela é o que faz a
       // tela pedir o horário em vez de dizer "erro".
       Alert.alert(t("Não foi possível direcionar"), (e as Error)?.message || t("Erro."));
-    } finally { setSalvandoDir(false); }
+    } finally { scope.release(); setSalvandoDir(false); }
   }
 
   // ═══ alocar da fila ═══
   async function alocar(p: NextPessoaEspera, alvo: NextTurmaGestao) {
     setProcessando(p.id);
+    const scope=captureCampusSession();
     try {
       await alocarNextMatricula(p.id, alvo.id);
+      scope.assertCurrent();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       trackEvento("next_alocou_da_fila", { entity_id: alvo.id });
       // Sai da fila na hora: o servidor confirmou.
@@ -330,8 +381,11 @@ export function NextGestaoScreen() {
       setGestao((g) => (g ? { ...g, espera: Math.max(0, g.espera - 1) } : g));
       setAlocarAlvo(null);
       if (alvo.id === turmaId) await carregarDetalhe(alvo.id);
+      scope.assertCurrent();
       Alert.alert(t("Pronto"), `${nomeDaPessoa(p)} ${t("está na turma")} ${alvo.nome || ""}`.trim());
     } catch (e) {
+      if(nextContextoMudou(e)) return;
+      if(nextErroExigeLimpeza(e))limparAcesso();
       const codigo = (e as { corpo?: { codigo?: string } })?.corpo?.codigo;
       // ⚠️ `ja_tem_turma`/`corrida` NÃO é erro de app: é fato que mudou por fora
       // (alguém alocou no sistema). Tira da fila e diz o que aconteceu.
@@ -342,7 +396,7 @@ export function NextGestaoScreen() {
       } else {
         Alert.alert(t("Não foi possível colocar na turma"), (e as Error)?.message || t("Erro."));
       }
-    } finally { setProcessando(null); }
+    } finally { scope.release(); setProcessando(null); }
   }
 
   if (!gestao && !erro) {
@@ -391,7 +445,7 @@ export function NextGestaoScreen() {
             <View style={styles.statDiv} />
             <Stat valor={presentes} label={t("presentes")} styles={styles} />
             <View style={styles.statDiv} />
-            <Stat valor={gestao.espera} label={t("esperando")} styles={styles} />
+            {podeVerEspera && <Stat valor={gestao.espera} label={t("esperando")} styles={styles} />}
           </View>
         </View>
 
@@ -459,7 +513,7 @@ export function NextGestaoScreen() {
 
         <View style={styles.tabs}>
           <Tab label={t("Pessoas da turma")} count={matriculas.length} active={aba === "turma"} onPress={() => { setAba("turma"); setBusca(""); }} styles={styles} />
-          <Tab label={t("Aceitações")} count={gestao.espera} active={aba === "aceitacoes"} onPress={() => { setAba("aceitacoes"); setBusca(""); }} styles={styles} />
+          {podeVerEspera && <Tab label={t("Aceitações")} count={gestao.espera} active={aba === "aceitacoes"} onPress={() => { setAba("aceitacoes"); setBusca(""); }} styles={styles} />}
         </View>
 
         {aba === "aceitacoes" ? (
