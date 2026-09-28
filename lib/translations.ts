@@ -6,6 +6,7 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Peça à equipe Kids para confirmar a participação neste campus.": { en: "Ask the Kids team to confirm participation at this campus.", es: "Pedí al equipo Kids que confirme la participación en esta sede." },
   "A localização deste campus ainda não foi configurada. Procure a equipe para confirmar sua presença.": { en: "This campus location has not been configured yet. Ask the team to confirm your attendance.", es: "La ubicación de esta sede todavía no está configurada. Pedí al equipo que confirme tu asistencia." },
   "Selecione a data e o horário do batismo.": { en: "Choose the baptism date and time.", es: "Elegí la fecha y el horario del bautismo." },
   "Nenhuma data de Batismo disponível.": { en: "No baptism date is available.", es: "No hay fechas de bautismo disponibles." },

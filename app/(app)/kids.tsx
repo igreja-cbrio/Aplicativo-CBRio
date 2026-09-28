@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -16,10 +16,14 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
+import { useCampus } from "@/contexts/CampusContext";
+import { captureCampusSession } from "@/lib/campusSession";
+import { kidsPodePreparar, kidsContextoMudou } from "@/lib/kidsCampus";
 import { apiGet, apiPost } from "@/lib/api";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 type Filho = {
+  participa_campus?: boolean;
   id: string;
   nome: string;
   data_nascimento: string | null;
@@ -74,6 +78,9 @@ export default function KidsScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
+  const {contexto} = useCampus();
+  const campusNome = contexto?.campi.find(c=>c.id===contexto.campus_id)?.nome;
+  const leitura = useRef(0);
 
   const [carregando, setCarregando] = useState(true);
   const [filhos, setFilhos] = useState<Filho[]>([]);
@@ -86,34 +93,41 @@ export default function KidsScreen() {
   const [solicitacoesFalhou, setSolicitacoesFalhou] = useState(false);
 
   const carregar = useCallback(async () => {
+    const scope = captureCampusSession(), chamada = ++leitura.current;
     setErro(null);
     try {
       const data = await apiGet<MeusFilhos>("/app/kids/meus-filhos");
+      scope.assertCurrent(); if(chamada !== leitura.current) return;
       setFilhos(data.filhos || []);
       setPre(data.preCheckin || null);
-      // Seleção inicial: todos os filhos marcados.
-      setSelecionados(new Set((data.filhos || []).map((f) => f.id)));
-      setEditando(!data.preCheckin); // sem código ativo → já abre na seleção
+      setSelecionados(new Set((data.filhos || []).filter(kidsPodePreparar).map(f=>f.id)));
+      setEditando(!data.preCheckin);
+      try {
+        const r = await apiGet<{solicitacoes:Solicitacao[]}>("/app/kids/minhas-solicitacoes");
+        scope.assertCurrent(); if(chamada !== leitura.current) return;
+        setSolicitacoes(r.solicitacoes || []); setSolicitacoesFalhou(false);
+      } catch(e) {
+        if(kidsContextoMudou(e)||chamada !== leitura.current) return;
+        setSolicitacoes([]); setSolicitacoesFalhou(true);
+      }
     } catch (e) {
+      if(kidsContextoMudou(e)||chamada !== leitura.current) return;
+      setFilhos([]); setPre(null); setSelecionados(new Set()); setSolicitacoes([]);
       setErro(e instanceof Error ? e.message : t("Não foi possível carregar."));
     } finally {
-      setCarregando(false);
+      scope.release(); if(chamada === leitura.current) setCarregando(false);
     }
-    // Solicitações de vínculo (best-effort · não bloqueia a tela) — mas a
-    // falha precisa ser visível: quem tem vínculo em análise via a tela limpa
-    // e achava que a solicitação tinha sumido.
-    apiGet<{ solicitacoes: Solicitacao[] }>("/app/kids/minhas-solicitacoes")
-      .then((r) => { setSolicitacoes(r.solicitacoes || []); setSolicitacoesFalhou(false); })
-      .catch(() => setSolicitacoesFalhou(true));
   }, [t]);
 
   useFocusEffect(
     useCallback(() => {
       carregar();
+      return () => { leitura.current += 1; };
     }, [carregar])
   );
 
   function toggle(id: string) {
+    if(!filhos.some(f=>f.id===id && kidsPodePreparar(f))) return;
     setSelecionados((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -123,19 +137,24 @@ export default function KidsScreen() {
   }
 
   async function gerar() {
-    const ids = [...selecionados];
+    const ids = [...selecionados].filter(id=>filhos.some(f=>f.id===id && kidsPodePreparar(f)));
     if (ids.length === 0) return;
+    const scope = captureCampusSession();
     setGerando(true);
     setErro(null);
     try {
       const novo = await apiPost<PreCheckin>("/app/kids/pre-checkin", {
         crianca_ids: ids,
       });
+      scope.assertCurrent();
       setPre(novo);
       setEditando(false);
     } catch (e) {
+      if(kidsContextoMudou(e)) return;
+      setPre(null);
       setErro(e instanceof Error ? e.message : t("Não foi possível gerar o check-in."));
     } finally {
+      scope.release();
       setGerando(false);
     }
   }
@@ -214,6 +233,7 @@ export default function KidsScreen() {
           // ── Código ativo: mostra QR + código pra apresentar no totem ──
           <>
             <GlassCard style={styles.qrCard}>
+              {!!campusNome && <Text style={styles.cardText}>{campusNome}</Text>}
               <Text style={styles.qrLabel}>{t("Apresente este código no totem Kids")}</Text>
               <View style={styles.qrBox}>
                 <QRCode value={pre.codigo} size={190} backgroundColor="#ffffff" color="#0B1F26" />
@@ -241,6 +261,7 @@ export default function KidsScreen() {
           <>
             <GlassCard style={styles.card}>
               <Text style={styles.cardTitle}>{t("Quem vai hoje?")}</Text>
+              {!!campusNome && <Text style={styles.cardText}>{campusNome}</Text>}
               <Text style={styles.cardText}>{t("Marque as crianças que você vai levar.")}</Text>
               {filhos.map((f) => {
                 const marcado = selecionados.has(f.id);
@@ -250,8 +271,9 @@ export default function KidsScreen() {
                     key={f.id}
                     style={({ pressed }) => [styles.filhoRow, pressed && styles.pressed]}
                     onPress={() => toggle(f.id)}
+                    disabled={!kidsPodePreparar(f)}
                     accessibilityRole="checkbox"
-                    accessibilityState={{ checked: marcado }}
+                    accessibilityState={{ checked: marcado, disabled: !kidsPodePreparar(f) }}
                     accessibilityLabel={f.nome}
                   >
                     <View style={[styles.check, marcado && styles.checkOn]}>
@@ -259,6 +281,7 @@ export default function KidsScreen() {
                     </View>
                     <View style={{ flex: 1, gap: 2 }}>
                       <Text style={styles.filhoNome}>{f.nome}</Text>
+                      {!kidsPodePreparar(f) && <Text style={styles.filhoObs}>{t("Peça à equipe Kids para confirmar a participação neste campus.")}</Text>}
                       {!!idade && <Text style={styles.filhoIdade}>{idade}</Text>}
                       {!!f.observacoes_medicas && (
                         <Text style={styles.filhoObs} numberOfLines={2}>

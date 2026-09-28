@@ -8,7 +8,9 @@
 
 - Branch `codex/multicampus-app`, base `origin/main` em `1c53b04`.
 - Depende do backend ERP PR #3067: https://github.com/igreja-cbrio/SISTEMA_INTEGRADO_CBRIO/pull/3067.
-- Objetivo desta PR: seleção de campus operacional, contexto/cache por usuário e campus, agenda pública segura, Batismo (inscrição, histórico próprio, fotos, gestão e notificações) e NEXT por APIs com escopo validado.
+- Objetivo desta PR: seleção de campus operacional, contexto/cache por usuário e campus, agenda pública segura, Batismo (inscrição, histórico próprio, fotos, gestão e notificações) NEXT e Kids por APIs com escopo validado.
+- Kids (28/09): lista própria/detalhe/solicitações usam identidade confirmada no backend; histórico e pré-check-in são do campus escolhido. UI mostra campus, limpa dados médicos/código em recusa e só seleciona filhos com `participa_campus:true`. Câmera e diálogos preservam a geração de origem antes de gravar. Nova preparação depende de RPC440 (ERP dc144239) e vínculo local previamente confirmado; backend compatível deve entrar em preparação antes deste cliente. Saúde/fotos/solicitar-vínculo ainda não certificados fora da preparação, sem prometer conclusão do módulo.
+- Validação Kids: 474 testes em 21 arquivos, typecheck, i18n e exportação iOS/Android (8,5 MB) passaram. Sem OTA ou produção.
 - A escolha do membro não concede permissões de funcionário nem altera seu cadastro-base.
 - Contratos: `/app/campus/contexto`, `/app/campus/agenda?dias=7` e `/app/campus/agenda/:id`; header `X-Campus-Id` validado no servidor.
 - Não publicar OTA nem mergear antes do backend compatível e das validações. Nenhuma migration ou alteração em produção executada nesta branch.

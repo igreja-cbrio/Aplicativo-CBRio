@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -19,6 +19,9 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { useColors } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/lib/i18n";
+import { useCampus } from "@/contexts/CampusContext";
+import { captureCampusSession } from "@/lib/campusSession";
+import { kidsContextoMudou } from "@/lib/kidsCampus";
 import { apiGet, apiPost } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -64,6 +67,9 @@ export default function KidsFilhoScreen() {
   const dlg = useDialogo();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
+  const {contexto} = useCampus();
+  const campusNome = contexto?.campi.find(c=>c.id===contexto.campus_id)?.nome;
+  const leitura = useRef(0);
   const [d, setD] = useState<Detalhe | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [consentAberto, setConsentAberto] = useState(false);
@@ -82,8 +88,10 @@ export default function KidsFilhoScreen() {
 
   const carregar = useCallback(async () => {
     if (!id) return;
+    const scope = captureCampusSession(), chamada = ++leitura.current;
     try {
       const r = await apiGet<Detalhe>(`/app/kids/filho/${id}`);
+      scope.assertCurrent(); if(chamada !== leitura.current) return;
       setD(r);
       const cc = r.crianca;
       setSaude({
@@ -95,11 +103,14 @@ export default function KidsFilhoScreen() {
       setSaudeDirty(false);
       setErro(null);
     } catch (e) {
+      if(kidsContextoMudou(e)||chamada !== leitura.current) return;
+      setD(null); setConsentAberto(false); setAceito(false); setSaudeDirty(false);
+      setSaude({tem_espectro:false,espectro_qual:"",tem_alergia:false,alergia_qual:"",tem_limitacao_fisica:false,limitacao_fisica_qual:"",observacoes_medicas:""});
       setErro(e instanceof Error ? e.message : t("Não foi possível carregar."));
-    }
+    } finally { scope.release(); }
   }, [id, t]);
 
-  useFocusEffect(useCallback(() => { carregar(); }, [carregar]));
+  useFocusEffect(useCallback(() => { carregar(); return () => { leitura.current += 1; }; }, [carregar]));
 
   function setSaudeCampo<K extends keyof typeof saude>(k: K, v: (typeof saude)[K]) {
     setSaude((s) => ({ ...s, [k]: v }));
@@ -108,6 +119,7 @@ export default function KidsFilhoScreen() {
 
   async function salvarSaude() {
     if (!id) return;
+    const scope = captureCampusSession();
     setSalvandoSaude(true);
     try {
       await apiPost(`/app/kids/filho/${id}/saude`, {
@@ -119,12 +131,16 @@ export default function KidsFilhoScreen() {
         limitacao_fisica_qual: saude.tem_limitacao_fisica ? saude.limitacao_fisica_qual.trim() || null : null,
         observacoes_medicas: saude.observacoes_medicas.trim() || null,
       });
+      scope.assertCurrent();
       setSaudeDirty(false);
       await carregar();
+      scope.assertCurrent();
       Alert.alert(t("Pronto 💙"), t("Informações de saúde salvas."));
     } catch (e) {
+      if(kidsContextoMudou(e)) return;
       Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível salvar."));
     } finally {
+      scope.release();
       setSalvandoSaude(false);
     }
   }
@@ -147,35 +163,44 @@ export default function KidsFilhoScreen() {
 
   function escolherFoto() {
     if (!aceito) return;
+    const scope = captureCampusSession();
+    const enviar = (fonte: "camera" | "galeria") => { try { scope.assertCurrent(); void enviarFoto(fonte); } catch { /* Contexto anterior. */ } finally { scope.release(); } };
     Alert.alert(t("Foto da criança"), t("Como você quer enviar?"), [
-      { text: t("Tirar foto"), onPress: () => enviarFoto("camera") },
-      { text: t("Escolher da galeria"), onPress: () => enviarFoto("galeria") },
-      { text: t("Cancelar"), style: "cancel" },
+      { text: t("Tirar foto"), onPress: () => enviar("camera") },
+      { text: t("Escolher da galeria"), onPress: () => enviar("galeria") },
+      { text: t("Cancelar"), style: "cancel", onPress: () => scope.release() },
     ]);
   }
 
   async function enviarFoto(fonte: "camera" | "galeria") {
     if (!user?.id || !id) return;
-    const asset = await pegarImagem(fonte);
-    if (!asset) return;
-    setSalvandoFoto(true);
+    const scope = captureCampusSession();
     try {
+      const asset = await pegarImagem(fonte);
+      scope.assertCurrent();
+      if (!asset) return;
+      setSalvandoFoto(true);
       const resp = await fetch(asset.uri);
       const arrayBuffer = await resp.arrayBuffer();
+      scope.assertCurrent();
       const ext = (asset.uri.split("?")[0].split(".").pop() || "jpg").toLowerCase();
       const path = `${user.id}/foto-crianca/${id}-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from(FOTO_BUCKET).upload(path, arrayBuffer, {
         contentType: asset.mimeType ?? `image/${ext}`,
         upsert: false, // bucket privado sem policy de SELECT → upsert dá RLS; path é único
       });
+      scope.assertCurrent();
       if (error) throw error;
       await apiPost(`/app/kids/filho/${id}/foto`, { storage_path: path, consentimento: true, versao_consentimento: CONSENT_VERSAO });
+      scope.assertCurrent();
       setConsentAberto(false);
       setAceito(false);
       await carregar();
     } catch (e) {
+      if(kidsContextoMudou(e)) return;
       Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível enviar a foto."));
     } finally {
+      scope.release();
       setSalvandoFoto(false);
     }
   }
@@ -187,20 +212,25 @@ export default function KidsFilhoScreen() {
   // opções e o diálogo da casa tem 2 botões (ver lib/dialogosNativos.ts).
   async function removerFoto() {
     if (!id) return;
+    const scope = captureCampusSession();
+    try {
     const ok = await dlg.confirmar({
       titulo: t("Remover foto"),
       mensagem: t("Isso apaga a foto e revoga a autorização de uso da imagem. Tem certeza?"),
       acao: t("Remover"),
       perigo: true,
     });
+    scope.assertCurrent();
     if (!ok) return;
     setSalvandoFoto(true);
-    try {
       await apiPost(`/app/kids/filho/${id}/foto/remover`, {});
+      scope.assertCurrent();
       await carregar();
     } catch (e) {
+      if(kidsContextoMudou(e)) return;
       void dlg.avisar(t("Erro"), e instanceof Error ? e.message : t("Não foi possível remover."));
     } finally {
+      scope.release();
       setSalvandoFoto(false);
     }
   }
@@ -226,6 +256,7 @@ export default function KidsFilhoScreen() {
           <View style={styles.center}><Text style={styles.vazio}>{erro}</Text></View>
         ) : c ? (
           <>
+            {!!campusNome && <Text style={styles.vazio}>{campusNome}</Text>}
             <View style={styles.topo}>
               {c.foto_url ? (
                 <Image source={{ uri: c.foto_url }} style={styles.foto} />
