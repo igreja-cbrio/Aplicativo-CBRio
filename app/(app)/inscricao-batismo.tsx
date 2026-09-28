@@ -25,6 +25,22 @@ import { font, radius, spacing, type Palette } from "@/constants/theme";
 /** Espelho do que `GET /public/batismo/horarios` devolve (utils/batismoHorario no ERP). */
 type HorarioBatismo = { horario: string; label: string; vagas_restantes: number | null };
 
+/** ⚠️ Uma DATA aberta pra batismo, com os horários dela. Campo `datas` do endpoint
+ *  (25/09/2026 · web PR #3063). Servidor antigo não devolve — a tela recua para
+ *  a data única do topo (`data_batismo`), como sempre foi. */
+type DataAberta = { data_batismo: string; horarios: HorarioBatismo[] };
+
+// ⚠️ 'YYYY-MM-DD' → Date LOCAL. `new Date('2026-09-27')` é meia-noite UTC = 21h
+// do dia anterior no Rio, e o banner mostraria "sábado, 26 de setembro" para a
+// data de domingo 27. É o mesmo bug de fuso do web (`formatDataLonga` no
+// `InscricaoBatismo.tsx`) — quem lida com data de calendário monta com componentes.
+function isoParaDataLocal(iso: string): Date | null {
+  const s = String(iso || "").trim();
+  const [a, m, d] = s.split("-").map((n) => Number(n));
+  if (!a || !m || !d) return null;
+  return new Date(a, m - 1, d, 12, 0, 0, 0);
+}
+
 export default function InscricaoBatismoScreen() {
   const { user } = useAuth();
   const { membro, loading } = useMembro();
@@ -32,7 +48,23 @@ export default function InscricaoBatismoScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
   const dlg = useDialogo();
-  const proxDt = useMemo(() => proximoBatismo(), []);
+  const proxDtCliente = useMemo(() => proximoBatismo(), []);
+  // ⚠️⚠️ As DATAS abertas de batismo vindas do SERVIDOR (25/09/2026 · web PR #3063).
+  // Antes o app calculava sozinho pela fórmula do 4º domingo e usava sempre a
+  // "próxima" — quem queria o mês seguinte não tinha caminho. Agora o servidor
+  // devolve as 3 próximas e a pessoa escolhe.
+  // ⚠️ `proxDtCliente` fica como REDE: se o servidor não devolver `datas` (bundle
+  // antigo do backend, offline, timeout), o banner ainda mostra alguma data em
+  // vez de ficar em branco.
+  const [datas, setDatas] = useState<DataAberta[]>([]);
+  const [dataEscolhida, setDataEscolhida] = useState<string | null>(null);
+  const dataEscolhidaDt = useMemo(
+    () => (dataEscolhida ? isoParaDataLocal(dataEscolhida) : null),
+    [dataEscolhida]
+  );
+  // A data que o banner e a mensagem de confirmação usam: a escolhida se veio
+  // do servidor; senão a calculada no cliente.
+  const proxDt = dataEscolhidaDt || proxDtCliente;
   const diasFalta = useMemo(() => diasAteProximoBatismo(proxDt), [proxDt]);
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -56,13 +88,33 @@ export default function InscricaoBatismoScreen() {
   // não aparece e a inscrição segue sem horário (o campo é opcional no
   // servidor), em vez de travar a pessoa.
   useEffect(() => {
-    apiGet<{ grupo_url?: string | null; horarios?: HorarioBatismo[] }>(
-      "/public/batismo/horarios",
-      { auth: false }
-    )
+    apiGet<{
+      grupo_url?: string | null;
+      data_batismo?: string | null;
+      horarios?: HorarioBatismo[];
+      datas?: DataAberta[];
+    }>("/public/batismo/horarios", { auth: false })
       .then((r) => {
         setGrupoUrl(r?.grupo_url ?? null);
-        const lista = Array.isArray(r?.horarios) ? r.horarios : [];
+        // ⚠️⚠️ Servidor NOVO (>= 25/09/2026) devolve `datas: [...]` com 3 datas
+        // abertas. Servidor antigo devolve só `data_batismo`/`horarios` no topo —
+        // aí a tela cai em UMA data só e o seletor de datas não aparece. Isto é
+        // fallback para BUNDLE + BACKEND antigos, não para o caso feliz.
+        const listaDatas: DataAberta[] = Array.isArray(r?.datas) && r!.datas!.length
+          ? r!.datas!
+          : r?.data_batismo
+          ? [{
+              data_batismo: r.data_batismo,
+              horarios: Array.isArray(r?.horarios) ? r.horarios! : [],
+            }]
+          : [];
+        setDatas(listaDatas);
+        // Pré-seleciona a primeira data — que é o que a igreja anuncia no
+        // púlpito e no WhatsApp. Um seletor vazio pedindo escolha dissolveria
+        // esse anúncio.
+        const primeira = listaDatas[0]?.data_batismo || null;
+        setDataEscolhida(primeira);
+        const lista = listaDatas[0]?.horarios || [];
         setHorarios(lista);
         // Se o horário escolhido saiu da lista (fechou ou lotou entre a abertura
         // da tela e agora), a seleção some — senão a pessoa envia algo que o
@@ -71,6 +123,16 @@ export default function InscricaoBatismoScreen() {
       })
       .catch(() => {});
   }, []);
+
+  // ⚠️ Trocar a data TROCA os horários e limpa o que estava escolhido: "09:30"
+  // de setembro não é o mesmo slot de novembro, e a ocupação (que o backend
+  // conta) é por data. Se o horário atual existir na data nova, mantém.
+  function escolherData(d: DataAberta) {
+    setDataEscolhida(d.data_batismo);
+    const hs = d.horarios || [];
+    setHorarios(hs);
+    setHorarioSel((sel) => (sel && hs.some((h) => h.horario === sel) ? sel : null));
+  }
 
   // ⚠️⚠️ PRÉ-PREENCHE O NASCIMENTO DA FICHA (10/08/2026 · apontamento 4).
   // A tela SEMPRE mostrava o campo, mesmo tendo o dado em `useMembro()`.
@@ -134,6 +196,12 @@ ${t("Próximo batismo")}: ${formatProximoBatismo(proxDt)}` : "";
           possui_deficiencia: deficiencia,
           deficiencia_descricao: deficiencia ? deficienciaDesc.trim() || null : null,
           observacoes: obs.trim() || null,
+          // ⚠️⚠️ A DATA ESCOLHIDA PASSA A VALER (25/09/2026 · web PR #3063). Sem
+          // isto, o seletor renderiza mas o gatilho `fn_app_inscricoes_fanout`
+          // grava a primeira data assim mesmo — que é o defeito da versão
+          // anterior. O backend recusa data fora da janela; ausência (`null`)
+          // cai na primeira aberta (regra dele, não do app).
+          data_batismo: dataEscolhida,
           horario_culto: horarioSel,
           cpf: membro?.cpf || null,
           membro_id: membro?.membroId ?? null,
@@ -214,6 +282,57 @@ ${t("Próximo batismo")}: ${formatProximoBatismo(proxDt)}` : "";
           maxLength={10}
         />
       )}
+      {/* ⚠️⚠️ ESCOLHER A DATA (25/09/2026 · pedido do Matheus: inscrição para o
+          próximo batismo E os dos meses seguintes). Só aparece com MAIS DE UMA
+          data — com uma só, um seletor de um item é ruído, e o banner
+          "Próximo batismo: X" no topo já diz tudo. */}
+      {datas.length > 1 && (
+        <View style={styles.horariosBox}>
+          <Text style={styles.horariosLabel}>{t("Data do batismo")}</Text>
+          <Text style={styles.horariosHint}>
+            {t("Escolha em qual mês você quer ser batizado(a).")}
+          </Text>
+          <View style={styles.horariosLista}>
+            {datas.map((d) => {
+              const ativo = dataEscolhida === d.data_batismo;
+              const dt = isoParaDataLocal(d.data_batismo);
+              // Vagas do mês inteiro. `null` (sem teto configurado) não soma:
+              // fica como "vaga aberta" sem número.
+              const vagas = d.horarios.reduce(
+                (t2, h) => (h.vagas_restantes == null ? t2 : t2 + h.vagas_restantes),
+                0
+              );
+              const semVaga = d.horarios.length === 0;
+              return (
+                <Pressable
+                  key={d.data_batismo}
+                  onPress={() => !semVaga && escolherData(d)}
+                  disabled={semVaga}
+                  style={[
+                    styles.dataChip,
+                    ativo && styles.dataChipAtivo,
+                    semVaga && styles.dataChipDesab,
+                  ]}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: ativo, disabled: semVaga }}
+                >
+                  <Text style={[styles.dataChipTitulo, ativo && styles.dataChipTituloAtivo]}>
+                    {dt ? formatProximoBatismo(dt) : d.data_batismo}
+                  </Text>
+                  <Text style={[styles.dataChipSub, ativo && styles.dataChipSubAtivo]}>
+                    {semVaga
+                      ? t("sem vaga")
+                      : vagas > 0
+                      ? `${vagas} ${t("vaga(s)")}`
+                      : t("vagas abertas")}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
       {/* Horário do culto · só aparece quando o servidor devolveu opção aberta.
           Lista vazia (tudo fechado/lotado, ou falha de rede) = sem seletor: a
           inscrição continua valendo, e a equipe combina o horário depois. */}
@@ -303,6 +422,26 @@ const makeStyles = (colors: Palette) =>
     chipAtivo: { borderColor: colors.primary, backgroundColor: colors.primary },
     chipTexto: { color: colors.text, fontSize: font.size.sm, fontWeight: "600" },
     chipTextoAtivo: { color: "#fff" },
+    // ⚠️ Cartão de escolha de DATA (mais alto que o chip de horário porque leva
+    // 2 linhas). Segue o padrão visual dos chips: outline no repouso, fill na
+    // cor primary quando ativo.
+    dataChip: {
+      minWidth: 150,
+      flexGrow: 1,
+      paddingVertical: spacing.sm + 2,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.md,
+      borderWidth: 1.5,
+      borderColor: colors.glassBorder,
+      backgroundColor: colors.surface,
+      gap: 2,
+    },
+    dataChipAtivo: { borderColor: colors.primary, backgroundColor: colors.primary },
+    dataChipDesab: { opacity: 0.5 },
+    dataChipTitulo: { color: colors.text, fontSize: font.size.sm, fontWeight: "700" },
+    dataChipTituloAtivo: { color: "#fff" },
+    dataChipSub: { color: colors.textMuted, fontSize: font.size.sm - 1 },
+    dataChipSubAtivo: { color: "rgba(255,255,255,0.9)" },
     jaBatizadoBox: {
       padding: spacing.md,
       borderRadius: radius.md,
