@@ -16,9 +16,7 @@
   <a href="https://apps.apple.com/br/app/cbrio/id6778156310"><img alt="App Store" src="https://img.shields.io/badge/App%20Store-dispon%C3%ADvel-000000?logo=apple&logoColor=white"></a>
   <a href="https://play.google.com/store/apps/details?id=br.com.cbrio.app"><img alt="Google Play" src="https://img.shields.io/badge/Google%20Play-dispon%C3%ADvel-34a853?logo=googleplay&logoColor=white"></a>
   <a href="https://github.com/igreja-cbrio/Aplicativo-CBRio/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/igreja-cbrio/Aplicativo-CBRio/actions/workflows/ci.yml/badge.svg"></a>
-  <img alt="Expo SDK 54" src="https://img.shields.io/badge/Expo-SDK%2054-000020?logo=expo&logoColor=white">
-  <img alt="React Native 0.81" src="https://img.shields.io/badge/React%20Native-0.81-20232a?logo=react&logoColor=61dafb">
-  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178c6?logo=typescript&logoColor=white">
+  <img alt="Expo" src="https://img.shields.io/badge/Expo-React%20Native-000020?logo=expo&logoColor=white">
   <img alt="Supabase" src="https://img.shields.io/badge/Supabase-3ecf8e?logo=supabase&logoColor=white">
 </p>
 
@@ -45,7 +43,7 @@
   <img src="docs/readme/tela-grupos.png" width="30%" alt="Grupos de conexão por bairro, em lista e mapa">
 </p>
 
-| | |
+| Área | O que a pessoa faz |
 |---|---|
 | **Cultos** | Próximos cultos por dia e horário, modo culto com decisão de fé pelo app, vídeos e transmissão |
 | **Cartão de membro** | QR Code para check-in e identificação, com passe na Carteira da Apple |
@@ -103,6 +101,8 @@ flowchart LR
 | Entrega | EAS Build e Submit · EAS Update (OTA) · GitHub Actions |
 | Qualidade | Vitest · script de mutantes · `tsc --noEmit` |
 
+Estado em outubro de 2026: v1.0.1 publicada na App Store (build 44, 21/09/2026) e no Google Play (versionCode 9, 16/09/2026) · 63 telas · 17 arquivos de teste · pt, en e es.
+
 ## Como rodar
 
 ```bash
@@ -115,17 +115,19 @@ npm run typecheck && npm test
 
 Build de loja e OTA usam o EAS (`eas build`, `npm run ota`); a catraca de versões está em `loja-publicado.json`.
 
+O app é o cliente do ERP da CBRio: fora da igreja ele abre, mas só carrega dados com um projeto Supabase que tenha o schema do ERP e com a API do ERP no ar.
+
 ## Projetos relacionados
 
 - [**Sistema Integrado CBRio**](https://github.com/igreja-cbrio/SISTEMA_INTEGRADO_CBRIO) — o ERP que este app consome: toda regra de negócio, a API e o banco.
 
 ## Equipe
 
-- **Matheus Toscano** — gestão da CBRio; idealizou e lidera o app, principal contribuidor · [GitHub](https://github.com/mtoscano99)
-- **Marcos Paulo Almeida** — engenharia · [GitHub](https://github.com/MarcosPaulo1)
+- **Matheus Toscano** — gestão da CBRio; idealizou o app e é seu principal autor · [GitHub](https://github.com/mtoscano99)
+- **Marcos Paulo Almeida** — engenharia; co-autor · [GitHub](https://github.com/MarcosPaulo1)
 
-Desenvolvido com apoio de ferramentas de IA (Claude Code), sob revisão e decisão humanas.
+**Sobre IA.** Desenvolvido com Claude Code: os agentes escrevem boa parte do código a partir das especificações da equipe, e o que vai para a loja ou por OTA passa por typecheck, testes e pelo script de mutantes no CI.
 
 ## Licença
 
-Código proprietário da Igreja Comunidade Batista do Rio de Janeiro. O repositório é público para fins de transparência e portfólio; todos os direitos reservados.
+Código de propriedade da Igreja Comunidade Batista do Rio de Janeiro (CBRio). Todos os direitos reservados. Não é *open source*: nenhuma licença de uso, cópia, modificação ou distribuição é concedida. Marcas, fontes e demais assets de terceiros pertencem aos respectivos titulares e não são licenciados por este repositório. Veja [`LICENSE`](LICENSE).
