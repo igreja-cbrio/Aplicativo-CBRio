@@ -29,7 +29,7 @@
   <a href="#equipe">Equipe</a>
 </p>
 
-> **English summary.** The official members app of CBRio, a large Baptist church in Rio de Janeiro, live on the App Store and Google Play. Expo SDK 54 + React Native 0.81 + TypeScript, Supabase with row-level security, a native Swift/Kotlin module for the Apple Wallet member card, an iOS widget, over-the-air updates with a release gate, and three languages. It is the mobile face of the church's [integrated ERP](https://github.com/igreja-cbrio/SISTEMA_INTEGRADO_CBRIO), which owns every business rule.
+> **English summary.** The official members app of CBRio, a large Baptist church in Rio de Janeiro, live on the App Store and Google Play. Expo SDK 54 + React Native 0.81 + TypeScript, Supabase with row-level security, a native Swift/Kotlin module for the Apple Wallet member card, an iOS widget, over-the-air updates with a release gate, and three languages. It is the mobile face of the church's integrated ERP (a private repository), which owns every business rule.
 
 ---
 
@@ -119,7 +119,7 @@ O app é o cliente do ERP da CBRio: fora da igreja ele abre, mas só carrega dad
 
 ## Projetos relacionados
 
-- [**Sistema Integrado CBRio**](https://github.com/igreja-cbrio/SISTEMA_INTEGRADO_CBRIO) — o ERP que este app consome: toda regra de negócio, a API e o banco.
+- **Sistema Integrado CBRio** (repositório privado) — o ERP que este app consome: toda regra de negócio, a API e o banco.
 
 ## Equipe
 
