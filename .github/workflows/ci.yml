@@ -35,6 +35,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ⚠️ O CLAUDE.md é carregado em TODA chamada de toda sessão do Claude Code
+      # neste repo. Reorganizado em 01/10/2026 (268 KB -> conhecimento de módulo em
+      # docs/claude/). NÃO suba o teto: mova texto para docs/claude/.
+      - name: Tamanho do CLAUDE.md (teto 70 KB)
+        run: |
+          tam=$(wc -c < CLAUDE.md)
+          echo "CLAUDE.md: $tam bytes (teto 71680)"
+          if [ "$tam" -gt 71680 ]; then
+            echo "::error file=CLAUDE.md::CLAUDE.md tem $tam bytes e passou do teto de 70 KB. Seção de módulo vai para docs/claude/<modulo>.md."
+            exit 1
+          fi
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
