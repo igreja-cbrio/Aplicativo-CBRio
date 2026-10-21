@@ -17,6 +17,7 @@ import { proximosCultos, cultoAoVivo, type CultoUpcoming, type CultoAoVivo } fro
 import { Carrossel } from "@/components/home/Carrossel";
 import { CardKidsCheckin } from "@/components/home/CardKidsCheckin";
 import { ProximosCultos } from "@/components/home/ProximosCultos";
+import { NovosConteudos } from "@/components/conteudos/NovosConteudos";
 import { AnimatedShortcut } from "@/components/anim/AnimatedShortcut";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { quebrarAposPrimeiraPalavra } from "@/lib/rotuloAtalho";
@@ -40,7 +41,8 @@ type Atalho = {
   icon: React.ComponentProps<typeof Ionicons>["name"];
   href:
     | "/generosidade" | "/batismo" | "/kids" | "/jornada" | "/next" | "/inscricoes"
-    | "/videos" | "/grupos" | "/meu-grupo" | "/voluntariado" | "/apresentacao-crianca";
+    | "/videos" | "/grupos" | "/meu-grupo" | "/voluntariado" | "/apresentacao-crianca"
+    | "/conteudos";
 };
 
 /**
@@ -122,6 +124,7 @@ const ATALHOS: Atalho[] = [
   // a ter espaço COMUM, porque quebra é layout e não tradução.
   { label: "Apresentação de crianças", icon: "happy", href: "/apresentacao-crianca", duasLinhas: true },
   { label: "Inscrições", icon: "clipboard", href: "/inscricoes" },
+  { label: "Conteúdos", icon: "library", href: "/conteudos" },
 ];
 
 export default function InicioScreen() {
@@ -226,6 +229,9 @@ export default function InicioScreen() {
         ) : (
           <ProximosCultos cultos={cultos} />
         )}
+
+        {/* Novos em Conteúdos — descoberta; some sozinha sem dado */}
+        <NovosConteudos />
 
         {/* Atalhos para os módulos */}
         <Text style={styles.sectionTitle}>{t("Atalhos")}</Text>

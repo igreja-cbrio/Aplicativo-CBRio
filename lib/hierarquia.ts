@@ -124,6 +124,12 @@ const PAI: Record<string, string> = {
   "/next-turma": "/next",
   "/next-espera": "/next",
   "/videos": "/menu",
+  // Conteúdos (21/10/2026): catálogo → pasta → vídeo. A seta do vídeo sobe
+  // pro CATÁLOGO (cd ..), mesmo quando se chegou por uma pasta — o mapa é
+  // estático e o catálogo é o pai previsível.
+  "/conteudos": "/",
+  "/conteudo-pasta": "/conteudos",
+  "/conteudo-video": "/conteudos",
   "/configuracoes": "/menu",
   "/trocar-senha": "/configuracoes",
   "/fale-conosco": "/configuracoes",
