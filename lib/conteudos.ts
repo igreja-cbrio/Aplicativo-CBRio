@@ -19,6 +19,7 @@ export type ConteudoVideo = {
   vimeo_id: string;
   vimeo_hash: string | null;
   titulo: string;
+  descricao: string | null;
   categoria_id: string | null;
   thumbnail_url: string | null;
   duracao_seg: number | null;

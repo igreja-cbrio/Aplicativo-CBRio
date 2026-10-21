@@ -103,6 +103,7 @@ export default function MenuScreen() {
       titulo: "Conteúdo",
       itens: [
         { label: "Pregações", icon: "play-circle-outline", onPress: () => router.navigate("/videos") },
+        { label: "Conteúdos", icon: "library-outline", onPress: () => router.navigate("/conteudos") },
       ],
     },
     {

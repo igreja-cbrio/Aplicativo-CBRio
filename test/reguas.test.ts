@@ -1004,6 +1004,15 @@ describe("janelaIndisponibilidadeBR", () => {
     // CI reprovando um código que ninguém tocou.
     expect(isValidDateBR("09/08/2026", HOJE)).toBe(false);
     expect(isValidDateBR("20/10/2026", HOJE)).toBe(false);
+    // ⚠️ MUTATION GUARD de verdade (21/10/2026): o mutante troca a validação
+    // por `isValidDateBR(de)` SEM `hoje` — ele olha o RELÓGIO REAL. Em
+    // 21/10/2026 todas as datas acima viraram passado no mundo real e o
+    // mutante passou a sobreviver (CI verde com a regra errada — o mesmo
+    // mecanismo do incidente de 10/08 descrito acima, só que no guard).
+    // Um caso um século à frente fica futuro para qualquer execução.
+    expect(janelaIndisponibilidadeBR("09/08/2126", "09/08/2126", "2126-08-07")).toEqual({
+      ok: true, de: "2126-08-09", ate: "2126-08-09",
+    });
   });
 
   it("aceita hoje e janela que COMEÇOU no passado mas ainda vale", () => {
