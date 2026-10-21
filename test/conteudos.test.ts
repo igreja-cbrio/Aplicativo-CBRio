@@ -101,6 +101,8 @@ describe("navegacaoVimeoPermitida", () => {
     expect(navegacaoVimeoPermitida("about:blank", true)).toBe(true);
     expect(navegacaoVimeoPermitida("https://vimeo.com/570280899", true)).toBe(false);
     expect(navegacaoVimeoPermitida("https://evil.example/", true)).toBe(false);
+    // ⚠️ Prefixo não basta: domínio colado (achado da revisão de 21/10).
+    expect(navegacaoVimeoPermitida("https://www.cbrio.com.br.evil.tld/", true)).toBe(false);
   });
 
   it("subframes (o player) carregam à vontade", () => {

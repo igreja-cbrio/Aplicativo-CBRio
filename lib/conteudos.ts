@@ -127,5 +127,7 @@ p.ready().catch(function(){m({evento:'erro'})});}catch(e){m({evento:'erro'})}})(
  */
 export function navegacaoVimeoPermitida(url: string, isTopFrame: boolean | undefined): boolean {
   if (isTopFrame === false) return true;
-  return url === "about:blank" || url.startsWith(ORIGEM_VIMEO);
+  // ⚠️ Prefixo cru não basta: "https://www.cbrio.com.br.evil.tld" começa com
+  // a origem. Ou é a origem exata, ou um caminho DENTRO dela (barra depois).
+  return url === "about:blank" || url === ORIGEM_VIMEO || url.startsWith(`${ORIGEM_VIMEO}/`);
 }
