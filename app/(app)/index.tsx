@@ -17,7 +17,6 @@ import { proximosCultos, cultoAoVivo, type CultoUpcoming, type CultoAoVivo } fro
 import { Carrossel } from "@/components/home/Carrossel";
 import { CardKidsCheckin } from "@/components/home/CardKidsCheckin";
 import { ProximosCultos } from "@/components/home/ProximosCultos";
-import { NovosConteudos } from "@/components/conteudos/NovosConteudos";
 import { AnimatedShortcut } from "@/components/anim/AnimatedShortcut";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { quebrarAposPrimeiraPalavra } from "@/lib/rotuloAtalho";
@@ -230,8 +229,6 @@ export default function InicioScreen() {
           <ProximosCultos cultos={cultos} />
         )}
 
-        {/* Novos em Conteúdos — descoberta; some sozinha sem dado */}
-        <NovosConteudos />
 
         {/* Atalhos para os módulos */}
         <Text style={styles.sectionTitle}>{t("Atalhos")}</Text>

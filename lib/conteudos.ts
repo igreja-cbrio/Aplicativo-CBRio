@@ -82,14 +82,6 @@ export function filtrarCatalogo(
   });
 }
 
-/** Os publicados mais recentemente no APP (publicado_em), pra faixa "Novos". */
-export function novosConteudos(itens: ConteudoItem[], n = 5): ConteudoItem[] {
-  return itens
-    .filter((i) => i.publicado_em)
-    .sort((a, b) => String(b.publicado_em).localeCompare(String(a.publicado_em)))
-    .slice(0, n);
-}
-
 /**
  * A página do player do Vimeo, carregada com `baseUrl: ORIGEM_VIMEO`.
  * - `<meta referrer>` + `referrerpolicy` fixos: não depender do padrão do SO.
