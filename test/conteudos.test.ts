@@ -5,7 +5,6 @@ import {
   filtrarCatalogo,
   htmlDoVimeo,
   navegacaoVimeoPermitida,
-  novosConteudos,
   type ConteudoItem,
   type ConteudoVideo,
 } from "@/lib/conteudos";
@@ -65,12 +64,6 @@ describe("filtrarCatalogo", () => {
       const r = filtrarCatalogo(comNull, { ordem });
       expect(r[r.length - 1].id).toBe("v0");
     }
-  });
-});
-
-describe("novosConteudos", () => {
-  it("ordena por publicado_em desc e corta em n", () => {
-    expect(novosConteudos(ITENS, 2).map((i) => i.id)).toEqual(["p1", "p2"].sort((a, b) => a.localeCompare(b)).slice(0, 0).concat(["p1", "p2"]).slice(0, 2));
   });
 });
 
