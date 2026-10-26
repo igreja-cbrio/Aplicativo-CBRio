@@ -52,8 +52,11 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
         {background ? <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: width * 2387 / PHOTO_CROP.width }}>
           <Image source={background} resizeMode="contain" style={{
-            position: "absolute", top: 0, bottom: 0,
+            position: "absolute", top: 0,
             width: width * 3600 / PHOTO_CROP.width,
+            // Image nativa herda a altura do asset (2387), mesmo com top/bottom.
+            // Sobrescrever as duas dimensões mantém a foto dentro do recorte.
+            height: width * 2387 / PHOTO_CROP.width,
             left: -width * PHOTO_CROP.x / PHOTO_CROP.width,
           }} accessibilityIgnoresInvertColors />
           <LinearGradient colors={["#598592", "rgba(89,133,146,0)"]} style={{ position: "absolute", top: 0, left: 0, right: 0, height: "12%" }} />

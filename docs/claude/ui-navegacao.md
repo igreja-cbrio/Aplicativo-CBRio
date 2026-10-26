@@ -498,3 +498,11 @@ para captura (ScreenCaptureKit -3811). Prévia web confere somente foto/fallback
 
 Build iOS 1.0.2 usa Xcode 26.2 fixo no EAS. `runtimeVersion` continua literal
 1.0.0; a versão de loja não troca o canal de atualização dos binários existentes.
+
+### Foto ausente no aparelho · 26/10/2026
+
+O Image nativo de iOS/Android injeta width/height do asset antes dos estilos.
+Usar top/bottom sem height explícita conservava 2387 pontos de altura: com
+contain, a foto ficava centralizada abaixo da área visível da Home. Definir
+width **e height** calculados pela mesma escala do recorte (1340 px) mantém
+o enquadramento aprovado. A prévia web não reproduzia essa altura intrínseca.
