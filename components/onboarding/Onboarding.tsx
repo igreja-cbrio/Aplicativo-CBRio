@@ -1,6 +1,7 @@
+import { FlatList } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 import { useMemo, useRef, useState } from "react";
-import { Dimensions, FlatList, Pressable, StyleSheet, View, type ViewToken } from "react-native";
+import { Dimensions, Pressable, StyleSheet, View, type ViewToken } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";

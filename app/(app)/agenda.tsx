@@ -1,10 +1,11 @@
+import { ScrollView } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BRAND_FONT } from "@/lib/fonts";
 import { HeartRefresh } from "@/components/anim/HeartRefresh";
 import { HeartPulseOverlay } from "@/components/anim/HeartPulse";
 import { Skeleton } from "@/components/anim/Skeleton";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenBackground } from "@/components/ui/ScreenBackground";
 import { useFocusEffect, useRouter } from "expo-router";

@@ -13,7 +13,7 @@ function glassComponent(): ComponentType<GlassViewProps> | null {
   } catch { return null; }
 }
 const NativeGlass = glassComponent();
-export function DockSurface({ children }: { children: ReactNode }) {
+export function DockSurface({ children, interactive = false }: { children: ReactNode; interactive?: boolean }) {
   const [reduceTransparency, setReduceTransparency] = useState(false);
   useEffect(() => {
     if (Platform.OS !== "ios") return;
@@ -23,7 +23,7 @@ export function DockSurface({ children }: { children: ReactNode }) {
     return () => { active = false; subscription.remove(); };
   }, []);
   return <View style={styles.shadow}>
-    {!reduceTransparency && NativeGlass ? <NativeGlass glassEffectStyle="regular" colorScheme="light" tintColor="rgba(247,250,244,0.3)" style={styles.shell}>{children}</NativeGlass>
+    {!reduceTransparency && NativeGlass ? <NativeGlass isInteractive={interactive} glassEffectStyle="regular" colorScheme="light" tintColor="rgba(247,250,244,0.3)" style={styles.shell}>{children}</NativeGlass>
       : !reduceTransparency && Platform.OS === "ios" ? <BlurView intensity={45} tint="light" style={[styles.shell, styles.frost]}>{children}</BlurView>
       : <View style={[styles.shell, styles.solid]}>{children}</View>}
   </View>;

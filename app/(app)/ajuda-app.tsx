@@ -1,3 +1,4 @@
+import { ScrollView } from "@/components/navigation/DockContent";
 import { Text, TextInput } from "@/components/ui/Typography";
 // ════════════════════════════════════════════════════════════════════════════
 //  AJUDA COM O APP · dúvida sobre o produto (Matheus · 29/08/2026)
@@ -15,7 +16,7 @@ import { Text, TextInput } from "@/components/ui/Typography";
 //  tela não conhece pessoa nenhuma, e é assim que tem que continuar.
 // ════════════════════════════════════════════════════════════════════════════
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Platform } from "react-native";
 import { Stack } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";

@@ -1,3 +1,4 @@
+import { Modal, ScrollView } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 // ============================================================================
 //  CENSO · disponível só para quem ainda não respondeu
@@ -21,9 +22,7 @@ import { Text } from "@/components/ui/Typography";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from "react-native";

@@ -1,8 +1,8 @@
+import { ScrollView } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 import React, { useMemo } from "react";
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from "react-native";

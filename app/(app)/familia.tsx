@@ -1,10 +1,10 @@
+import { ScrollView } from "@/components/navigation/DockContent";
 import { Text, TextInput } from "@/components/ui/Typography";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
   Pressable,
-  ScrollView,
   Share,
   StyleSheet,
   View,

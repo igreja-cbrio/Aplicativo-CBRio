@@ -1,3 +1,4 @@
+import { ScrollView } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 // ============================================================================
 // APRESENTAÇÃO DE CRIANÇA · a porta nativa (11/08/2026)
@@ -14,7 +15,7 @@ import { Text } from "@/components/ui/Typography";
 // 0 linhas — ninguém nunca conseguiu se inscrever.
 // ============================================================================
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { Stack, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";

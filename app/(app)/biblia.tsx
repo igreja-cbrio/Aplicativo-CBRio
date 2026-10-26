@@ -1,6 +1,9 @@
+import { useContext } from "react";
+import { DockInsetContext } from "@/components/navigation/DockContent";
+import { Modal, ScrollView } from "@/components/navigation/DockContent";
 import { Text, TextInput } from "@/components/ui/Typography";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +20,7 @@ import { ControleFonte } from "@/components/devocional/ControleFonte";
 
 const CORES = [{ nome: "amarelo" as const, cor: "#F8E59A" }, { nome: "azul" as const, cor: "#BFDDEA" }, { nome: "verde" as const, cor: "#CDE2C2" }, { nome: "rosa" as const, cor: "#EAC6D2" }];
 export default function Biblia() {
+  const dockInset = useContext(DockInsetContext);
   const colors = useColors(), styles = useMemo(() => css(colors), [colors]), t = useT(), { membro } = useMembro();
   // A−/A+ da leitura (24/09/2026): compartilhado com o devocional, persistido no aparelho.
   const fonte = useFonteLeitura();
@@ -112,7 +116,7 @@ export default function Biblia() {
       </View> : <Text style={styles.headerTitle} numberOfLines={1}>{titulo}</Text>}
       {capitulo ? <ControleFonte passo={fonte.passo} mudar={fonte.mudar} papel /> : <View style={styles.back} />}
     </View>
-    <ScrollView ref={scrollRef} contentContainerStyle={[styles.content, Boolean(capitulo) && styles.readerContent]} showsVerticalScrollIndicator={!capitulo}>
+    <ScrollView ref={scrollRef} contentContainerStyle={[styles.content, Boolean(capitulo) && [styles.readerContent, { paddingBottom: dockInset + 220 }]]} showsVerticalScrollIndicator={!capitulo}>
       {!livro && <BookList busca={busca} setBusca={setBusca} livros={livrosFiltrados} abrir={setLivro} s={styles} c={colors} t={t} />}
       {livro && !capitulo && <><Text style={styles.eyebrow}>{t("CAPÍTULOS")}</Text><Text style={styles.title}>{livro.nome}</Text><View style={styles.chapters}>{Array.from({ length: livro.capitulos }, (_, i) => <Pressable key={i + 1} style={styles.chapter} onPress={() => abrirCapitulo(i + 1)}><Text style={styles.chapterText}>{i + 1}</Text></Pressable>)}</View></>}
       {carregando && <ActivityIndicator color={colors.primary} size="large" />}
@@ -122,13 +126,13 @@ export default function Biblia() {
         return <Pressable key={v.verse} onPress={() => alternar(v.verse)} style={[styles.verse, marcada ? { backgroundColor: marcada } : undefined, ativo && styles.verseSelected]}><Text style={[styles.verseText, { fontSize: tamVerso.fontSize, lineHeight: tamVerso.lineHeight }]}><Text style={[styles.verseNumber, ativo && styles.verseNumberSelected]}>{v.verse} </Text>{v.text.trim()}</Text></Pressable>;
       })}<Text style={styles.translation}>{versao.nome} · {t("domínio público")}</Text></View>}
     </ScrollView>
-    {selecionados.length > 0 && <View style={styles.actions}>
+    {selecionados.length > 0 && <View style={[styles.actions, { bottom: dockInset + 78 }]}>
       {temMarcacaoSelecionada
         ? <Pressable style={styles.removeMark} onPress={removerMarcacao}><Ionicons name="close-circle-outline" size={20} color="#A44343" /><Text style={styles.removeMarkText}>{t("Remover marcação")}</Text></Pressable>
         : <View style={styles.colors}>{CORES.map(x => <Pressable key={x.nome} onPress={() => marcar(x.nome)} style={[styles.color, { backgroundColor: x.cor }]} accessibilityLabel={t("Marcar versículo")} />)}</View>}
       <View style={styles.actionRule} /><Pressable style={styles.action} onPress={() => comentar(true)}><Ionicons name="bookmark-outline" size={20} color="#263234" /><Text style={styles.actionText}>{t("Salvar")}</Text></Pressable><Pressable style={styles.action} onPress={() => comentar(false)}><Ionicons name="chatbubble-outline" size={20} color="#263234" /><Text style={styles.actionText}>{t("Comentários")}</Text></Pressable>
     </View>}
-    {capitulo && <View style={styles.chapterNav}>
+    {capitulo && <View style={[styles.chapterNav, { bottom: dockInset + 12 }]}>
       <Pressable disabled={carregando || capitulo <= 1} onPress={() => abrirCapitulo(capitulo - 1)} style={[styles.chapterArrow, capitulo <= 1 && styles.chapterArrowDisabled]}><Ionicons name="chevron-back" size={22} color="#263234" /><Text style={styles.chapterArrowText}>{t("Anterior")}</Text></Pressable>
       <Text style={styles.chapterPosition}>{livro?.nome} {capitulo}</Text>
       <Pressable disabled={carregando || capitulo >= (livro?.capitulos ?? 0)} onPress={() => abrirCapitulo(capitulo + 1)} style={[styles.chapterArrow, capitulo >= (livro?.capitulos ?? 0) && styles.chapterArrowDisabled]}><Text style={styles.chapterArrowText}>{t("Próximo")}</Text><Ionicons name="chevron-forward" size={22} color="#263234" /></Pressable>

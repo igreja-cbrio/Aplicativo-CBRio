@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Animated, Image, Keyboard, Modal, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
-import { useRouter, type Href } from "expo-router";
+import { usePathname, useRouter, type Href } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { MenuContent } from "@/components/navigation/MenuContent";
@@ -15,6 +15,8 @@ export function useMenu() {
 }
 
 export function MenuProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const pendingRoute = useRef<string | null>(null);
   const [visible, setVisible] = useState(false);
   const progress = useRef(new Animated.Value(0)).current;
   const closing = useRef(false), reduceMotion = useRef(false);
@@ -29,10 +31,11 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
   const openMenu = useCallback(() => {
     Keyboard.dismiss();
     closing.current = false;
+    pendingRoute.current = null;
     progress.setValue(0);
     setVisible(true);
   }, [progress]);
-  const close = (next?: () => void) => {
+  const close = useCallback((next?: () => void) => {
     if (closing.current) return;
     closing.current = true;
     Animated.timing(progress, { toValue: 0, duration: reduceMotion.current ? 0 : 180, useNativeDriver: true }).start(({ finished }) => {
@@ -41,6 +44,22 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
       closing.current = false;
       next?.();
     });
+  }, [progress]);
+  useEffect(() => {
+    if (!pendingRoute.current || pathname !== pendingRoute.current) return;
+    // A próxima rota já foi confirmada. Revela-a só depois do commit visual.
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => { pendingRoute.current = null; close(); });
+    });
+    return () => { cancelAnimationFrame(first); cancelAnimationFrame(second); };
+  }, [pathname, close]);
+  const navigate = (href: Href) => {
+    if (pendingRoute.current || closing.current) return;
+    const target = (typeof href === "string" ? href : href.pathname).replace(/\/\([^/]+\)/g, "").split("?")[0] || "/";
+    if (target === pathname) { close(); return; }
+    pendingRoute.current = target;
+    router.navigate(href);
   };
   return <MenuContext.Provider value={{ openMenu }}>
     <View style={{ flex: 1 }} accessibilityElementsHidden={visible} importantForAccessibility={visible ? "no-hide-descendants" : "auto"}>{children}</View>
@@ -53,7 +72,7 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
             <View style={styles.logoFrame}><Image source={require("@/assets/images/cbrio-wordmark.png")} tintColor="#fff" resizeMode="contain" style={styles.logo} accessibilityLabel="CBRio" /></View>
             <Pressable accessibilityRole="button" accessibilityLabel={t("Fechar menu")} onPress={() => close()} style={styles.close}><Ionicons name="close-outline" size={30} color="#fff" /></Pressable>
           </View>
-          <MenuContent onNavigate={(href: Href) => close(() => router.navigate(href))} onSignOut={() => close(() => { void signOut(); })} />
+          <MenuContent onNavigate={navigate} onSignOut={() => close(() => { void signOut(); })} />
         </Animated.View>
       </View>
     </Modal>

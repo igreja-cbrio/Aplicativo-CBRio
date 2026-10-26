@@ -1,3 +1,4 @@
+import { ScrollView } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 // ============================================================================
 // GENEROSIDADE · só o VALOR, sem meio de doação (Marcos · 05/08/2026)
@@ -24,7 +25,7 @@ import { Text } from "@/components/ui/Typography";
 // estilo aqui: é a diferença entre permitido e proibido.
 // ============================================================================
 import { useMemo, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Linking, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";

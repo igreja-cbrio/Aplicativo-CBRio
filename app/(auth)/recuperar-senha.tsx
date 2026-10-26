@@ -10,31 +10,34 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
-import { useAuth } from "@/contexts/AuthContext";
+import { apiPost } from "@/lib/api";
+import { mascararCpf, soDigitosCpf } from "@/lib/cpf";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 export default function RecuperarSenhaScreen() {
-  const { resetPassword } = useAuth();
+  const [emailMascarado, setEmailMascarado] = useState<string | null>(null);
   const t = useT();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleReset() {
     setError(null);
-    if (!email) {
-      setError(t("Informe seu e-mail."));
+    if (loading) return;
+    if (soDigitosCpf(cpf).length !== 11) {
+      setError(t("Informe um CPF válido."));
       return;
     }
     setLoading(true);
     try {
-      await resetPassword(email);
+      const response = await apiPost<{ emailMascarado: string | null }>("/app/auth/recuperar-senha", { cpf: soDigitosCpf(cpf) }, { auth: false });
+      setEmailMascarado(response.emailMascarado);
       setSent(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("Não foi possível enviar o e-mail."));
@@ -56,21 +59,22 @@ export default function RecuperarSenhaScreen() {
             </View>
             <Text style={styles.title}>{t("Recuperar senha")}</Text>
             <Text style={styles.subtitle}>
-              {t("Enviaremos um link para redefinir sua senha.")}
+              {t("Informe seu CPF para receber um link no e-mail da sua conta.")}
             </Text>
 
             {sent ? (
               <Text style={styles.success}>
-                {t("Pronto! Se houver uma conta com esse e-mail, o link de recuperação foi enviado.")}
+                {emailMascarado ? `${t("Link enviado para")} ${emailMascarado}. ${t("Confira também a pasta de spam.")}` : t("Se houver uma conta vinculada ao CPF, você receberá as instruções no e-mail cadastrado.")}
               </Text>
             ) : (
               <View style={styles.form}>
                 <Input
-                  label={t("E-mail")}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="voce@exemplo.com"
-                  keyboardType="email-address"
+                  label={t("CPF")}
+                  value={cpf}
+                  onChangeText={(value) => setCpf(mascararCpf(value))}
+                  placeholder="000.000.000-00"
+                  keyboardType="number-pad"
+                  maxLength={14}
                 />
                 {error && <Text style={styles.error}>{error}</Text>}
                 <Button title={t("Enviar link")} onPress={handleReset} loading={loading} />

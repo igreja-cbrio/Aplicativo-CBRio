@@ -76,3 +76,11 @@ AppState.addEventListener("change", (state) => {
   if (state === "active") supabase.auth.startAutoRefresh();
   else supabase.auth.stopAutoRefresh();
 });
+
+let recoveryClientSequence = 0;
+/** Não compartilha storage, refresh automático ou listeners com a conta aberta. */
+export function createRecoveryClient() {
+  return createClient(supabaseUrl || FALLBACK_URL, supabaseAnonKey || FALLBACK_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: `cbrio-recovery-${++recoveryClientSequence}` },
+  });
+}

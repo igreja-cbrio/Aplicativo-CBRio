@@ -1,0 +1,20 @@
+import { describe, it, expect, vi } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { recoveryTokens } from "../lib/recoveryLink";
+import { preparePasswordRecovery } from "../lib/passwordRecovery";
+const link = "cbrio://redefinir-senha#access_token=token-b&refresh_token=refresh-b&type=recovery";
+function client(id = "B") {
+ const auth = { setSession: vi.fn(async () => ({ data: { session: { user: { id } }, user: { id } }, error: null })), getUser: vi.fn(async () => ({ data: { user: { id } }, error: null })), updateUser: vi.fn(async () => ({ error: null })) };
+ return { auth, sdk: { auth } as unknown as SupabaseClient };
+}
+describe("link de recuperação", () => {
+ it("aceita somente a rota esperada com par de tokens e tipo recovery", () => { expect(recoveryTokens(link)).toEqual({ access_token: "token-b", refresh_token: "refresh-b" }); expect(recoveryTokens(link.replace("cbrio://", "cbrio:///"))).not.toBeNull(); });
+ it.each([null, "", "cbrio://redefinir-senha", link.replace("recovery", "signup"), link.replace("recovery", "magiclink"), link.replace("cbrio:", "https:"), link.replace("redefinir-senha", "redefinir-senha.evil"), link+"&access_token=another", link+"&error=expired", link+"&bad=%XX", link.replace("&refresh_token=refresh-b", ""), link.replace("#", "?type=recovery#")])("rejeita URL inválida mesmo com uma conta aberta: %s", (url) => { expect(recoveryTokens(url)).toBeNull(); });
+ it("uma sessão existente nunca autoriza um formulário sem link", async () => { const c = client("A"); await expect(preparePasswordRecovery(null, c.sdk)).rejects.toThrow(); expect(c.auth.setSession).not.toHaveBeenCalled(); expect(c.auth.updateUser).not.toHaveBeenCalled(); });
+ it("sessão A no app não é usada; só cliente do link B recebe a senha", async () => { const a = client("A"), b = client("B"); const recovery = await preparePasswordRecovery(link, b.sdk); await recovery.save("new-password"); expect(b.auth.setSession).toHaveBeenCalledWith({ access_token: "token-b", refresh_token: "refresh-b" }); expect(b.auth.updateUser).toHaveBeenCalledWith({ password: "new-password" }); expect(a.auth.updateUser).not.toHaveBeenCalled(); await expect(recovery.save("again")).rejects.toThrow(); });
+ it("erro ou ausência de sessão nunca libera", async () => { const c = client(); c.auth.setSession.mockResolvedValue({ data: { session: null, user: null }, error: null } as any); await expect(preparePasswordRecovery(link, c.sdk)).rejects.toThrow(); expect(c.auth.updateUser).not.toHaveBeenCalled(); });
+ it("conta trocada após validar bloqueia o update", async () => { const c = client(); const recovery = await preparePasswordRecovery(link, c.sdk); c.auth.getUser.mockResolvedValue({ data: { user: { id: "A" } }, error: null }); await expect(recovery.save("new-password")).rejects.toThrow(); expect(c.auth.updateUser).not.toHaveBeenCalled(); });
+ it("novo link invalida a autorização anterior", async () => { const c = client(); const recovery = await preparePasswordRecovery(link, c.sdk); recovery.invalidate(); await expect(recovery.save("new-password")).rejects.toThrow(); expect(c.auth.updateUser).not.toHaveBeenCalled(); });
+ it("duplo toque só pode enviar uma alteração", async () => { const c = client(); const recovery = await preparePasswordRecovery(link, c.sdk); const attempts = await Promise.allSettled([recovery.save("new-password"), recovery.save("different")]); expect(attempts.filter(r => r.status === "fulfilled")).toHaveLength(1); expect(c.auth.updateUser).toHaveBeenCalledTimes(1); });
+ it("invalidação durante getUser impede salvar", async () => { const c = client(); let release: (r: any) => void = () => {}; c.auth.getUser.mockImplementation(() => new Promise(resolve => { release = resolve; })); const recovery = await preparePasswordRecovery(link, c.sdk); const saving = recovery.save("new-password"); recovery.invalidate(); release({ data: { user: { id: "B" } }, error: null }); await expect(saving).rejects.toThrow(); expect(c.auth.updateUser).not.toHaveBeenCalled(); });
+});

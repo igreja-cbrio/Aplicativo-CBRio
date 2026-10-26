@@ -1,4 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useIsFocused } from "@react-navigation/native";
+import { DockInsetContext } from "@/components/navigation/DockContent";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useEffect, useRef, useState } from "react";
 import { Stack, router, useGlobalSearchParams, usePathname } from "expo-router";
 import { AppState, BackHandler, Platform, View } from "react-native";
 import { MembroProvider } from "@/contexts/MembroContext";
@@ -47,8 +50,13 @@ const TELAS_BARRA: Record<string, string> = {
 
 export default function AppLayout() {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const [dockHeight, setDockHeight] = useState(78 + Math.max(insets.bottom, 12));
   const { mode } = useTheme();
   const pathname = usePathname();
+  const focused = useIsFocused();
+  const focusRef = useRef(focused);
+  focusRef.current = focused;
   const paramsGlobais = useGlobalSearchParams();
 
   const telaDeBarra = Object.prototype.hasOwnProperty.call(TELAS_BARRA, pathname);
@@ -104,12 +112,12 @@ export default function AppLayout() {
       if (saiuEm == null) return;
       const fora = Date.now() - saiuEm;
       saiuEm = null;
-      if (fora < MS_PARA_RECOMECAR) return;
+      if (fora < MS_PARA_RECOMECAR || !focusRef.current) return;
 
       const rota = rotaRef.current;
       // Já está na Home, ou está no meio do cadastro (resetar apagaria o que a
       // pessoa digitou) → não mexe.
-      if (rota === "/" || rota.startsWith("/completar-cadastro")) return;
+      if (rota === "/" || rota.startsWith("/completar-cadastro") || rota === "/recuperar-senha" || rota === "/redefinir-senha") return;
       try {
         router.dismissAll();
       } catch {
@@ -131,10 +139,9 @@ export default function AppLayout() {
           {!semBarra && <StatusBar style={pathname === "/" || mode === "dark" ? "light" : "dark"} />}
           {!semBarra && pathname !== "/" && <TopBar mostrarVoltar={telaDeBarra || pathname === "/agenda"} />}
 
-          {/* A barra é IRMÃ do Stack (não sobreposta): a tela nunca fica por
-              baixo dela, então nenhum `paddingBottom` de tela precisa saber
-              que a barra existe. */}
+          {/* Conteúdo ocupa a tela inteira e passa por trás do dock. */}
           <View style={{ flex: 1 }}>
+            <DockInsetContext.Provider value={semBarra || pathname === "/" ? 0 : dockHeight}>
             <Stack
               screenOptions={{
                 headerShown: false,
@@ -162,9 +169,10 @@ export default function AppLayout() {
               <Stack.Screen name="generosidade" options={{ animation: "none" }} />
               <Stack.Screen name="menu" options={{ animation: "none" }} />
             </Stack>
+            </DockInsetContext.Provider>
           </View>
 
-          {!semBarra && pathname !== "/" && <BottomBar />}
+          {!semBarra && pathname !== "/" && <BottomBar onLayout={(event) => setDockHeight(event.nativeEvent.layout.height)} />}
         </View>
       </CadastroGate>
       </MenuProvider>

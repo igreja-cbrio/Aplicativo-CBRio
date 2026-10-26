@@ -1,3 +1,4 @@
+import { ScrollView } from "@/components/navigation/DockContent";
 import { Text, TextInput } from "@/components/ui/Typography";
 // ============================================================================
 // FALAR COM A CBRIO · a porta única (11/08/2026 · apontamento 14)
@@ -18,7 +19,7 @@ import { Text, TextInput } from "@/components/ui/Typography";
 // a pessoa diz o que precisa faz mais sentido."*
 // ============================================================================
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Stack } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";

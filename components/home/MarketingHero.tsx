@@ -1,6 +1,6 @@
 import { Text } from "@/components/ui/Typography";
 import { useEffect, useRef, useState } from "react";
-import { RefreshControl, Image, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type ImageSourcePropType } from "react-native";
+import { ActivityIndicator, RefreshControl, Image, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type ImageSourcePropType } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -45,7 +45,7 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
   return (
     <View style={styles.hero} onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}>
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        {background ? <View style={styles.photo}>
+        {background ? <View style={[styles.photo, { height: Math.min(viewportHeight, width * 16 / 9) }]}>
           <Image source={background} resizeMode="cover" style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors />
           <LinearGradient colors={["#598592", "rgba(89,133,146,0)"]} style={styles.skyBlend} />
         </View> : null}
@@ -110,14 +110,21 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
         </View>
       </View>
       </ScrollView>
+      {refreshing && <View pointerEvents="none" accessibilityRole="progressbar" accessibilityLabel={t("Atualizando...")} style={[styles.refresh, { top: insets.top + 64 }]}>
+        <ActivityIndicator color="#fff" size="small" />
+        <Text style={styles.refreshText}>{t("Atualizando...")}</Text>
+      </View>}
     </View>
   );
 }
 const styles = StyleSheet.create({
   hero: { flex: 1, backgroundColor: "#598592", overflow: "hidden" },
   scroll: { flex: 1 },
-  // Reserva mais céu e reduz o recorte lateral da foto; o fundo nunca rola.
-  photo: { position: "absolute", bottom: 0, left: 0, right: 0, height: "90%" },
+  refresh: { position: "absolute", alignSelf: "center", borderRadius: 24, paddingHorizontal: 18, paddingVertical: 10, backgroundColor: "rgba(25,52,59,0.9)", flexDirection: "row", alignItems: "center", gap: 10 },
+  refreshText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  // Mantém a escala do enquadramento 9:16 da referência, inclusive em celulares mais altos.
+  // O céu preenche o excedente; a foto permanece fixa durante o gesto de atualizar.
+  photo: { position: "absolute", bottom: 0, left: 0, right: 0,  },
   skyBlend: { position: "absolute", top: 0, left: 0, right: 0, height: "16%" },
   frame: { flex: 1, width: "100%", maxWidth: 680, alignSelf: "center" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },

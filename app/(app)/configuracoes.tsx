@@ -1,3 +1,4 @@
+import { ScrollView } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -5,7 +6,6 @@ import {
   Linking,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Switch,
   View,
@@ -330,7 +330,7 @@ export default function ConfiguracoesScreen() {
               />
             </View>
           )}
-          <Pressable style={styles.navRow} onPress={() => router.navigate("/trocar-senha")}>
+          <Pressable style={styles.navRow} onPress={() => router.navigate("/(auth)/recuperar-senha")}>
             <Ionicons name="key-outline" size={20} color={colors.text} />
             <Text style={[styles.label, { flex: 1 }]}>{t("Trocar senha")}</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />

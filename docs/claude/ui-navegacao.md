@@ -462,3 +462,11 @@ patches em APIs internas do React Native.
 
 Os cinco destinos de QuickLinks usam troca direta e navegação reutilizável.
 Generosidade retorna à Home e telas fora de foco ficam congeladas pelo stack.
+
+### Home, dock sobreposto e recuperação por CPF · 26/10/2026
+- Foto fixa ancorada embaixo, enquadramento 9:16 (largura × 16/9); céu preenche telas altas sem ampliar a imagem. Refresh mantém feedback nativo e cápsula com spinner durante dados/OTA.
+- Dock é absoluto, sem faixa própria. `DockInsetContext` mede altura real; `DockContent` adiciona espaço só ao conteúdo do scroll externo, preserva refs/listas genéricas e zera em modais. Bíblia e FAB de escalas sobem acima da barra.
+- Menu navega com a gaveta aberta e só a recolhe após a rota destino confirmar, em dois frames. Não revela Home antes de abrir destino.
+- iOS: segurar 220ms abre lente com ícone/legenda ampliados; arrastar seleciona, soltar confirma, sair da área cancela. `GlassView.isInteractive` em iOS compatível, fallback acessível; VoiceOver usa botões. Implementação customizada inspirada em Apple HIG Tab bars / UIGlassEffect; não é UITabBar nativa. Android mantém toque e superfície sólida segura.
+- Recuperar senha recebe CPF no login e configurações, chama `POST /app/auth/recuperar-senha`, mostra só máscara retornada. Backend exige relação única membro/profile/Auth e quota persistente; não expõe email completo.
+- Redefinir valida URL/tipo/tokens e usa cliente Auth efêmero, isolado da sessão atual; não aceita sessão já aberta como autorização. Após salvar, pede login de novo. Testes cobrem link B com conta A, expiração, URLs ambíguas, invalidação e duplo envio.

@@ -1,3 +1,5 @@
+import { DockInsetContext } from "@/components/navigation/DockContent";
+import { Modal, ScrollView } from "@/components/navigation/DockContent";
 import { Text, TextInput } from "@/components/ui/Typography";
 // ============================================================================
 // MONTAR ESCALA · por TIME, em duas etapas, num carrossel (23/09/2026)
@@ -24,10 +26,10 @@ import { Text, TextInput } from "@/components/ui/Typography";
 // `composicao` (equipe × posição × quantidade) desde 25/08 e `team_id` em cada
 // linha. A tela lia um campo `equipes` que nunca existiu na resposta.
 // ============================================================================
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator, Alert, Image, Modal, Pressable,
-  RefreshControl, ScrollView, StyleSheet, View, useWindowDimensions,
+  ActivityIndicator, Alert, Image, Pressable,
+  RefreshControl, StyleSheet, View, useWindowDimensions,
   type NativeSyntheticEvent, type NativeScrollEvent,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -98,6 +100,7 @@ const mesmoAlvo = (a: AlvoArraste | null, b: AlvoArraste | null) =>
   a === b || (!!a && !!b && a.tipo === b.tipo && a.chave === b.chave && (a.tipo === "time" || (b.tipo === "posicao" && a.time === b.time)));
 
 export default function EscalaSupervisorScreen() {
+  const dockInset = useContext(DockInsetContext);
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { width: larguraTela } = useWindowDimensions();
@@ -520,7 +523,7 @@ export default function EscalaSupervisorScreen() {
     return (
       <View key={time.chave} style={{ width: larguraTela }}>
         <ScrollView
-          contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: 110, gap: 8 }}
+          contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: dockInset + 110, gap: 8 }}
           keyboardShouldPersistTaps="handled"
           onScroll={e => { paginaScrollY.current[time.chave] = e.nativeEvent.contentOffset.y; }}
           scrollEventThrottle={16}
@@ -726,7 +729,7 @@ export default function EscalaSupervisorScreen() {
           )}
 
           {servicoSel && !carregandoEscala && !dragItem && !somenteLeitura && (
-            <Pressable style={styles.fab} onPress={() => abrirAdd(timeAberto)} accessibilityRole="button" accessibilityLabel={t("Adicionar voluntário")}>
+            <Pressable style={[styles.fab, { bottom: dockInset + spacing.lg }]} onPress={() => abrirAdd(timeAberto)} accessibilityRole="button" accessibilityLabel={t("Adicionar voluntário")}>
               <Ionicons name="person-add" size={20} color="#fff" />
               <Text style={styles.fabTxt}>{t("Adicionar")}</Text>
             </Pressable>

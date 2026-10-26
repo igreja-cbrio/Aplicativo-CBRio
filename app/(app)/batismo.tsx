@@ -1,15 +1,13 @@
+import { FlatList, Modal, ScrollView } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  FlatList,
   Image,
   Linking,
-  Modal,
   Pressable,
-  ScrollView,
   Share,
   StyleSheet,
   View,

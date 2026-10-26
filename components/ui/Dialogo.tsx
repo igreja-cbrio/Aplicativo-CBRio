@@ -1,3 +1,4 @@
+import { Modal } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 // ============================================================================
 // DIÁLOGO DA CASA · o fim do "modal quadrado" (11/08/2026)
@@ -24,7 +25,7 @@ import { Text } from "@/components/ui/Typography";
 // navegam na linha seguinte ao alerta continuam nativos de propósito.
 // ============================================================================
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Modal, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useColors } from "@/contexts/ThemeContext";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { useT } from "@/lib/i18n";

@@ -1,6 +1,7 @@
+import { Modal } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 import { useEffect, useMemo } from "react";
-import { Modal, StyleSheet, View, useWindowDimensions } from "react-native";
+import { StyleSheet, View, useWindowDimensions } from "react-native";
 import ConfettiCannon from "react-native-confetti-cannon";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";

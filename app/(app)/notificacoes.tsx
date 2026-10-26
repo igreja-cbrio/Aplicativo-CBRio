@@ -1,10 +1,9 @@
+import { ScrollView, SectionList } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
-  SectionList,
   StyleSheet,
   View,
 } from "react-native";

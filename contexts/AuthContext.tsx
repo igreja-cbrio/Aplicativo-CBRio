@@ -1,3 +1,4 @@
+import { logoutWithCleanup, type LogoutScope } from "@/lib/logout";
 import React, {
   createContext,
   useContext,
@@ -57,7 +58,7 @@ type AuthContextValue = {
   signInWithApple: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (novaSenha: string) => Promise<void>;
-  signOut: () => Promise<void>;
+  signOut: (scope?: LogoutScope) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -286,16 +287,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { error } = await supabase.auth.updateUser({ password: novaSenha });
         if (error) throw error;
       },
-      async signOut() {
+      async signOut(scope = "global") {
         setPreview(false);
-        await limparCache(); // descarta cache local (destaques/cultos) da sessão
-        await definirBiometriaAtiva(false); // cada conta reativa o desbloqueio
-        // Remove o push token deste aparelho ANTES de derrubar a sessão (a RLS
-        // de delete exige o dono logado) — senão o token fica órfão e a conta
-        // antiga/excluída seguiria recebendo pushes neste aparelho.
-        await unregisterPush();
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
+        await logoutWithCleanup({
+          clearCache: limparCache,
+          disableBiometry: () => definirBiometriaAtiva(false),
+          unregisterPush,
+          endSession: (selectedScope) => supabase.auth.signOut({ scope: selectedScope }),
+        }, scope);
       },
     }),
     [session, loading, rememberPref, preview]
