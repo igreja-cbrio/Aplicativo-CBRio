@@ -17,6 +17,11 @@ export type HomeNotice = { id: string; title: string; body?: string; count?: num
 /** Foto original fornecida pelo marketing, sem textos incorporados. */
 export const HOME_BACKGROUND: ImageSourcePropType = require("@/assets/images/home-copacabana.jpg");
 
+// Recorte da última referência ("Ver as fotos recentes.png"), sem as faixas
+// pretas: x=972..2312 na foto original de 3600 × 2387. Escala só pela largura:
+// celulares altos ganham céu acima, nunca outro zoom/corte nem distorção.
+const PHOTO_CROP = { x: 972, width: 1340 };
+
 export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACKGROUND, refreshing = false, onRefresh }: { notices: HomeNotice[]; unreadCount?: number; background?: ImageSourcePropType; refreshing?: boolean; onRefresh?: () => void }) {
   const { height, width, fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -45,9 +50,13 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
   return (
     <View style={styles.hero} onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}>
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        {background ? <View style={[styles.photo, { height: Math.min(viewportHeight, width * 16 / 9) }]}>
-          <Image source={background} resizeMode="cover" style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors />
-          <LinearGradient colors={["#598592", "rgba(89,133,146,0)"]} style={styles.skyBlend} />
+        {background ? <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: width * 2387 / PHOTO_CROP.width }}>
+          <Image source={background} resizeMode="contain" style={{
+            position: "absolute", top: 0, bottom: 0,
+            width: width * 3600 / PHOTO_CROP.width,
+            left: -width * PHOTO_CROP.x / PHOTO_CROP.width,
+          }} accessibilityIgnoresInvertColors />
+          <LinearGradient colors={["#598592", "rgba(89,133,146,0)"]} style={{ position: "absolute", top: 0, left: 0, right: 0, height: "12%" }} />
         </View> : null}
         <LinearGradient colors={background ? ["rgba(12,32,38,0.42)", "rgba(12,32,38,0.46)", "rgba(12,32,38,0.62)"] : ["#49656b", "#314b51", "#142e34"]} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} />
       </View>
@@ -122,10 +131,6 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   refresh: { position: "absolute", alignSelf: "center", borderRadius: 24, paddingHorizontal: 18, paddingVertical: 10, backgroundColor: "rgba(25,52,59,0.9)", flexDirection: "row", alignItems: "center", gap: 10 },
   refreshText: { color: "#fff", fontSize: 13, fontWeight: "700" },
-  // Mantém a escala do enquadramento 9:16 da referência, inclusive em celulares mais altos.
-  // O céu preenche o excedente; a foto permanece fixa durante o gesto de atualizar.
-  photo: { position: "absolute", bottom: 0, left: 0, right: 0,  },
-  skyBlend: { position: "absolute", top: 0, left: 0, right: 0, height: "16%" },
   frame: { flex: 1, width: "100%", maxWidth: 680, alignSelf: "center" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   logoFrame: { width: 112, height: 40, overflow: "hidden" },

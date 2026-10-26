@@ -29,7 +29,8 @@
       "autoIncrement": true,
       "environment": "production",
       "ios": {
-        "resourceClass": "m-medium"
+        "resourceClass": "m-medium",
+        "image": "macos-sequoia-15.6-xcode-26.2"
       },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://hhntwfawfnxvuobhdfkb.supabase.co",

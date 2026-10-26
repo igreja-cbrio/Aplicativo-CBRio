@@ -45,7 +45,7 @@ está no ERP, em `docs/mapa/APPS.md`.
 ## ⚠️⚠️ Regras transversais (uma linha cada · a íntegra está no arquivo indicado)
 
 - **OTA só sai de uma worktree LIMPA em `origin/main`** (um OTA tirado de branch antiga já derrubou 18 PRs da frota) → `batismo.md`.
-- **A `version` do `app.json` continua `"1.0.0"`**: subir congela o OTA da frota (o runtime é `appVersion`) → `publicacao-ota-auditorias.md` e "Rotina do build de loja" abaixo.
+- **`runtimeVersion` literal permanece `"1.0.0"`** (desacoplado de `version`, agora 1.0.2): módulos novos são opcionais no JS para binários antigos; não voltar à policy `appVersion` sem migração → `publicacao-ota-auditorias.md`.
 - **Quem decide o que é válido é o BACKEND, não o app**: régua de negócio (o que está aberto, quem pode, qual status vale) vem de endpoint do ERP, nunca reproduzida aqui → `geral-integracao-erp.md`.
 - **`behavior` do `KeyboardAvoidingView` NUNCA é `undefined`** → `ui-navegacao.md`.
 - **`<Modal>` dentro de `<Modal>` nasce ATRÁS no iOS**: componente embutido (ex.: `CalendarioBR embutido`) dentro de modal → `ui-navegacao.md`.

@@ -2,7 +2,7 @@
   "expo": {
     "name": "CBRio",
     "slug": "aplicativo-cbrio",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "scheme": "cbrio",
     "userInterfaceStyle": "automatic",
