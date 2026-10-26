@@ -17,10 +17,6 @@ export const MENU_SECTIONS = [
   { title: "Viver a CBRio", items: QUICK_LINKS },
   { title: "Participar", items: [
     { label: "Inscrições", icon: "create-outline", href: "/inscricoes" },
-    { label: "Batismo", icon: "water-outline", href: "/batismo" },
-    { label: "NEXT", icon: "sparkles-outline", href: "/next" },
-    { label: "Apresentação de crianças", icon: "happy-outline", href: "/apresentacao-crianca" },
-    { label: "Check-in Kids", icon: "happy-outline", href: "/kids" },
   ] },
   { title: "Conteúdo", items: [
     { label: "Pregações", icon: "play-circle-outline", href: "/videos" },
