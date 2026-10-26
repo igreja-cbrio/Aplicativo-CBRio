@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/Input";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
-type Estado = "validando" | "pronto" | "invalido";
+type Estado = "validando" | "pronto" | "invalido" | "concluido";
 
 export default function RedefinirSenha() {
   const { signOut } = useAuth();
@@ -69,7 +69,7 @@ export default function RedefinirSenha() {
       await currentAttempt.save(senha);
       if (attempt.current !== currentAttempt) return;
       attempt.current = null;
-      setEstado("invalido");
+      setEstado("concluido");
       try { await signOut("local"); } catch {
         Alert.alert(t("Senha redefinida ✅"), t("A senha foi alterada. Saia da conta pelo menu e entre novamente."));
         router.replace("/");
@@ -93,6 +93,8 @@ export default function RedefinirSenha() {
             <CbrioHeart size={56} />
           </View>
           <Text style={styles.title}>{t("Redefinir senha")}</Text>
+
+          {estado === "concluido" && <Text style={styles.texto}>{t("Senha redefinida ✅")} {t("Entre novamente usando sua nova senha.")}</Text>}
 
           {estado === "validando" && (
             <Text style={styles.texto}>{t("Validando seu link de redefinição…")}</Text>
