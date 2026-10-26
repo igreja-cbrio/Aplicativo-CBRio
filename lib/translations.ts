@@ -6,6 +6,15 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Comunidade": { en: "Community", es: "Comunidad" },
+  "Ajustes": { en: "Settings", es: "Ajustes" },
+  "Conteúdo": { en: "Content", es: "Contenido" },
+  "NEXT": { en: "NEXT", es: "NEXT" },
+  "Participar": { en: "Participate", es: "Participar" },
+  "Você": { en: "You", es: "Tú" },
+  "Agenda e destaques": { en: "Events and highlights", es: "Agenda y destacados" },
+  "Viver a CBRio": { en: "Life at CBRio", es: "Vivir la CBRio" },
+  "Fechar menu": { en: "Close menu", es: "Cerrar menú" },
   "Não perca seu streak diário na devocional de Quarta com Deus!": { en: "Keep your daily streak in the Wednesday with God devotional!", es: "¡Mantén tu racha diaria en el devocional de Miércoles con Dios!" },
   "Notícias e avisos": { en: "News and announcements", es: "Noticias y avisos" },
   "seja muito": { en: "a warm", es: "¡te damos la" },

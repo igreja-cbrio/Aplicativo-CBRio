@@ -18,7 +18,7 @@ export function ComingSoon({ title, icon, description }: Props) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <View style={styles.content}>
         <View style={styles.badge}>
           <Ionicons name={icon} size={36} color={colors.brandPale} />

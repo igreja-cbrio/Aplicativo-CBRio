@@ -696,7 +696,7 @@ export default function GrupoMembrosScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* ── barra de cima: o nome vive AQUI (uma vez), com dia/local embaixo ── */}

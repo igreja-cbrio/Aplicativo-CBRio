@@ -30,7 +30,7 @@ export default function Mural() {
     } catch (e) { Alert.alert(t("Não foi possível publicar"), e instanceof Error ? e.message : t("Tente novamente.")); }
     finally { setEnviando(false); }
   }
-  return <SafeAreaView style={s.safe} edges={["top", "left", "right"]}>
+  return <SafeAreaView style={s.safe} edges={["left", "right"]}>
     <Stack.Screen options={{ headerShown: false }} />
     <View style={s.header}><Pressable onPress={() => params.referencia ? router.back() : subirUmNivel()} hitSlop={12} style={s.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}><Ionicons name="chevron-back" size={24} color={c.text} /></Pressable><Text style={s.headerTitle}>{t("Comentários")}</Text><View style={s.back} /></View>
     <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">

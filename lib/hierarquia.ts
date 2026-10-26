@@ -59,6 +59,7 @@ import { router, type Href } from "expo-router";
  */
 const PAI: Record<string, string> = {
   "/noticias": "/",
+  "/agenda": "/",
   // telas de barra → Home
   "/meu-grupo": "/",
   "/voluntariado": "/",

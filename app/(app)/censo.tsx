@@ -180,7 +180,7 @@ export default function CensoScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.header}>

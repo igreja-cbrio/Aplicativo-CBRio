@@ -213,7 +213,7 @@ ${t("Primeiro encontro")}: ${dataComHora(me.encontros[0].data, me.encontros[0].h
   // gerencia. Falha na consulta cai na de membro — nunca prende ninguém.
   if (gestao && !verComoMembro) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+      <SafeAreaView style={styles.safe} edges={["left", "right"]}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.headerGestao}>
           <Pressable onPress={() => subirUmNivel()} hitSlop={8} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
@@ -241,7 +241,7 @@ ${t("Primeiro encontro")}: ${dataComHora(me.encontros[0].data, me.encontros[0].h
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>

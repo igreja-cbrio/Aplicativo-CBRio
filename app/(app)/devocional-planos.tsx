@@ -27,7 +27,7 @@ export default function Planos() {
     if (!pense) return Alert.alert(t("Conteúdo indisponível"), t("O Pense mais recente ainda não carregou."));
     await Linking.openURL("https://www.youtube.com/watch?v=" + pense.video_id);
   }
-  return <SafeAreaView style={s.safe} edges={["top", "left", "right"]}><Stack.Screen options={{ headerShown: false }} />
+  return <SafeAreaView style={s.safe} edges={["left", "right"]}><Stack.Screen options={{ headerShown: false }} />
     <View style={s.header}><Pressable onPress={() => subirUmNivel()} hitSlop={12} style={s.back}><Ionicons name="chevron-back" size={24} color={c.text} /></Pressable><Text style={s.headerTitle}>{t("Planos de leitura")}</Text><View style={s.back} /></View>
     <ScrollView contentContainerStyle={s.content}><Text style={s.eyebrow}>{t("ESCOLHA SUA JORNADA")}</Text><Text style={s.title}>{t("Um caminho para cada ritmo")}</Text><Text style={s.subtitle}>{t("Abra uma opção e siga uma leitura por dia.")}</Text>
       <Card icon="play" numero="01" titulo="Pense Pedrão" texto={pense?.titulo ?? t("Uma mensagem breve para o seu dia")} onPress={abrirPense} s={s} c={c} />

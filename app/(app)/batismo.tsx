@@ -134,7 +134,7 @@ export default function BatismoScreen() {
 
   if (podeGerenciar) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={["left", "right"]}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.headerGestao}>
           <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
@@ -163,7 +163,7 @@ export default function BatismoScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
         keyboardShouldPersistTaps="handled"

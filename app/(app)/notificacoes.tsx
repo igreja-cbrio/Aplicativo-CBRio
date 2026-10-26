@@ -184,7 +184,7 @@ export default function NotificacoesScreen() {
   const chips = ["Todas", ...(naoLidas > 0 ? ["Não lidas"] : []), ...categorias];
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
         <Pressable

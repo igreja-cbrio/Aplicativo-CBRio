@@ -33,7 +33,7 @@ export default function Registros() {
     try { await excluirRegistro(registro); await carregar(); }
     catch (e) { Alert.alert(t("Não foi possível excluir"), e instanceof Error ? e.message : t("Tente novamente.")); }
   }
-  return <SafeAreaView style={s.safe} edges={["top", "left", "right"]}><Stack.Screen options={{ headerShown: false }} />
+  return <SafeAreaView style={s.safe} edges={["left", "right"]}><Stack.Screen options={{ headerShown: false }} />
     <View style={s.header}><Pressable onPress={() => params.referencia ? router.back() : subirUmNivel()} hitSlop={12} style={s.back}><Ionicons name="chevron-back" size={24} color={c.text} /></Pressable><Text style={s.headerTitle}>{t("Anotações e Marcações")}</Text><Pressable onPress={() => setEditando(v => !v)} hitSlop={10} style={s.back}><Ionicons name={editando ? "close" : "add"} size={25} color={c.primary} /></Pressable></View>
     <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
       <Text style={s.intro}>{t("Suas reflexões privadas, marcações e comentários publicados ficam reunidos aqui.")}</Text>

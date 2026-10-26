@@ -6,35 +6,11 @@ import { CadastroGate } from "@/components/auth/CadastroGate";
 import { TopBar } from "@/components/ui/TopBar";
 import { BottomBar } from "@/components/ui/BottomBar";
 import { useColors } from "@/contexts/ThemeContext";
-import { useT } from "@/lib/i18n";
+import { MenuProvider } from "@/contexts/MenuContext";
+import { StatusBar } from "expo-status-bar";
 import { ehRaiz, registrarRotaAtual, subirUmNivel } from "@/lib/hierarquia";
 
-/**
- * ============================================================================
- * CASCA DA NAVEGAÇÃO (Marcos · 04/08/2026) — desenho aprovado por ele:
- *
- *   faixa superior:  [ ← ]        Título/logo        [ 🔔 ] [ foto ]
- *   barra de baixo:  Grupos · Servir · Cuidados · Devocional · Menu
- *
- * A HOME fica FORA da barra e **não existe botão "Início" em lugar nenhum** —
- * chega-se nela pela SETA. Foi decisão dele, ciente do trade-off (eu havia
- * sugerido Início na barra; ele preferiu os 4 valores + Menu, "senão fica
- * bagunçado").
- *
- * ⚠️ POR QUE A TAB BAR NATIVA SAIU (era `(tabs)/_layout.tsx` ·
- * expo-router/unstable-native-tabs): no UITabBarController, tudo que aparece
- * TEM que ser uma aba — não existe "tela fora da barra com a barra visível", e
- * a Home precisa exatamente disso. Custo assumido: perdemos o Liquid Glass
- * nativo do iOS 26 e o encolher-ao-rolar. Ganho: sai por OTA (é JS) e é o
- * desenho que ele quer ver.
- * ⚠️ Isto NÃO é o "dock custom" aposentado em 12/06 — lá o problema eram
- * GESTOS próprios (pan/long-press/GlassView aninhada). Aqui são 5 Pressable.
- *
- * As telas de barra recebem a faixa AQUI (uma só, global). As telas de
- * profundidade (perfil, cartões, kids, next…) seguem com o cabeçalho próprio
- * até a limpeza — montar as duas coisas juntas daria dois cabeçalhos.
- * ============================================================================
- */
+/** Navegação comum: marca no topo, menu lateral e atalhos da nova Home. */
 
 /**
  * Quanto tempo fora faz o app "começar de novo" na Home ao voltar.
@@ -71,7 +47,6 @@ const TELAS_BARRA: Record<string, string> = {
 
 export default function AppLayout() {
   const colors = useColors();
-  const t = useT();
   const pathname = usePathname();
   const paramsGlobais = useGlobalSearchParams();
 
@@ -146,18 +121,14 @@ export default function AppLayout() {
 
   return (
     <MembroProvider>
+      <MenuProvider>
       {/* Portão de cadastro: quem entrou sem cadastro de gente (nome real +
           telefone + nascimento) é levado a /completar-cadastro. Não bloqueia
           render — só navega quando o servidor confirma que falta algo. */}
       <CadastroGate>
         <View style={{ flex: 1, backgroundColor: colors.background }}>
-          {telaDeBarra && pathname !== "/" && (
-            <TopBar
-              titulo={TELAS_BARRA[pathname] ? t(TELAS_BARRA[pathname]) : undefined}
-              mostrarLogo={pathname === "/"}
-              mostrarVoltar={pathname !== "/"}
-            />
-          )}
+          {!semBarra && <StatusBar style="light" />}
+          {!semBarra && pathname !== "/" && <TopBar mostrarVoltar={telaDeBarra || pathname === "/agenda"} />}
 
           {/* A barra é IRMÃ do Stack (não sobreposta): a tela nunca fica por
               baixo dela, então nenhum `paddingBottom` de tela precisa saber
@@ -193,6 +164,7 @@ export default function AppLayout() {
           {!semBarra && pathname !== "/" && <BottomBar />}
         </View>
       </CadastroGate>
+      </MenuProvider>
     </MembroProvider>
   );
 }

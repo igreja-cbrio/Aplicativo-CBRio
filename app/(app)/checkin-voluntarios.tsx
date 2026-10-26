@@ -223,7 +223,7 @@ export default function CheckinVoluntariosScreen() {
   const totalMarcados = escala.filter((e) => !!doItem(e)).length;
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <View style={styles.header}>
         <Pressable onPress={() => subirUmNivel("/checkin-voluntarios")} hitSlop={12} style={styles.voltar}>
           <Ionicons name="chevron-back" size={26} color={colors.text} />

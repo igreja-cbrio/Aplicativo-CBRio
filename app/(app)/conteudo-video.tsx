@@ -41,7 +41,7 @@ export default function ConteudoVideoScreen() {
   const proxima = pasta && idx >= 0 && idx + 1 < pasta.partes.length ? pasta.partes[idx + 1] : null;
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>

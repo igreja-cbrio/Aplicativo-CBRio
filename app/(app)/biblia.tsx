@@ -102,7 +102,7 @@ export default function Biblia() {
   }
   const temMarcacaoSelecionada = selecionados.some(v => Boolean(marcacoes[v]));
   const titulo = capitulo ? livro?.nome + " " + capitulo : livro?.nome ?? t("Bíblia");
-  return <SafeAreaView style={[styles.safe, Boolean(capitulo) && styles.readerSafe]} edges={["top", "left", "right"]}><Stack.Screen options={{ headerShown: false }} />
+  return <SafeAreaView style={[styles.safe, Boolean(capitulo) && styles.readerSafe]} edges={["left", "right"]}><Stack.Screen options={{ headerShown: false }} />
     <View style={[styles.header, Boolean(capitulo) && styles.readerHeader]}>
       <Pressable onPress={voltar} hitSlop={12} style={styles.back}><Ionicons name="chevron-back" size={24} color={capitulo ? "#263234" : colors.text} /></Pressable>
       {capitulo ? <View style={styles.readerNav}>

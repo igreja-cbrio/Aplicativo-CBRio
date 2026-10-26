@@ -7,6 +7,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 ## Índice de seções
 
 - Home editorial do marketing (26/10/2026)
+- Navegação e identidade do app inteiro (26/10/2026)
 
 - ⚠️⚠️ TRÊS RELATOS DO ANDROID DO MARCOS · diálogo, fundo da folha, teclado (23/09/2026)
 - ⚠️ NAVEGAÇÃO · o peso não era o destino (11/08/2026 · PR #111)
@@ -397,3 +398,27 @@ Matheus autorizou publicar o fundo provisório por OTA em 26/10 para conferir
 no app. A foto limpa e a conferência em aparelhos seguem pendentes. O relatório
 da loja aponta apenas idade do binário (40 dias), sem diferenças nativas;
 a publicação pode usar a exceção de idade, mantendo o portão de testes.
+
+## Navegação e identidade do app inteiro (26/10/2026)
+
+Matheus esclareceu que a referência é a identidade do app inteiro, e que não
+quer a Home antiga ao rolar. A Home agora termina nos cinco atalhos: o conteúdo
+de agenda, Kids e cultos foi para `/agenda`, acessível pelo menu lateral.
+O menu do topo abre `MenuProvider`, uma gaveta à direita com fundo escurecido,
+fechamento pelo X, toque fora e voltar do Android. `/menu` permanece como
+entrada de compatibilidade: volta à Home e abre a gaveta.
+
+`lib/appNavigation.ts` centraliza os destinos. `QuickLinks` é usado tanto na
+Home quanto no rodapé das demais telas. O novo cabeçalho de marca aparece em
+todas as telas autenticadas, exceto Home e completar cadastro. Os cabeçalhos
+locais conservam títulos, ações e retorno hierárquico; o logo também leva à Home.
+
+O cabeçalho global consome o inset superior e o rodapé consome o inferior.
+As SafeAreaViews das telas internas ficam com left/right para não duplicar
+espaço. **Não zerar o contexto global de insets**: Censo e várias folhas usam
+esses valores dentro de Modal. Onboarding e modais conservam seus insets.
+
+Paletas, raios, fundos, campos e cartões compartilhados usam a identidade teal
+do marketing, com leitura clara/escura preservada. `GlassCard` mantém a API mas
+passa a ser superfície com contorno fino em ambas as plataformas, sem blur.
+Fontes continuam iBrand/Gotham e a foto limpa continua pendente.

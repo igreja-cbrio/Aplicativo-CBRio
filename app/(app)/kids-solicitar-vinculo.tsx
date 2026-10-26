@@ -214,7 +214,7 @@ export default function KidsSolicitarVinculoScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
       <TecladoSeguro style={{ flex: 1 }}>
         <ScrollView

@@ -89,7 +89,7 @@ export default function PlanoDiaScreen() {
   }
 
   const n = Number(numero) || null, tot = Number(total) || null;
-  return <SafeAreaView style={s.safe} edges={["top", "left", "right"]}>
+  return <SafeAreaView style={s.safe} edges={["left", "right"]}>
     <Stack.Screen options={{ headerShown: false }} />
     <View style={s.header}>
       <Pressable onPress={() => subirUmNivel()} hitSlop={12} style={s.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}><Ionicons name="chevron-back" size={24} color={c.text} /></Pressable>
