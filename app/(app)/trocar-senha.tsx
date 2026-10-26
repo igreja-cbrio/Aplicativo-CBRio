@@ -70,7 +70,7 @@ export default function TrocarSenha() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <TecladoSeguro  style={{ flex: 1 }}>
         <ScrollView
           automaticallyAdjustKeyboardInsets

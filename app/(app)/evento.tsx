@@ -261,7 +261,7 @@ export default function EventoScreen() {
 
   if (carregando) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+      <SafeAreaView style={styles.safe} edges={["left", "right"]}>
         <Stack.Screen options={{ headerShown: false }} />
         {cabecalho}
         <ActivityIndicator style={{ marginTop: spacing.xl }} color={colors.primary} />
@@ -273,7 +273,7 @@ export default function EventoScreen() {
   // porta do evento aparece como "esse evento não existe" pra quem está inscrito.
   if (falhouCarga && !evento && !minha) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+      <SafeAreaView style={styles.safe} edges={["left", "right"]}>
         <Stack.Screen options={{ headerShown: false }} />
         {cabecalho}
         <Text style={styles.muted}>
@@ -288,7 +288,7 @@ export default function EventoScreen() {
 
   if (!evento && !minha) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+      <SafeAreaView style={styles.safe} edges={["left", "right"]}>
         <Stack.Screen options={{ headerShown: false }} />
         {cabecalho}
         <Text style={styles.muted}>
@@ -305,7 +305,7 @@ export default function EventoScreen() {
   const prazo = fmtPrazo(ev?.inscricoes_encerram_em);
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
       {cabecalho}
       {/* ⚠️ Sem KeyboardAvoidingView esta tela ficava SEM proteção nenhuma —

@@ -69,14 +69,15 @@ export function Button({
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     base: {
-      height: 52,
+      minHeight: 52,
+      paddingVertical: 14,
       borderRadius: radius.full,
       alignItems: "center",
       justifyContent: "center",
       paddingHorizontal: spacing.lg,
     },
     primary: { backgroundColor: colors.primary },
-    ghost: { backgroundColor: "transparent" },
+    ghost: { backgroundColor: "transparent", borderWidth: 1, borderColor: colors.border },
     dimmed: { opacity: 0.6 },
     label: { color: "#fff", fontSize: font.size.md, fontWeight: "600" },
   });

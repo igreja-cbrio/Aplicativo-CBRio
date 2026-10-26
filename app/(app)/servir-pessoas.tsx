@@ -148,7 +148,7 @@ export default function ServirPessoasScreen() {
   const timeEscolhido = det?.times.find(x => x.id === timeNovo);
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <View style={styles.header}>
         <Pressable onPress={() => subirUmNivel()} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
           <Ionicons name="chevron-back" size={26} color={colors.text} />

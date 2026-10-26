@@ -210,7 +210,7 @@ export default function GrupoEditarScreen() {
 
   if (checking || carregando) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+      <SafeAreaView style={styles.safe} edges={["left", "right"]}>
         <Stack.Screen options={{ headerShown: false }} />
         <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />
       </SafeAreaView>
@@ -219,7 +219,7 @@ export default function GrupoEditarScreen() {
 
   if (!isAdmin) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+      <SafeAreaView style={styles.safe} edges={["left", "right"]}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.header}>
           <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
@@ -235,7 +235,7 @@ export default function GrupoEditarScreen() {
 
   if (!grupo) {
     return (
-      <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+      <SafeAreaView style={styles.safe} edges={["left", "right"]}>
         <Stack.Screen options={{ headerShown: false }} />
         <Text style={styles.muted}>{t("Grupo não encontrado.")}</Text>
       </SafeAreaView>
@@ -243,7 +243,7 @@ export default function GrupoEditarScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
       <TecladoSeguro        style={{ flex: 1 }}>
         <ScrollView

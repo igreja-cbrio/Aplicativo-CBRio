@@ -12,9 +12,9 @@ export function ScreenBackground({ style }: { style?: ViewStyle }) {
   const stops =
     mode === "dark"
       ? // brilho teal no topo -> base escura da marca
-        ["#16404E", "#0E2833", "#0B1F26"]
+        ["#314b51", "#29434a", "#233c42"]
       : // azul claro da marca -> areia suave (gradiente perceptível, texto escuro ok)
-        ["#CDE2E6", "#E8F0EF", "#F6F3EC"];
+        ["#e6ece8", "#f2f3ef", "#fafaf6"];
   return (
     <View
       pointerEvents="none"

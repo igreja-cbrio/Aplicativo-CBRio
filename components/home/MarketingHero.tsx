@@ -6,15 +6,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useT } from "@/lib/i18n";
 import { BRAND_FONT } from "@/lib/fonts";
+import { QuickLinks } from "@/components/navigation/QuickLinks";
+import { useMenu } from "@/contexts/MenuContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export type HomeNotice = { id: string; title: string; body?: string; count?: number; href: "/devocional" | "/noticias" };
-const SHORTCUTS = [
-  { label: "Cuidados", icon: "heart-outline", href: "/cuidados" },
-  { label: "Devocional", icon: "book-outline", href: "/devocional" },
-  { label: "Grupos", icon: "people-outline", href: "/meu-grupo" },
-  { label: "Servir", icon: "hand-left-outline", href: "/voluntariado" },
-  { label: "Generosidade", icon: "gift-outline", href: "/generosidade" },
-] as const;
+
 
 /** Foto limpa do marketing ainda pendente. Nunca usar a arte com texto como fundo. */
 export const HOME_BACKGROUND: ImageSourcePropType | undefined = undefined;
@@ -24,6 +21,8 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
+  const { openMenu } = useMenu();
+  const { fontMultiplier } = useTheme();
   const [cardWidth, setCardWidth] = useState(0);
   const [page, setPage] = useState(0);
   const carousel = useRef<ScrollView>(null);
@@ -33,8 +32,7 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
     setPage(0);
     carousel.current?.scrollTo({ x: 0, animated: false });
   }, [cardWidth, noticeIds]);
-  const largeText = fontScale > 1.2;
-  const scrollShortcuts = largeText || width < 360;
+  const largeText = fontScale * fontMultiplier > 1.2;
   const titleSize = Math.min(76, (width - 40) * 0.18);
   const selectNotice = (next: number) => {
     const index = (next + notices.length) % notices.length;
@@ -56,7 +54,7 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
               <Ionicons name="notifications-outline" size={23} color="#fff" />
               {unreadCount > 0 ? <View style={styles.badge}><Text style={styles.badgeText}>{unreadCount > 9 ? "9+" : unreadCount}</Text></View> : null}
             </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel={t("Menu")} onPress={() => router.navigate("/menu")} style={styles.headerButton}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t("Menu")} onPress={openMenu} style={styles.headerButton}>
               <Ionicons name="menu-outline" size={32} color="#fff" />
             </Pressable>
           </View>
@@ -102,14 +100,7 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
               </ScrollView>
             ) : null}
           </View>
-          <ScrollView horizontal scrollEnabled={scrollShortcuts} showsHorizontalScrollIndicator={false} style={styles.dock} contentContainerStyle={styles.dockContent}>
-            {SHORTCUTS.map((item, i) => (
-              <Pressable key={item.href} accessibilityRole="button" accessibilityLabel={t(item.label)} onPress={() => router.navigate(item.href)} style={({ pressed }) => [styles.shortcut, scrollShortcuts ? { width: 120, flexBasis: 120, flexGrow: 0, flexShrink: 0 } : { flex: i === SHORTCUTS.length - 1 ? 1.4 : 1 }, i > 0 && styles.divider, pressed && styles.shortcutPressed]}>
-                <Ionicons name={item.icon} size={21} color="#29434a" />
-                <Text style={[styles.shortcutLabel, scrollShortcuts && { fontSize: 12 }]}>{t(item.label)}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+          <QuickLinks />
         </View>
       </View>
     </View>
@@ -144,11 +135,5 @@ const styles = StyleSheet.create({
   dots: { flexDirection: "row", alignSelf: "center", alignItems: "flex-end", justifyContent: "center", gap: 3, minWidth: 44, minHeight: 44, paddingBottom: 6 },
   dot: { width: 6, height: 6, borderRadius: 3, borderWidth: 1, borderColor: "#fff" },
   dotSelected: { backgroundColor: "#fff" },
-  dock: { flexGrow: 0, backgroundColor: "#fafaf6", borderRadius: 28 },
-  dockContent: { flexGrow: 1, paddingVertical: 12, paddingHorizontal: 3 },
-  shortcut: { minHeight: 48, alignItems: "center", justifyContent: "center", paddingHorizontal: 2, gap: 7 },
-  shortcutLabel: { fontSize: 10, fontWeight: "700", color: "#29434a", textAlign: "center", width: "100%" },
-  divider: { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: "#c9d1cf" },
-  shortcutPressed: { backgroundColor: "#dfe9e7", borderRadius: 16 },
   pressed: { opacity: 0.72 },
 });

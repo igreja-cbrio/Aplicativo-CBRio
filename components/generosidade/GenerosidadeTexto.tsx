@@ -70,7 +70,7 @@ export function GenerosidadeTexto() {
   const [abrindo, setAbrindo] = useState(false);
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Pressable

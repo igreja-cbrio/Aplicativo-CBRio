@@ -17,7 +17,7 @@ export default function Leituras() {
   const dias = [...new Set(leituras.map(x => x.data_leitura))];
   const mes = new Date().toISOString().slice(0, 7), diasMes = dias.filter(d => d.startsWith(mes)).length;
   const concluidos = planos.filter(p => p.concluido);
-  return <SafeAreaView style={s.safe} edges={["top", "left", "right"]}><Stack.Screen options={{ headerShown: false }} />
+  return <SafeAreaView style={s.safe} edges={["left", "right"]}><Stack.Screen options={{ headerShown: false }} />
     <View style={s.header}><Pressable onPress={() => subirUmNivel()} hitSlop={12} style={s.back}><Ionicons name="chevron-back" size={24} color={c.text} /></Pressable><Text style={s.headerTitle}>{t("Leituras da Bíblia")}</Text><View style={s.back} /></View>
     <ScrollView contentContainerStyle={s.content}>{loading ? <ActivityIndicator color={c.primary} /> : <>
       <View style={s.hero}><Text style={s.heroLabel}>{t("NESTE MÊS")}</Text><Text style={s.heroNumber}>{diasMes}</Text><Text style={s.heroText}>{diasMes === 1 ? t("dia com leitura da Bíblia") : t("dias com leitura da Bíblia")}</Text><View style={s.heroRule} /><Text style={s.total}>{dias.length} {t("dias registrados no total")}</Text></View>

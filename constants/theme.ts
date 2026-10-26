@@ -6,9 +6,9 @@
  *   #408097 azul/teal principal · #70a8b0 teal médio · #d5e4e6 azul claro · #eae3da areia
  */
 export const brand = {
-  primary: "#408097",
-  primaryMid: "#70a8b0",
-  pale: "#d5e4e6",
+  primary: "#355b62",
+  primaryMid: "#a1bec1",
+  pale: "#dce7e5",
   sand: "#eae3da",
 } as const;
 
@@ -39,40 +39,40 @@ export type Palette = {
 };
 
 export const darkColors: Palette = {
-  background: "#0B1F26",
-  surface: "#102A33",
-  surfaceAlt: "#16323D",
+  background: "#233c42",
+  surface: "#314b51",
+  surfaceAlt: "#3a555b",
   glass: "rgba(255,255,255,0.08)",
   glassBorder: "rgba(255,255,255,0.14)",
-  dockBg: "rgba(16,42,51,0.55)",
-  primary: brand.primary,
-  primaryDark: "#33697C",
+  dockBg: "#314b51",
+  primary: "#408097",
+  primaryDark: "#29434a",
   brandMid: brand.primaryMid,
   brandPale: brand.pale,
   sand: brand.sand,
   text: "#F4F8F9",
-  textMuted: "#9FB8BF",
-  border: "#1F3D47",
+  textMuted: "#c2d1d2",
+  border: "#607a7e",
   danger: "#E5757A",
   success: "#5BB98C",
   warning: "#E0A24E",
 };
 
 export const lightColors: Palette = {
-  background: "#F4F8F9",
+  background: "#f2f3ef",
   surface: "#FFFFFF",
-  surfaceAlt: "#EAF1F3",
+  surfaceAlt: "#e6ece8",
   glass: "rgba(64,128,151,0.08)",
   glassBorder: "rgba(11,31,38,0.10)",
   dockBg: "rgba(255,255,255,0.6)",
   primary: brand.primary,
-  primaryDark: "#33697C",
+  primaryDark: "#29434a",
   brandMid: brand.primary,
   brandPale: brand.primary, // no claro, o coração/ícone fica teal (visível no fundo claro)
   sand: brand.sand,
-  text: "#0B1F26",
-  textMuted: "#5C7A85",
-  border: "#DCE6E9",
+  text: "#203a40",
+  textMuted: "#536d70",
+  border: "#cad6d1",
   danger: "#C0473C",
   success: "#2E8B57",
   warning: "#A86A12",
@@ -81,7 +81,7 @@ export const lightColors: Palette = {
 export const palettes = { light: lightColors, dark: darkColors } as const;
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
-export const radius = { sm: 8, md: 12, lg: 20, xl: 28, full: 999 } as const;
+export const radius = { sm: 12, md: 18, lg: 28, xl: 32, full: 999 } as const;
 export const font = {
   size: { sm: 13, md: 15, lg: 18, xl: 24, xxl: 32 },
 } as const;

@@ -297,7 +297,7 @@ export default function GrupoVisitaScreen() {
   const ultimaVisita = visitas && visitas.length > 0 ? visitas[0] : null;
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* ⚠️ Esta NÃO é tela de barra (não está em `TELAS_BARRA` do layout), então

@@ -29,7 +29,7 @@ export default function DevocionalHome() {
     // Todo plano abre na mesma tela (25/09/2026); o ritmo vem do dado.
     router.navigate({ pathname: "/devocional-plano", params: { planoId: p.id } });
   }
-  return <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+  return <SafeAreaView style={styles.safe} edges={["left", "right"]}>
     <Stack.Screen options={{ headerShown: false }} />
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.intro}><Text style={styles.eyebrow}>{t("SUA JORNADA COM A PALAVRA")}</Text><Text style={styles.title}>{t("Devocional")}</Text><Text style={styles.subtitle}>{t("Leia, reflita e guarde o que Deus falou com você.")}</Text></View>
