@@ -422,3 +422,15 @@ Paletas, raios, fundos, campos e cartões compartilhados usam a identidade teal
 do marketing, com leitura clara/escura preservada. `GlassCard` mantém a API mas
 passa a ser superfície com contorno fino em ambas as plataformas, sem blur.
 Fontes continuam iBrand/Gotham e a foto limpa continua pendente.
+
+A seção Participar contém somente Inscrições (ajuste solicitado em 26/10).
+Batismo, NEXT e apresentação de crianças permanecem dentro de Inscrições,
+sem atalhos redundantes na gaveta. Check-in Kids segue em Minha família e
+Agenda e destaques.
+
+Ainda em 26/10, Matheus forneceu a foto limpa original
+`kseniia-lobko-FR9iwdBmwgw-unsplash.jpg`. Ela está em
+`assets/images/home-copacabana.jpg` e é o `HOME_BACKGROUND` padrão. A Home
+usa `cover` para preencher a tela sem distorcer e um gradiente teal para
+legibilidade dos textos brancos. Isso resolve a pendência do fundo provisório
+descrita acima; as fontes exatas do marketing continuam pendentes.

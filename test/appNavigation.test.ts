@@ -14,7 +14,8 @@ describe("menu lateral e atalhos do app", () => {
   });
   it("mantém acessíveis recursos retirados do antigo bloco da Home", () => {
     const destinations = items.map((item) => item.href);
-    for (const href of ["/agenda", "/kids", "/next", "/batismo", "/apresentacao-crianca", "/inscricoes", "/conteudos"]) {
+    // Inscrições reúne Batismo/NEXT/apresentação; Kids fica em família/agenda.
+    for (const href of ["/agenda", "/familia", "/inscricoes", "/conteudos"]) {
       expect(destinations).toContain(href);
     }
   });

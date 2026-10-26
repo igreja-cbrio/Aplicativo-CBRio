@@ -13,8 +13,8 @@ import { useTheme } from "@/contexts/ThemeContext";
 export type HomeNotice = { id: string; title: string; body?: string; count?: number; href: "/devocional" | "/noticias" };
 
 
-/** Foto limpa do marketing ainda pendente. Nunca usar a arte com texto como fundo. */
-export const HOME_BACKGROUND: ImageSourcePropType | undefined = undefined;
+/** Foto original fornecida pelo marketing, sem textos incorporados. */
+export const HOME_BACKGROUND: ImageSourcePropType = require("@/assets/images/home-copacabana.jpg");
 
 export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACKGROUND }: { notices: HomeNotice[]; unreadCount?: number; background?: ImageSourcePropType }) {
   const { height, width, fontScale } = useWindowDimensions();
@@ -44,7 +44,7 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
     <View style={[styles.hero, { minHeight: height, paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 20), paddingLeft: Math.max(insets.left, 20), paddingRight: Math.max(insets.right, 20) }]}>
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
         {background ? <Image source={background} resizeMode="cover" style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors /> : null}
-        <LinearGradient colors={background ? ["rgba(12,32,38,0.28)", "rgba(12,32,38,0.35)", "rgba(12,32,38,0.72)"] : ["#49656b", "#314b51", "#142e34"]} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={background ? ["rgba(12,32,38,0.42)", "rgba(12,32,38,0.46)", "rgba(12,32,38,0.62)"] : ["#49656b", "#314b51", "#142e34"]} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} />
       </View>
       <View style={styles.frame}>
         <View style={styles.header}>

@@ -11,6 +11,7 @@ Arte **oficial** da marca usada pelo app.
 | `cbrio-vertical.png`        | Coração + "cbrio" (teal)              | uso geral / telas claras              |
 | `cbrio-wordmark.png`        | Apenas "cbrio" (teal)                 | cabeçalhos                            |
 | `paleta-cores.png`          | Referência da paleta                  | documentação                          |
+| `home-copacabana.jpg`       | Foto de Copacabana fornecida pelo marketing (Kseniia Lobko, arquivo Unsplash `FR9iwdBmwgw`) | Fundo da Home, com enquadramento `cover` e camada de contraste |
 
 ## Gerados automaticamente (não editar à mão)
 
