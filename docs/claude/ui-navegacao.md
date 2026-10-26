@@ -393,4 +393,7 @@ A foto limpa do marketing ainda precisa ser fornecida: a referência recebida
 contém os textos incorporados. `HOME_BACKGROUND` está sem imagem, com fundo
 teal provisório. Substituir por `require` de asset local quando a foto chegar;
 não usar a arte composta como fundo. Nenhuma dependência nativa adicionada.
-Não publicado por OTA nesta etapa; falta a foto e validação em aparelhos.
+Matheus autorizou publicar o fundo provisório por OTA em 26/10 para conferir
+no app. A foto limpa e a conferência em aparelhos seguem pendentes. O relatório
+da loja aponta apenas idade do binário (40 dias), sem diferenças nativas;
+a publicação pode usar a exceção de idade, mantendo o portão de testes.
