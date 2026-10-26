@@ -6,6 +6,7 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Não perca seu streak diário na devocional de Quarta com Deus!": { en: "Keep your daily streak in the Wednesday with God devotional!", es: "¡Mantén tu racha diaria en el devocional de Miércoles con Dios!" },
   "Notícias e avisos": { en: "News and announcements", es: "Noticias y avisos" },
   "seja muito": { en: "a warm", es: "¡te damos la" },
   "bem-vindo!": { en: "welcome!", es: "bienvenida!" },
