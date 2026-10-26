@@ -6,6 +6,7 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "O tamanho da fonte é aplicado imediatamente em todo o app.": { en: "Text size is applied immediately throughout the app.", es: "El tamaño de letra se aplica inmediatamente en toda la app." },
   "Comunidade": { en: "Community", es: "Comunidad" },
   "Ajustes": { en: "Settings", es: "Ajustes" },
   "Conteúdo": { en: "Content", es: "Contenido" },

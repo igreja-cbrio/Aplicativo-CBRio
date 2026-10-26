@@ -146,7 +146,7 @@ describe("hierarquia · a árvore do `cd ..`", () => {
   });
 
   it("tela de barra volta pra Home em UM passo", () => {
-    for (const r of ["/meu-grupo", "/voluntariado", "/cuidados", "/devocional", "/menu"]) {
+    for (const r of ["/cuidados", "/devocional", "/meu-grupo", "/voluntariado", "/generosidade"]) {
       expect(rotaPai(r), `${r} deveria subir pra Home`).toBe("/");
     }
   });
@@ -276,7 +276,7 @@ describe("barra de baixo · reaproveita a aba viva", () => {
   });
 
   it("as 5 rotas da barra são as mesmas que a barra desenha", () => {
-    expect([...ROTAS_BARRA]).toEqual(["/meu-grupo", "/voluntariado", "/cuidados", "/devocional", "/menu"]);
+    expect([...ROTAS_BARRA]).toEqual(["/cuidados", "/devocional", "/meu-grupo", "/voluntariado", "/generosidade"]);
     for (const r of ROTAS_BARRA) expect(ehRotaDeBarra(r)).toBe(true);
     expect(ehRotaDeBarra("/")).toBe(false);
     expect(ehRotaDeBarra("/grupo-detalhe")).toBe(false);

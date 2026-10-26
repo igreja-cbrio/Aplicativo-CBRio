@@ -19,7 +19,7 @@ import { registerForPush } from "@/lib/push";
 import { initTelemetria, trackTela } from "@/lib/telemetria";
 import { attachNotifTapListener } from "@/lib/notifTap";
 import { loadFontScale } from "@/lib/applyFontScale";
-import { useFontsCbrio, applyCbrioFontGlobally } from "@/lib/fonts";
+import { useFontsCbrio } from "@/lib/fonts";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -174,7 +174,6 @@ function RootNavigator() {
 export default function RootLayout() {
   const fontScaleReady = useFontScaleBootstrap();
   const fontsLoaded = useFontsCbrio();
-  if (fontsLoaded) applyCbrioFontGlobally();
   if (!fontScaleReady || !fontsLoaded) return null;
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

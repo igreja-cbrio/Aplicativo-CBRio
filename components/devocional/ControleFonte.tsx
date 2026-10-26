@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Text } from "@/components/ui/Typography";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useT } from "@/lib/i18n";
 import { PASSOS_FONTE } from "@/lib/fonteLeitura";
 

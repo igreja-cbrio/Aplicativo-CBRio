@@ -1,9 +1,9 @@
+import { Text } from "@/components/ui/Typography";
 import { useMemo } from "react";
 import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
-  Text,
   type PressableProps,
 } from "react-native";
 import { useColors } from "@/contexts/ThemeContext";
@@ -79,5 +79,5 @@ const makeStyles = (colors: Palette) =>
     primary: { backgroundColor: colors.primary },
     ghost: { backgroundColor: "transparent", borderWidth: 1, borderColor: colors.border },
     dimmed: { opacity: 0.6 },
-    label: { color: "#fff", fontSize: font.size.md, fontWeight: "600" },
+    label: { flexShrink: 1, maxWidth: "100%", textAlign: "center", color: "#fff", fontSize: font.size.md, fontWeight: "600" },
   });

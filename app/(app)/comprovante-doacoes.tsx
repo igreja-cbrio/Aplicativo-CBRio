@@ -1,9 +1,9 @@
+import { Text } from "@/components/ui/Typography";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
   ScrollView,
-  Text,
   View,
   StyleSheet,
   Alert,

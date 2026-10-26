@@ -1,3 +1,4 @@
+import { Text } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -11,7 +12,6 @@ import {
   ScrollView,
   Share,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";

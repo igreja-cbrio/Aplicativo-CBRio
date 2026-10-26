@@ -1,3 +1,4 @@
+import { Text, TextInput } from "@/components/ui/Typography";
 // ============================================================================
 // MONTAR ESCALA · por TIME, em duas etapas, num carrossel (23/09/2026)
 //
@@ -26,7 +27,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator, Alert, Image, Modal, Pressable,
-  RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions,
+  RefreshControl, ScrollView, StyleSheet, View, useWindowDimensions,
   type NativeSyntheticEvent, type NativeScrollEvent,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";

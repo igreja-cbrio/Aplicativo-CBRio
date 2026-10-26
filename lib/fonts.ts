@@ -1,15 +1,5 @@
-// Carregamento das famílias da CBRio (Gotham por enquanto; iBrand entra
-// quando os arquivos chegarem). Resolve fontWeight/fontStyle para a
-// fontFamily certa, e aplica globalmente em <Text>/<TextInput> via patch
-// no render (como já é feito pra escala de fonte em applyFontScale.ts).
-//
-// Boot:
-//   import { useFontsCbrio } from "@/lib/fonts";
-//   const fontsReady = useFontsCbrio();
-//   if (!fontsReady) return <Splash />;
-
 import { useFonts } from "expo-font";
-import { StyleSheet, Text, TextInput, type TextStyle } from "react-native";
+import type { TextStyle } from "react-native";
 
 export const FONT_MAP = {
   "Gotham-Light": require("../assets/fonts/Gotham-Light.otf"),
@@ -34,7 +24,7 @@ export function useFontsCbrio(): boolean {
 }
 
 /** Resolve uma fontFamily Gotham a partir do peso + itálico do estilo. */
-function familyParaPeso(weightRaw: TextStyle["fontWeight"], italic: boolean): string {
+export function familyParaPeso(weightRaw: TextStyle["fontWeight"], italic: boolean): string {
   const w = String(weightRaw ?? "");
   // Mapa de pesos numéricos / nomes -> família real
   if (italic) {
@@ -62,44 +52,4 @@ function familyParaPeso(weightRaw: TextStyle["fontWeight"], italic: boolean): st
     default:
       return "Gotham-Book";
   }
-}
-
-type Renderable = {
-  render?: (...args: unknown[]) => { props?: { style?: unknown } };
-  __cbrioFontPatched?: boolean;
-};
-
-function patchComponent(Comp: typeof Text | typeof TextInput) {
-  const C = Comp as unknown as Renderable;
-  if (C.__cbrioFontPatched || !C.render) return;
-  const original = C.render;
-  C.render = function patched(this: unknown, ...args: unknown[]) {
-    const el = original.apply(this, args);
-    if (!el || !el.props) return el;
-    const flat = StyleSheet.flatten(el.props.style as TextStyle | undefined) ?? {};
-    // Se o autor já definiu uma fontFamily explícita (ex.: ícone, system), respeita.
-    if (flat.fontFamily) return el;
-    const italic = flat.fontStyle === "italic";
-    const fam = familyParaPeso(flat.fontWeight, italic);
-    // ⚠️ Android: manter fontWeight/fontStyle JUNTO de uma fontFamily que já é
-    // do peso certo (ex.: Gotham-Black) faz o sistema aplicar FAUX-BOLD por cima
-    // → texto borrado, com "brilho". iOS ignora o peso quando a família é
-    // explícita, por isso só aparecia no Android. Removemos os dois; o peso/
-    // itálico já está embutido na família resolvida.
-    const { fontWeight: _fw, fontStyle: _fs, ...rest } = flat;
-    const styled: TextStyle = { ...rest, fontFamily: fam };
-    (el.props as { style?: unknown }).style = styled;
-    return el;
-  };
-  C.__cbrioFontPatched = true;
-}
-
-let patched = false;
-
-/** Aplica a família global após o load. Chamar uma vez (idempotente). */
-export function applyCbrioFontGlobally() {
-  if (patched) return;
-  patchComponent(Text);
-  patchComponent(TextInput);
-  patched = true;
 }

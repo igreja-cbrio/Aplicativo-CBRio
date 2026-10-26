@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Ajustes do marketing, fonte e atualização manual (26/10/2026)
+
 - Home editorial do marketing (26/10/2026)
 - Navegação e identidade do app inteiro (26/10/2026)
 
@@ -434,3 +436,29 @@ Ainda em 26/10, Matheus forneceu a foto limpa original
 usa `cover` para preencher a tela sem distorcer e um gradiente teal para
 legibilidade dos textos brancos. Isso resolve a pendência do fundo provisório
 descrita acima; as fontes exatas do marketing continuam pendentes.
+
+## Ajustes do marketing, fonte e atualização manual (26/10/2026)
+
+A foto da Home fica fora do ScrollView, fixa durante o gesto de atualizar.
+O enquadramento usa 90% da altura e uma transição de céu para reduzir o corte
+sem distorcer a foto. O gesto recarrega avisos/streak e consulta a OTA pelo
+PortaoAtualizacao; a aplicação continua protegida pelos guardas existentes e
+só é autorizada pelo gesto se a Home ainda estiver em foco.
+
+Cabeçalho e rodapé internos acompanham o fundo do tema, sem faixas teal
+independentes. DockSurface usa GlassView quando a API existe, BlurView apenas
+no iOS anterior e superfície sólida no Android/reduzir transparência. Não
+habilitar blur experimental no Android (histórico de crash). O ícone de
+Generosidade é branco sobre teal. As ações da notificação quebram em linhas
+quando não cabem, mantendo o texto centralizado.
+
+Text e TextInput das telas/componentes vêm de components/ui/Typography.
+React Native 0.81 exporta funções sem o antigo .render; o patch global era
+ignorado. Os wrappers assinam lib/fontScale e atualizam imediatamente, com
+persistência em cbrio.fontScale, entrelinha proporcional, fontes Gotham e refs
+preservadas. Textos aninhados herdam o tamanho do pai quando não há tamanho
+explícito; ícones de bibliotecas não recebem a preferência. Não reintroduzir
+patches em APIs internas do React Native.
+
+Os cinco destinos de QuickLinks usam troca direta e navegação reutilizável.
+Generosidade retorna à Home e telas fora de foco ficam congeladas pelo stack.

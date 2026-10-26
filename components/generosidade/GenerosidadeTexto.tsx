@@ -1,3 +1,4 @@
+import { Text } from "@/components/ui/Typography";
 // ============================================================================
 // GENEROSIDADE · só o VALOR, sem meio de doação (Marcos · 05/08/2026)
 //
@@ -23,7 +24,7 @@
 // estilo aqui: é a diferença entre permitido e proibido.
 // ============================================================================
 import { useMemo, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -87,7 +88,7 @@ export function GenerosidadeTexto() {
         </View>
 
         <View style={styles.selo}>
-          <Ionicons name="gift" size={26} color={colors.brandPale} />
+          <Ionicons name="gift-outline" size={28} color="#fff" />
         </View>
 
         <Text style={styles.lead}>

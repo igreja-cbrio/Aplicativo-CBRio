@@ -1,8 +1,8 @@
+import { Text } from "@/components/ui/Typography";
 import { useMemo, useState } from "react";
 import {
   Platform,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { Link } from "expo-router";

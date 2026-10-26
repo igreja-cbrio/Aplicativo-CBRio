@@ -113,7 +113,7 @@ const PAI: Record<string, string> = {
   "/kids-solicitar-vinculo": "/kids",
   "/jornada": "/menu",
   "/censo": "/menu",
-  "/generosidade": "/menu",
+  "/generosidade": "/",
   "/comprovante-doacoes": "/generosidade",
   "/inscricoes": "/menu",
   "/evento": "/inscricoes",

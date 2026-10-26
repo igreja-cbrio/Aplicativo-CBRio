@@ -1,3 +1,4 @@
+import { Text, TextInput } from "@/components/ui/Typography";
 import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -5,8 +6,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from "react-native";
 import { Stack, router } from "expo-router";

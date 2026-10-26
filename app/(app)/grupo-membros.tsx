@@ -1,3 +1,4 @@
+import { Text, TextInput } from "@/components/ui/Typography";
 // ============================================================================
 // GERENCIAR GRUPO · tudo o que o líder faz, num lugar só (Marcos · 05/08/2026)
 //
@@ -51,7 +52,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator, Alert, Linking, Modal, Platform,
-  Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, TextInput, View,
+  Pressable, RefreshControl, ScrollView, Share, StyleSheet, View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";

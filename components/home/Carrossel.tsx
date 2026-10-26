@@ -1,3 +1,4 @@
+import { Text } from "@/components/ui/Typography";
 import { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -6,7 +7,6 @@ import {
   Linking,
   Pressable,
   StyleSheet,
-  Text,
   View,
   type ViewToken,
 } from "react-native";

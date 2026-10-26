@@ -1,6 +1,7 @@
+import { Text } from "@/components/ui/Typography";
 import { Ionicons } from "@expo/vector-icons";
 import { usePathname, type Href } from "expo-router";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMembro } from "@/lib/useMembro";
 import { useT } from "@/lib/i18n";

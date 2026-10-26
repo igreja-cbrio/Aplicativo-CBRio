@@ -1,11 +1,10 @@
+import { Text, TextInput } from "@/components/ui/Typography";
 import { useMemo, useState, useRef } from "react";
 import {
   FlatList,
   Modal,
   Pressable,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";

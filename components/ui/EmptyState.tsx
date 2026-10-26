@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet } from "react-native";
+import { Text } from "@/components/ui/Typography";
+import { View, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/Button";

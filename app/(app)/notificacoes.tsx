@@ -1,3 +1,4 @@
+import { Text } from "@/components/ui/Typography";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -5,7 +6,6 @@ import {
   ScrollView,
   SectionList,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";

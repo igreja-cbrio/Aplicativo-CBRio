@@ -1,3 +1,4 @@
+import { Text, TextInput } from "@/components/ui/Typography";
 // ⚠️ PESSOAS DO SERVIR · só pra ADMIN (24/09/2026 · pedido do Marcos)
 //
 // "para as pessoas que forem admin, uma opção na aba de servir de buscar as
@@ -12,7 +13,7 @@
 // A porta (card na aba Servir) aparece com `gere_pessoas` (admin OU líder de time/área
 // sem recorte · 24/09). O LÍDER vê e mexe só nos times que lidera; a trava é o servidor (403).
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/contexts/ThemeContext";

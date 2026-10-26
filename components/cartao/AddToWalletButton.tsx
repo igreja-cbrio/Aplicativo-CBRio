@@ -1,9 +1,9 @@
+import { Text } from "@/components/ui/Typography";
 import {
   ActivityIndicator,
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
