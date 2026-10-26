@@ -1,3 +1,4 @@
+import { ScrollView } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 // ============================================================================
 // CHECK-IN DOS VOLUNTÁRIOS PELO SUPERVISOR (25/08/2026)
@@ -20,7 +21,7 @@ import { Text } from "@/components/ui/Typography";
 // ============================================================================
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator, Alert, Image, Pressable, RefreshControl, ScrollView, StyleSheet, View,
+  ActivityIndicator, Alert, Image, Pressable, RefreshControl, StyleSheet, View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";

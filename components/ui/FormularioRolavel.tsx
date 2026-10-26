@@ -1,3 +1,4 @@
+import { ScrollView } from "@/components/navigation/DockContent";
 // ============================================================================
 // FORMULÁRIO ROLÁVEL · a ScrollView que leva o campo focado pra vista
 //
@@ -25,7 +26,7 @@
 //   (login/cadastro) continuarem centralizados.
 // ============================================================================
 import React, { createContext, useCallback, useContext, useRef } from "react";
-import { ScrollView, View, type ScrollViewProps, type StyleProp, type ViewStyle } from "react-native";
+import { View, type ScrollViewProps, type StyleProp, type ViewStyle } from "react-native";
 import { ATRASO_TECLADO_MS, alvoDaRolagem } from "@/lib/rolarAteCampo";
 
 type RolarAte = (alvo: View | null) => void;

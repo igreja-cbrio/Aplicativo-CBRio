@@ -1,8 +1,7 @@
+import { FlatList, Modal } from "@/components/navigation/DockContent";
 import { Text, TextInput } from "@/components/ui/Typography";
 import { useMemo, useState, useRef } from "react";
 import {
-  FlatList,
-  Modal,
   Pressable,
   StyleSheet,
   View,

@@ -1,3 +1,4 @@
+import { Modal, ScrollView } from "@/components/navigation/DockContent";
 import { Text, TextInput } from "@/components/ui/Typography";
 // ============================================================================
 // GESTÃO DO NEXT · a superfície ÚNICA de quem gerencia (03/09/2026)
@@ -20,8 +21,7 @@ import { Text, TextInput } from "@/components/ui/Typography";
 // ============================================================================
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator, Alert, Linking, Modal, Pressable, RefreshControl,
-  ScrollView, StyleSheet, View,
+  ActivityIndicator, Alert, Linking, Pressable, RefreshControl, StyleSheet, View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";

@@ -51,6 +51,7 @@ function RootNavigator() {
   const router = useRouter();
   const pathname = usePathname();
   const authed = !!session || preview;
+  const recoveryScreen = pathname === "/redefinir-senha" || pathname === "/recuperar-senha";
 
   // Telemetria: inicializa 1x (handler de erros + flush) e registra cada tela.
   useEffect(() => { initTelemetria(); }, []);
@@ -87,7 +88,7 @@ function RootNavigator() {
     const inAuthGroup = segments[0] === "(auth)";
     // Redefinição de senha: o deep link cria sessão ANTES do usuário digitar
     // a nova senha — não pode ser expulso da tela pelo redirect de authed.
-    const inRedefinirSenha = segments.includes("redefinir-senha" as never);
+    const inRedefinirSenha = segments.includes("redefinir-senha" as never) || segments.includes("recuperar-senha" as never);
 
     if (!authed && !inAuthGroup) {
       router.replace("/(auth)/login");
@@ -118,12 +119,12 @@ function RootNavigator() {
     return detach;
   }, []);
 
-  if (loading || (session && !preview && precisaBiometria === null)) {
+  if (loading || (session && !preview && precisaBiometria === null && !recoveryScreen)) {
     return <SplashPulse />;
   }
 
   // Sessão salva + biometria ativa + ainda não desbloqueou nesta abertura.
-  if (session && !preview && precisaBiometria && !desbloqueado) {
+  if (session && !preview && precisaBiometria && !desbloqueado && !recoveryScreen) {
     return (
       <>
         <StatusBar style={mode === "light" ? "dark" : "light"} />
@@ -139,7 +140,7 @@ function RootNavigator() {
   }
 
   // Onboarding 1x pra novos usuários (depois da biometria, antes do app).
-  if (authed && mostrarOnboarding) {
+  if (authed && mostrarOnboarding && !recoveryScreen) {
     return (
       <>
         <StatusBar style={mode === "light" ? "dark" : "light"} />

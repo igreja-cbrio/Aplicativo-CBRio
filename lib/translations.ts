@@ -6,6 +6,12 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Atualizando...": { en: "Updating...", es: "Actualizando..." },
+  "Informe seu CPF para receber um link no e-mail da sua conta.": { en: "Enter your CPF to receive a link at your account email.", es: "Introduce tu CPF para recibir un enlace en el correo de tu cuenta." },
+  "Link enviado para": { en: "Link sent to", es: "Enlace enviado a" },
+  "Confira também a pasta de spam.": { en: "Also check your spam folder.", es: "Revisa también la carpeta de spam." },
+  "Se houver uma conta vinculada ao CPF, você receberá as instruções no e-mail cadastrado.": { en: "If an account is linked to this CPF, you will receive instructions at its registered email.", es: "Si hay una cuenta vinculada a este CPF, recibirás instrucciones en su correo registrado." },
+  "Entre novamente usando sua nova senha.": { en: "Sign in again with your new password.", es: "Vuelve a iniciar sesión con tu nueva contraseña." },
   "O tamanho da fonte é aplicado imediatamente em todo o app.": { en: "Text size is applied immediately throughout the app.", es: "El tamaño de letra se aplica inmediatamente en toda la app." },
   "Comunidade": { en: "Community", es: "Comunidad" },
   "Ajustes": { en: "Settings", es: "Ajustes" },

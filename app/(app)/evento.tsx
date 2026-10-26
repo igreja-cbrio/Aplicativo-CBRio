@@ -1,3 +1,4 @@
+import { ScrollView } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 // ============================================================================
 // EVENTO · detalhe + inscrição DENTRO do app (Marcos · 05/08/2026)
@@ -30,7 +31,6 @@ import {
   ActivityIndicator,
   Image,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from "react-native";

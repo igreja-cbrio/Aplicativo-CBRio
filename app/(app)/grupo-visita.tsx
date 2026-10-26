@@ -1,12 +1,11 @@
+import { Modal, ScrollView } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Linking,
-  Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Switch,
   View,
