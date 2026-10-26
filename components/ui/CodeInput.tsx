@@ -1,5 +1,5 @@
 import type { TextInput as NativeTextInput } from "react-native";
-import { TextInput } from "@/components/ui/Typography";
+import { Text, TextInput } from "@/components/ui/Typography";
 import { useEffect, useMemo, useRef } from "react";
 import {
   Animated,
@@ -129,7 +129,7 @@ function Cell({
       ]}
     >
       {digit ? (
-        <Animated.Text style={styles.digit}>{digit}</Animated.Text>
+        <Text style={styles.digit}>{digit}</Text>
       ) : (
         <Animated.View style={[styles.caret, { opacity: caret }]} />
       )}

@@ -2,6 +2,8 @@ import { Text } from "@/components/ui/Typography";
 import { useEffect, useRef, useState } from "react";
 import { Animated, StyleSheet, type TextStyle, View } from "react-native";
 
+const AnimatedText = Animated.createAnimatedComponent(Text);
+
 /**
  * Número grande com tick de "flip" quando o valor muda (ex.: contagem
  * regressiva diária do batismo). Sobe o número antigo, desce o novo.
@@ -43,16 +45,16 @@ export function AnimatedCountdown({
 
   return (
     <View style={styles.wrap}>
-      <Animated.Text
+      <AnimatedText
         style={[style, styles.layer, { transform: [{ translateY: ySaindo }], opacity: opSaindo }]}
       >
         {prev}
-      </Animated.Text>
-      <Animated.Text
+      </AnimatedText>
+      <AnimatedText
         style={[style, { transform: [{ translateY: yEntrando }], opacity: opEntrando }]}
       >
         {display}
-      </Animated.Text>
+      </AnimatedText>
     </View>
   );
 }
