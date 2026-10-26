@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Recorte da referência final e atalhos UIKit (26/10/2026)
+
 - Ajustes do marketing, fonte e atualização manual (26/10/2026)
 
 - Home editorial do marketing (26/10/2026)
@@ -470,3 +472,29 @@ Generosidade retorna à Home e telas fora de foco ficam congeladas pelo stack.
 - iOS: segurar 220ms abre lente com ícone/legenda ampliados; arrastar seleciona, soltar confirma, sair da área cancela. `GlassView.isInteractive` em iOS compatível, fallback acessível; VoiceOver usa botões. Implementação customizada inspirada em Apple HIG Tab bars / UIGlassEffect; não é UITabBar nativa. Android mantém toque e superfície sólida segura.
 - Recuperar senha recebe CPF no login e configurações, chama `POST /app/auth/recuperar-senha`, mostra só máscara retornada. Backend exige relação única membro/profile/Auth e quota persistente; não expõe email completo.
 - Redefinir valida URL/tipo/tokens e usa cliente Auth efêmero, isolado da sessão atual; não aceita sessão já aberta como autorização. Após salvar, pede login de novo. Testes cobrem link B com conta A, expiração, URLs ambíguas, invalidação e duplo envio.
+
+
+## Recorte da referência final e atalhos UIKit (26/10/2026)
+
+Matheus enviou `Ver as fotos recentes.png` depois de rejeitar o enquadramento
+central anterior. Correspondência de pontos da foto confirmou x=972..2312,
+y≈0..2383 na original 3600×2387 (a captura tem faixas pretas fora da foto).
+MarketingHero usa essa janela horizontal, escala exclusivamente pela largura,
+e preserva a proporção da foto. Em celulares altos, céu preenche o excedente
+acima; não usar `cover` de tela inteira nem esticar a imagem. Fundo permanece
+fixo, separado do gesto de atualização. Asset original permanece intacto.
+
+A lente com PanResponder/long press foi rejeitada e removida. O módulo local
+`modules/native-shortcuts` expõe UITabBar independente, uso documentado pela
+Apple: https://developer.apple.com/documentation/uikit/uitabbar . O sistema
+controla seleção, gesto e material; não há reconhecedor, lupa ou animação
+customizados. Delegate emite o índice e o app usa a navegação já existente.
+
+**Exige novo binário iOS.** JS usa requireOptionalNativeModule e só ativa em
+iOS 26+ com o módulo presente. Android, iOS anterior e binários já instalados
+mantêm atalhos por toque, incluindo rolagem horizontal para fonte ampliada.
+Não afirmar gesto validado só pela compilação: Device Hub permanece inacessível
+para captura (ScreenCaptureKit -3811). Prévia web confere somente foto/fallback.
+
+Build iOS 1.0.2 usa Xcode 26.2 fixo no EAS. `runtimeVersion` continua literal
+1.0.0; a versão de loja não troca o canal de atualização dos binários existentes.
