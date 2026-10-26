@@ -110,7 +110,7 @@ export default function InicioScreen() {
     return () => { active = false; };
   }, [membro?.membroId]));
   const notices: HomeNotice[] = [
-    { id: "devocional", title: streak && streak > 0 ? t("Continue sua sequência de leitura") : t("Um tempo com Deus, todos os dias"), body: t("Abra seu devocional e renove sua fé."), count: streak ?? undefined, href: "/devocional" },
+    { id: "devocional", title: t("Não perca seu streak diário na devocional de Quarta com Deus!"), count: streak ?? undefined, href: "/devocional" },
     ...avisos.slice(0, 5).map((a) => ({ id: a.id, title: a.titulo, body: a.corpo, href: "/noticias" as const })),
   ];
 

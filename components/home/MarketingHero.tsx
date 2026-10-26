@@ -35,6 +35,12 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
   }, [cardWidth, noticeIds]);
   const largeText = fontScale > 1.2;
   const scrollShortcuts = largeText || width < 360;
+  const titleSize = Math.min(76, (width - 40) * 0.18);
+  const selectNotice = (next: number) => {
+    const index = (next + notices.length) % notices.length;
+    carousel.current?.scrollTo({ x: index * cardWidth, animated: true });
+    setPage(index);
+  };
 
   return (
     <View style={[styles.hero, { minHeight: height, paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 20), paddingLeft: Math.max(insets.left, 20), paddingRight: Math.max(insets.right, 20) }]}>
@@ -56,37 +62,46 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
           </View>
         </View>
         <View style={[styles.welcome, { paddingVertical: Math.max(64, height * 0.12) }]}>
-          <Text style={styles.eyebrow}>{t("seja muito")}</Text>
-          <Text accessibilityRole="header" style={[styles.title, { fontSize: Math.min(76, (width - 40) * 0.18) }]}>{t("bem-vindo!")}</Text>
+          <Text style={[styles.eyebrow, { fontSize: titleSize * 0.5, lineHeight: titleSize * 0.55 }]}>{t("seja muito")}</Text>
+          <Text accessibilityRole="header" style={[styles.title, { fontSize: titleSize, lineHeight: titleSize * 1.05, marginTop: -8 * fontScale }]}>{t("bem-vindo!")}</Text>
           <Pressable onPress={() => router.navigate("/noticias")} accessibilityRole="button" style={({ pressed }) => [styles.news, pressed && styles.pressed]}>
             <Text style={styles.newsLabel}>{t("veja o que está acontecendo")}</Text>
             <Ionicons name="arrow-forward" size={18} color="#fff" />
           </Pressable>
         </View>
         <View style={styles.footer}>
+          {notices.length > 1 ? (
+            <Pressable
+              accessibilityRole="adjustable"
+              accessibilityLabel={t("Avisos")}
+              accessibilityValue={{ min: 1, max: notices.length, now: page + 1 }}
+              accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+              onAccessibilityAction={(event) => selectNotice(page + (event.nativeEvent.actionName === "decrement" ? -1 : 1))}
+              onPress={() => selectNotice(page + 1)}
+              style={styles.dots}
+            >
+              {notices.map((notice, i) => <View key={notice.id} style={[styles.dot, i === page && styles.dotSelected]} />)}
+            </Pressable>
+          ) : null}
           <View onLayout={(e) => setCardWidth(e.nativeEvent.layout.width)}>
             {cardWidth > 0 ? (
               <ScrollView ref={carousel} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={(e) => setPage(Math.max(0, Math.min(notices.length - 1, Math.round(e.nativeEvent.contentOffset.x / cardWidth))))}>
                 {notices.map((notice) => (
                   <View key={notice.id} style={{ width: cardWidth, paddingHorizontal: 1 }}>
-                    <Pressable onPress={() => router.navigate(notice.href)} accessibilityRole="button" style={({ pressed }) => [styles.notice, pressed && styles.pressed]}>
-                      {notice.count != null && notice.count > 0 ? <Text style={styles.count} accessibilityLabel={`${notice.count} ${t("dias")}`}>{notice.count}</Text> : <Ionicons name={notice.href === "/devocional" ? "book-outline" : "megaphone-outline"} size={30} color="#fff" />}
-                      <View style={styles.noticeCopy}>
-                        <Text style={styles.noticeTitle}>{notice.title}</Text>
-                        {notice.body ? <Text style={styles.noticeBody} numberOfLines={largeText ? undefined : 2}>{notice.body}</Text> : null}
+                    <Pressable onPress={() => router.navigate(notice.href)} accessibilityRole="button" style={({ pressed }) => [styles.notice, largeText && styles.noticeLargeText, pressed && styles.pressed]}>
+                      <View style={[styles.noticeLeading, largeText && styles.noticeLeadingLarge]}>
+                        {notice.count != null && notice.count > 0 ? <Text style={styles.count} accessibilityLabel={`${notice.count} ${t("dias")}`}>{notice.count}</Text> : <Ionicons name={notice.href === "/devocional" ? "book-outline" : "megaphone-outline"} size={30} color="#fff" />}
                       </View>
-                      <Ionicons name="chevron-forward" size={16} color="#fff" />
+                      <View style={[styles.noticeCopy, largeText && styles.noticeCopyLarge]}>
+                        <Text style={[styles.noticeTitle, !notice.body && styles.noticeMessage]} numberOfLines={!largeText && notice.body ? 1 : undefined}>{notice.title}</Text>
+                        {notice.body ? <Text style={styles.noticeBody} numberOfLines={largeText ? undefined : 1}>{notice.body}</Text> : null}
+                      </View>
                     </Pressable>
                   </View>
                 ))}
               </ScrollView>
             ) : null}
           </View>
-          {notices.length > 1 ? <View style={styles.dots}>{notices.map((notice, i) => (
-            <Pressable key={notice.id} accessibilityRole="button" accessibilityLabel={`${t("Avisos")} ${i + 1}/${notices.length}`} accessibilityState={{ selected: i === page }} onPress={() => { carousel.current?.scrollTo({ x: i * cardWidth, animated: true }); setPage(i); }} style={styles.dotButton}>
-              <View style={[styles.dot, i === page && styles.dotSelected]} />
-            </Pressable>
-          ))}</View> : <View style={{ height: 18 }} />}
           <ScrollView horizontal scrollEnabled={scrollShortcuts} showsHorizontalScrollIndicator={false} style={styles.dock} contentContainerStyle={styles.dockContent}>
             {SHORTCUTS.map((item, i) => (
               <Pressable key={item.href} accessibilityRole="button" accessibilityLabel={t(item.label)} onPress={() => router.navigate(item.href)} style={({ pressed }) => [styles.shortcut, scrollShortcuts ? { width: 120, flexBasis: 120, flexGrow: 0, flexShrink: 0 } : { flex: i === SHORTCUTS.length - 1 ? 1.4 : 1 }, i > 0 && styles.divider, pressed && styles.shortcutPressed]}>
@@ -112,19 +127,23 @@ const styles = StyleSheet.create({
   headerButton: { minWidth: 44, minHeight: 48, alignItems: "center", justifyContent: "center" },
   welcome: { flex: 1, alignItems: "center", justifyContent: "center" },
   eyebrow: { color: "#fff", fontFamily: BRAND_FONT, fontSize: 27, textAlign: "center" },
-  title: { color: "#fff", fontFamily: BRAND_FONT, textAlign: "center", marginTop: 0 },
+  title: { color: "#fff", fontFamily: BRAND_FONT, textAlign: "center", includeFontPadding: false },
   news: { borderWidth: 1.5, borderColor: "rgba(255,255,255,0.9)", borderRadius: 40, paddingHorizontal: 18, paddingVertical: 13, minHeight: 48, flexDirection: "row", alignItems: "center", gap: 10, marginTop: 18, maxWidth: "100%", backgroundColor: "rgba(12,32,38,0.16)" },
   newsLabel: { color: "#fff", fontSize: 14, flexShrink: 1, textAlign: "center" },
-  footer: { paddingTop: 24, paddingBottom: 12 },
-  notice: { minHeight: 94, flexDirection: "row", alignItems: "center", gap: 16, paddingVertical: 17, paddingHorizontal: 20, borderRadius: 32, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.75)", backgroundColor: "rgba(12,32,38,0.28)" },
-  count: { fontFamily: BRAND_FONT, fontSize: 46, color: "#fff" },
-  noticeCopy: { flex: 1, gap: 5 },
-  noticeTitle: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  footer: { paddingTop: 8, paddingBottom: 12 },
+  notice: { minHeight: 58, flexDirection: "row", alignItems: "center", paddingVertical: 2, paddingHorizontal: 16, borderRadius: 999, borderWidth: 1.2, borderColor: "rgba(255,255,255,0.95)", backgroundColor: "transparent", marginBottom: 20 },
+  noticeLargeText: { paddingVertical: 12, borderRadius: 30, gap: 12 },
+  noticeLeading: { width: "40%", alignItems: "flex-start" },
+  noticeLeadingLarge: { width: "auto", flexShrink: 0 },
+  count: { fontFamily: BRAND_FONT, fontSize: 52, lineHeight: 54, includeFontPadding: false, color: "#fff" },
+  noticeCopy: { flex: 1, gap: 3, paddingVertical: 4 },
+  noticeCopyLarge: { minWidth: 0 },
+  noticeTitle: { color: "#fff", fontWeight: "700", fontSize: 13 },
+  noticeMessage: { fontWeight: "500", fontSize: 12, lineHeight: 14 },
   noticeBody: { color: "#eef3f3", fontSize: 12, lineHeight: 18 },
-  dots: { flexDirection: "row", alignSelf: "center" },
-  dotButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  dots: { flexDirection: "row", alignSelf: "center", alignItems: "flex-end", justifyContent: "center", gap: 3, minWidth: 44, minHeight: 44, paddingBottom: 6 },
   dot: { width: 6, height: 6, borderRadius: 3, borderWidth: 1, borderColor: "#fff" },
-  dotSelected: { backgroundColor: "#fff", width: 18 },
+  dotSelected: { backgroundColor: "#fff" },
   dock: { flexGrow: 0, backgroundColor: "#fafaf6", borderRadius: 28 },
   dockContent: { flexGrow: 1, paddingVertical: 12, paddingHorizontal: 3 },
   shortcut: { minHeight: 48, alignItems: "center", justifyContent: "center", paddingHorizontal: 2, gap: 7 },
