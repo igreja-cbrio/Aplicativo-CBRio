@@ -59,7 +59,7 @@ import { ehRaiz, registrarRotaAtual, subirUmNivel } from "@/lib/hierarquia";
  */
 const MS_PARA_RECOMECAR = 3 * 60 * 1000;
 
-/** Rota → título do centro da faixa. Home (`/`) mostra o logo. */
+/** Rota → título do centro da faixa. Home (`/`) usa seu cabeçalho editorial. */
 const TELAS_BARRA: Record<string, string> = {
   "/": "",
   "/meu-grupo": "Meus grupos",
@@ -151,7 +151,7 @@ export default function AppLayout() {
           render — só navega quando o servidor confirma que falta algo. */}
       <CadastroGate>
         <View style={{ flex: 1, backgroundColor: colors.background }}>
-          {telaDeBarra && (
+          {telaDeBarra && pathname !== "/" && (
             <TopBar
               titulo={TELAS_BARRA[pathname] ? t(TELAS_BARRA[pathname]) : undefined}
               mostrarLogo={pathname === "/"}
@@ -190,7 +190,7 @@ export default function AppLayout() {
             </Stack>
           </View>
 
-          {!semBarra && <BottomBar />}
+          {!semBarra && pathname !== "/" && <BottomBar />}
         </View>
       </CadastroGate>
     </MembroProvider>

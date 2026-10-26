@@ -4,11 +4,15 @@ import { HeartRefresh } from "@/components/anim/HeartRefresh";
 import { HeartPulseOverlay } from "@/components/anim/HeartPulse";
 import { Skeleton } from "@/components/anim/Skeleton";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScreenBackground } from "@/components/ui/ScreenBackground";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useRouter, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "@/contexts/AuthContext";
+import { MarketingHero, type HomeNotice } from "@/components/home/MarketingHero";
+import { apiGet } from "@/lib/api";
+import { streakDevocional } from "@/lib/devocional";
+import { useNotificacoesNaoLidas } from "@/lib/useNotificacoes";
+import { StatusBar } from "expo-status-bar";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { useT } from "@/lib/i18n";
@@ -21,18 +25,6 @@ import { AnimatedShortcut } from "@/components/anim/AnimatedShortcut";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { quebrarAposPrimeiraPalavra } from "@/lib/rotuloAtalho";
 
-// ⚠️ O logo, o sino e a foto SAÍRAM daqui (04/08/2026): agora vivem na faixa
-// superior global (components/ui/TopBar.tsx), que aparece igual em todas as
-// telas de barra. Não recriar header local aqui — daria dois cabeçalhos.
-
-function primeiroNome(nomeCompleto?: string, email?: string | null) {
-  const nome = nomeCompleto?.trim();
-  if (nome) return nome.split(/\s+/)[0];
-  const local = (email ?? "").split("@")[0]?.split(/[._-]/)[0] ?? "";
-  if (local) return local.charAt(0).toUpperCase() + local.slice(1);
-  return "membro";
-}
-
 type Atalho = {
   label: string;
   /** Força "primeira palavra" / "resto" no rótulo. Ver lib/rotuloAtalho. */
@@ -44,74 +36,9 @@ type Atalho = {
     | "/conteudos";
 };
 
-/**
- * ⚠️⚠️ A REGRA É **NÃO REPETIR A BARRA DE BAIXO** — não "não repetir o menu".
- *
- * Este comentário dizia "os itens que estejam no menu não sejam atalhos", e
- * isso é ambíguo o bastante pra me fazer ler errado em 10/08/2026: eu quase
- * recusei o pedido do Marcos achando que ele contradizia a própria regra dele.
- * Ele esclareceu: *"os atalhos só não devem ser igual ao menu de rodapé,
- * justamente o que eu pedi. Inscrições e pregações estão no outro menu,
- * exatamente como jornada, next, batismo, kids que estão no outro menu mas
- * ficam no atalho."*
- *
- * ⇒ O que MANDA é a `BottomBar` (`components/ui/BottomBar.tsx`): Grupos,
- * Servir, Cuidados, Devocional e Menu. Nada daí vira atalho, porque já está
- * sempre a um toque. Estar no /menu NÃO impede — Jornada, NEXT, Batismo e Kids
- * estão lá e são atalhos desde o começo.
- *
- * "No culto" saiu por outro motivo: virou o CARD DE AO VIVO no topo, que só
- * aparece enquanto o culto acontece.
- *
- * ⚠️⚠️ EXCEÇÃO ABERTA EM 21/09/2026 · **Grupos repete a barra de baixo DE
- * PROPÓSITO**. Decisão do Marcos depois da reunião de lançamento, vendo no
- * iPhone dele: *"tem que ser o mesmo atalho o do menu com o da tela
- * principal."* O atalho apontava pro buscador (`/grupos`) e a barra pro
- * `/meu-grupo` — mesmo nome, destinos diferentes, e o líder que tocava em
- * "Grupos" caía no buscador sem achar o próprio grupo. Aqui o custo de repetir
- * é menor que o de ter duas portas homônimas discordando.
- *
- * ⚠️ A grade é de 3 colunas. Quem acrescentar um 7º deixa 3+3+1 — decidir o que
- * sai junto, não empurrar.
- */
-/**
- * ⚠️⚠️ ATUALIZAÇÃO DE 20/08/2026 · a lista virou a que o Matheus pediu:
- * *"gostaria que os atalhos da página principal fossem: grupos, next,
- * voluntariado, batismo, apresentação de crianças e inscrições"*.
- *
- * ⚠️⚠️ ISSO CONTRARIA A REGRA REGISTRADA ACIMA, e de propósito: **Grupos** e
- * **Voluntariado** ESTÃO na barra de baixo (como "Grupos" e "Servir"), então
- * agora aparecem em dois lugares na mesma tela. A regra "não repetir a barra"
- * era do Marcos (10/08); este pedido é do Matheus (20/08) e é explícito. Quem
- * mexer aqui de novo precisa saber que a duplicação foi PEDIDA, não descuido —
- * e que a decisão entre as duas é dos dois, não de quem está editando.
- *
- * Saíram: **Sua jornada**, **Pregações** e **Generosidade** (as três seguem no
- * `/menu`) e **Kids**.
- *
- * ⚠️ **Kids é o único que NÃO tem item no `/menu`** — ele virou cartão dentro
- * de "Minha família" (decisão do Marcos, 05/08). Então o check-in do Kids passou
- * de 1 toque pra 3 (Menu → Minha família → cartão), e é uma tela usada NO
- * DOMINGO, com criança no colo. Fica declarado como consequência a decidir; não
- * inventei um 7º atalho pra compensar, porque a grade é de 3 colunas e o pedido
- * listou 6.
- *
- * ⚠️ 6 itens = 2 linhas cheias. Generosidade saiu da lista, então o filtro de
- * FEATURES não afeta mais o desenho da grade.
- */
+// Atalhos complementares preservados abaixo da abertura do marketing.
 const ATALHOS: Atalho[] = [
-  // ⚠️⚠️ `/meu-grupo`, e NÃO `/grupos` — invertido em 21/09/2026 pelo Marcos,
-  // depois de ver acontecer no iPhone dele: *"quando apertamos no atalho de
-  // grupos, ele não abre a tela de grupos padrão, ele abre outra; tem que ser o
-  // mesmo atalho o do menu com o da tela principal."*
-  //
-  // O comentário que estava aqui defendia o contrário (atalho = PORTA de
-  // entrada, logo o buscador) e o argumento era que apontar pra `/meu-grupo`
-  // duplicaria a barra de baixo. O que a reunião de lançamento mostrou é que
-  // duas portas com o MESMO nome e destinos diferentes é pior que duplicar:
-  // o líder toca em "Grupos", cai no buscador e não acha o próprio grupo.
-  // `/meu-grupo` também é a única porta que leva à seção "Grupos que você
-  // gerencia" — de onde o supervisor chega na tela de visita.
+  // Grupos mantém o mesmo destino da navegação principal.
   { label: "Grupos", icon: "people", href: "/meu-grupo" },
   { label: "NEXT", icon: "sparkles", href: "/next" },
   { label: "Voluntariado", icon: "hand-left", href: "/voluntariado" },
@@ -127,8 +54,10 @@ const ATALHOS: Atalho[] = [
 ];
 
 export default function InicioScreen() {
-  const { user } = useAuth();
   const { membro } = useMembro();
+  const { count: unreadCount } = useNotificacoesNaoLidas();
+  const pathname = usePathname();
+  const insets = useSafeAreaInsets();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
@@ -137,19 +66,23 @@ export default function InicioScreen() {
   const [cultos, setCultos] = useState<CultoUpcoming[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [avisos, setAvisos] = useState<{ id: string; titulo: string; corpo: string }[]>([]);
+  const [streak, setStreak] = useState<number | null>(null);
   const [aoVivo, setAoVivo] = useState<CultoAoVivo | null>(null);
 
   const carregar = useCallback(async (forcar = false) => {
-    const [d, c, v] = await Promise.all([
+    const [d, c, v, a] = await Promise.all([
       destaquesAtivos(forcar).catch(() => []),
       proximosCultos(7, forcar).catch(() => []),
       // ⚠️ SEM cache: "está ao vivo agora?" é a pergunta mais perecível da
       // tela — servir do cache mostraria o card depois do culto acabar.
       cultoAoVivo().catch(() => null),
+      apiGet<{ comunicados: { id: string; titulo: string; corpo: string }[] }>("/app/comunicados").catch(() => null),
     ]);
     setDestaques(d);
     setCultos(c);
     setAoVivo(v);
+    if (a) setAvisos(a.comunicados || []);
   }, []);
 
   useEffect(() => {
@@ -170,20 +103,28 @@ export default function InicioScreen() {
     await carregar(true); // pull-to-refresh ignora o cache
     setRefreshing(false);
   }, [carregar]);
-  const nome = primeiroNome(
-    membro?.nome || (user?.user_metadata?.nome as string | undefined),
-    user?.email
-  );
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    setStreak(null);
+    if (membro?.membroId) streakDevocional(membro.membroId).then((n) => { if (active) setStreak(n); }).catch(() => {});
+    return () => { active = false; };
+  }, [membro?.membroId]));
+  const notices: HomeNotice[] = [
+    { id: "devocional", title: streak && streak > 0 ? t("Continue sua sequência de leitura") : t("Um tempo com Deus, todos os dias"), body: t("Abra seu devocional e renove sua fé."), count: streak ?? undefined, href: "/devocional" },
+    ...avisos.slice(0, 5).map((a) => ({ id: a.id, title: a.titulo, body: a.corpo, href: "/noticias" as const })),
+  ];
 
   return (
-    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
+    <View style={styles.safe}>
+      {pathname === "/" ? <StatusBar style="light" /> : null}
       <ScreenBackground />
       <HeartPulseOverlay visible={refreshing} />
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={<HeartRefresh refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <Text style={styles.hello}>{t("Olá")}, {nome}</Text>
+        <MarketingHero notices={notices} unreadCount={unreadCount} />
+        <SafeAreaView edges={["left", "right"]} style={styles.content}>
 
         {/* AO VIVO — só durante o culto (ponto 2 do Marcos: o "No culto" saiu
             do menu e aparece aqui, na hora em que serve pra algo). */}
@@ -251,8 +192,11 @@ export default function InicioScreen() {
             </AnimatedShortcut>
           ))}
         </View>
+        </SafeAreaView>
       </ScrollView>
-    </SafeAreaView>
+      {/* Mantém contraste dos ícones do sistema ao rolar para o conteúdo claro. */}
+      <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top, backgroundColor: "#49656b" }} />
+    </View>
   );
 }
 
@@ -271,7 +215,6 @@ const makeStyles = (colors: Palette) =>
     aoVivoDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: "#fff" },
     aoVivoTitulo: { color: "#fff", fontSize: font.size.lg, fontWeight: "800" },
     aoVivoSub: { color: "rgba(255,255,255,0.9)", fontSize: font.size.sm },
-    hello: { color: colors.text, fontSize: font.size.xxl, fontFamily: BRAND_FONT, marginTop: spacing.md },
     sectionTitle: {
       color: colors.text,
       fontSize: font.size.lg,

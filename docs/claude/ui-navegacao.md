@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Home editorial do marketing (26/10/2026)
+
 - ⚠️⚠️ TRÊS RELATOS DO ANDROID DO MARCOS · diálogo, fundo da folha, teclado (23/09/2026)
 - ⚠️ NAVEGAÇÃO · o peso não era o destino (11/08/2026 · PR #111)
 - ⚠️⚠️ DIÁLOGO DA CASA · o fim do "modal quadrado" (11/08/2026)
@@ -369,3 +371,26 @@ o problema é pior que guarda nenhuma. Tem caso de teste pras duas pontas.
 
 `ehFormato` virou `export` para entrar no portão (`test/reguas.test.ts`) — antes
 não tinha teste nenhum, o que é justamente como o furo apareceu.
+
+
+## Home editorial do marketing (26/10/2026)
+
+A pedido do Matheus, a Home tem uma abertura de tela cheia com logo branco,
+menu no topo, chamada para notícias, avisos arredondados e atalhos inferiores
+Cuidados / Devocional / Grupos / Servir / Generosidade. Essa decisão substitui
+as regras anteriores de TopBar/BottomBar na HOME; as demais telas mantêm a casca.
+`MarketingHero` respeita safe areas, altura da janela e fonte ampliada (atalhos
+roláveis). A Home continua rolável para cultos ao vivo, Kids, destaques e atalhos
+complementares. Generosidade abre a tela existente e preserva o bloqueio de
+pagamentos por `FEATURES`.
+
+`/noticias` reutiliza o mural oficial `/app/comunicados`, com título próprio e
+pai Home no mapa de navegação. O card de avisos usa essa mesma fonte e a sequência
+real do devocional; nunca inventa o número 12 da referência. Sem sequência
+conhecida, apresenta convite de leitura sem contador. O sino mantém as não lidas.
+
+A foto limpa do marketing ainda precisa ser fornecida: a referência recebida
+contém os textos incorporados. `HOME_BACKGROUND` está sem imagem, com fundo
+teal provisório. Substituir por `require` de asset local quando a foto chegar;
+não usar a arte composta como fundo. Nenhuma dependência nativa adicionada.
+Não publicado por OTA nesta etapa; falta a foto e validação em aparelhos.

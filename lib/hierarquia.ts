@@ -58,6 +58,7 @@ import { router, type Href } from "expo-router";
  *   └── /culto-detalhe     (próximos cultos, na Home)
  */
 const PAI: Record<string, string> = {
+  "/noticias": "/",
   // telas de barra → Home
   "/meu-grupo": "/",
   "/voluntariado": "/",

@@ -6,6 +6,13 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Notícias e avisos": { en: "News and announcements", es: "Noticias y avisos" },
+  "seja muito": { en: "a warm", es: "¡te damos la" },
+  "bem-vindo!": { en: "welcome!", es: "bienvenida!" },
+  "veja o que está acontecendo": { en: "see what's happening", es: "mira lo que está pasando" },
+  "Continue sua sequência de leitura": { en: "Keep your reading streak going", es: "Continúa tu racha de lectura" },
+  "Um tempo com Deus, todos os dias": { en: "Time with God, every day", es: "Un tiempo con Dios, cada día" },
+  "Abra seu devocional e renove sua fé.": { en: "Open your devotional and renew your faith.", es: "Abre tu devocional y renueva tu fe." },
   // ── Servir · Pessoas do Servir pra LÍDER (24/09/2026) ──
   "Vincule pessoas aos seus times e diga em quais cultos elas servem.": { en: "Link people to your teams and set which services they serve in.", es: "Vinculá personas a tus equipos y decí en qué cultos sirven." },
   "Busque alguém pra ver os times dela nos times que você lidera, vincular e dizer em quais cultos ela serve.": { en: "Search someone to see them in the teams you lead, link them and set which services they serve in.", es: "Buscá a alguien para verlo en los equipos que liderás, vincularlo y decir en qué cultos sirve." },
