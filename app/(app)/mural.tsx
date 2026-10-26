@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, router, useFocusEffect } from "expo-router";
+import { Stack, router, useFocusEffect, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
@@ -41,6 +41,7 @@ function quando(iso: string | null): string {
 }
 
 export default function MuralScreen() {
+  const pathname = usePathname();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
@@ -81,7 +82,7 @@ export default function MuralScreen() {
           <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>{t("Avisos")}</Text>
+          <Text style={styles.title}>{pathname === "/noticias" ? t("Notícias e avisos") : t("Avisos")}</Text>
           <View style={{ width: 24 }} />
         </View>
 
