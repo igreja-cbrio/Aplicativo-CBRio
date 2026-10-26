@@ -1,3 +1,4 @@
+import { useAuth } from "@/contexts/AuthContext";
 import { Text } from "@/components/ui/Typography";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Platform, ScrollView, StyleSheet, View } from "react-native";
@@ -5,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Linking from "expo-linking";
 
-import { supabase, createRecoveryClient } from "@/lib/supabase";
+import { createRecoveryClient } from "@/lib/supabase";
 import { preparePasswordRecovery } from "@/lib/passwordRecovery";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
@@ -17,6 +18,7 @@ import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 type Estado = "validando" | "pronto" | "invalido";
 
 export default function RedefinirSenha() {
+  const { signOut } = useAuth();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
@@ -68,7 +70,11 @@ export default function RedefinirSenha() {
       if (attempt.current !== currentAttempt) return;
       attempt.current = null;
       setEstado("invalido");
-      await supabase.auth.signOut({ scope: "local" });
+      try { await signOut("local"); } catch {
+        Alert.alert(t("Senha redefinida ✅"), t("A senha foi alterada. Saia da conta pelo menu e entre novamente."));
+        router.replace("/");
+        return;
+      }
       Alert.alert(t("Senha redefinida ✅"), t("Entre novamente usando sua nova senha."));
       router.replace("/(auth)/login");
     } catch (e) {

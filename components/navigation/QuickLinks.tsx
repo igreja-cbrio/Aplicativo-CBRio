@@ -4,7 +4,7 @@ import { Text } from "@/components/ui/Typography";
 import { DockSurface } from "@/components/navigation/DockSurface";
 import { Ionicons } from "@expo/vector-icons";
 import { usePathname } from "expo-router";
-import { AccessibilityInfo, PanResponder, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
+import { AccessibilityInfo, Animated, PanResponder, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useT } from "@/lib/i18n";
 import { irParaBarra } from "@/lib/nav";
 import { QUICK_LINKS } from "@/lib/appNavigation";
@@ -20,6 +20,8 @@ export function QuickLinks() {
   const items = useRef<{ x: number; width: number }[]>([]);
   const offset = useRef(0);
   const held = useRef(false), selected = useRef<number | null>(null);
+  const lensX = useRef(new Animated.Value(0)).current;
+  const reduceMotion = useRef(true);
   const [lens, setLens] = useState<number | null>(null);
   const [screenReader, setScreenReader] = useState(false);
   const navigate = useRef((index: number) => irParaBarra(pathname, QUICK_LINKS[index].href));
@@ -28,10 +30,18 @@ export function QuickLinks() {
   useEffect(() => {
     AccessibilityInfo.isScreenReaderEnabled().then(setScreenReader).catch(() => {});
     const subscription = AccessibilityInfo.addEventListener("screenReaderChanged", setScreenReader);
-    return () => subscription.remove();
+    AccessibilityInfo.isReduceMotionEnabled().then(value => { reduceMotion.current = value; }).catch(() => {});
+    const motion = AccessibilityInfo.addEventListener("reduceMotionChanged", value => { reduceMotion.current = value; });
+    return () => { subscription.remove(); motion.remove(); lensX.stopAnimation(); };
   }, []);
   const select = (index: number | null) => {
     if (index !== selected.current && index !== null) void Haptics.selectionAsync().catch(() => {});
+    if (index !== null && items.current[index]) {
+      const item = items.current[index];
+      const x = Math.max(0, Math.min(bounds.current.width - Math.max(90, item.width), item.x - offset.current));
+      if (selected.current === null || reduceMotion.current) lensX.setValue(x);
+      else Animated.spring(lensX, { toValue: x, stiffness: 320, damping: 28, mass: 0.7, useNativeDriver: true }).start();
+    } else lensX.stopAnimation();
     selected.current = index;
     setLens(index);
   };
@@ -66,16 +76,16 @@ export function QuickLinks() {
       <Text style={[styles.label, scroll && { fontSize: 12 }]}>{t(item.label)}</Text>
     </Pressable>)}
   </ScrollView></DockSurface>
-    {lens !== null && lensItem && <View pointerEvents="none" accessible={false} accessibilityElementsHidden style={[styles.lens, { left: Math.max(0, Math.min(bounds.current.width - Math.max(90, lensItem.width), lensItem.x - offset.current)), width: Math.max(90, lensItem.width) }]}>
+    {lens !== null && lensItem && <Animated.View pointerEvents="none" accessible={false} accessibilityElementsHidden style={[styles.lens, { transform: [{ translateX: lensX }], width: Math.max(90, lensItem.width) }]}>
       <DockSurface interactive><View style={styles.lensContent}>
         <Ionicons name={QUICK_LINKS[lens].icon} size={29} color="#29434a" />
         <Text style={[styles.label, { fontSize: 12 }]}>{t(QUICK_LINKS[lens].label)}</Text>
       </View></DockSurface>
-    </View>}
+    </Animated.View>}
   </View>;
 }
 const styles = StyleSheet.create({
-  lens: { position: "absolute", top: -14, zIndex: 10 },
+  lens: { position: "absolute", left: 0, top: -14, zIndex: 10 },
   lensContent: { minHeight: 90, justifyContent: "center", alignItems: "center", paddingHorizontal: 4, paddingVertical: 10, gap: 8 },
   dock: { flexGrow: 0, borderRadius: 28 },
   content: { flexGrow: 1, paddingVertical: 10, paddingHorizontal: 3 },

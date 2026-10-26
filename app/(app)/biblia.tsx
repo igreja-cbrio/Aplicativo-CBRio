@@ -116,7 +116,7 @@ export default function Biblia() {
       </View> : <Text style={styles.headerTitle} numberOfLines={1}>{titulo}</Text>}
       {capitulo ? <ControleFonte passo={fonte.passo} mudar={fonte.mudar} papel /> : <View style={styles.back} />}
     </View>
-    <ScrollView ref={scrollRef} contentContainerStyle={[styles.content, Boolean(capitulo) && styles.readerContent]} showsVerticalScrollIndicator={!capitulo}>
+    <ScrollView ref={scrollRef} contentContainerStyle={[styles.content, Boolean(capitulo) && [styles.readerContent, { paddingBottom: dockInset + 220 }]]} showsVerticalScrollIndicator={!capitulo}>
       {!livro && <BookList busca={busca} setBusca={setBusca} livros={livrosFiltrados} abrir={setLivro} s={styles} c={colors} t={t} />}
       {livro && !capitulo && <><Text style={styles.eyebrow}>{t("CAPÍTULOS")}</Text><Text style={styles.title}>{livro.nome}</Text><View style={styles.chapters}>{Array.from({ length: livro.capitulos }, (_, i) => <Pressable key={i + 1} style={styles.chapter} onPress={() => abrirCapitulo(i + 1)}><Text style={styles.chapterText}>{i + 1}</Text></Pressable>)}</View></>}
       {carregando && <ActivityIndicator color={colors.primary} size="large" />}

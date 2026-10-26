@@ -6,6 +6,7 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "A senha foi alterada. Saia da conta pelo menu e entre novamente.": { en: "Your password was changed. Sign out from the menu and sign in again.", es: "Tu contraseña fue cambiada. Cierra sesión desde el menú y vuelve a entrar." },
   "Atualizando...": { en: "Updating...", es: "Actualizando..." },
   "Informe seu CPF para receber um link no e-mail da sua conta.": { en: "Enter your CPF to receive a link at your account email.", es: "Introduce tu CPF para recibir un enlace en el correo de tu cuenta." },
   "Link enviado para": { en: "Link sent to", es: "Enlace enviado a" },

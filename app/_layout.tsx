@@ -86,8 +86,8 @@ function RootNavigator() {
     if (loading) return;
 
     const inAuthGroup = segments[0] === "(auth)";
-    // Redefinição de senha: o deep link cria sessão ANTES do usuário digitar
-    // a nova senha — não pode ser expulso da tela pelo redirect de authed.
+    // Recuperação é pública, inclusive com outra conta conectada. A sessão
+    // do link fica isolada; o guard não deve expulsar a pessoa desse fluxo.
     const inRedefinirSenha = segments.includes("redefinir-senha" as never) || segments.includes("recuperar-senha" as never);
 
     if (!authed && !inAuthGroup) {

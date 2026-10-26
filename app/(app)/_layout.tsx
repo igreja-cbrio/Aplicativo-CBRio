@@ -1,3 +1,4 @@
+import { useIsFocused } from "@react-navigation/native";
 import { DockInsetContext } from "@/components/navigation/DockContent";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useEffect, useRef, useState } from "react";
@@ -53,6 +54,9 @@ export default function AppLayout() {
   const [dockHeight, setDockHeight] = useState(78 + Math.max(insets.bottom, 12));
   const { mode } = useTheme();
   const pathname = usePathname();
+  const focused = useIsFocused();
+  const focusRef = useRef(focused);
+  focusRef.current = focused;
   const paramsGlobais = useGlobalSearchParams();
 
   const telaDeBarra = Object.prototype.hasOwnProperty.call(TELAS_BARRA, pathname);
@@ -108,12 +112,12 @@ export default function AppLayout() {
       if (saiuEm == null) return;
       const fora = Date.now() - saiuEm;
       saiuEm = null;
-      if (fora < MS_PARA_RECOMECAR) return;
+      if (fora < MS_PARA_RECOMECAR || !focusRef.current) return;
 
       const rota = rotaRef.current;
       // Já está na Home, ou está no meio do cadastro (resetar apagaria o que a
       // pessoa digitou) → não mexe.
-      if (rota === "/" || rota.startsWith("/completar-cadastro")) return;
+      if (rota === "/" || rota.startsWith("/completar-cadastro") || rota === "/recuperar-senha" || rota === "/redefinir-senha") return;
       try {
         router.dismissAll();
       } catch {
