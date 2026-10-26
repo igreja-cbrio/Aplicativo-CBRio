@@ -1897,4 +1897,7 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Remover marcação": { en: "Remove highlight", es: "Quitar marcación" },
   "Marcação removida": { en: "Highlight removed", es: "Marcación eliminada" },
   "Não foi possível remover": { en: "Could not remove", es: "No se pudo eliminar" },
+  "Não recebeu o link?": { en: "Didn't receive the link?", es: "¿No recibiste el enlace?" },
+  "Confirmar e-mail da conta": { en: "Confirm account email", es: "Confirmar correo de la cuenta" },
+  "Confirme o e-mail que você usa para entrar no app. O link será enviado apenas se ele estiver vinculado ao CPF informado.": { en: "Confirm the email you use to sign in. The link will only be sent if it is linked to the CPF entered.", es: "Confirma el correo que usas para iniciar sesión. El enlace solo se enviará si está vinculado al CPF informado." },
 };

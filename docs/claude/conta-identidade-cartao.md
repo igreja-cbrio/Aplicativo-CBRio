@@ -9,6 +9,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 - ⚠️⚠️ CARTÃO · o Android via "Add to Apple Wallet" (2026-08-14)
 - Módulo 1 — Autenticação (detalhes)
 - ⚠️ App · entrada de PESSOA sob o Contrato de porta (2026-08-04)
+- Recuperação com confirmação do e-mail (2026-10-26)
 
 ---
 
@@ -225,3 +226,11 @@ contas do app apontavam pra cadastro sem CPF.
 - ⚠️ `perfil.tsx` ainda salva por `app_salvar_membro` (RPC antiga que cruza por
   CPF/telefone/**nome**) — porta velha, fora do contrato. Migrar pro
   `/app/identidade/completar` num próximo passo.
+
+## Recuperação com confirmação do e-mail (2026-10-26)
+Após o pedido por CPF, “Não recebeu o link?” abre a confirmação do email da
+conta, preservando o CPF e permitindo corrigir o endereço. O app não lista
+contas vinculadas e não escolhe um destino automaticamente. Envia o seletor
+`email` opcional ao endpoint já existente; o servidor é quem exige vínculo
+canônico único e envia para Auth.email. Publicar o backend compatível antes
+deste cliente, pois o antigo ignoraria o novo campo. Limites de envio mantidos.

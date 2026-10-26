@@ -23,6 +23,8 @@ export default function RecuperarSenhaScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [cpf, setCpf] = useState("");
+  const [email, setEmail] = useState("");
+  const [confirmarEmail, setConfirmarEmail] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -34,9 +36,16 @@ export default function RecuperarSenhaScreen() {
       setError(t("Informe um CPF válido."));
       return;
     }
+    if (confirmarEmail && !email.trim()) {
+      setError(t("Informe um e-mail válido."));
+      return;
+    }
     setLoading(true);
     try {
-      const response = await apiPost<{ emailMascarado: string | null }>("/app/auth/recuperar-senha", { cpf: soDigitosCpf(cpf) }, { auth: false });
+      const response = await apiPost<{ emailMascarado: string | null }>("/app/auth/recuperar-senha", {
+        cpf: soDigitosCpf(cpf),
+        ...(confirmarEmail ? { email: email.trim() } : {}),
+      }, { auth: false });
       setEmailMascarado(response.emailMascarado);
       setSent(true);
     } catch (e) {
@@ -63,9 +72,18 @@ export default function RecuperarSenhaScreen() {
             </Text>
 
             {sent ? (
+              <View style={styles.form}>
               <Text style={styles.success}>
                 {emailMascarado ? `${t("Link enviado para")} ${emailMascarado}. ${t("Confira também a pasta de spam.")}` : t("Se houver uma conta vinculada ao CPF, você receberá as instruções no e-mail cadastrado.")}
               </Text>
+              <Text style={styles.subtitle}>{t("Não recebeu o link?")}</Text>
+              <Button title={t("Confirmar e-mail da conta")} variant="ghost" onPress={() => {
+                setConfirmarEmail(true);
+                setSent(false);
+                setError(null);
+                setEmailMascarado(null);
+              }} />
+              </View>
             ) : (
               <View style={styles.form}>
                 <Input
@@ -76,6 +94,10 @@ export default function RecuperarSenhaScreen() {
                   keyboardType="number-pad"
                   maxLength={14}
                 />
+                {confirmarEmail && <>
+                  <Text style={styles.subtitle}>{t("Confirme o e-mail que você usa para entrar no app. O link será enviado apenas se ele estiver vinculado ao CPF informado.")}</Text>
+                  <Input label={t("E-mail")} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" maxLength={254} />
+                </>}
                 {error && <Text style={styles.error}>{error}</Text>}
                 <Button title={t("Enviar link")} onPress={handleReset} loading={loading} />
               </View>
