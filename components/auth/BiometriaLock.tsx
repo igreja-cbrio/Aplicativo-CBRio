@@ -1,5 +1,6 @@
+import { Text } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";

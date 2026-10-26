@@ -1,5 +1,6 @@
+import { Text } from "@/components/ui/Typography";
 import { useRef } from "react";
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from "react-native";
 import WebView from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";

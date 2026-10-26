@@ -1,10 +1,11 @@
+import type { TextInput as NativeTextInput } from "react-native";
+import { TextInput } from "@/components/ui/Typography";
 import { useEffect, useMemo, useRef } from "react";
 import {
   Animated,
   Easing,
   Pressable,
   StyleSheet,
-  TextInput,
   View,
 } from "react-native";
 import { useColors } from "@/contexts/ThemeContext";
@@ -31,7 +32,7 @@ export function CodeInput({
 }: Props) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<NativeTextInput>(null);
 
   function handleChange(text: string) {
     const digits = text.replace(/[^0-9]/g, "").slice(0, cellCount);

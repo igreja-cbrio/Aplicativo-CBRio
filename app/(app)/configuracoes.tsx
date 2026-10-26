@@ -1,3 +1,4 @@
+import { Text } from "@/components/ui/Typography";
 import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -7,7 +8,6 @@ import {
   ScrollView,
   StyleSheet,
   Switch,
-  Text,
   View,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
@@ -264,7 +264,7 @@ export default function ConfiguracoesScreen() {
             })}
           </View>
           <Text style={styles.hint}>
-            {t("Para o novo tamanho valer em todo o app, feche e abra o aplicativo de novo.")}
+            {t("O tamanho da fonte é aplicado imediatamente em todo o app.")}
           </Text>
         </Section>
 

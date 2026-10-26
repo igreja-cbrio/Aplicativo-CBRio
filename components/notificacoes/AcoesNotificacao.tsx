@@ -1,3 +1,4 @@
+import { Text } from "@/components/ui/Typography";
 // ════════════════════════════════════════════════════════════════════════════
 //  Botões dentro do card da notificação (Matheus · 29/08/2026)
 //
@@ -9,7 +10,7 @@
 //  botões são `Pressable` aninhado e não deixam o toque subir pro card.
 // ════════════════════════════════════════════════════════════════════════════
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { useDialogo } from "@/components/ui/Dialogo";
@@ -142,9 +143,12 @@ export function AcoesNotificacao({ id, tipo, data, onFeito }: Props) {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-    linha: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
+    linha: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.sm },
     botao: {
-      flex: 1,
+      flexGrow: 1,
+      flexBasis: 120,
+      minWidth: 0,
+      paddingHorizontal: 14,
       borderRadius: 999,
       paddingVertical: 11,
       alignItems: "center",
@@ -153,7 +157,7 @@ const makeStyles = (colors: Palette) =>
     },
     principal: { backgroundColor: colors.primary },
     secundario: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.glassBorder },
-    texto: { fontSize: font.size.sm, fontWeight: "800" },
+    texto: { textAlign: "center", flexShrink: 1, maxWidth: "100%", fontSize: font.size.sm, fontWeight: "800" },
     textoPrincipal: { color: "#fff" },
     textoSecundario: { color: colors.text },
     feitoLinha: { marginTop: spacing.sm },

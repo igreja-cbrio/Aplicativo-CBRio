@@ -1,10 +1,10 @@
+import { Text } from "@/components/ui/Typography";
 import { useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";

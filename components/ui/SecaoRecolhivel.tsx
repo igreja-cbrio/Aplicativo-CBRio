@@ -1,3 +1,4 @@
+import { Text } from "@/components/ui/Typography";
 // Seção que abre e fecha, RECOLHIDA por padrão.
 //
 // ⚠️ O cabeçalho é a única coisa que a pessoa vê enquanto a seção está fechada,
@@ -9,7 +10,7 @@
 // ⚠️ Sem animação de altura de propósito: `LayoutAnimation` é ignorado na nova
 // arquitetura do RN e o resto do app não usa transição de layout em lista.
 import { useState, type ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
 import { font, radius, spacing, type Palette } from "@/constants/theme";

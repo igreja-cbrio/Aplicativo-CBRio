@@ -1,5 +1,6 @@
+import { Text } from "@/components/ui/Typography";
 import { useMemo, useState } from "react";
-import { Modal, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, StatusBar, StyleSheet, View } from "react-native";
 import WebView, { type WebViewProps } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

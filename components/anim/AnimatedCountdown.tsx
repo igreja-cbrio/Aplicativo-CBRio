@@ -1,5 +1,6 @@
+import { Text } from "@/components/ui/Typography";
 import { useEffect, useRef, useState } from "react";
-import { Animated, StyleSheet, Text, type TextStyle, View } from "react-native";
+import { Animated, StyleSheet, type TextStyle, View } from "react-native";
 
 /**
  * Número grande com tick de "flip" quando o valor muda (ex.: contagem

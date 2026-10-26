@@ -15,5 +15,5 @@ export function BottomBar() {
     return () => { show.remove(); hide.remove(); };
   }, []);
   if (keyboard) return null;
-  return <View style={{ paddingTop: 10, paddingHorizontal: 20, paddingBottom: Math.max(insets.bottom, 12), backgroundColor: "#314b51" }}><QuickLinks /></View>;
+  return <View style={{ paddingTop: 10, paddingHorizontal: 20, paddingBottom: Math.max(insets.bottom, 12), backgroundColor: "transparent" }}><QuickLinks /></View>;
 }

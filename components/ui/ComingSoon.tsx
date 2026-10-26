@@ -1,5 +1,6 @@
+import { Text } from "@/components/ui/Typography";
 import { useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors } from "@/contexts/ThemeContext";

@@ -1,3 +1,4 @@
+import { Text, TextInput } from "@/components/ui/Typography";
 // Um campo do censo, nativo. Espelha `PerguntaCampo.tsx` da web em comportamento
 // (não em código: lá é DOM, aqui é React Native).
 //
@@ -6,7 +7,7 @@
 // strings, número guarda number, data guarda 'AAAA-MM-DD'. Mudar o formato aqui
 // quebra o gráfico daquela pergunta sem erro nenhum na tela.
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";

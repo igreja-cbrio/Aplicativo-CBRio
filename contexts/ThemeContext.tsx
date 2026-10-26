@@ -12,14 +12,8 @@ import { palettes, type Palette } from "@/constants/theme";
 export type ThemePreference = "system" | "light" | "dark";
 type Mode = "light" | "dark";
 
-/** Escalas de fonte disponíveis (multiplicador aplicado em todo o app). */
-export type FontScale = "sm" | "md" | "lg" | "xl";
-export const FONT_SCALES: Record<FontScale, number> = {
-  sm: 0.92,
-  md: 1.0,
-  lg: 1.12,
-  xl: 1.28,
-};
+import { FONT_SCALES, setAppFontScale, type FontScale } from "@/lib/fontScale";
+export { FONT_SCALES, type FontScale } from "@/lib/fontScale";
 
 const PREF_KEY = "cbrio.themePref";
 const FONT_KEY = "cbrio.fontScale";
@@ -49,6 +43,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     });
     AsyncStorage.getItem(FONT_KEY).then((v) => {
       if (v === "sm" || v === "md" || v === "lg" || v === "xl") {
+        setAppFontScale(v);
         setFontScaleState(v);
       }
     });
@@ -60,6 +55,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }
 
   function setFontScale(s: FontScale) {
+    setAppFontScale(s);
     setFontScaleState(s);
     AsyncStorage.setItem(FONT_KEY, s);
   }

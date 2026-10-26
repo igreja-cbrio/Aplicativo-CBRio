@@ -1,3 +1,4 @@
+import { Text } from "@/components/ui/Typography";
 // ============================================================================
 // COMPLETAR CADASTRO · a porta de entrada de PESSOA no app (Marcos · 04/08/2026)
 //
@@ -29,7 +30,7 @@
 // ============================================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";

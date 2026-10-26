@@ -1,5 +1,6 @@
+import { Text } from "@/components/ui/Typography";
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { escalar } from "@/lib/fonteLeitura";
 import { FONTE_SERIF } from "@/lib/fonteSerif";
 import { paragrafos } from "@/lib/paragrafos";

@@ -1,3 +1,4 @@
+import { Text } from "@/components/ui/Typography";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -6,7 +7,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";

@@ -1,4 +1,5 @@
 import { router, type Href } from "expo-router";
+import { QUICK_LINKS } from "@/lib/appNavigation";
 
 /**
  * Navegação padrão do app.
@@ -39,13 +40,7 @@ export function irPara(rota: Href) {
 // ============================================================================
 
 /** As 5 telas da barra de baixo, na ordem em que aparecem. */
-export const ROTAS_BARRA = [
-  "/meu-grupo",
-  "/voluntariado",
-  "/cuidados",
-  "/devocional",
-  "/menu",
-] as const;
+export const ROTAS_BARRA = QUICK_LINKS.map((item) => item.href);
 
 const BARRA = new Set<string>(ROTAS_BARRA);
 

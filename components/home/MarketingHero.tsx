@@ -1,5 +1,6 @@
+import { Text } from "@/components/ui/Typography";
 import { useEffect, useRef, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions, type ImageSourcePropType } from "react-native";
+import { RefreshControl, Image, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type ImageSourcePropType } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,9 +17,10 @@ export type HomeNotice = { id: string; title: string; body?: string; count?: num
 /** Foto original fornecida pelo marketing, sem textos incorporados. */
 export const HOME_BACKGROUND: ImageSourcePropType = require("@/assets/images/home-copacabana.jpg");
 
-export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACKGROUND }: { notices: HomeNotice[]; unreadCount?: number; background?: ImageSourcePropType }) {
+export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACKGROUND, refreshing = false, onRefresh }: { notices: HomeNotice[]; unreadCount?: number; background?: ImageSourcePropType; refreshing?: boolean; onRefresh?: () => void }) {
   const { height, width, fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const [viewportHeight, setViewportHeight] = useState(height);
   const router = useRouter();
   const t = useT();
   const { openMenu } = useMenu();
@@ -41,11 +43,15 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
   };
 
   return (
-    <View style={[styles.hero, { minHeight: height, paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 20), paddingLeft: Math.max(insets.left, 20), paddingRight: Math.max(insets.right, 20) }]}>
+    <View style={styles.hero} onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}>
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        {background ? <Image source={background} resizeMode="cover" style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors /> : null}
+        {background ? <View style={styles.photo}>
+          <Image source={background} resizeMode="cover" style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors />
+          <LinearGradient colors={["#598592", "rgba(89,133,146,0)"]} style={styles.skyBlend} />
+        </View> : null}
         <LinearGradient colors={background ? ["rgba(12,32,38,0.42)", "rgba(12,32,38,0.46)", "rgba(12,32,38,0.62)"] : ["#49656b", "#314b51", "#142e34"]} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} />
       </View>
+      <ScrollView style={styles.scroll} contentContainerStyle={{ minHeight: viewportHeight, paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 20), paddingLeft: Math.max(insets.left, 20), paddingRight: Math.max(insets.right, 20) }} showsVerticalScrollIndicator={false} contentInsetAdjustmentBehavior="never" alwaysBounceVertical={!!onRefresh} bounces={!!onRefresh} overScrollMode="never" refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" colors={["#314b51"]} progressViewOffset={insets.top} /> : undefined}>
       <View style={styles.frame}>
         <View style={styles.header}>
           <View style={styles.logoFrame}><Image source={require("@/assets/images/cbrio-wordmark.png")} style={styles.logo} resizeMode="contain" tintColor="#fff" accessible accessibilityLabel="CBRio" /></View>
@@ -59,7 +65,7 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
             </Pressable>
           </View>
         </View>
-        <View style={[styles.welcome, { paddingVertical: Math.max(64, height * 0.12) }]}>
+        <View style={styles.welcome}>
           <Text style={[styles.eyebrow, { fontSize: titleSize * 0.5, lineHeight: titleSize * 0.55 }]}>{t("seja muito")}</Text>
           <Text accessibilityRole="header" style={[styles.title, { fontSize: titleSize, lineHeight: titleSize * 1.05, marginTop: -8 * fontScale }]}>{t("bem-vindo!")}</Text>
           <Pressable onPress={() => router.navigate("/noticias")} accessibilityRole="button" style={({ pressed }) => [styles.news, pressed && styles.pressed]}>
@@ -103,11 +109,16 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
           <QuickLinks />
         </View>
       </View>
+      </ScrollView>
     </View>
   );
 }
 const styles = StyleSheet.create({
-  hero: { backgroundColor: "#314b51" },
+  hero: { flex: 1, backgroundColor: "#598592", overflow: "hidden" },
+  scroll: { flex: 1 },
+  // Reserva mais céu e reduz o recorte lateral da foto; o fundo nunca rola.
+  photo: { position: "absolute", bottom: 0, left: 0, right: 0, height: "90%" },
+  skyBlend: { position: "absolute", top: 0, left: 0, right: 0, height: "16%" },
   frame: { flex: 1, width: "100%", maxWidth: 680, alignSelf: "center" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   logoFrame: { width: 112, height: 40, overflow: "hidden" },
@@ -116,7 +127,7 @@ const styles = StyleSheet.create({
   badge: { position: "absolute", top: 3, right: 2, backgroundColor: "#fff", borderRadius: 10, minWidth: 18, paddingHorizontal: 3, alignItems: "center" },
   badgeText: { color: "#29434a", fontSize: 10, fontWeight: "700" },
   headerButton: { minWidth: 44, minHeight: 48, alignItems: "center", justifyContent: "center" },
-  welcome: { flex: 1, alignItems: "center", justifyContent: "center" },
+  welcome: { flex: 1, paddingVertical: 24, alignItems: "center", justifyContent: "center" },
   eyebrow: { color: "#fff", fontFamily: BRAND_FONT, fontSize: 27, textAlign: "center" },
   title: { color: "#fff", fontFamily: BRAND_FONT, textAlign: "center", includeFontPadding: false },
   news: { borderWidth: 1.5, borderColor: "rgba(255,255,255,0.9)", borderRadius: 40, paddingHorizontal: 18, paddingVertical: 13, minHeight: 48, flexDirection: "row", alignItems: "center", gap: 10, marginTop: 18, maxWidth: "100%", backgroundColor: "rgba(12,32,38,0.16)" },

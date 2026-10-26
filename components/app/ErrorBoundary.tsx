@@ -1,5 +1,6 @@
+import { Text } from "@/components/ui/Typography";
 import React from "react";
-import { View, Text, Pressable, StyleSheet, Platform } from "react-native";
+import { View, Pressable, StyleSheet, Platform } from "react-native";
 import * as Updates from "expo-updates";
 import { trackErro } from "../../lib/telemetria";
 

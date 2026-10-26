@@ -1,3 +1,4 @@
+import { Text } from "@/components/ui/Typography";
 // ============================================================================
 // "SEUS DADOS" · resumo em vez de formulário (Marcos · 05/08/2026)
 //
@@ -14,7 +15,7 @@
 // senão a pessoa não consegue se inscrever de jeito nenhum.
 // ============================================================================
 import { useMemo } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";

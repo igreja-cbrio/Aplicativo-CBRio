@@ -1,3 +1,4 @@
+import { Text } from "@/components/ui/Typography";
 // Formulário do censo dentro do app — um bloco por tela.
 //
 // Mesma decisão de UI da web, e pelo mesmo motivo: 31 perguntas numa rolagem
@@ -5,7 +6,7 @@
 // vista, valida 6 campos por vez em vez de 31 no final, e a condicional encurta
 // o formulário de verdade (bloco cujo conteúdo todo ficou invisível não existe).
 import { useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";

@@ -1,3 +1,4 @@
+import { Text, TextInput } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -7,10 +8,8 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
-} from 'react-native';
+} from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';

@@ -1,9 +1,8 @@
+import { Text, TextInput } from "@/components/ui/Typography";
 import { useMemo, useRef, useState } from "react";
 import {
   Pressable,
   StyleSheet,
-  Text,
-  TextInput,
   View,
   type TextInputProps,
 } from "react-native";

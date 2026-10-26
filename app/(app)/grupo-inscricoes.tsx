@@ -1,7 +1,8 @@
+import { Text, TextInput } from "@/components/ui/Typography";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator, Alert, Linking, Modal, Platform,
-  Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
+  Pressable, RefreshControl, ScrollView, StyleSheet, View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";

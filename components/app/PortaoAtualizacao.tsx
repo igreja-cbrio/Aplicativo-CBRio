@@ -1,3 +1,4 @@
+import { Text } from "@/components/ui/Typography";
 // ============================================================================
 // PORTÃO DE ATUALIZAÇÃO · obrigatório, sem opção de recusar (Marcos · 05/08/2026)
 //
@@ -27,8 +28,8 @@
 // ⚠️ No-op em desenvolvimento (`expo-updates` desligado) — senão a tela apareceria
 // em dev e no Expo Go, onde `reloadAsync` nem existe.
 // ============================================================================
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { ActivityIndicator, AppState, Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { createContext, useContext, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { ActivityIndicator, AppState, Linking, Platform, Pressable, StyleSheet, View } from "react-native";
 import * as Updates from "expo-updates";
 import { abaixoDoPiso } from "@/lib/versaoApp";
 import { versaoMinimaApp, type VersaoMinima } from "@/lib/api";
@@ -53,8 +54,12 @@ import { decidirAplicacao, leEmbutido } from "@/lib/portaoUpdate";
  * bundle velho — sem apagar o que a pessoa estava escrevendo. Não é escape: não
  * há botão de "depois", e a janela é de minutos.
  */
+interface AtualizacaoManual { (ativa: () => boolean): Promise<void> }
+const AtualizacaoManualContext = createContext<AtualizacaoManual>(async () => {});
+export const useAtualizacaoManual = () => useContext(AtualizacaoManualContext);
+
 function useBuscaAtualizacao() {
-  const buscando = useRef(false);
+  const buscando = useRef<Promise<void> | null>(null);
   // ⚠️⚠️ CONSERTO (07/08): antes isto era um `momentoDeCobrar` que virava `true`
   // e **NUNCA voltava a false** — ou seja, a proteção que o comentário acima
   // promete NÃO EXISTIA: um download que terminasse no meio do uso mostrava o
@@ -90,22 +95,22 @@ function useBuscaAtualizacao() {
   // Agora a bandeira é ESTADO e sobe ANTES de baixar. Não existe mais janela.
   const [baixouNestaSessao, setBaixouNestaSessao] = useState(false);
 
-  const buscar = useCallback(async () => {
-    if (!Updates.isEnabled || buscando.current) return;
-    buscando.current = true;
-    try {
-      const r = await Updates.checkForUpdateAsync();
-      if (r.isAvailable) {
-        // ⚠️ ANTES do fetch, de propósito: é o que fecha a corrida.
-        setBaixouNestaSessao(true);
-        await Updates.fetchUpdateAsync(); // vira isUpdatePending
-      }
-    } catch {
-      // Sem rede / servidor fora: silêncio de propósito. O app segue usável com
-      // o bundle atual — o portão só existe quando o novo JÁ está no aparelho.
-    } finally {
-      buscando.current = false;
-    }
+  const buscar = useCallback((): Promise<void> => {
+    if (!Updates.isEnabled) return Promise.resolve();
+    if (buscando.current) return buscando.current;
+    const tarefa = (async () => {
+      try {
+        const r = await Updates.checkForUpdateAsync();
+        if (r.isAvailable) {
+          setBaixouNestaSessao(true); // Antes do evento nativo: não interrompe formulários.
+          await Updates.fetchUpdateAsync();
+        }
+      } catch {
+        // Sem rede, mantém o app atual disponível.
+      } finally { buscando.current = null; }
+    })();
+    buscando.current = tarefa;
+    return tarefa;
   }, []);
 
   useEffect(() => {
@@ -120,7 +125,13 @@ function useBuscaAtualizacao() {
     return () => sub.remove();
   }, [buscar]);
 
-  return baixouNestaSessao;
+  const buscarManual = useCallback(async (ativa: () => boolean) => {
+    await buscar();
+    // Só a Home ainda em foco autoriza aplicação. Se saiu para um formulário,
+    // a atualização permanece baixada para o próximo momento seguro.
+    if (ativa()) setBaixouNestaSessao(false);
+  }, [buscar]);
+  return { baixouNestaSessao, buscarManual };
 }
 
 /**
@@ -215,7 +226,7 @@ export function PortaoAtualizacao({ children }: { children: React.ReactNode }) {
   const { isUpdatePending, isChecking, isDownloading, isStartupProcedureRunning } = Updates.useUpdates();
   const [aplicando, setAplicando] = useState(false);
   const [falhou, setFalhou] = useState(false);
-  const baixouNestaSessao = useBuscaAtualizacao();
+  const { baixouNestaSessao, buscarManual } = useBuscaAtualizacao();
   const piso = usaPisoDeVersao();
   // ⚠️ Ficha de cadastro aberta ⇒ o portão espera (ver lib/cadastroAberto.ts).
   // O caminho rápido manda um código por E-MAIL: a pessoa TEM que sair do app
@@ -292,7 +303,7 @@ export function PortaoAtualizacao({ children }: { children: React.ReactNode }) {
   // até o reload acontecer ou falhar (então vira "tentar de novo").
   if (aplicando || falhou) return <TelaAplicacao aplicando={aplicando} onTentar={aplicar} colors={colors} styles={styles} t={t} />;
 
-  return <>{children}</>;
+  return <AtualizacaoManualContext.Provider value={buscarManual}>{children}</AtualizacaoManualContext.Provider>;
 }
 
 /** Splash de aplicação do bundle novo — estável enquanto `reloadAsync` roda. */

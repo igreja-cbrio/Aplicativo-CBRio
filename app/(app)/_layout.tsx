@@ -5,7 +5,7 @@ import { MembroProvider } from "@/contexts/MembroContext";
 import { CadastroGate } from "@/components/auth/CadastroGate";
 import { TopBar } from "@/components/ui/TopBar";
 import { BottomBar } from "@/components/ui/BottomBar";
-import { useColors } from "@/contexts/ThemeContext";
+import { useColors, useTheme } from "@/contexts/ThemeContext";
 import { MenuProvider } from "@/contexts/MenuContext";
 import { StatusBar } from "expo-status-bar";
 import { ehRaiz, registrarRotaAtual, subirUmNivel } from "@/lib/hierarquia";
@@ -47,6 +47,7 @@ const TELAS_BARRA: Record<string, string> = {
 
 export default function AppLayout() {
   const colors = useColors();
+  const { mode } = useTheme();
   const pathname = usePathname();
   const paramsGlobais = useGlobalSearchParams();
 
@@ -127,7 +128,7 @@ export default function AppLayout() {
           render — só navega quando o servidor confirma que falta algo. */}
       <CadastroGate>
         <View style={{ flex: 1, backgroundColor: colors.background }}>
-          {!semBarra && <StatusBar style="light" />}
+          {!semBarra && <StatusBar style={pathname === "/" || mode === "dark" ? "light" : "dark"} />}
           {!semBarra && pathname !== "/" && <TopBar mostrarVoltar={telaDeBarra || pathname === "/agenda"} />}
 
           {/* A barra é IRMÃ do Stack (não sobreposta): a tela nunca fica por
@@ -137,8 +138,9 @@ export default function AppLayout() {
             <Stack
               screenOptions={{
                 headerShown: false,
+                freezeOnBlur: true,
                 animation: "ios_from_right",
-                animationDuration: 260,
+                animationDuration: 180,
               }}
             >
               {/* ⚠️ TROCA DE ABA NÃO DESLIZA (11/08/2026 · "a navegação tá
@@ -157,6 +159,7 @@ export default function AppLayout() {
               <Stack.Screen name="voluntariado" options={{ animation: "none" }} />
               <Stack.Screen name="cuidados" options={{ animation: "none" }} />
               <Stack.Screen name="devocional" options={{ animation: "none" }} />
+              <Stack.Screen name="generosidade" options={{ animation: "none" }} />
               <Stack.Screen name="menu" options={{ animation: "none" }} />
             </Stack>
           </View>

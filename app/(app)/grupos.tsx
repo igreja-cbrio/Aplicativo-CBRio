@@ -1,11 +1,10 @@
+import { Text, TextInput } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";

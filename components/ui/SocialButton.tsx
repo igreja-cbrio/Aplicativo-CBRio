@@ -1,5 +1,6 @@
+import { Text } from "@/components/ui/Typography";
 import { useMemo } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet } from "react-native";
 import { AntDesign } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
