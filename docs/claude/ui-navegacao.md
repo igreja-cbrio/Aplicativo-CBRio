@@ -516,6 +516,11 @@ com desenho de até 20×20 pt e 6 pt transparentes abaixo. Assim o UIKit não
 amplia o símbolo até encostar na legenda. O renderer usa a escala nativa
 da tela; tint, seleção, acessibilidade e arraste continuam com UITabBar.
 
+Após a aprovação visual dos atalhos, o contador do sino na Home foi ajustado:
+altura mínima de 20 pt, padding vertical de 2 pt e linha de texto de 16 pt
+para fonte de 11 pt. A cápsula pode crescer com a preferência de tamanho da
+fonte, sem altura fixa que corte os números. Vale para iOS e Android.
+
 ### Foto ausente no aparelho · 26/10/2026
 
 O Image nativo de iOS/Android injeta width/height do asset antes dos estilos.
