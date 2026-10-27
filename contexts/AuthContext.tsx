@@ -287,7 +287,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { error } = await supabase.auth.updateUser({ password: novaSenha });
         if (error) throw error;
       },
-      async signOut(scope = "global") {
+      async signOut(scope = "local") { // só este aparelho · ver lib/logout.ts
         setPreview(false);
         await logoutWithCleanup({
           clearCache: limparCache,
