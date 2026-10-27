@@ -45,6 +45,10 @@ final class NativeShortcutsView: ExpoView, UITabBarDelegate {
     labels = next
     bar.setItems(zip(labels, symbols).enumerated().map { index, entry in
       let item = UITabBarItem(title: entry.0, image: UIImage(systemName: entry.1), tag: index)
+      // Separa símbolo e legenda sem substituir o layout, a lente ou os
+      // reconhecedores do UIKit. Ambos os ajustes são APIs públicas.
+      item.imageInsets = UIEdgeInsets(top: -2, left: 0, bottom: 2, right: 0)
+      item.titlePositionAdjustment = UIOffset(horizontal: 0, vertical: 2)
       item.accessibilityLabel = entry.0
       return item
     }, animated: false)
