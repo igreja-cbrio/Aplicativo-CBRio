@@ -510,6 +510,12 @@ Isso preserva o material, a seleção e os gestos do UIKit. A mudança é nativa
 e exige nova compilação; não afirmar que chegou por OTA. Android mantém
 os atalhos comuns, que já têm espaçamento próprio.
 
+O primeiro ajuste de offsets ainda ficou apertado na captura de 10h44.
+Os SF Symbols agora são renderizados como imagens template de 22×26 pt,
+com desenho de até 20×20 pt e 6 pt transparentes abaixo. Assim o UIKit não
+amplia o símbolo até encostar na legenda. O renderer usa a escala nativa
+da tela; tint, seleção, acessibilidade e arraste continuam com UITabBar.
+
 ### Foto ausente no aparelho · 26/10/2026
 
 O Image nativo de iOS/Android injeta width/height do asset antes dos estilos.
