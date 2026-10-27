@@ -27,6 +27,21 @@ final class NativeShortcutsView: ExpoView, UITabBarDelegate {
   private var activeIndex = -1
   private let symbols = ["heart", "book", "person.2", "hand.raised", "gift"]
 
+  private func shortcutImage(_ name: String) -> UIImage? {
+    let configuration = UIImage.SymbolConfiguration(pointSize: 20, weight: .regular)
+    guard let symbol = UIImage(systemName: name, withConfiguration: configuration) else { return nil }
+    // O UIKit pode ampliar SF Symbols automaticamente na barra flutuante.
+    // Uma imagem template com tamanho fixo mantém o desenho em até 20 pt e
+    // reserva espaço transparente abaixo, sem alterar a hierarquia do controle.
+    let scale = min(20 / symbol.size.width, 20 / symbol.size.height)
+    let size = CGSize(width: symbol.size.width * scale, height: symbol.size.height * scale)
+    let renderer = UIGraphicsImageRenderer(size: CGSize(width: 22, height: 26))
+    return renderer.image { _ in
+      symbol.draw(in: CGRect(x: (22 - size.width) / 2, y: (20 - size.height) / 2,
+                            width: size.width, height: size.height))
+    }.withRenderingMode(.alwaysTemplate)
+  }
+
   required init(appContext: AppContext? = nil) {
     super.init(appContext: appContext)
     backgroundColor = .clear
@@ -44,7 +59,11 @@ final class NativeShortcutsView: ExpoView, UITabBarDelegate {
     guard next.count == symbols.count, next != labels else { return }
     labels = next
     bar.setItems(zip(labels, symbols).enumerated().map { index, entry in
-      let item = UITabBarItem(title: entry.0, image: UIImage(systemName: entry.1), tag: index)
+      let item = UITabBarItem(title: entry.0, image: shortcutImage(entry.1), tag: index)
+      // Separa símbolo e legenda sem substituir o layout, a lente ou os
+      // reconhecedores do UIKit. Ambos os ajustes são APIs públicas.
+      item.imageInsets = UIEdgeInsets(top: -2, left: 0, bottom: 2, right: 0)
+      item.titlePositionAdjustment = UIOffset(horizontal: 0, vertical: 2)
       item.accessibilityLabel = entry.0
       return item
     }, animated: false)

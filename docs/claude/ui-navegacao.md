@@ -499,6 +499,23 @@ para captura (ScreenCaptureKit -3811). Prévia web confere somente foto/fallback
 Build iOS 1.0.2 usa Xcode 26.2 fixo no EAS. `runtimeVersion` continua literal
 1.0.0; a versão de loja não troca o canal de atualização dos binários existentes.
 
+### Validação nativa e espaçamento · 27/10/2026
+
+O simulador ainda tinha um binário 1.0.1 sem `NativeShortcuts`, embora recebesse
+o JS atual. Instalado o build local com o módulo, Matheus confirmou o arraste
+nativo funcionando. A captura real de Servir revelou símbolo e legenda muito
+próximos. Os itens agora usam `imageInsets` (-2 pt no topo, +2 na base) e
+`titlePositionAdjustment` (+2 pt vertical), APIs públicas de `UITabBarItem`.
+Isso preserva o material, a seleção e os gestos do UIKit. A mudança é nativa
+e exige nova compilação; não afirmar que chegou por OTA. Android mantém
+os atalhos comuns, que já têm espaçamento próprio.
+
+O primeiro ajuste de offsets ainda ficou apertado na captura de 10h44.
+Os SF Symbols agora são renderizados como imagens template de 22×26 pt,
+com desenho de até 20×20 pt e 6 pt transparentes abaixo. Assim o UIKit não
+amplia o símbolo até encostar na legenda. O renderer usa a escala nativa
+da tela; tint, seleção, acessibilidade e arraste continuam com UITabBar.
+
 ### Foto ausente no aparelho · 26/10/2026
 
 O Image nativo de iOS/Android injeta width/height do asset antes dos estilos.
