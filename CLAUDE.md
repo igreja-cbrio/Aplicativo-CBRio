@@ -620,3 +620,16 @@ splash nativa (`splash.png`) são compostos com `sharp` e referenciados no
 - Sempre que um módulo for adicionado/alterado, atualizar a tabela de Módulos
   e os detalhes correspondentes aqui.
 ```
+
+## ⚠️⚠️ Sair = só ESTE aparelho (27/10/2026)
+
+O Marcelo foi deslogado ao mesmo tempo do sistema web, deste app e do CBRio
+Staff. Log de auth: `logout?scope=global` vindo de um app Android (`okhttp`) às
+11:12:36; o web caiu 26s depois. `supabase.auth.signOut` com `scope: 'global'`
+revoga TODAS as sessões da conta, e a conta é a mesma nos 3 lugares.
+
+- `lib/logout.ts` e `AuthContext.signOut` passaram a ter padrão **`local`**
+  (antes `"global"`). Vale pro Menu, Configurações, completar cadastro e o
+  "Sair" da tela de biometria. `test/logout.test.ts` vigia o padrão.
+- **Sem botão "sair de todos os aparelhos"** (decisão do Marcos, 27/10).
+- Pares: CBRio-Staff #42 e SISTEMA_INTEGRADO_CBRIO #3511 (mesma troca).
