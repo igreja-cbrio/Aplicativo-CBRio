@@ -22,9 +22,8 @@ import { Text } from "@/components/ui/Typography";
 // ⚠️ PAGAMENTO continua na página hospedada (`/pagamento/<token>`): é onde vivem
 // Pix/boleto/cartão e o escopo PCI (dado de cartão nunca entra no app). O app
 // abre o link que a própria resposta devolve.
-// ⚠️ Evento com campo `imagem` cai no FORM PÚBLICO (o app não sobe arquivo pro
-// pipeline daquele formulário) — melhor mandar pro caminho que funciona do que
-// mostrar um campo que não envia.
+// Campos de imagem e contratos especiais usam o formulário canônico em uma
+// tela embutida no app; uploads, consentimentos e cobrança continuam no servidor.
 // ============================================================================
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -51,6 +50,7 @@ import { useMembro } from "@/lib/useMembro";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { trackEvento } from "@/lib/telemetria";
+import { eventoCorresponde } from "@/lib/eventoDestino";
 import { abrirInscricaoEvento } from "@/lib/eventos";
 import BotaoCompartilhar from "@/components/inscricoes/BotaoCompartilhar";
 import { mensagemEvento } from "@/lib/compartilharInscricao";
@@ -106,7 +106,7 @@ function rotuloStatus(insc: MinhaInscricaoEvento, t: (s: string) => string) {
 }
 
 export default function EventoScreen() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, slug } = useLocalSearchParams<{ id?: string; slug?: string }>();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
@@ -130,7 +130,7 @@ export default function EventoScreen() {
   const [falhouCarga, setFalhouCarga] = useState(false);
 
   const carregar = useCallback(async () => {
-    if (!id) return;
+    if (!id && !slug) { setCarregando(false); return; }
     setCarregando(true);
     try {
       // As duas listas em paralelo: o catálogo (dados do evento + campos) e as
@@ -144,19 +144,19 @@ export default function EventoScreen() {
       ]);
       const cat = rCat.status === "fulfilled" ? rCat.value : { eventos: [] as EventoAberto[] };
       const mine = rMine.status === "fulfilled" ? rMine.value : { inscricoes: [] as MinhaInscricaoEvento[] };
-      // Só é falha de verdade quando as DUAS não vieram: com a minha inscrição
-      // em mãos a tela ainda mostra o QR, que é o que importa na entrada.
-      setFalhouCarga(rCat.status === "rejected" && rMine.status === "rejected");
-      setEvento((cat.eventos || []).find((e) => e.id === id) ?? null);
+      // Falha parcial não significa evento encerrado. Dados recuperados ainda
+      // aparecem (inclusive QR); sem dados, a tela oferece tentar novamente.
+      setFalhouCarga(rCat.status === "rejected" || rMine.status === "rejected");
+      setEvento((cat.eventos || []).find((e) => eventoCorresponde(e, id, slug)) ?? null);
       if ("textos" in cat && cat.textos) setTextos(cat.textos);
       const viva = (mine.inscricoes || []).find(
-        (i) => i.evento.id === id && i.status !== "cancelada"
+        (i) => eventoCorresponde(i.evento, id, slug) && i.status !== "cancelada"
       );
-      setMinha(viva ?? (mine.inscricoes || []).find((i) => i.evento.id === id) ?? null);
+      setMinha(viva ?? (mine.inscricoes || []).find((i) => eventoCorresponde(i.evento, id, slug)) ?? null);
     } finally {
       setCarregando(false);
     }
-  }, [id]);
+  }, [id, slug]);
 
   useFocusEffect(
     useCallback(() => {
@@ -404,19 +404,10 @@ export default function EventoScreen() {
               />
             ) : null}
           </GlassCard>
-        ) : soWeb ? (
+        ) : soWeb || temCampoImagem ? (
           <GlassCard style={styles.card}>
             <Text style={styles.desc}>
-              {t("Neste evento você escolhe como pagar antes de se inscrever: no Pix a inscrição é feita aqui mesmo; no cartão de crédito ela é feita em outro site.")}
-            </Text>
-            <Button title={t("Escolher forma de pagamento")} onPress={() => abrirInscricaoEvento(ev!.url)} />
-          </GlassCard>
-        ) : temCampoImagem ? (
-          /* Evento que pede FOTO: o app não sobe arquivo neste formulário —
-             manda pro form público, que sabe. Honesto e sem campo morto. */
-          <GlassCard style={styles.card}>
-            <Text style={styles.desc}>
-              {t("Este evento pede o envio de uma imagem. A inscrição segue no site, em uma janela aqui dentro.")}
+              {t("Preencha o formulário completo aqui no app, incluindo os dados e aceites deste evento.")}
             </Text>
             <Button title={t("Abrir inscrição")} onPress={() => abrirInscricaoEvento(ev!.url)} />
           </GlassCard>

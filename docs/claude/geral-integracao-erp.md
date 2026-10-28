@@ -528,3 +528,18 @@ Descobri quando fui usar a telemetria pra diagnosticar o próprio app.
   pessoa digitou**. Chave nova exige mudar a whitelist em
   `backend/services/systemMobileOps.js` (repo do sistema) — e responder antes:
   *isso pode identificar alguém?*
+
+
+## Inscrições sem navegador externo (2026-10-28)
+Push e sino `inscricao_evento` navegam para `/evento` pelo ID; avisos antigos
+com slug são resolvidos no catálogo e em Minhas inscrições. Os formulários nativos
+existentes continuam. Imagem, responsável de menor e termos especiais abrem a
+página canônica em `/inscricao-formulario`, WebView sem injeção de autenticação.
+O fallback completo do censo também usa essa tela. Sem nova dependência nativa.
+A tela possui voltar/histórico, fechar, carregamento, erro e tentativa manual;
+fica sem dock e não é descartada ao voltar do pagamento/seleção de foto após 3min.
+URLs iniciais exigem HTTPS e domínio exato CBRio; popups e navegação externa são
+confirmados, sem registrar URL/token na telemetria. Retornar não confirma pagamento:
+a tela de evento consulta novamente o servidor. Links de pagamento/comprovante
+explicitamente externos preservam o fluxo anterior. Novas notificações incluem dia
+civil e horário quando cadastrados (ERP `notificacaoEventoPublicado`).

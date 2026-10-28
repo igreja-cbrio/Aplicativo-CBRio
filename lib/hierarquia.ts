@@ -117,6 +117,7 @@ const PAI: Record<string, string> = {
   "/comprovante-doacoes": "/generosidade",
   "/inscricoes": "/menu",
   "/evento": "/inscricoes",
+  "/inscricao-formulario": "/inscricoes",
   "/batismo": "/inscricoes",
   "/inscricao-batismo": "/batismo",
   "/next": "/inscricoes",
