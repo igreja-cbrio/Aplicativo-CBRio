@@ -16,7 +16,8 @@ import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 /** Formulário canônico com seus uploads e aceites, sem sair da navegação do app.
  * Não injeta sessão, preenche aceites ou infere confirmação de pagamento. */
 export default function InscricaoFormulario() {
-  const { url } = useLocalSearchParams<{ url?: string }>();
+  const { url, para } = useLocalSearchParams<{ url?: string; para?: string }>();
+  const outraPessoa = para === "outra-pessoa";
   const inicial = typeof url === "string" ? urlPublicaCbrio(url) : null;
   const pagina = inicial;
   const [erro, setErro] = useState(false);
@@ -73,9 +74,15 @@ export default function InscricaoFormulario() {
           <Ionicons name="close" size={24} color={colors.text} />
         </Pressable>
       </View>
+      {outraPessoa ? <View style={[styles.aviso, { backgroundColor: colors.surface }]}>
+        <Text style={{ color: colors.text, fontWeight: "700" }}>{t("Inscrever outra pessoa")}</Text>
+        <Text style={{ color: colors.textMuted }}>{t("Nome, CPF e nascimento devem ser de quem vai participar. Preencha seus dados somente nos campos de responsável, quando solicitados.")}</Text>
+      </View> : null}
       <TecladoSeguro style={{ flex: 1 }}>
         {pagina ? <WebView
+          key={`${pagina}:${outraPessoa}`}
           ref={web}
+          incognito={outraPessoa}
           source={{ uri: pagina }}
           style={{ flex: 1, backgroundColor: colors.background }}
           // Interceptar TODOS os esquemas evita o fallback automático do WebView
@@ -123,6 +130,7 @@ export default function InscricaoFormulario() {
 }
 
 const styles = StyleSheet.create({
+  aviso: { paddingHorizontal: 16, paddingVertical: 10, gap: 4 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, paddingVertical: 6, borderBottomWidth: StyleSheet.hairlineWidth },
   action: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   loading: { position: "absolute", top: 8, alignSelf: "center", padding: 12, borderRadius: 24, backgroundColor: "#fff" },
