@@ -8,13 +8,18 @@ import { openBrowserAsync } from "expo-web-browser";
 
 describe("inscrever outra pessoa sem usar a identidade do titular", () => {
   beforeEach(() => vi.clearAllMocks());
-  it.each(["/evento/classe-batismo", "/inscricao-batismo", "/inscricao-grupos", "/next", "/quero-servir"])("mantém %s dentro do app sem sessão ou dados pessoais", path => {
+  it.each(["/inscricao-batismo", "/inscricao-grupos", "/next", "/quero-servir"])("mantém %s dentro do app sem sessão ou dados pessoais", path => {
     const url = `https://www.cbrio.org${path}`;
     expect(destinoInscricaoOutraPessoa(url)).toEqual({ pathname: "/inscricao-formulario", params: { url, para: "outra-pessoa" } });
     const push = vi.spyOn(router, "push");
     expect(inscreverOutraPessoa(url)).toBe(true);
     expect(push).toHaveBeenCalledWith(destinoInscricaoOutraPessoa(url));
     expect(openBrowserAsync).not.toHaveBeenCalled();
+  });
+  it("abre os campos nativos de outro participante na Classe de Batismo", () => {
+    expect(destinoInscricaoOutraPessoa("https://www.cbrio.org/evento/classe-batismo")).toEqual({
+      pathname: "/inscricao-participante", params: { slug: "classe-batismo" },
+    });
   });
   it("abre uma nova instância a cada participante, mesmo no mesmo evento", () => {
     const push = vi.spyOn(router, "push");

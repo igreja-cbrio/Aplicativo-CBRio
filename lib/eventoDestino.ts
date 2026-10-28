@@ -32,5 +32,9 @@ export function eventoCorresponde(evento: { id: string; slug: string }, id?: str
  * preenchidos. A API autenticada de inscrição vincula o titular da conta. */
 export function destinoInscricaoOutraPessoa(url?: string | null) {
   const segura = typeof url === "string" ? urlPublicaCbrio(url) : null;
+  if (segura) {
+    const slug = new URL(segura).pathname.match(/^\/evento\/([a-zA-Z0-9_-]+)\/?$/)?.[1];
+    if (slug) return { pathname: "/inscricao-participante" as const, params: { slug } };
+  }
   return segura ? { pathname: "/inscricao-formulario" as const, params: { url: segura, para: "outra-pessoa" } } : null;
 }
