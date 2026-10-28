@@ -9,6 +9,7 @@ export type EventoPublico = {
   contrato?: string; exigir_endereco?: boolean; exige_dados_menor?: boolean;
   termos_extra?: unknown[]; checkout_externo?: unknown; aviso?: string | null;
   pagamento_ativo?: boolean; valor_centavos?: number;
+  msg_sucesso_titulo?: string; msg_sucesso_texto?: string;
   campos: (CampoEvento & { mostrar_se?: unknown })[];
 };
 

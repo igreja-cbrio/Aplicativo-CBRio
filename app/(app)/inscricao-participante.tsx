@@ -17,7 +17,7 @@ import { buscarEventoParticipante, enviarInscricaoParticipante, suportaParticipa
 import { mascaraDataBR, nascimentoBRParaISO, maskCPF } from "@/lib/validators";
 import { extrasFaltando } from "@/lib/inscricaoPayload";
 import { urlPagamentoDaResposta, type InscricaoEventoResp, type TextosInscricao } from "@/lib/api";
-import { abrirInscricaoEvento } from "@/lib/eventos";
+import { abrirFormularioInscricao, abrirInscricaoEvento } from "@/lib/eventos";
 
 export default function InscricaoParticipante() {
   const { slug } = useLocalSearchParams<{ slug?: string }>();
@@ -104,12 +104,15 @@ function FormularioParticipante({ slug }: { slug: string }) {
             <Text style={s.title}>{evento.nome}</Text>
             {evento.data ? <Text style={s.text}>{evento.data.split("-").reverse().join("/")}{evento.hora ? ` · ${evento.hora.slice(0, 5)}` : ""}</Text> : null}
             {evento.local ? <Text style={s.text}>{evento.local}</Text> : null}
+            {evento.descricao ? <Text style={s.text}>{evento.descricao}</Text> : null}
             {evento.pagamento_ativo && evento.valor_centavos ? <Text style={s.text}>{`R$ ${(evento.valor_centavos / 100).toFixed(2).replace(".", ",")}`}</Text> : null}
           </GlassCard>
           {resultado ? <GlassCard style={s.card}>
             <Ionicons name={resultado.pagamento ? "time-outline" : "checkmark-circle-outline"} size={32} color={c.primary} />
-            <Text style={s.title}>{resultado.pagamento ? t("Aguardando pagamento") : resultado.ja_inscrito ? t("Esta pessoa já está inscrita.") : t("Inscrição confirmada!")}</Text>
-            <Text style={s.text}>{resultado.pagamento ? t("Sua vaga está reservada. Conclua o pagamento para confirmar.") : t("Te esperamos lá.")}</Text>
+            <Text style={s.title}>{resultado.pagamento ? t("Aguardando pagamento") : resultado.ja_inscrito ? t("Esta pessoa já está inscrita.") : evento.msg_sucesso_titulo || t("Inscrição confirmada!")}</Text>
+            <Text style={s.text}>{resultado.pagamento ? t("Sua vaga está reservada. Conclua o pagamento para confirmar.") : evento.msg_sucesso_texto || t("Te esperamos lá.")}</Text>
+            {resultado.numero_sorte ? <Text style={s.text}>{t("Seu número da sorte")}: {resultado.numero_sorte}</Text> : null}
+            {resultado.comprovante_token ? <Button title={t("Abrir comprovante")} onPress={() => abrirFormularioInscricao(`https://www.cbrio.org/i/c/${encodeURIComponent(resultado.comprovante_token!)}`)} /> : null}
             {pagar ? <Button title={t("Pagar agora")} onPress={() => abrirInscricaoEvento(pagar)} /> : null}
           </GlassCard> : !aberto ? <Text style={s.text}>{evento.aviso || t("Inscrições encerradas")}</Text> : !nativo ? <GlassCard style={s.card}>
             <Text style={s.text}>{t("Este evento tem um formulário especial. Continue na página do evento, dentro do app, para preencher todos os campos e autorizações.")}</Text>
