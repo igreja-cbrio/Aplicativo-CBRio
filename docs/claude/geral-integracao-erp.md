@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Campos nativos para inscrição de outro participante (2026-10-28)
+
 - Inscrever outra pessoa pelo app (2026-10-28)
 
 - 📬 MATHEUS — RECADO ABERTO (10/08/2026 · escrito pela sessão do Marcos)
@@ -558,3 +560,26 @@ cria nova tela de formulário, em WebView privativa, sem prefill ou JWT; nome,
 CPF e nascimento pertencem ao participante. Campos de responsável e aceites
 seguem a configuração canônica do evento. Não cria vínculo familiar nem
 promete listar a inscrição do terceiro em Meus eventos do titular.
+
+
+## Campos nativos para inscrição de outro participante (2026-10-28)
+
+O relato "abriu no navegador" era o WebView dentro do CBRio. URLs de eventos
+`/evento/:slug` agora abrem `/inscricao-participante`, com Input/CampoExtra,
+FormulárioRolavel, tema, teclado e tipografia do app. Campos e aceites começam
+vazios; a tela não importa useMembro. CampoExtra é compartilhado com a inscrição
+pessoal. A chave slug e router.push separam participantes/eventos.
+
+Configuração e textos vêm de GET `/public/evento/:slug` e `/textos`. O POST é
+`/public/evento/:slug/inscrever`, explicitamente SEM JWT. Nunca chamar a inscrição
+autenticada para terceiro: ela injeta o ID do titular. Payload com whitelist,
+consentimento marcado, envio travado contra duplo toque, e erros do servidor
+preservados. Não altera o cadastro do titular nem inventa vínculo familiar.
+
+Contratos completo/mínimo, endereço e campos comuns usam controles nativos.
+Autorização de menor, termos extras, condicionais, imagem, tipos desconhecidos e
+checkout externo mantêm a porta canônica embutida, com aviso explícito. Portas
+legadas (NEXT, Batismo, Grupos, Servir) também mantêm o formulário público.
+Não afirmar que todos os formulários viraram nativos. Pagamento pendente não é
+confirmação. Testes cobrem o POST real mockado sem sessão/IDs, aceite, erro e
+seleção conservadora do contrato; não fazer inscrição real para testar.

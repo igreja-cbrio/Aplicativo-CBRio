@@ -39,7 +39,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import QRCode from "react-native-qrcode-svg";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { CampoExtra } from "@/components/inscricoes/CampoExtra";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { SeusDados } from "@/components/inscricoes/SeusDados";
 import { faltaNaFicha, podeInscrever } from "@/lib/ficha";
@@ -454,9 +454,6 @@ export default function EventoScreen() {
                 campo={c}
                 valor={extras[c.key] ?? ""}
                 onChange={(v) => setExtras((s) => ({ ...s, [c.key]: v }))}
-                styles={styles}
-                colors={colors}
-                t={t}
               />
             ))}
 
@@ -603,92 +600,6 @@ function MinhaInscricao({
         </GlassCard>
       ) : null}
     </>
-  );
-}
-
-/** Campo extra do form-builder. Tipos que o app não sabe renderizar caem em texto. */
-function CampoExtra({
-  campo,
-  valor,
-  onChange,
-  styles,
-  colors,
-  t,
-}: {
-  campo: CampoEvento;
-  valor: string;
-  onChange: (v: string) => void;
-  styles: ReturnType<typeof makeStyles>;
-  colors: Palette;
-  t: (s: string) => string;
-}) {
-  const label = `${campo.label}${campo.obrigatorio ? " *" : ""}`;
-  const opcoes = campo.opcoes || [];
-
-  if ((campo.tipo === "select" || campo.tipo === "escolha") && opcoes.length) {
-    return (
-      <View style={styles.campoBloco}>
-        <Text style={styles.campoLabel}>{label}</Text>
-        <View style={styles.pills}>
-          {opcoes.map((o) => {
-            const sel = valor === o;
-            return (
-              <Pressable
-                key={o}
-                onPress={() => onChange(sel ? "" : o)}
-                style={[styles.pill, sel && { backgroundColor: colors.primary, borderColor: colors.primary }]}
-              >
-                <Text style={[styles.pillTxt, sel && { color: "#fff" }]}>{o}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-    );
-  }
-
-  if (campo.tipo === "multi" && opcoes.length) {
-    // Múltipla escolha vai como lista separada por ", " — é o formato que o
-    // servidor grava (string) e que o ERP exibe.
-    const sel = new Set(valor ? valor.split(",").map((s) => s.trim()).filter(Boolean) : []);
-    return (
-      <View style={styles.campoBloco}>
-        <Text style={styles.campoLabel}>{label}</Text>
-        <View style={styles.pills}>
-          {opcoes.map((o) => {
-            const on = sel.has(o);
-            return (
-              <Pressable
-                key={o}
-                onPress={() => {
-                  const n = new Set(sel);
-                  if (on) n.delete(o);
-                  else n.add(o);
-                  onChange([...n].join(", "));
-                }}
-                style={[styles.pill, on && { backgroundColor: colors.primary, borderColor: colors.primary }]}
-              >
-                <Text style={[styles.pillTxt, on && { color: "#fff" }]}>{o}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-    );
-  }
-
-  return (
-    <Input
-      label={label}
-      value={valor}
-      onChangeText={onChange}
-      placeholder={campo.tipo === "data" ? "DD/MM/AAAA" : undefined}
-      multiline={campo.tipo === "textarea"}
-      keyboardType={
-        campo.tipo === "numero" ? "number-pad" : campo.tipo === "email" ? "email-address" : "default"
-      }
-      autoCapitalize={campo.tipo === "email" ? "none" : "sentences"}
-    />
   );
 }
 

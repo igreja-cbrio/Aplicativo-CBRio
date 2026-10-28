@@ -6,6 +6,10 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Endereço completo": { en: "Full address", es: "Dirección completa" },
+  "Este evento tem um formulário especial. Continue na página do evento, dentro do app, para preencher todos os campos e autorizações.": {"en": "This event has a special form. Continue to the event page inside the app to complete all fields and authorizations.", "es": "Este evento tiene un formulario especial. Continúa en la página del evento dentro de la app para completar todos los campos y autorizaciones."},
+  "Esta pessoa já está inscrita.": {"en": "This person is already registered.", "es": "Esta persona ya está inscrita."},
+  "Informe uma data de nascimento válida.": {"en": "Enter a valid date of birth.", "es": "Introduce una fecha de nacimiento válida."},
   "Outra pessoa": {"en": "Someone else", "es": "Otra persona"},
   "Inscrever outra pessoa": {"en": "Register someone else", "es": "Inscribir a otra persona"},
   "Escolha a inscrição e preencha os dados de quem vai participar, como seu filho. Seu cadastro permanece igual.": {"en": "Choose a registration and enter the details of the participant, such as your child. Your profile stays the same.", "es": "Elige la inscripción y completa los datos de quien va a participar, como tu hijo. Tu perfil no cambia."},
