@@ -25,7 +25,7 @@ import { Text } from "@/components/ui/Typography";
 // Campos de imagem e contratos especiais usam o formulário canônico em uma
 // tela embutida no app; uploads, consentimentos e cobrança continuam no servidor.
 // ============================================================================
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -128,6 +128,19 @@ export default function EventoScreen() {
   // do evento, que é onde o sinal é pior, a segunda mensagem esconde o QR de
   // quem está inscrito.
   const [falhouCarga, setFalhouCarga] = useState(false);
+  const [capaMedida, setCapaMedida] = useState<{ uri: string; proporcao: number } | null>(null);
+  const capa = evento?.capa_url ?? minha?.evento.capa_url;
+  useEffect(() => {
+    let atual = true;
+    if (capa) {
+      Image.getSize(capa, (width, height) => {
+        if (atual && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+          setCapaMedida({ uri: capa, proporcao: width / height });
+        }
+      }, () => { /* Falha de medida mantém contain e a proporção de fallback. */ });
+    }
+    return () => { atual = false; };
+  }, [capa]);
 
   const carregar = useCallback(async () => {
     if (!id && !slug) { setCarregando(false); return; }
@@ -301,7 +314,6 @@ export default function EventoScreen() {
   const ev = evento;
   const quando = fmtData(ev?.data ?? minha?.evento.data, ev?.hora ?? minha?.evento.hora);
   const local = ev?.local ?? minha?.evento.local;
-  const capa = ev?.capa_url ?? minha?.evento.capa_url;
   const prazo = fmtPrazo(ev?.inscricoes_encerram_em);
 
   return (
@@ -316,7 +328,14 @@ export default function EventoScreen() {
       <ScrollView
         automaticallyAdjustKeyboardInsets
         contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {capa ? <Image source={{ uri: capa }} style={styles.capa} resizeMode="cover" /> : null}
+        {capa ? (
+          <Image
+            key={capa}
+            source={{ uri: capa }}
+            style={[styles.capa, { aspectRatio: capaMedida?.uri === capa ? capaMedida.proporcao : 2 }]}
+            resizeMode="contain"
+          />
+        ) : null}
 
         <GlassCard style={styles.card}>
           <Text style={styles.nome}>{ev?.nome || minha?.evento.nome}</Text>
@@ -702,7 +721,8 @@ const makeStyles = (c: Palette) =>
     back: { width: 24 },
     title: { flex: 1, textAlign: "center", color: c.text, fontSize: font.size.lg, fontWeight: "800" },
     muted: { color: c.textMuted, fontSize: font.size.md, padding: spacing.lg },
-    capa: { width: "100%", height: 168, borderRadius: radius.lg },
+    // A mesma arte pode ser panorâmica, quadrada ou vertical. Não recortar texto/logo.
+    capa: { width: "100%", borderRadius: radius.lg },
     card: { padding: spacing.lg, gap: spacing.sm, borderRadius: radius.lg },
     nome: { color: c.text, fontSize: font.size.lg, fontWeight: "800" },
     linha: { flexDirection: "row", alignItems: "center", gap: 8 },
