@@ -289,7 +289,7 @@ export default function InscricoesScreen() {
                   }`}
                 >
                   {ev.capa_url ? (
-                    <Image source={{ uri: ev.capa_url }} style={styles.eventoCapa} resizeMode="cover" />
+                    <Image source={{ uri: ev.capa_url }} style={styles.eventoCapa} resizeMode="contain" />
                   ) : (
                     <View style={[styles.eventoCapa, styles.eventoCapaVazia]}>
                       <Ionicons name="calendar" size={26} color={colors.brandMid} />
