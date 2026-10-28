@@ -18,7 +18,7 @@ import {
 } from "@/lib/api";
 import BotaoCompartilhar from "@/components/inscricoes/BotaoCompartilhar";
 import { mensagemEvento, mensagemPorta } from "@/lib/compartilharInscricao";
-import { abrirInscricaoEvento } from "@/lib/eventos";
+import { abrirInscricaoEvento, inscreverOutraPessoa } from "@/lib/eventos";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { irPara } from "@/lib/nav";
@@ -128,11 +128,26 @@ export default function InscricoesScreen() {
   // finalmente aparece no app.
   const [minhas, setMinhas] = useState<MinhaInscricaoEvento[] | null>(null);
   const [verMeus, setVerMeus] = useState(false);
-  // Links públicos pra CONVIDAR alguém. ⚠️ Vêm do servidor (o app não monta
-  // URL) e a falha é silenciosa DE PROPÓSITO: sem eles o botão de compartilhar
-  // não aparece, e o resto da tela funciona igual. Compartilhar é um extra —
-  // não pode derrubar a tela de inscrição de quem quer se inscrever.
+  const [outraPessoa, setOutraPessoa] = useState(false);
+  const [carregandoPortas, setCarregandoPortas] = useState(true);
+  const [erroPortas, setErroPortas] = useState(false);
+  const [erroDestino, setErroDestino] = useState(false);
+  // Links públicos vêm do servidor. No modo pessoal, compartilhar é opcional;
+  // para terceiros, falhas precisam de nova tentativa, nunca fallback pessoal.
   const [portas, setPortas] = useState<Record<string, PortaInscricaoLink>>({});
+
+  const carregarPortas = useCallback(async () => {
+    setCarregandoPortas(true); setErroPortas(false); setErroDestino(false);
+    try {
+      const r = await buscarPortasInscricao();
+      setPortas(Object.fromEntries((r.portas || []).map(p => [p.chave, p])));
+    } catch { setErroPortas(true); }
+    finally { setCarregandoPortas(false); }
+  }, []);
+
+  function abrirParaOutraPessoa(url?: string | null) {
+    setErroDestino(!inscreverOutraPessoa(url));
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -142,10 +157,8 @@ export default function InscricoesScreen() {
       minhasInscricoesEventos()
         .then((r) => setMinhas(r.inscricoes || []))
         .catch(() => setMinhas([]));
-      buscarPortasInscricao()
-        .then((r) => setPortas(Object.fromEntries((r.portas || []).map((p) => [p.chave, p]))))
-        .catch(() => setPortas({}));
-    }, [membro?.membroId])
+      carregarPortas();
+    }, [membro?.membroId, carregarPortas])
   );
 
   return (
@@ -160,22 +173,42 @@ export default function InscricoesScreen() {
           <View style={{ width: 24 }} />
         </View>
 
+        <View style={styles.segRow} accessibilityRole="radiogroup">
+          {[{ valor: false, titulo: "Para mim" }, { valor: true, titulo: "Outra pessoa" }].map(op => <Pressable
+            key={String(op.valor)} accessibilityRole="radio" accessibilityState={{ checked: outraPessoa === op.valor }}
+            onPress={() => { setOutraPessoa(op.valor); setVerMeus(false); setErroDestino(false); }}
+            style={[styles.segBtn, outraPessoa === op.valor && styles.segBtnAtivo]}>
+            <Text style={[styles.segTxt, outraPessoa === op.valor && styles.segTxtAtivo]}>{t(op.titulo)}</Text>
+          </Pressable>)}
+        </View>
+        {outraPessoa ? <Text style={styles.rowDesc}>{t("Escolha a inscrição e preencha os dados de quem vai participar, como seu filho. Seu cadastro permanece igual.")}</Text> : null}
+        {outraPessoa && carregandoPortas ? <Text style={styles.rowDesc}>{t("Carregando formulários...")}</Text> : null}
+        {outraPessoa && (erroPortas || erroDestino) ? <View style={styles.vazioCard}>
+          <Text style={styles.vazioTxt}>{t("Não foi possível abrir o formulário. Tente carregar novamente.")}</Text>
+          <Pressable accessibilityRole="button" onPress={carregarPortas} style={styles.segBtn}>
+            <Text style={styles.segTxt}>{t("Tentar novamente")}</Text>
+          </Pressable>
+        </View> : null}
+
         {itens.map((it) => {
-          const st = it.chave ? status?.[it.chave] ?? "nenhum" : "nenhum";
+          const st = !outraPessoa && it.chave ? status?.[it.chave] ?? "nenhum" : "nenhum";
           return (
             <Pressable
               key={it.href || it.url}
               style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-              onPress={() => (it.href ? irPara(it.href) : it.url && abrirInscricaoEvento(it.url))}
+              onPress={() => outraPessoa
+                ? abrirParaOutraPessoa(it.porta ? portas[it.porta]?.url : it.url)
+                : (it.href ? irPara(it.href) : it.url && abrirInscricaoEvento(it.url))}
+              disabled={outraPessoa && carregandoPortas}
               accessibilityRole="button"
-              accessibilityLabel={`${t(it.label)}. ${st === "ativo" ? t("Inscrito") : st === "pendente" ? t("Pendente") : t(it.desc)}`}
+              accessibilityLabel={`${t(it.label)}. ${st === "ativo" ? t("Inscrito") : st === "pendente" ? t("Pendente") : (outraPessoa ? t("Inscrever outra pessoa") : t(it.desc))}`}
             >
               <View style={styles.icon}>
                 <Ionicons name={it.icon} size={22} color={colors.brandMid} />
               </View>
               <View style={{ flex: 1, gap: 3 }}>
                 <Text style={styles.rowLabel}>{t(it.label)}</Text>
-                <Text style={styles.rowDesc}>{t(it.desc)}</Text>
+                <Text style={styles.rowDesc}>{outraPessoa ? t("Inscrever outra pessoa") : t(it.desc)}</Text>
               </View>
               <StatusBadge status={st} styles={styles} colors={colors} t={t} />
               <BotaoCompartilhar
@@ -199,7 +232,7 @@ export default function InscricoesScreen() {
         {((eventos && eventos.length > 0) || (minhas && minhas.length > 0)) && (
           <>
             <Text style={styles.secao}>{t("Eventos da igreja")}</Text>
-            <View style={styles.segRow}>
+            {!outraPessoa ? <View style={styles.segRow}>
               {[
                 { k: false, label: t("Todos") },
                 { k: true, label: t("Meus eventos") },
@@ -220,7 +253,7 @@ export default function InscricoesScreen() {
                   </Pressable>
                 );
               })}
-            </View>
+            </View> : null}
             {verMeus && (minhas?.length ?? 0) === 0 ? (
               <View style={styles.vazioCard}>
                 <Ionicons name="ticket-outline" size={26} color={colors.textMuted} />
@@ -280,12 +313,12 @@ export default function InscricoesScreen() {
                 <Pressable
                   key={ev.id}
                   style={({ pressed }) => [styles.eventoCard, pressed && styles.pressed]}
-                  onPress={() =>
-                    router.navigate({ pathname: "/evento", params: { id: ev.id } } as never)
+                  onPress={() => outraPessoa ? abrirParaOutraPessoa(ev.url)
+                    : router.navigate({ pathname: "/evento", params: { id: ev.id } } as never)
                   }
                   accessibilityRole="button"
                   accessibilityLabel={`${ev.nome}. ${
-                    ev.statusInsc ? t("Ver minha inscrição") : t("Toque para se inscrever")
+                    outraPessoa ? t("Inscrever outra pessoa") : ev.statusInsc ? t("Ver minha inscrição") : t("Toque para se inscrever")
                   }`}
                 >
                   {ev.capa_url ? (
@@ -326,21 +359,21 @@ export default function InscricoesScreen() {
                       ) : null}
                       {/* Sem esta pista o comprovante fica escondido atrás de um
                           toque e a pessoa não sabe que ele existe. */}
-                      {ev.temComprovante ? (
+                      {!outraPessoa && ev.temComprovante ? (
                         <View style={styles.tagQr}>
                           <Ionicons name="qr-code-outline" size={11} color={colors.brandMid} />
                           <Text style={styles.tagQrTxt}>{t("Comprovante")}</Text>
                         </View>
                       ) : null}
-                      {ev.pagamentoPendente ? (
+                      {!outraPessoa && ev.pagamentoPendente ? (
                         <View style={styles.tagPendente}>
                           <Text style={styles.tagPendenteTxt}>{t("Pagamento pendente")}</Text>
                         </View>
-                      ) : ev.statusInsc === "cancelada" ? (
+                      ) : !outraPessoa && ev.statusInsc === "cancelada" ? (
                         <View style={styles.tagPendente}>
                           <Text style={styles.tagPendenteTxt}>{t("Cancelada")}</Text>
                         </View>
-                      ) : ev.statusInsc ? (
+                      ) : !outraPessoa && ev.statusInsc ? (
                         <View style={styles.tagInscrito}>
                           <Text style={styles.tagInscritoTxt}>{t("Inscrito")}</Text>
                         </View>

@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Inscrever outra pessoa pelo app (2026-10-28)
+
 - 📬 MATHEUS — RECADO ABERTO (10/08/2026 · escrito pela sessão do Marcos)
 - ⚠️ AJUDA COM O APP · suporte do produto, no menu (29/08/2026)
 - ⚠️ NOTIFICAÇÃO COM BOTÃO · confirmar/pedir troca e aprovar/recusar (29/08/2026)
@@ -543,3 +545,16 @@ confirmados, sem registrar URL/token na telemetria. Retornar não confirma pagam
 a tela de evento consulta novamente o servidor. Links de pagamento/comprovante
 explicitamente externos preservam o fluxo anterior. Novas notificações incluem dia
 civil e horário quando cadastrados (ERP `notificacaoEventoPublicado`).
+
+## Inscrever outra pessoa pelo app (2026-10-28)
+O hub Inscrições permite escolher Para mim/Outra pessoa. No segundo modo, usa
+somente as URLs públicas do catálogo `/app/inscricoes/portas` e dos eventos,
+sem fallback para a inscrição autenticada. Esta última injeta `membro_id` da
+conta e nunca deve receber os dados do filho/terceiro. Links ausentes/falhas
+mostram erro e nova tentativa; status pessoais e Meus eventos ficam ocultos.
+O detalhe do evento também permite inscrever terceiros mesmo que o titular já
+esteja inscrito, enquanto o evento constar no catálogo aberto. Cada abertura
+cria nova tela de formulário, em WebView privativa, sem prefill ou JWT; nome,
+CPF e nascimento pertencem ao participante. Campos de responsável e aceites
+seguem a configuração canônica do evento. Não cria vínculo familiar nem
+promete listar a inscrição do terceiro em Meus eventos do titular.

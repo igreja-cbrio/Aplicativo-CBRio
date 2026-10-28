@@ -6,6 +6,13 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Outra pessoa": {"en": "Someone else", "es": "Otra persona"},
+  "Inscrever outra pessoa": {"en": "Register someone else", "es": "Inscribir a otra persona"},
+  "Escolha a inscrição e preencha os dados de quem vai participar, como seu filho. Seu cadastro permanece igual.": {"en": "Choose a registration and enter the details of the participant, such as your child. Your profile stays the same.", "es": "Elige la inscripción y completa los datos de quien va a participar, como tu hijo. Tu perfil no cambia."},
+  "Carregando formulários...": {"en": "Loading forms...", "es": "Cargando formularios..."},
+  "Não foi possível abrir o formulário. Tente carregar novamente.": {"en": "Unable to open the form. Try loading it again.", "es": "No se pudo abrir el formulario. Intenta cargarlo de nuevo."},
+  "Quer inscrever seu filho ou outra pessoa? Preencha os dados de quem vai participar.": {"en": "Want to register your child or someone else? Enter the participant’s details.", "es": "¿Quieres inscribir a tu hijo o a otra persona? Completa los datos de quien va a participar."},
+  "Nome, CPF e nascimento devem ser de quem vai participar. Preencha seus dados somente nos campos de responsável, quando solicitados.": {"en": "Name, CPF and date of birth must belong to the participant. Enter your own details only in the guardian fields, when requested.", "es": "El nombre, CPF y fecha de nacimiento deben ser del participante. Introduce tus datos solo en los campos de responsable, cuando se soliciten."},
   "A senha foi alterada. Saia da conta pelo menu e entre novamente.": { en: "Your password was changed. Sign out from the menu and sign in again.", es: "Tu contraseña fue cambiada. Cierra sesión desde el menú y vuelve a entrar." },
   "Atualizando...": { en: "Updating...", es: "Actualizando..." },
   "Informe seu CPF para receber um link no e-mail da sua conta.": { en: "Enter your CPF to receive a link at your account email.", es: "Introduce tu CPF para recibir un enlace en el correo de tu cuenta." },

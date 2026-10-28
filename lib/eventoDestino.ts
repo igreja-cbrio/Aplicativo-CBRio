@@ -27,3 +27,10 @@ export function destinoNotificacaoEvento(data: { evento_id?: unknown; slug?: unk
 export function eventoCorresponde(evento: { id: string; slug: string }, id?: string, slug?: string) {
   return id ? evento.id === id : !!slug && evento.slug === slug;
 }
+
+/** Terceiros usam a porta pública, que resolve o participante pelos dados
+ * preenchidos. A API autenticada de inscrição vincula o titular da conta. */
+export function destinoInscricaoOutraPessoa(url?: string | null) {
+  const segura = typeof url === "string" ? urlPublicaCbrio(url) : null;
+  return segura ? { pathname: "/inscricao-formulario" as const, params: { url: segura, para: "outra-pessoa" } } : null;
+}

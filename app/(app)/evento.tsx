@@ -51,7 +51,7 @@ import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { trackEvento } from "@/lib/telemetria";
 import { eventoCorresponde } from "@/lib/eventoDestino";
-import { abrirInscricaoEvento } from "@/lib/eventos";
+import { abrirInscricaoEvento, inscreverOutraPessoa } from "@/lib/eventos";
 import BotaoCompartilhar from "@/components/inscricoes/BotaoCompartilhar";
 import { mensagemEvento } from "@/lib/compartilharInscricao";
 import {
@@ -386,6 +386,11 @@ export default function EventoScreen() {
             </Text>
           ) : null}
         </GlassCard>
+
+        {ev?.url ? <GlassCard style={styles.card}>
+          <Text style={styles.desc}>{t("Quer inscrever seu filho ou outra pessoa? Preencha os dados de quem vai participar.")}</Text>
+          <Button title={t("Inscrever outra pessoa")} onPress={() => inscreverOutraPessoa(ev.url)} />
+        </GlassCard> : null}
 
         {/* ───────── JÁ INSCRITA · a inscrição dela ───────── */}
         {minha && minha.status !== "cancelada" ? (

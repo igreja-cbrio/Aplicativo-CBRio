@@ -2,7 +2,7 @@ import * as WebBrowser from "expo-web-browser";
 import { trackEvento } from "./telemetria";
 
 import { router } from "expo-router";
-import { urlFormularioEvento, urlPublicaCbrio } from "./eventoDestino";
+import { destinoInscricaoOutraPessoa, urlFormularioEvento, urlPublicaCbrio } from "./eventoDestino";
 
 export function abrirFormularioInscricao(url: string): void {
   const segura = urlPublicaCbrio(url);
@@ -28,4 +28,12 @@ export async function abrirInscricaoEvento(slugOrUrl: string): Promise<void> {
     const { Linking } = await import("react-native");
     Linking.openURL(url).catch(() => {});
   }
+}
+
+/** Nova instância para não reaproveitar campos/aceites de outra inscrição. */
+export function inscreverOutraPessoa(url?: string | null): boolean {
+  const destino = destinoInscricaoOutraPessoa(url);
+  if (!destino) return false;
+  router.push(destino as never);
+  return true;
 }
