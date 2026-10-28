@@ -1,16 +1,27 @@
-// Abre o formulário público de inscrição de um evento (espinha /inscricoes) num
-// navegador in-app. A MESMA página do site trata inscrição gratuita e paga
-// (paga → redireciona pro checkout do Asaas). Não reimplementamos o contrato de
-// dados nem o PCI no app — reusamos o fluxo já validado em produção.
 import * as WebBrowser from "expo-web-browser";
 import { trackEvento } from "./telemetria";
 
-const BASE_PUBLICO = "https://www.cbrio.org/evento/";
+import { router } from "expo-router";
+import { urlFormularioEvento, urlPublicaCbrio } from "./eventoDestino";
+
+export function abrirFormularioInscricao(url: string): void {
+  const segura = urlPublicaCbrio(url);
+  if (!segura) return;
+  router.navigate({ pathname: "/inscricao-formulario", params: { url: segura } } as never);
+}
 
 export async function abrirInscricaoEvento(slugOrUrl: string): Promise<void> {
-  const url = slugOrUrl.startsWith("http") ? slugOrUrl : `${BASE_PUBLICO}${slugOrUrl}`;
+  const formulario = urlFormularioEvento(slugOrUrl);
+  if (formulario) {
+    trackEvento("inscricao_evento_abrir", { endpoint: "/evento" });
+    abrirFormularioInscricao(formulario);
+    return;
+  }
+  // Pagamento/comprovante externo mantém o fluxo já suportado pelo provedor.
+  const url = slugOrUrl;
+  if (!/^https:\/\//i.test(url)) return;
   try {
-    trackEvento("inscricao_evento_abrir", { endpoint: url });
+    trackEvento("inscricao_evento_abrir", { endpoint: "/evento/link" });
     await WebBrowser.openBrowserAsync(url, { dismissButtonStyle: "close" });
   } catch {
     // se o browser in-app falhar, cai pro externo

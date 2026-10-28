@@ -17,7 +17,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { irPara } from "@/lib/nav";
-import { abrirInscricaoEvento } from "@/lib/eventos";
+import { destinoNotificacaoEvento } from "@/lib/eventoDestino";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -146,9 +146,7 @@ export default function NotificacoesScreen() {
         return;
       }
       case "inscricao_evento": {
-        const slug = (data as { slug?: string }).slug;
-        if (slug) abrirInscricaoEvento(slug);
-        else router.navigate("/inscricoes");
+        router.navigate(destinoNotificacaoEvento(data));
         return;
       }
     }

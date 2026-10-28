@@ -36,7 +36,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { apiGet } from "@/lib/api";
-import * as WebBrowser from "expo-web-browser";
+import { abrirFormularioInscricao } from "@/lib/eventos";
 import * as Crypto from "expo-crypto";
 import FormCenso from "@/components/censo/FormCenso";
 import {
@@ -154,7 +154,7 @@ export default function CensoScreen() {
   async function abrirNaWeb() {
     if (!status?.url) return;
     setAbrindo(false);
-    await WebBrowser.openBrowserAsync(status.url, { dismissButtonStyle: "close" });
+    abrirFormularioInscricao(status.url);
     carregar();
   }
 
@@ -304,7 +304,7 @@ export default function CensoScreen() {
               <Text style={styles.titulo}>{t("Não consegui abrir o formulário")}</Text>
               <Text style={styles.texto}>{erroForm}</Text>
               {!!status?.url && (
-                <Button title={t("Abrir no navegador")} onPress={() => abrirNaWeb()} />
+                <Button title={t("Abrir formulário completo")} onPress={() => abrirNaWeb()} />
               )}
             </View>
           ) : naoSuportados.length > 0 ? (
@@ -314,7 +314,7 @@ export default function CensoScreen() {
               <Text style={styles.texto}>
                 {t("Ele tem um tipo de pergunta que o app ainda não mostra. Para você não deixar nada em branco, respondemos pelo navegador.")}
               </Text>
-              <Button title={t("Abrir no navegador")} onPress={() => abrirNaWeb()} />
+              <Button title={t("Abrir formulário completo")} onPress={() => abrirNaWeb()} />
             </View>
           ) : enviado ? (
             <View style={styles.centro}>

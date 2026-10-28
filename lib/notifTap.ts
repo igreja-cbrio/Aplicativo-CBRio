@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { abrirInscricaoEvento } from "./eventos";
+import { destinoNotificacaoEvento } from "./eventoDestino";
 import { trackEvento } from "./telemetria";
 
 /** Última resposta de push que ESTA instalação já tratou (sobrevive a reinício). */
@@ -124,11 +124,7 @@ export function attachNotifTapListener(): () => void {
         return;
       }
       case "inscricao_evento": {
-        // Push de evento publicado → abre o formulário público do evento
-        // (mesmo fluxo do site · gratuito ou pago→Asaas). Sem slug, cai na aba.
-        const slug = (data as { slug?: string }).slug;
-        if (slug) abrirInscricaoEvento(slug);
-        else router.navigate("/inscricoes");
+        router.navigate(destinoNotificacaoEvento(data));
         return;
       }
       default:

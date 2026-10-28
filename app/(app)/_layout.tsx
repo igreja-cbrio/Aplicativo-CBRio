@@ -62,7 +62,7 @@ export default function AppLayout() {
   const telaDeBarra = Object.prototype.hasOwnProperty.call(TELAS_BARRA, pathname);
   // Onboarding é a única tela sem casca: quem está completando o cadastro não
   // deve ter atalho pra sair pelo rodapé.
-  const semBarra = pathname.startsWith("/completar-cadastro");
+  const semBarra = pathname.startsWith("/completar-cadastro") || pathname === "/inscricao-formulario";
 
   // Rota atual num ref: o listener de AppState é montado UMA vez e leria um
   // pathname congelado se dependesse do closure.
@@ -91,7 +91,7 @@ export default function AppLayout() {
     if (Platform.OS !== "android") return;
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
       const rota = rotaRef.current;
-      if (ehRaiz(rota) || rota.startsWith("/completar-cadastro")) return false;
+      if (ehRaiz(rota) || rota === "/inscricao-formulario" || rota.startsWith("/completar-cadastro")) return false;
       subirUmNivel(rota);
       return true; // consumido: não deixa o histórico agir também
     });
@@ -117,7 +117,7 @@ export default function AppLayout() {
       const rota = rotaRef.current;
       // Já está na Home, ou está no meio do cadastro (resetar apagaria o que a
       // pessoa digitou) → não mexe.
-      if (rota === "/" || rota.startsWith("/completar-cadastro") || rota === "/recuperar-senha" || rota === "/redefinir-senha") return;
+      if (rota === "/evento" || rota === "/inscricao-formulario" || rota === "/" || rota.startsWith("/completar-cadastro") || rota === "/recuperar-senha" || rota === "/redefinir-senha") return;
       try {
         router.dismissAll();
       } catch {
