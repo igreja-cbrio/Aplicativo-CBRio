@@ -137,6 +137,9 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Sem função": { en: "No role", es: "Sin función" },
   "Equipe toda": { en: "Whole team", es: "Todo el equipo" },
   "Sem funções definidas nesta equipe.": { en: "No roles defined for this team.", es: "Este equipo no tiene funciones definidas." },
+  "Já está em todas as funções desta equipe.": { en: "Already in every role of this team.", es: "Ya está en todas las funciones de este equipo." },
+  "Mostrando": { en: "Showing", es: "Mostrando" },
+  "Digite mais do nome pra achar quem falta.": { en: "Type more of the name to find the rest.", es: "Escriba más del nombre para encontrar al resto." },
   "…ou outra função (opcional)": { en: "…or another role (optional)", es: "…u otra función (opcional)" },
   // ⚠️ Chaves curtas de propósito: entram com o NÚMERO na frente ("faltam 2").
   "faltam": { en: "need", es: "faltan" },

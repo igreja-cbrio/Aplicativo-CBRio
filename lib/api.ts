@@ -463,11 +463,14 @@ export type AdminPessoaDetalhe = {
   vinculos_fora?: number;
   /** Pode mexer no domingo de preferência (líder só se a pessoa está num time dele). */
   pode_rodizio?: boolean;
-  times: { id: string; name: string; area: string | null; posicoes: { id: string; name: string }[] }[];
+  /** `posicoes` = só as funções que a pessoa AINDA não tem no time; `todas_ocupadas` = já tem todas. */
+  times: { id: string; name: string; area: string | null; posicoes: { id: string; name: string }[]; todas_ocupadas?: boolean }[];
   tipos: { id: string; name: string; recurrence_day: number | null; recurrence_time: string | null }[];
 };
-export function buscarPessoasServir(q: string) {
-  return apiGet<AdminPessoa[]>(`/app/voluntariado/admin/pessoas?q=${encodeURIComponent(q)}`);
+/** `total` = quantos o nome achou (a lista vem cortada em 30). Servidor antigo devolve só a lista. */
+export async function buscarPessoasServir(q: string): Promise<{ itens: AdminPessoa[]; total: number }> {
+  const r = await apiGet<AdminPessoa[] | { itens: AdminPessoa[]; total: number }>(`/app/voluntariado/admin/pessoas?q=${encodeURIComponent(q)}&com_total=1`);
+  return Array.isArray(r) ? { itens: r, total: r.length } : r;
 }
 export function getPessoaServir(id: string) {
   return apiGet<AdminPessoaDetalhe>(`/app/voluntariado/admin/pessoas/${id}`);

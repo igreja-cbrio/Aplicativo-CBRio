@@ -45,6 +45,7 @@ export default function ServirPessoasScreen() {
   // ── Busca ──
   const [busca, setBusca] = useState("");
   const [resultados, setResultados] = useState<AdminPessoa[]>([]);
+  const [totalBusca, setTotalBusca] = useState(0);
   const [buscando, setBuscando] = useState(false);
   const [buscaErro, setBuscaErro] = useState(false);
   const buscaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -58,7 +59,7 @@ export default function ServirPessoasScreen() {
     buscaTimer.current = setTimeout(async () => {
       try {
         const r = await buscarPessoasServir(q.trim());
-        if (seq === buscaSeq.current) { setResultados(r); setBuscaErro(false); }
+        if (seq === buscaSeq.current) { setResultados(r.itens); setTotalBusca(r.total); setBuscaErro(false); }
       } catch {
         if (seq === buscaSeq.current) { setResultados([]); setBuscaErro(true); }
       } finally {
@@ -178,7 +179,13 @@ export default function ServirPessoasScreen() {
           </Pressable>
         ) : (!buscando && resultados.length === 0) ? (
           <Text style={[styles.muted, { padding: spacing.md, textAlign: "center" }]}>{t("Nenhuma pessoa encontrada.")}</Text>
-        ) : resultados.map(p => (
+        ) : (<>
+        {totalBusca > resultados.length && (
+          <Text style={[styles.pequeno, { color: colors.textMuted, textAlign: "center", paddingVertical: 6 }]}>
+            {t("Mostrando")} {resultados.length} {t("de")} {totalBusca}. {t("Digite mais do nome pra achar quem falta.")}
+          </Text>
+        )}
+        {resultados.map(p => (
           <Pressable key={p.id} style={styles.linha} onPress={() => abrir(p)} accessibilityRole="button" accessibilityLabel={`${t("Abrir")} ${p.full_name}`}>
             {p.avatar_url ? (
               <Image source={{ uri: p.avatar_url }} style={styles.avatar} accessibilityIgnoresInvertColors />
@@ -196,6 +203,7 @@ export default function ServirPessoasScreen() {
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </Pressable>
         ))}
+        </>)}
       </ScrollView>
 
       {/* Ficha da pessoa */}
@@ -311,7 +319,11 @@ export default function ServirPessoasScreen() {
                           </Pressable>
                         );
                       })}
-                      {timeEscolhido.posicoes.length === 0 && <Text style={styles.muted}>{t("Sem funções definidas nesta equipe.")}</Text>}
+                      {timeEscolhido.posicoes.length === 0 && (
+                        <Text style={styles.muted}>
+                          {timeEscolhido.todas_ocupadas ? t("Já está em todas as funções desta equipe.") : t("Sem funções definidas nesta equipe.")}
+                        </Text>
+                      )}
                     </ScrollView>
                     <Pressable style={[styles.botao, !!ocupado && { opacity: 0.6 }]} onPress={vincular} disabled={!!ocupado} accessibilityRole="button">
                       {ocupado === "vincular" ? <ActivityIndicator color="#fff" /> : (
