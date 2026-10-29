@@ -389,6 +389,18 @@ background — o mesmo padrão que o ERP usa em `Batismos.tsx`.
 - `emAcao` foi removido: com a marcação otimista o spinner por linha não existe
   mais, e deixar o estado morto só confundiria quem ler depois.
 
+## ⚠️⚠️ SERVIR · liderança por culto no card do time, editor de culto, inscritos e convite (29/10/2026)
+
+Ajuste do Marcos depois de testar a 1ª versão: a liderança mora DENTRO do card do time
+("Tornar líder" abre os cultos: Todos, Domingo manhã, Domingo noite, Quarta, Sábado; a
+lista vem do servidor em `opcoes_culto`). A função "Líder" saiu do "Vincular" (parecia um
+time chamado Líder): o servidor não a oferece mais. Admin vê "Editor de culto" (monta a
+escala de todos os times naquele culto; sem "todos", que seria admin).
+Busca sem resultado vira convite: Copiar link · WhatsApp (`wa.me/?text=`) · QR code
+(`GET /app/voluntariado/admin/convite`). Quem se inscreve aparece na busca como
+"Inscrição · etapa" (id `insc:<id>`); vincular cria o perfil (a tela troca o id pelo novo)
+e o servidor avança a inscrição, avisado num diálogo. Ações usam `det.pessoa.id`.
+
 ## ⚠️⚠️ SERVIR · "Tornar líder deste time" na ficha da pessoa (29/10/2026)
 
 Seção "Liderança" no Pessoas do Servir (`servir-pessoas.tsx`): um botão por time que
