@@ -26,6 +26,7 @@ import { fundoDaFolha } from "@/lib/folha";
 import { useDialogo } from "@/components/ui/Dialogo";
 import {
   buscarPessoasServir, getPessoaServir, vincularAoTime, atualizarVinculo, tirarDoTime, salvarRodizioDe,
+  tornarLider, tirarLideranca,
   type AdminPessoa, type AdminPessoaDetalhe, type AdminVinculo,
 } from "@/lib/api";
 
@@ -141,6 +142,27 @@ export default function ServirPessoasScreen() {
       await vincularAoTime({ volunteer_profile_id: aberta.id, team_id: timeNovo, position_id: funcaoNova || undefined });
       setTimeNovo(""); setFuncaoNova("");
     }, t("Erro ao vincular ao time"));
+  }
+
+  // LIDERANÇA (29/10/2026): a mesma concessão de "líder do time" da web. O líder
+  // vê e monta a escala do time e gerencia as pessoas dele. O servidor decide quem
+  // pode (admin ou outro líder do time) e não deixa ninguém tirar a própria.
+  async function alternarLider(tm: { id: string; name: string; lider?: boolean }) {
+    if (!aberta) return;
+    const nome = aberta.full_name;
+    const ok = await dlg.confirmar(tm.lider ? {
+      titulo: t("Tirar liderança"),
+      mensagem: t("{nome} deixa de liderar {time}: não monta mais a escala nem gerencia as pessoas do time.").replace("{nome}", nome).replace("{time}", tm.name),
+      acao: t("Tirar"),
+      perigo: true,
+    } : {
+      titulo: t("Tornar líder"),
+      mensagem: t("{nome} vai ver e montar a escala de {time} e gerenciar as pessoas do time.").replace("{nome}", nome).replace("{time}", tm.name),
+      acao: t("Tornar líder"),
+    });
+    if (!ok) return;
+    void agir(`lider:${tm.id}`, () => (tm.lider ? tirarLideranca(aberta.id, tm.id) : tornarLider(aberta.id, tm.id)).then(() => {}),
+      tm.lider ? t("Erro ao tirar a liderança") : t("Erro ao tornar líder"));
   }
 
   function mudarSemana(n: number | null) {
@@ -292,6 +314,26 @@ export default function ServirPessoasScreen() {
                     </View>
                   </View>
                 ))}
+
+                {/* Liderança — só com servidor novo (manda `tem_cadastro`). */}
+                {det.tem_cadastro !== undefined && det.times.length > 0 && (
+                  <>
+                    <Text style={styles.secao}>{t("Liderança")}</Text>
+                    {!det.tem_cadastro ? (
+                      <Text style={styles.muted}>{t("Ainda não tem o cadastro da igreja ligado ao perfil de voluntário. Ligue em Voluntariado › Supervisores, no sistema, para poder torná-la líder.")}</Text>
+                    ) : det.times.map(tm => (
+                      <View key={tm.id} style={styles.funcaoLinha}>
+                        <Text style={[styles.pequeno, { color: colors.text, flex: 1 }]}>{tm.name}</Text>
+                        {ocupado === `lider:${tm.id}` ? <ActivityIndicator color={colors.textMuted} /> : (
+                          <Pressable onPress={() => alternarLider(tm)} disabled={!!ocupado} accessibilityRole="button"
+                            style={[styles.chip, tm.lider && styles.chipAtivo]}>
+                            <Text style={[styles.chipTxt, tm.lider && styles.chipTxtAtivo]}>{tm.lider ? t("Líder · tirar") : t("Tornar líder")}</Text>
+                          </Pressable>
+                        )}
+                      </View>
+                    ))}
+                  </>
+                )}
 
                 {/* Vincular a um time */}
                 <Text style={styles.secao}>{det.escopo === "lider" ? t("Vincular a um time seu") : t("Vincular a um time")}</Text>

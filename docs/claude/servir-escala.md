@@ -388,3 +388,12 @@ background — o mesmo padrão que o ERP usa em `Batismos.tsx`.
   importa**: é ele que o desfazer usa.
 - `emAcao` foi removido: com a marcação otimista o spinner por linha não existe
   mais, e deixar o estado morto só confundiria quem ler depois.
+
+## ⚠️⚠️ SERVIR · "Tornar líder deste time" na ficha da pessoa (29/10/2026)
+
+Seção "Liderança" no Pessoas do Servir (`servir-pessoas.tsx`): um botão por time que
+quem está vendo gerencia. "Tornar líder" / "Líder · tirar", com confirmação. Grava a
+concessão de líder do time no ERP (`/app/voluntariado/admin/pessoas/:id/lideranca`);
+o servidor decide quem pode e recusa tirar a própria liderança. Sem cadastro ligado ao
+perfil, a seção avisa em vez de mostrar botões. Servidor antigo (sem `tem_cadastro`):
+a seção não aparece.
