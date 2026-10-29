@@ -463,8 +463,11 @@ export type AdminPessoaDetalhe = {
   vinculos_fora?: number;
   /** Pode mexer no domingo de preferência (líder só se a pessoa está num time dele). */
   pode_rodizio?: boolean;
-  /** `posicoes` = só as funções que a pessoa AINDA não tem no time; `todas_ocupadas` = já tem todas. */
-  times: { id: string; name: string; area: string | null; posicoes: { id: string; name: string }[]; todas_ocupadas?: boolean }[];
+  /** Tem cadastro da igreja ligado ao perfil (sem ele não dá pra tornar líder). Servidor antigo não manda. */
+  tem_cadastro?: boolean;
+  /** `posicoes` = só as funções que a pessoa AINDA não tem no time; `todas_ocupadas` = já tem todas.
+   *  `lider` = é líder do time inteiro (a concessão que o "Tornar líder" grava). */
+  times: { id: string; name: string; area: string | null; posicoes: { id: string; name: string }[]; todas_ocupadas?: boolean; lider?: boolean }[];
   tipos: { id: string; name: string; recurrence_day: number | null; recurrence_time: string | null }[];
 };
 /** `total` = quantos o nome achou (a lista vem cortada em 30). Servidor antigo devolve só a lista. */
@@ -484,6 +487,13 @@ export function atualizarVinculo(id: string, body: { service_type_ids?: string[]
 }
 export function tirarDoTime(id: string) {
   return apiDelete<{ ok: true; id: string }>(`/app/voluntariado/admin/vinculos/${id}`);
+}
+/** Liderança do time (vê e monta a escala dele, gerencia as pessoas). Quem pode: admin ou outro líder do time. */
+export function tornarLider(pessoaId: string, teamId: string) {
+  return apiPost<{ ok: true; lider: true }>(`/app/voluntariado/admin/pessoas/${pessoaId}/lideranca`, { team_id: teamId });
+}
+export function tirarLideranca(pessoaId: string, teamId: string) {
+  return apiDelete<{ ok: true; lider: false }>(`/app/voluntariado/admin/pessoas/${pessoaId}/lideranca/${teamId}`);
 }
 export function salvarRodizioDe(pessoaId: string, semana: number | null) {
   return apiPatch<{ rodizio_semana: number | null }>(`/app/voluntariado/admin/pessoas/${pessoaId}/rodizio`, { semana });
