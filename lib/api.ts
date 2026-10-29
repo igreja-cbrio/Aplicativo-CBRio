@@ -446,7 +446,10 @@ export function salvarRodizioSemana(semana: number | null) {
 }
 
 // ===== ADMIN do Servir · pessoas × times × cultos (só papel admin; o servidor trava com 403) =====
-export type AdminPessoa = { id: string; full_name: string; avatar_url: string | null; rodizio_semana: number | null; times: string[] };
+export type AdminPessoa = { id: string; full_name: string; avatar_url: string | null; rodizio_semana: number | null; times: string[];
+  /** Inscrita pelo formulário e ainda sem perfil: id `insc:<id>`, sem times. */
+  inscricao?: { id: string; status: string; area: string | null };
+};
 export type AdminVinculo = {
   id: string; team_id: string; team_name: string | null; team_area: string | null;
   position_id: string | null; position_name: string | null;
@@ -465,9 +468,16 @@ export type AdminPessoaDetalhe = {
   pode_rodizio?: boolean;
   /** Tem cadastro da igreja ligado ao perfil (sem ele não dá pra tornar líder). Servidor antigo não manda. */
   tem_cadastro?: boolean;
+  /** Inscrição do formulário (aberta). Sem perfil ainda: `pessoa.id` é `insc:<id>`. */
+  inscricao?: { id: string; status: string; area: string | null } | null;
+  /** Cultos de liderança/editor, vindos do servidor (a lista não vive no app). */
+  opcoes_culto?: { chave: string; rotulo: string }[];
+  /** Só admin: torna editor de culto (escala todos os times daquele culto). */
+  pode_editor_culto?: boolean;
+  editor_culto?: string[];
   /** `posicoes` = só as funções que a pessoa AINDA não tem no time; `todas_ocupadas` = já tem todas.
-   *  `lider` = é líder do time inteiro (a concessão que o "Tornar líder" grava). */
-  times: { id: string; name: string; area: string | null; posicoes: { id: string; name: string }[]; todas_ocupadas?: boolean; lider?: boolean }[];
+   *  `lideranca` = chaves de culto em que ela lidera o time (["todos"] ou avulsos). */
+  times: { id: string; name: string; area: string | null; posicoes: { id: string; name: string }[]; todas_ocupadas?: boolean; lider?: boolean; lideranca?: string[] }[];
   tipos: { id: string; name: string; recurrence_day: number | null; recurrence_time: string | null }[];
 };
 /** `total` = quantos o nome achou (a lista vem cortada em 30). Servidor antigo devolve só a lista. */
@@ -478,8 +488,9 @@ export async function buscarPessoasServir(q: string): Promise<{ itens: AdminPess
 export function getPessoaServir(id: string) {
   return apiGet<AdminPessoaDetalhe>(`/app/voluntariado/admin/pessoas/${id}`);
 }
+/** Vincular avança a inscrição aberta da pessoa (`inscricao.para`); `insc:<id>` cria o perfil (`volunteer_profile_id`). */
 export function vincularAoTime(body: { volunteer_profile_id: string; team_id: string; position_id?: string }) {
-  return apiPost<AdminVinculo>("/app/voluntariado/admin/vinculos", body);
+  return apiPost<AdminVinculo & { volunteer_profile_id?: string; inscricao?: { id: string; de: string; para: string } | null }>("/app/voluntariado/admin/vinculos", body);
 }
 /** `service_type_ids` vale pra PESSOA no TIME inteiro (o servidor espalha); marcar todos grava "todos". */
 export function atualizarVinculo(id: string, body: { service_type_ids?: string[] | null; position_id?: string | null }) {
@@ -488,12 +499,24 @@ export function atualizarVinculo(id: string, body: { service_type_ids?: string[]
 export function tirarDoTime(id: string) {
   return apiDelete<{ ok: true; id: string }>(`/app/voluntariado/admin/vinculos/${id}`);
 }
-/** Liderança do time (vê e monta a escala dele, gerencia as pessoas). Quem pode: admin ou outro líder do time. */
-export function tornarLider(pessoaId: string, teamId: string) {
-  return apiPost<{ ok: true; lider: true }>(`/app/voluntariado/admin/pessoas/${pessoaId}/lideranca`, { team_id: teamId });
+/** Liderança do time num culto (`culto` = chave de `opcoes_culto`; "todos" = o time inteiro). Admin ou outro líder do time. */
+export function tornarLider(pessoaId: string, teamId: string, culto: string) {
+  return apiPost<{ ok: true; lideranca: string[] }>(`/app/voluntariado/admin/pessoas/${pessoaId}/lideranca`, { team_id: teamId, culto });
 }
-export function tirarLideranca(pessoaId: string, teamId: string) {
-  return apiDelete<{ ok: true; lider: false }>(`/app/voluntariado/admin/pessoas/${pessoaId}/lideranca/${teamId}`);
+export function tirarLideranca(pessoaId: string, teamId: string, culto?: string) {
+  const q = culto ? `?culto=${encodeURIComponent(culto)}` : "";
+  return apiDelete<{ ok: true; lideranca: string[] }>(`/app/voluntariado/admin/pessoas/${pessoaId}/lideranca/${teamId}${q}`);
+}
+/** Editor de culto: monta a escala de todos os times daquele culto. Só admin. */
+export function tornarEditorDeCulto(pessoaId: string, culto: string) {
+  return apiPost<{ ok: true; editor_culto: string[] }>(`/app/voluntariado/admin/pessoas/${pessoaId}/editor-culto`, { culto });
+}
+export function tirarEditorDeCulto(pessoaId: string, culto: string) {
+  return apiDelete<{ ok: true; editor_culto: string[] }>(`/app/voluntariado/admin/pessoas/${pessoaId}/editor-culto/${encodeURIComponent(culto)}`);
+}
+/** Link da ficha de inscrição do voluntariado, com o nome pré-preenchido, e o texto pro WhatsApp. */
+export function conviteServir(nome: string) {
+  return apiGet<{ url: string; texto: string }>(`/app/voluntariado/admin/convite?nome=${encodeURIComponent(nome)}`);
 }
 export function salvarRodizioDe(pessoaId: string, semana: number | null) {
   return apiPatch<{ rodizio_semana: number | null }>(`/app/voluntariado/admin/pessoas/${pessoaId}/rodizio`, { semana });
