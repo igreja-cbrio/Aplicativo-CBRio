@@ -1171,14 +1171,6 @@ export type NextMatricula = {
   telefone: string | null;
   status: string | null;
   check_in_at: string | null;
-  /**
-   * ⚠️ O que JÁ foi indicado no sistema. O direcionamento é ADITIVO e
-   * idempotente, então isto é contexto ("já mandei essa pessoa pro batismo"),
-   * não trava — reenviar o mesmo destino não duplica nada.
-   */
-  indicou_batismo?: boolean | null;
-  indicou_servir?: boolean | null;
-  indicou_grupo?: boolean | null;
 };
 
 export type NextPresenca = {
@@ -1254,40 +1246,9 @@ export function alocarNextMatricula(
   return apiPost(`/app/next/matriculas/${encodeURIComponent(matriculaId)}/alocar`, { turma_id: turmaId });
 }
 
-// ⚠️ Os catálogos vêm do SERVIDOR (`batismo_horarios` e `vol_form_opcoes`, os
-// MESMOS que o totem e o formulário público leem). Uma 2ª lista escrita aqui
-// ofereceria opção que o servidor recusa no envio.
-export type NextDirecionarOpcoes = {
-  batismo: {
-    data_batismo: string | null;
-    horarios: { horario: string; label?: string | null; vagas_restantes?: number | null }[];
-    /** ⚠️ `true` = não deu pra saber (ou a equipe fechou tudo). Não é "não tem". */
-    indisponivel?: boolean;
-  };
-  areas: { id: string; label: string; area_canonica?: string | null }[];
-  areas_indisponivel?: boolean;
-};
-
-export function getNextDirecionarOpcoes(): Promise<NextDirecionarOpcoes> {
-  return apiGet<NextDirecionarOpcoes>("/app/next/direcionar-opcoes");
-}
-
-export type NextDirecionarDestino = "batismo" | "voluntarios" | "grupos";
-
-/**
- * ⚠️⚠️ Roda a MESMA `direcionarMatricula` do totem e da aba Pessoas — o app é
- * cliente novo da porta, não uma 2ª régua. É lá que vivem o horário do batismo
- * OBRIGATÓRIO, a resolução das áreas do servir e a idempotência.
- *
- * ⚠️ O erro dela vem com `codigo`/`campo` no corpo (`err.corpo`), e é isso que
- * deixa a tela PEDIR o horário em vez de dizer "erro".
- */
-export function direcionarNextMatricula(
-  matriculaId: string,
-  body: { destinos: NextDirecionarDestino[]; areas?: string[]; horario_batismo?: string | null }
-): Promise<{ ok?: boolean; destinos?: string[]; [k: string]: unknown }> {
-  return apiPost(`/app/next/matriculas/${encodeURIComponent(matriculaId)}/direcionar`, body);
-}
+// ⚠️ `direcionar-opcoes` e `POST .../direcionar` SAÍRAM em 29/10/2026 (o
+// servidor responde 410 pra binário antigo). No fim do NEXT a equipe mostra na
+// TV os QR de inscrição de cada área e a pessoa entra pela porta normal.
 
 /**
  * WALK-IN: quem chegou no encontro sem estar na lista.

@@ -289,39 +289,10 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Confira o campo": { en: "Check the field", es: "Revisa el campo" },
   "Não foi possível registrar": { en: "Couldn't register", es: "No se pudo registrar" },
 
-  // direcionamento — o fim do encontro
-  "Direcionar": { en: "Send on", es: "Direccionar" },
-  "Direcionado": { en: "Sent on", es: "Direccionado" },
-  "Pra onde essa pessoa vai depois do NEXT?": {
-    en: "Where does this person go after NEXT?",
-    es: "¿A dónde va esta persona después del NEXT?",
-  },
-  "A equipe de cada área recebe o encaminhamento.": {
-    en: "Each area's team gets the referral.",
-    es: "El equipo de cada área recibe la derivación.",
-  },
-  "Não foi possível direcionar": { en: "Couldn't send on", es: "No se pudo direccionar" },
-  "Horário do batismo": { en: "Baptism time", es: "Horario del bautismo" },
-  "Escolha o horário do batismo.": { en: "Choose the baptism time.", es: "Elige el horario del bautismo." },
-  "Escolha ao menos um destino.": { en: "Choose at least one destination.", es: "Elige al menos un destino." },
-  "Os horários do batismo não carregaram.": {
-    en: "The baptism times didn't load.",
-    es: "Los horarios del bautismo no cargaron.",
-  },
-  "Os horários do batismo não carregaram. Tente de novo.": {
-    en: "The baptism times didn't load. Try again.",
-    es: "Los horarios del bautismo no cargaron. Inténtalo de nuevo.",
-  },
-  "Nenhum horário aberto no próximo batismo.": {
-    en: "No open time at the next baptism.",
-    es: "Ningún horario abierto en el próximo bautismo.",
-  },
-  "Onde quer servir? (opcional)": { en: "Where do you want to serve? (optional)", es: "¿Dónde quieres servir? (opcional)" },
+  // ⚠️ "Quero servir", "Grupo de conexão" e "grupo" vieram com o direcionamento
+  // do Next (removido em 29/10/2026), mas Inscrições, Jornada e Grupos usam.
   "Quero servir": { en: "I want to serve", es: "Quiero servir" },
   "Grupo de conexão": { en: "Connect group", es: "Grupo de conexión" },
-  // ⚠️ minúsculas: entram inline no resumo do que já foi indicado
-  "batismo": { en: "baptism", es: "bautismo" },
-  "servir": { en: "serving", es: "servir" },
   "grupo": { en: "group", es: "grupo" },
   // Duas chaves desta leva ("CPF" e "Registrar") JA EXISTEM aqui, escritas sem
   // aspas mais abaixo. Chave repetida e erro de TypeScript (TS1117), e
