@@ -30,7 +30,7 @@ import { join } from "node:path";
 import { motivoDaFalha, podeVirarConteudo, ler } from "@/lib/falhaDeLeitura";
 import { estadoDoQr, podeDesenharQr, temCpf } from "@/lib/cartaoQr";
 import { linkDeInscricao, ehPorConvite, precisaEscolherNaLista } from "@/lib/convite";
-import { podeDirecionar, areasSaoObrigatorias, turmasQueRecebem, encontroSugerido, nomeDaPessoa, turmaSugerida, dataDaTurma, contarPresentes } from "@/lib/nextGestao";
+import { turmasQueRecebem, encontroSugerido, nomeDaPessoa, turmaSugerida, dataDaTurma, contarPresentes } from "@/lib/nextGestao";
 import { acaoAoFechar, temRascunho } from "@/lib/descartarRascunho";
 import { casaBusca, normalizarBusca, filtrarPorTexto } from "@/lib/buscaTexto";
 import { ehDomingo, indiceDoDestaque } from "@/lib/homeCultos";
@@ -2155,51 +2155,6 @@ describe("rótulo do atalho · quebra depois da primeira palavra", () => {
 // servidor vai recusar.
 // ============================================================================
 describe("gestão do Next no app", () => {
-  describe("direcionar", () => {
-    it("sem destino não direciona, e DIZ por quê", () => {
-      const r = podeDirecionar({ destinos: [] });
-      expect(r.pode).toBe(false);
-      expect(r.motivo).toBeTruthy();
-    });
-
-    it("⚠️⚠️ batismo SEM horário não passa — o servidor lança 400", () => {
-      const r = podeDirecionar({ destinos: ["batismo"] });
-      expect(r.pode).toBe(false);
-      expect(r.motivo).toContain("horário");
-    });
-
-    it("batismo COM horário passa", () => {
-      expect(podeDirecionar({ destinos: ["batismo"], horarioBatismo: "08:30" }).pode).toBe(true);
-    });
-
-    it("horário só de espaço NÃO conta como horário", () => {
-      expect(podeDirecionar({ destinos: ["batismo"], horarioBatismo: "   " }).pode).toBe(false);
-    });
-
-    it("⚠️ catálogo indisponível NÃO é 'não tem horário' — é 'não deu pra saber'", () => {
-      const r = podeDirecionar({ destinos: ["batismo"], horarioBatismo: "08:30", batismoIndisponivel: true });
-      expect(r.pode).toBe(false);
-      expect(r.motivo).toContain("carregaram");
-    });
-
-    it("servir e grupo passam sem horário nenhum (o batismo é o único que exige)", () => {
-      expect(podeDirecionar({ destinos: ["voluntarios"] }).pode).toBe(true);
-      expect(podeDirecionar({ destinos: ["grupos"] }).pode).toBe(true);
-      expect(podeDirecionar({ destinos: ["voluntarios", "grupos"] }).pode).toBe(true);
-    });
-
-    it("⚠️ área NÃO é obrigatória — o servidor aceita servir sem área", () => {
-      expect(areasSaoObrigatorias()).toBe(false);
-    });
-
-    it("entrada inesperada não estoura no fim do encontro", () => {
-      // @ts-expect-error a tela pode chamar com o estado ainda vazio
-      expect(podeDirecionar(undefined).pode).toBe(false);
-      // @ts-expect-error idem
-      expect(podeDirecionar({ destinos: null }).pode).toBe(false);
-    });
-  });
-
   describe("turmas que recebem alguém da fila", () => {
     it("⚠️ só turma ABERTA — encerrada devolveria 403 do servidor", () => {
       const r = turmasQueRecebem([

@@ -13,57 +13,6 @@
 // renderizava. Não era tela faltando: era caminho inalcançável.
 // ============================================================================
 
-/** Destinos que o app oferece. Espelha o `permitir` do `POST .../direcionar`. */
-export type DestinoNext = "batismo" | "voluntarios" | "grupos";
-
-export const DESTINOS_NEXT: { chave: DestinoNext; rotulo: string; icone: string }[] = [
-  { chave: "batismo", rotulo: "Batismo", icone: "water-outline" },
-  { chave: "voluntarios", rotulo: "Quero servir", icone: "hand-left-outline" },
-  { chave: "grupos", rotulo: "Grupo de conexão", icone: "people-outline" },
-];
-
-/**
- * ⚠️⚠️ O HORÁRIO DO BATISMO É OBRIGATÓRIO, e quem manda é a régua do servidor
- * (`services/nextDirecionar.js` LANÇA 400 quando falta). Aqui a mesma condição
- * decide o estado do botão: sem isso a pessoa preenche o direcionamento inteiro
- * no fim do encontro, toca em "Direcionar" e leva um erro — com a fila
- * esperando.
- *
- * ⚠️ `motivo` é o que a tela ESCREVE ao lado do botão desabilitado. Botão cinza
- * sem explicação lê-se como app quebrado (a lição do calendário de 25/08).
- */
-export function podeDirecionar(entrada: {
-  destinos: DestinoNext[];
-  horarioBatismo?: string | null;
-  batismoIndisponivel?: boolean;
-}): { pode: boolean; motivo?: string } {
-  const destinos = Array.isArray(entrada?.destinos) ? entrada.destinos : [];
-  if (destinos.length === 0) return { pode: false, motivo: "Escolha ao menos um destino." };
-
-  if (destinos.includes("batismo")) {
-    // ⚠️ `indisponivel` NÃO é "não tem horário": é "não deu pra saber" (ou a
-    // equipe fechou tudo). O servidor o declara de propósito; tratar como
-    // ausência faria a tela dizer que o batismo não existe.
-    if (entrada.batismoIndisponivel) {
-      return { pode: false, motivo: "Os horários do batismo não carregaram. Tente de novo." };
-    }
-    if (!String(entrada.horarioBatismo || "").trim()) {
-      return { pode: false, motivo: "Escolha o horário do batismo." };
-    }
-  }
-  return { pode: true };
-}
-
-/**
- * ⚠️ Áreas do "quero servir" NÃO são obrigatórias: a régua do servidor aceita
- * `voluntarios` sem área (a equipe conversa depois). Exigir aqui travaria o
- * direcionamento por um campo que o servidor não pede — o mesmo desalinhamento
- * que fez o batismo pedir dado que a ficha já tinha.
- */
-export function areasSaoObrigatorias(): boolean {
-  return false;
-}
-
 export type TurmaGestaoLeve = {
   id: string;
   nome?: string | null;
