@@ -679,16 +679,6 @@ const MUTANTES = [
     para: "  return (Array.isArray(presencas) ? presencas : []).filter((p) => p && p.presente === true && (!encontroId || p.encontro_id === encontroId)).length;",
   },
   {
-    // ⚠⚠ O batismo exige HORÁRIO, e quem lança 400 é o servidor
-    // (`services/nextDirecionar.js`). Sem esta guarda o líder preenche o
-    // direcionamento inteiro no fim do encontro, toca em "Direcionar" e leva
-    // erro — com a fila esperando.
-    nome: "nextGestao: batismo sem horário passar",
-    arq: "lib/nextGestao.ts",
-    de: '    if (!String(entrada.horarioBatismo || "").trim()) {',
-    para: '    if (false) {',
-  },
-  {
     // ⚠️⚠️ A máscara de data serve DUAS portas de PESSOA (o /completar-cadastro
     // e o "Adicionar pessoa" do grupo). Sem o teto de 8 dígitos o ano aceita
     // 5+ e a pessoa entra na base com nascimento absurdo — e em data de
@@ -713,14 +703,6 @@ const MUTANTES = [
     arq: "lib/nextGestao.ts",
     de: '  return (Array.isArray(turmas) ? turmas : []).filter((t) => t && t.status === "aberta");',
     para: "  return Array.isArray(turmas) ? turmas : [];",
-  },
-  {
-    // ⚠ "Não deu pra saber" virando "pode direcionar" faria a tela oferecer
-    // um horário que o servidor recusa — o oposto de declarar a lacuna.
-    nome: "nextGestao: catálogo indisponível deixar de bloquear",
-    arq: "lib/nextGestao.ts",
-    de: "    if (entrada.batismoIndisponivel) {",
-    para: "    if (false) {",
   },
   {
     // ⚠️⚠️ A folha de recusa de PEDIDO sumiu do arquivo no refactor f246407

@@ -16,8 +16,12 @@ import { Text, TextInput } from "@/components/ui/Typography";
 // ⚠️⚠️ QUEM AUTORIZA É O SERVIDOR (`backend/utils/nextGestaoApp.js`): entrar é
 // módulo `next` >= 2 ∪ posse da turma, AGIR é escrita >= 2 ∪ posse. `escreve`
 // vem na resposta e some com os botões — botão que devolve 403 é pior que botão
-// ausente. Nada aqui reimplementa régua: direcionar roda a MESMA
-// `direcionarMatricula` do totem, o walk-in passa pelo matcher canônico.
+// ausente. Nada aqui reimplementa régua: o walk-in passa pelo matcher canônico.
+//
+// ⚠️ O "Direcionar" (marcar no fim do NEXT pra onde cada um vai) SAIU em
+// 29/10/2026: no fim do NEXT a equipe mostra na TV os QR de inscrição de cada
+// área e a pessoa entra pela porta normal. Medido: 2 de 1.076 formados tinham
+// marcação. O servidor responde 410 pra binário antigo.
 // ============================================================================
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -37,13 +41,13 @@ import { mascararTelefoneBR } from "@/lib/telefone";
 import { mascararCpf } from "@/lib/cpf";
 import { trackEvento } from "@/lib/telemetria";
 import {
-  DESTINOS_NEXT, contarPresentes, dataDaTurma, encontroSugerido, nomeDaPessoa,
-  podeDirecionar, turmaSugerida, turmasQueRecebem, type DestinoNext,
+  contarPresentes, dataDaTurma, encontroSugerido, nomeDaPessoa,
+  turmaSugerida, turmasQueRecebem,
 } from "@/lib/nextGestao";
 import {
-  alocarNextMatricula, direcionarNextMatricula, getNextDirecionarOpcoes,
+  alocarNextMatricula,
   getNextGestao, getNextListaEspera, getNextTurma, marcarPresencaNext, nextWalkIn,
-  type NextDirecionarOpcoes, type NextGestao, type NextMatricula,
+  type NextGestao, type NextMatricula,
   type NextPessoaEspera, type NextTurmaDetalhe, type NextTurmaGestao,
 } from "@/lib/api";
 import { fundoDaFolha } from "@/lib/folha";
@@ -111,14 +115,6 @@ export function NextGestaoScreen() {
   const [wTelefone, setWTelefone] = useState("");
   const [wCpf, setWCpf] = useState("");
   const [salvandoWalk, setSalvandoWalk] = useState(false);
-
-  // direcionamento
-  const [dirAlvo, setDirAlvo] = useState<NextMatricula | null>(null);
-  const [dirDestinos, setDirDestinos] = useState<DestinoNext[]>([]);
-  const [dirAreas, setDirAreas] = useState<string[]>([]);
-  const [dirHorario, setDirHorario] = useState<string | null>(null);
-  const [opcoes, setOpcoes] = useState<NextDirecionarOpcoes | null>(null);
-  const [salvandoDir, setSalvandoDir] = useState(false);
 
   // alocar da fila
   const [alocarAlvo, setAlocarAlvo] = useState<NextPessoaEspera | null>(null);
@@ -272,51 +268,6 @@ export function NextGestaoScreen() {
       const campo = (e as { corpo?: { campo?: string } })?.corpo?.campo;
       Alert.alert(campo ? t("Confira o campo") : t("Não foi possível registrar"), (e as Error)?.message || t("Erro."));
     } finally { setSalvandoWalk(false); }
-  }
-
-  // ═══ direcionamento ═══
-  async function abrirDirecionar(m: NextMatricula) {
-    setDirAlvo(m); setDirDestinos([]); setDirAreas([]); setDirHorario(null);
-    if (opcoes) return;
-    try {
-      setOpcoes(await getNextDirecionarOpcoes());
-    } catch {
-      // ⚠️ Falha aqui NÃO fecha a folha: grupo e servir seguem possíveis. O que
-      // fica bloqueado é o batismo, e a régua diz isso ao lado do botão.
-      setOpcoes({ batismo: { data_batismo: null, horarios: [], indisponivel: true }, areas: [], areas_indisponivel: true });
-    }
-  }
-
-  function alternar<T>(l: T[], v: T): T[] {
-    return l.includes(v) ? l.filter((x) => x !== v) : [...l, v];
-  }
-
-  const vereditoDir = podeDirecionar({
-    destinos: dirDestinos,
-    horarioBatismo: dirHorario,
-    batismoIndisponivel: !!opcoes?.batismo?.indisponivel,
-  });
-
-  async function salvarDirecionar() {
-    if (!dirAlvo || !vereditoDir.pode) return;
-    setSalvandoDir(true);
-    try {
-      await direcionarNextMatricula(dirAlvo.id, {
-        destinos: dirDestinos,
-        areas: dirAreas.length ? dirAreas : undefined,
-        horario_batismo: dirDestinos.includes("batismo") ? dirHorario : null,
-      });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      trackEvento("next_direcionou", { entity_id: turmaId || undefined, label: dirDestinos.join("+") });
-      setDirAlvo(null);
-      if (turmaId) await carregarDetalhe(turmaId);
-      Alert.alert(t("Direcionado"), t("A equipe de cada área recebe o encaminhamento."));
-    } catch (e) {
-      // ⚠️ A régua do servidor LANÇA regra de negócio com código (horário
-      // ausente = 400 · lotado = 409). Propagar a mensagem dela é o que faz a
-      // tela pedir o horário em vez de dizer "erro".
-      Alert.alert(t("Não foi possível direcionar"), (e as Error)?.message || t("Erro."));
-    } finally { setSalvandoDir(false); }
   }
 
   // ═══ alocar da fila ═══
@@ -533,17 +484,10 @@ export function NextGestaoScreen() {
               telefone={m.telefone}
               status={m.status}
               presente={!!encontroAtual && presMap.get(`${encontroAtual}:${m.id}`) === true}
-              indicou={[
-                m.indicou_batismo ? t("batismo") : null,
-                m.indicou_servir ? t("servir") : null,
-                m.indicou_grupo ? t("grupo") : null,
-              ].filter(Boolean) as string[]}
               processando={processando === m.id}
               podeEscrever={podeEscrever && !!encontroAtual}
               acaoPrincipal={t("Presença")}
               onAcaoPrincipal={() => { void alternarPresenca(m); }}
-              acaoSecundaria={podeEscrever ? t("Direcionar") : null}
-              onAcaoSecundaria={() => { void abrirDirecionar(m); }}
               colors={colors}
               styles={styles}
             />
@@ -556,14 +500,11 @@ export function NextGestaoScreen() {
               telefone={p.telefone}
               status={null}
               presente={false}
-              indicou={[]}
               observacao={p.observacoes}
               processando={processando === p.id}
               podeEscrever={podeEscrever && turmasAbertas.length > 0}
               acaoPrincipal={t("Colocar em uma turma")}
               onAcaoPrincipal={() => setAlocarAlvo(p)}
-              acaoSecundaria={null}
-              onAcaoSecundaria={() => {}}
               colors={colors}
               styles={styles}
             />
@@ -612,117 +553,6 @@ export function NextGestaoScreen() {
               {salvandoWalk ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnTxt}>{t("Registrar e marcar presença")}</Text>}
             </Pressable>
           </View>
-        </TecladoSeguro>
-      </Modal>
-
-      {/* ═══ DIRECIONAMENTO ═══ */}
-      <Modal visible={!!dirAlvo} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setDirAlvo(null)}>
-        <TecladoSeguro style={styles.modalWrap}>
-          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }} keyboardShouldPersistTaps="handled">
-            <View style={[styles.sheet, { paddingBottom: fundoSeguro }]}>
-              <View style={styles.sheetHead}>
-                <Text style={styles.sheetTitle} numberOfLines={1}>{dirAlvo ? nomeDaPessoa(dirAlvo) : t("Direcionar")}</Text>
-                <Pressable onPress={() => setDirAlvo(null)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
-                  <Ionicons name="close" size={24} color={colors.text} />
-                </Pressable>
-              </View>
-              <Text style={styles.sheetSub}>{t("Pra onde essa pessoa vai depois do NEXT?")}</Text>
-
-              <View style={styles.chipsRow}>
-                {DESTINOS_NEXT.map((d) => {
-                  const on = dirDestinos.includes(d.chave);
-                  return (
-                    <Pressable
-                      key={d.chave}
-                      style={[styles.option, on && styles.optionActive]}
-                      onPress={() => setDirDestinos((a) => alternar(a, d.chave))}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: on }}
-                    >
-                      <Ionicons name={d.icone as never} size={16} color={on ? "#fff" : colors.textMuted} />
-                      <Text style={[styles.optionTxt, on && styles.optionTxtActive]}>{t(d.rotulo)}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              {/* ⚠️⚠️ Horário do batismo é OBRIGATÓRIO — a régua do servidor lança
-                  400 sem ele. Aqui a mesma condição desabilita o botão. */}
-              {dirDestinos.includes("batismo") ? (
-                <>
-                  <Text style={styles.fieldLabel}>
-                    {t("Horário do batismo")}
-                    {opcoes?.batismo?.data_batismo
-                      ? ` · ${String(opcoes.batismo.data_batismo).slice(8, 10)}/${String(opcoes.batismo.data_batismo).slice(5, 7)}`
-                      : ""}
-                  </Text>
-                  {opcoes === null ? (
-                    <ActivityIndicator color={colors.primary} />
-                  ) : (opcoes.batismo?.horarios || []).length === 0 ? (
-                    <Text style={styles.motivo}>
-                      {opcoes.batismo?.indisponivel
-                        ? t("Os horários do batismo não carregaram.")
-                        : t("Nenhum horário aberto no próximo batismo.")}
-                    </Text>
-                  ) : (
-                    <View style={styles.chipsRow}>
-                      {opcoes.batismo.horarios.map((h) => {
-                        const on = dirHorario === h.horario;
-                        return (
-                          <Pressable
-                            key={h.horario}
-                            style={[styles.option, on && styles.optionActive]}
-                            onPress={() => setDirHorario(on ? null : h.horario)}
-                            accessibilityRole="radio"
-                            accessibilityState={{ selected: on }}
-                          >
-                            <Text style={[styles.optionTxt, on && styles.optionTxtActive]}>{h.label || h.horario}</Text>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  )}
-                </>
-              ) : null}
-
-              {/* ⚠️ Área do servir é OPCIONAL (o servidor aceita sem). */}
-              {dirDestinos.includes("voluntarios") && (opcoes?.areas || []).length > 0 ? (
-                <>
-                  <Text style={styles.fieldLabel}>{t("Onde quer servir? (opcional)")}</Text>
-                  <View style={styles.chipsRow}>
-                    {(opcoes?.areas || []).map((a) => {
-                      const on = dirAreas.includes(a.id);
-                      return (
-                        <Pressable
-                          key={a.id}
-                          style={[styles.option, on && styles.optionActive]}
-                          onPress={() => setDirAreas((x) => alternar(x, a.id))}
-                          accessibilityRole="checkbox"
-                          accessibilityState={{ checked: on }}
-                        >
-                          <Text style={[styles.optionTxt, on && styles.optionTxtActive]}>{a.label}</Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </>
-              ) : null}
-
-              {/* ⚠️ Botão cinza sem explicação lê-se como app quebrado. */}
-              {!vereditoDir.pode && vereditoDir.motivo ? (
-                <Text style={[styles.motivo, { marginTop: spacing.sm }]}>{t(vereditoDir.motivo)}</Text>
-              ) : null}
-
-              <Pressable
-                style={[styles.saveBtn, { marginTop: spacing.md }, !vereditoDir.pode && { opacity: 0.5 }]}
-                disabled={!vereditoDir.pode || salvandoDir}
-                onPress={() => { void salvarDirecionar(); }}
-                accessibilityRole="button"
-              >
-                {salvandoDir ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnTxt}>{t("Direcionar")}</Text>}
-              </Pressable>
-            </View>
-          </ScrollView>
         </TecladoSeguro>
       </Modal>
 
@@ -784,21 +614,18 @@ function Tab({ label, count, active, onPress, styles }: {
 }
 
 function PessoaCard({
-  nome, telefone, status, presente, indicou, observacao, processando, podeEscrever,
-  acaoPrincipal, onAcaoPrincipal, acaoSecundaria, onAcaoSecundaria, colors, styles,
+  nome, telefone, status, presente, observacao, processando, podeEscrever,
+  acaoPrincipal, onAcaoPrincipal, colors, styles,
 }: {
   nome: string;
   telefone: string | null | undefined;
   status: string | null;
   presente: boolean;
-  indicou: string[];
   observacao?: string | null;
   processando: boolean;
   podeEscrever: boolean;
   acaoPrincipal: string;
   onAcaoPrincipal: () => void;
-  acaoSecundaria: string | null;
-  onAcaoSecundaria: () => void;
   colors: Palette;
   styles: ReturnType<typeof makeStyles>;
 }) {
@@ -815,7 +642,6 @@ function PessoaCard({
           <View style={styles.metaRow}>
             {status ? <Text style={styles.meta}>{t(status)}</Text> : null}
             {telefone ? <Text style={styles.meta} numberOfLines={1}>{telefone}</Text> : null}
-            {indicou.length ? <Text style={styles.meta} numberOfLines={1}>{indicou.join(", ")}</Text> : null}
           </View>
           {observacao ? <Text style={styles.meta} numberOfLines={2}>{observacao}</Text> : null}
         </View>
@@ -846,12 +672,6 @@ function PessoaCard({
             )}
             <Text style={[styles.acaoBtnTxt, presente && styles.acaoBtnTxtOn]}>{acaoPrincipal}</Text>
           </Pressable>
-          {acaoSecundaria ? (
-            <Pressable style={styles.acaoBtnGhost} onPress={onAcaoSecundaria} accessibilityRole="button" accessibilityLabel={`${acaoSecundaria} ${nome}`}>
-              <Ionicons name="arrow-forward-circle-outline" size={17} color={colors.textMuted} />
-              <Text style={styles.acaoBtnGhostTxt}>{acaoSecundaria}</Text>
-            </Pressable>
-          ) : null}
         </View>
       ) : null}
     </View>
@@ -951,8 +771,6 @@ function makeStyles(c: Palette) {
     acaoBtnOn: { backgroundColor: c.success, borderColor: c.success },
     acaoBtnTxt: { color: c.primary, fontWeight: "800", fontSize: font.size.sm },
     acaoBtnTxtOn: { color: "#fff" },
-    acaoBtnGhost: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderColor: c.glassBorder, backgroundColor: c.surfaceAlt, borderRadius: radius.full, paddingVertical: 10, paddingHorizontal: spacing.md },
-    acaoBtnGhostTxt: { color: c.textMuted, fontWeight: "700", fontSize: font.size.sm },
 
     modalWrap: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" },
     sheet: { backgroundColor: c.background, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.md, gap: spacing.sm },
@@ -962,12 +780,6 @@ function makeStyles(c: Palette) {
     fieldLabel: { color: c.textMuted, fontSize: font.size.sm - 1, marginTop: spacing.xs },
     fieldHint: { color: c.textMuted, fontSize: font.size.sm - 2 },
     field: { backgroundColor: c.surfaceAlt, borderWidth: 1, borderColor: c.glassBorder, borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: 12, color: c.text, fontSize: font.size.md },
-    chipsRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-    option: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderColor: c.glassBorder, backgroundColor: c.surfaceAlt, borderRadius: radius.full, paddingVertical: 9, paddingHorizontal: spacing.md },
-    optionActive: { backgroundColor: c.primary, borderColor: c.primary },
-    optionTxt: { color: c.text, fontSize: font.size.sm, fontWeight: "700" },
-    optionTxtActive: { color: "#fff" },
-    motivo: { color: c.warning, fontSize: font.size.sm, fontWeight: "700" },
     saveBtn: { backgroundColor: c.primary, borderRadius: radius.full, paddingVertical: 13, alignItems: "center" },
     saveBtnTxt: { color: "#fff", fontWeight: "800", fontSize: font.size.md },
     turmaOpcao: { flexDirection: "row", alignItems: "center", gap: spacing.sm, borderWidth: 1, borderColor: c.glassBorder, backgroundColor: c.surface, borderRadius: radius.lg, paddingVertical: 12, paddingHorizontal: spacing.md },

@@ -8,6 +8,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 - ⚠️⚠️ NEXT · quem gerencia ABRE DIRETO na gestão (03/09/2026 · 2ª rodada)
 - ⚠️⚠️ GESTÃO DO NEXT NO APP · a tela existia e ninguém alcançava (03/09/2026)
+- ⚠️ NEXT · o "Direcionar" SAIU do app (29/10/2026)
 
 ---
 
@@ -157,6 +158,9 @@ lê aquelas duas chaves.
 
 ### A régua pura · `lib/nextGestao.ts`
 
+⚠️ Os três itens sobre direcionar abaixo são HISTÓRICO: a função saiu em
+29/10/2026 (ver a última seção).
+
 - ⚠️⚠️ **`podeDirecionar`**: batismo sem horário **não passa**, porque
   `services/nextDirecionar.js` LANÇA 400. Sem a guarda o líder preenche o
   direcionamento inteiro no fim do encontro, toca em "Direcionar" e leva erro —
@@ -250,3 +254,21 @@ cru).
 (22/06) e Android vc 5 (24/07). Publicar exige as lojas atualizadas **e o
 `loja-publicado.json` atualizado**, ou o escape declarado
 `CBRIO_OTA_EMBUTIDO_VELHO=1`.
+
+## ⚠️ NEXT · o "Direcionar" SAIU do app (29/10/2026)
+
+Decisão do Marcos: no fim do NEXT a equipe mostra **na TV os QR de inscrição de
+cada área** (Grupos · Voluntários · Batismo · Devocional) e a pessoa se inscreve
+pela **porta normal**. Marcar à mão pra onde cada formado vai não pegou: medido,
+**2 de 1.076** formados tinham alguma marcação.
+
+Saiu: o botão "Direcionar" do cartão da pessoa, a folha de destinos,
+`podeDirecionar` / `areasSaoObrigatorias` / `DESTINOS_NEXT`, os campos
+`indicou_*` da matrícula, `getNextDirecionarOpcoes` / `direcionarNextMatricula`,
+as chaves de tradução e os 2 mutantes da régua. Presença, walk-in e "Colocar em
+uma turma" ficam intocados.
+
+⚠️ Par com a PR do ERP que faz `GET /app/next/direcionar-opcoes` e
+`POST /app/next/matriculas/:id/direcionar` responderem **410** — binário antigo
+que ainda mostra o botão leva erro declarado em vez de gravar. Esta metade é
+tela: sai por **OTA**.
