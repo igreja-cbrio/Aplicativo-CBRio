@@ -17,7 +17,7 @@ import { useMembro } from "@/lib/useMembro";
 import { SeusDados, fichaCompleta } from "@/components/inscricoes/SeusDados";
 import { apiGet, apiPost, criarInscricaoApi, getVoluntariadoOpcoes, getSupervisorInfo, getEscalaServicos, type VoluntariadoOpcao } from "@/lib/api";
 import { cultosDeHoje } from "@/lib/janelaCheckin";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useVoluntariadoSync } from "@/lib/useVoluntariadoSync";
 import { estadoVoluntariado, volEncerrado } from "@/lib/volStatus";
 import { type MinhaEscala } from "@/lib/escalas";
@@ -64,7 +64,10 @@ export default function VoluntariadoScreen() {
   // servidor (`lib/janelaCheckin`, no portão), porque o backend responde 403
   // fora da janela. Mostrar o card sempre faria o supervisor tocar e levar erro.
   const [temCultoHoje, setTemCultoHoje] = useState(false);
-  useEffect(() => {
+  // ⚠️ Confere o acesso TODA VEZ que a aba ganha foco (29/10/2026 · Marcos):
+  // quem acabou de ser tornado líder só via "Montar escala"/"Pessoas" depois de
+  // fechar o app, porque isto rodava uma vez, na montagem da tela.
+  useFocusEffect(useCallback(() => {
     getSupervisorInfo()
       .then(async (r) => {
         const sup = !!r?.supervisor;
@@ -84,7 +87,7 @@ export default function VoluntariadoScreen() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, []));
   const colors = useColors();
   const t = useT();
   const styles = useMemo(() => makeStyles(colors), [colors]);
