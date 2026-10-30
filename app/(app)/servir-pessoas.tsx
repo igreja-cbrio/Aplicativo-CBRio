@@ -14,7 +14,9 @@ import { Text, TextInput } from "@/components/ui/Typography";
 // A porta (card na aba Servir) aparece com `gere_pessoas` (admin OU líder de time/área
 // sem recorte · 24/09). O LÍDER vê e mexe só nos times que lidera; a trava é o servidor (403).
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Image, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Image, Linking, Pressable, Share, StyleSheet, View } from "react-native";
+import * as Clipboard from "expo-clipboard";
+import QRCode from "react-native-qrcode-svg";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/contexts/ThemeContext";
@@ -26,6 +28,7 @@ import { fundoDaFolha } from "@/lib/folha";
 import { useDialogo } from "@/components/ui/Dialogo";
 import {
   buscarPessoasServir, getPessoaServir, vincularAoTime, atualizarVinculo, tirarDoTime, salvarRodizioDe,
+  tornarLider, tirarLideranca, tornarEditorDeCulto, tirarEditorDeCulto, conviteServir,
   type AdminPessoa, type AdminPessoaDetalhe, type AdminVinculo,
 } from "@/lib/api";
 
@@ -34,6 +37,13 @@ function iniciais(nome: string): string {
 }
 
 const SEMANAS = [1, 2, 3, 4] as const;
+
+// Etapas da fila de inscrição do voluntariado (vocabulário do ERP).
+const ETAPA_INSCRICAO: Record<string, string> = {
+  inscrito: "Inscrita, aguardando contato",
+  enviado_ministerio: "Enviada ao ministério",
+  integrado: "Integrada",
+};
 
 export default function ServirPessoasScreen() {
   const colors = useColors();
@@ -66,6 +76,29 @@ export default function ServirPessoasScreen() {
         if (seq === buscaSeq.current) setBuscando(false);
       }
     }, 300);
+  }
+
+  // ── Convite (busca sem resultado) ──
+  // O link leva à ficha de inscrição do voluntariado com o nome preenchido; quem
+  // se inscreve aparece nesta busca e, ao ser vinculado a um time, avança na fila.
+  const [convite, setConvite] = useState<{ nome: string; url: string; texto: string } | null>(null);
+  const [conviteCarregando, setConviteCarregando] = useState(false);
+  const [qrAberto, setQrAberto] = useState(false);
+  async function pegarConvite(): Promise<{ url: string; texto: string } | null> {
+    const nome = busca.trim();
+    if (convite && convite.nome === nome) return convite;
+    setConviteCarregando(true);
+    try { const c = await conviteServir(nome); setConvite({ nome, ...c }); return c; }
+    catch (e: any) { void dlg.avisar(t("Erro"), e?.message || t("Erro ao gerar o convite")); return null; }
+    finally { setConviteCarregando(false); }
+  }
+  async function convidar(como: "copiar" | "whatsapp" | "qr") {
+    const c = await pegarConvite();
+    if (!c) return;
+    if (como === "copiar") { await Clipboard.setStringAsync(c.url); void dlg.avisar(t("Link copiado"), t("Cole na conversa com a pessoa.")); return; }
+    if (como === "qr") { setQrAberto(true); return; }
+    const wa = `https://wa.me/?text=${encodeURIComponent(c.texto)}`;
+    try { await Linking.openURL(wa); } catch { await Share.share({ message: c.texto }); }
   }
 
   // ── Ficha (modal) ──
@@ -138,9 +171,67 @@ export default function ServirPessoasScreen() {
   function vincular() {
     if (!aberta || !timeNovo) return;
     void agir("vincular", async () => {
-      await vincularAoTime({ volunteer_profile_id: aberta.id, team_id: timeNovo, position_id: funcaoNova || undefined });
+      const r = await vincularAoTime({ volunteer_profile_id: aberta.id, team_id: timeNovo, position_id: funcaoNova || undefined });
       setTimeNovo(""); setFuncaoNova("");
+      // Inscrição sem perfil: o servidor criou o perfil. Daqui em diante a ficha é dele.
+      if (r.volunteer_profile_id && r.volunteer_profile_id !== aberta.id) {
+        const novoId = r.volunteer_profile_id, velhoId = aberta.id;
+        setAberta(a => a ? { ...a, id: novoId, inscricao: undefined } : a);
+        setResultados(prev => prev.map(p => p.id === velhoId ? { ...p, id: novoId, inscricao: undefined } : p));
+      }
+      if (r.inscricao) {
+        void dlg.avisar(t("A inscrição avançou"), r.inscricao.para === "integrado"
+          ? t("A inscrição de voluntário foi marcada como integrada no sistema.")
+          : t("A inscrição foi enviada ao ministério. Para Kids e Bridge, ela só é integrada depois da triagem de antecedentes."));
+      }
     }, t("Erro ao vincular ao time"));
+  }
+
+  // LIDERANÇA (29/10/2026): a mesma concessão de "líder do time" da web. O líder
+  // vê e monta a escala do time e gerencia as pessoas dele. O servidor decide quem
+  // pode (admin ou outro líder do time) e não deixa ninguém tirar a própria.
+  // Card do time aberto no seletor de cultos da liderança.
+  const [liderAberto, setLiderAberto] = useState<string | null>(null);
+  const rotuloCulto = (chave: string) => t(det?.opcoes_culto?.find(o => o.chave === chave)?.rotulo ?? chave);
+  async function alternarLider(tm: { id: string; name: string; lideranca?: string[] }, chave: string) {
+    if (!det) return;
+    const pessoaId = det.pessoa.id, nome = det.pessoa.full_name;
+    const atual = tm.lideranca ?? [];
+    const tirar = atual.includes(chave);
+    const culto = chave === "todos" ? t("todos os cultos") : rotuloCulto(chave);
+    const ok = await dlg.confirmar(tirar ? {
+      titulo: t("Tirar liderança"),
+      mensagem: t("{nome} deixa de liderar {time} em {culto}.").replace("{nome}", nome).replace("{time}", tm.name).replace("{culto}", culto),
+      acao: t("Tirar"),
+      perigo: true,
+    } : {
+      titulo: t("Tornar líder"),
+      mensagem: (chave === "todos"
+        ? t("{nome} vai ver e montar a escala de {time} em todos os cultos e gerenciar as pessoas do time.")
+        : t("{nome} vai ver e montar a escala de {time} em {culto}.")).replace("{nome}", nome).replace("{time}", tm.name).replace("{culto}", culto),
+      acao: t("Tornar líder"),
+    });
+    if (!ok) return;
+    void agir(`lider:${tm.id}:${chave}`, () => (tirar ? tirarLideranca(pessoaId, tm.id, chave) : tornarLider(pessoaId, tm.id, chave)).then(() => {}),
+      tirar ? t("Erro ao tirar a liderança") : t("Erro ao tornar líder"));
+  }
+  async function alternarEditor(chave: string) {
+    if (!det) return;
+    const pessoaId = det.pessoa.id, nome = det.pessoa.full_name;
+    const tirar = (det.editor_culto ?? []).includes(chave);
+    const ok = await dlg.confirmar(tirar ? {
+      titulo: t("Tirar editor de culto"),
+      mensagem: t("{nome} deixa de montar a escala dos times em {culto}.").replace("{nome}", nome).replace("{culto}", rotuloCulto(chave)),
+      acao: t("Tirar"),
+      perigo: true,
+    } : {
+      titulo: t("Tornar editor de culto"),
+      mensagem: t("{nome} vai ver e montar a escala de todos os times em {culto}.").replace("{nome}", nome).replace("{culto}", rotuloCulto(chave)),
+      acao: t("Confirmar"),
+    });
+    if (!ok) return;
+    void agir(`editor:${chave}`, () => (tirar ? tirarEditorDeCulto(pessoaId, chave) : tornarEditorDeCulto(pessoaId, chave)).then(() => {}),
+      t("Erro ao salvar o editor de culto"));
   }
 
   function mudarSemana(n: number | null) {
@@ -178,7 +269,22 @@ export default function ServirPessoasScreen() {
             <Text style={[styles.muted, { textAlign: "center" }]}>{t("Falha ao buscar. Toque pra tentar de novo.")}</Text>
           </Pressable>
         ) : (!buscando && resultados.length === 0) ? (
-          <Text style={[styles.muted, { padding: spacing.md, textAlign: "center" }]}>{t("Nenhuma pessoa encontrada.")}</Text>
+          <View style={styles.cardTime}>
+            <Text style={styles.cardTimeNome}>{t("Ninguém com esse nome")}</Text>
+            <Text style={[styles.pequeno, { color: colors.textMuted }]}>
+              {t("Convide {nome} para preencher a ficha de voluntário. Depois da inscrição, a pessoa aparece aqui para você vincular a um time.").replace("{nome}", busca.trim())}
+            </Text>
+            <View style={[styles.chips, { marginTop: spacing.sm }]}>
+              {([["copiar", "copy-outline", "Copiar link"], ["whatsapp", "logo-whatsapp", "WhatsApp"], ["qr", "qr-code-outline", "QR code"]] as const).map(([como, icone, rotulo]) => (
+                <Pressable key={como} onPress={() => convidar(como)} disabled={conviteCarregando} accessibilityRole="button"
+                  style={[styles.chip, { flexDirection: "row", alignItems: "center", gap: 6 }]}>
+                  <Ionicons name={icone} size={16} color={colors.primary} />
+                  <Text style={styles.chipTxt}>{t(rotulo)}</Text>
+                </Pressable>
+              ))}
+              {conviteCarregando && <ActivityIndicator color={colors.primary} />}
+            </View>
+          </View>
         ) : (<>
         {totalBusca > resultados.length && (
           <Text style={[styles.pequeno, { color: colors.textMuted, textAlign: "center", paddingVertical: 6 }]}>
@@ -197,7 +303,7 @@ export default function ServirPessoasScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.pessoaNome} numberOfLines={1}>{p.full_name}</Text>
               <Text style={[styles.pequeno, { color: colors.textMuted }]} numberOfLines={1}>
-                {p.times.length ? p.times.join(" · ") : t("Sem time")}
+                {p.inscricao ? `${t("Inscrição")} · ${t(ETAPA_INSCRICAO[p.inscricao.status] ?? p.inscricao.status)}` : p.times.length ? p.times.join(" · ") : t("Sem time")}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -227,6 +333,14 @@ export default function ServirPessoasScreen() {
             ) : det && (
               <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                 {det.pessoa.telefone ? <Text style={[styles.pequeno, { color: colors.textMuted }]}>{det.pessoa.telefone}</Text> : null}
+                {det.inscricao && (
+                  <View style={[styles.cardTime, { marginTop: spacing.sm }]}>
+                    <Text style={[styles.pequeno, { color: colors.text, fontWeight: "700" }]}>
+                      {t("Inscrição de voluntário")} · {t(ETAPA_INSCRICAO[det.inscricao.status] ?? det.inscricao.status)}
+                    </Text>
+                    <Text style={[styles.pequeno, { color: colors.textMuted }]}>{t("Ao vincular a um time, a inscrição avança na fila do sistema.")}</Text>
+                  </View>
+                )}
 
                 {/* Domingo de preferência */}
                 <Text style={styles.secao}>{t("Domingo de preferência")}</Text>
@@ -290,8 +404,68 @@ export default function ServirPessoasScreen() {
                         );
                       })}
                     </View>
+                    {/* Liderança do time (servidor novo manda `opcoes_culto`). */}
+                    {det.opcoes_culto && (() => {
+                      const tm = det.times.find(x => x.id === g.team_id);
+                      if (!tm) return null;
+                      const lid = tm.lideranca ?? [];
+                      const aberto = liderAberto === g.team_id;
+                      return (
+                        <View style={styles.liderBox}>
+                          <Pressable style={styles.funcaoLinha} onPress={() => setLiderAberto(aberto ? null : g.team_id)} accessibilityRole="button" accessibilityState={{ expanded: aberto }}>
+                            <Ionicons name={lid.length ? "star" : "star-outline"} size={16} color={lid.length ? colors.primary : colors.textMuted} />
+                            <Text style={[styles.pequeno, { color: lid.length ? colors.primary : colors.text, flex: 1, fontWeight: "700" }]}>
+                              {lid.length ? `${t("Líder")} · ${lid.includes("todos") ? t("todos os cultos") : lid.map(rotuloCulto).join(", ")}` : t("Tornar líder")}
+                            </Text>
+                            <Ionicons name={aberto ? "chevron-up" : "chevron-down"} size={16} color={colors.textMuted} />
+                          </Pressable>
+                          {aberto && (!det.tem_cadastro ? (
+                            <Text style={styles.muted}>{t("Ainda não tem o cadastro da igreja ligado ao perfil de voluntário. Ligue em Voluntariado › Supervisores, no sistema, para poder torná-la líder.")}</Text>
+                          ) : (
+                            <>
+                              <Text style={[styles.pequeno, { color: colors.textMuted, marginBottom: 4 }]}>{t("Líder em quais cultos? Toque de novo para tirar.")}</Text>
+                              <View style={styles.chips}>
+                                {det.opcoes_culto.map(o => {
+                                  const marcado = lid.includes(o.chave);
+                                  // "Todos" já cobre os avulsos: eles ficam apagados enquanto "Todos" estiver marcado.
+                                  const coberto = o.chave !== "todos" && lid.includes("todos");
+                                  const salvando = ocupado === `lider:${tm.id}:${o.chave}`;
+                                  return (
+                                    <Pressable key={o.chave} onPress={() => alternarLider(tm, o.chave)} disabled={!!ocupado || coberto} accessibilityRole="checkbox" accessibilityState={{ checked: marcado || coberto, disabled: coberto }}
+                                      style={[styles.chip, (marcado || coberto) && styles.chipAtivo, coberto && { opacity: 0.45 }]}>
+                                      {salvando ? <ActivityIndicator size="small" color={colors.primary} />
+                                        : <Text style={[styles.chipTxt, (marcado || coberto) && styles.chipTxtAtivo]}>{t(o.rotulo)}</Text>}
+                                    </Pressable>
+                                  );
+                                })}
+                              </View>
+                            </>
+                          ))}
+                        </View>
+                      );
+                    })()}
                   </View>
                 ))}
+
+                {/* Editor de culto (só admin): monta a escala de TODOS os times daquele culto. */}
+                {det.pode_editor_culto && det.opcoes_culto && (
+                  <>
+                    <Text style={styles.secao}>{t("Editor de culto")}</Text>
+                    <Text style={[styles.pequeno, { color: colors.textMuted, marginBottom: 6 }]}>{t("Monta a escala de todos os times no culto marcado.")}</Text>
+                    <View style={styles.chips}>
+                      {det.opcoes_culto.filter(o => o.chave !== "todos").map(o => {
+                        const marcado = (det.editor_culto ?? []).includes(o.chave);
+                        return (
+                          <Pressable key={o.chave} onPress={() => alternarEditor(o.chave)} disabled={!!ocupado} accessibilityRole="checkbox" accessibilityState={{ checked: marcado }}
+                            style={[styles.chip, marcado && styles.chipAtivo]}>
+                            {ocupado === `editor:${o.chave}` ? <ActivityIndicator size="small" color={colors.primary} />
+                              : <Text style={[styles.chipTxt, marcado && styles.chipTxtAtivo]}>{t(o.rotulo)}</Text>}
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </>
+                )}
 
                 {/* Vincular a um time */}
                 <Text style={styles.secao}>{det.escopo === "lider" ? t("Vincular a um time seu") : t("Vincular a um time")}</Text>
@@ -341,6 +515,15 @@ export default function ServirPessoasScreen() {
           </View>
         </TecladoSeguro>
       </Modal>
+      <Modal visible={qrAberto && !!convite} animationType="fade" transparent statusBarTranslucent onRequestClose={() => setQrAberto(false)}>
+        <Pressable style={[styles.modalWrap, { justifyContent: "center", padding: spacing.lg }]} onPress={() => setQrAberto(false)} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
+          <View style={[styles.sheet, { borderRadius: radius.lg, alignItems: "center" }]}>
+            <Text style={styles.sheetTitle}>{t("Aponte a câmera do celular")}</Text>
+            <Text style={[styles.pequeno, { color: colors.textMuted, textAlign: "center", marginVertical: spacing.sm }]}>{t("Abre a ficha de voluntário com o nome já preenchido.")}</Text>
+            {convite && <View style={{ padding: 12, backgroundColor: "#fff", borderRadius: radius.md }}><QRCode value={convite.url} size={220} /></View>}
+          </View>
+        </Pressable>
+      </Modal>
       <dlg.Dialogo />
     </SafeAreaView>
   );
@@ -375,4 +558,5 @@ const makeStyles = (c: Palette) =>
     funcaoLinha: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 },
     botao: { marginTop: spacing.sm, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: c.primary, borderRadius: radius.md, paddingVertical: 12 },
     botaoTxt: { color: "#fff", fontWeight: "800", fontSize: font.size.md },
+    liderBox: { marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: c.border },
   });
