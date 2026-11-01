@@ -11,12 +11,12 @@ import { AnimatedBell } from "@/components/anim/AnimatedBell";
 
 export const TOPBAR_H = 64;
 /** Cabeçalho da identidade do marketing; títulos específicos permanecem no conteúdo. */
-export function TopBar({ mostrarVoltar = false }: { mostrarVoltar?: boolean }) {
+export function TopBar({ mostrarVoltar = false, rota }: { mostrarVoltar?: boolean; rota?: string }) {
   const colors = useColors();
   const insets = useSafeAreaInsets(), pathname = usePathname(), router = useRouter(), t = useT();
   const { openMenu } = useMenu(), { count } = useNotificacoesNaoLidas();
   return <View style={[styles.header, { paddingTop: insets.top, minHeight: insets.top + TOPBAR_H }]}>
-    {mostrarVoltar ? <Pressable accessibilityRole="button" accessibilityLabel={t("Voltar")} onPress={() => subirUmNivel(pathname)} style={styles.button}><Ionicons name="chevron-back" size={24} color={colors.text} /></Pressable> : null}
+    {mostrarVoltar ? <Pressable accessibilityRole="button" accessibilityLabel={t("Voltar")} onPress={() => subirUmNivel(rota ?? pathname)} style={styles.button}><Ionicons name="chevron-back" size={24} color={colors.text} /></Pressable> : null}
     <Pressable accessibilityRole="button" accessibilityLabel={t("Início")} onPress={() => router.navigate("/")} style={styles.brand}>
       <View style={styles.logoFrame}><Image source={require("@/assets/images/cbrio-wordmark.png")} resizeMode="contain" tintColor={colors.text} style={styles.logo} /></View>
     </Pressable>

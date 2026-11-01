@@ -6,7 +6,8 @@ import { Stack, router, useGlobalSearchParams, usePathname } from "expo-router";
 import { AppState, BackHandler, Platform, View } from "react-native";
 import { MembroProvider } from "@/contexts/MembroContext";
 import { CadastroGate } from "@/components/auth/CadastroGate";
-import { TopBar } from "@/components/ui/TopBar";
+import { AppScreenFrame } from "@/components/navigation/AppScreenFrame";
+import { chromeDaTela } from "@/lib/appNavigation";
 import { BottomBar } from "@/components/ui/BottomBar";
 import { useColors, useTheme } from "@/contexts/ThemeContext";
 import { MenuProvider } from "@/contexts/MenuContext";
@@ -38,16 +39,6 @@ import { ehRaiz, registrarRotaAtual, subirUmNivel } from "@/lib/hierarquia";
  */
 const MS_PARA_RECOMECAR = 3 * 60 * 1000;
 
-/** Rota → título do centro da faixa. Home (`/`) usa seu cabeçalho editorial. */
-const TELAS_BARRA: Record<string, string> = {
-  "/": "",
-  "/meu-grupo": "Meus grupos",
-  "/voluntariado": "Servir",
-  "/cuidados": "Cuidados",
-  "/devocional": "Devocional",
-  "/menu": "Menu",
-};
-
 export default function AppLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -59,10 +50,9 @@ export default function AppLayout() {
   focusRef.current = focused;
   const paramsGlobais = useGlobalSearchParams();
 
-  const telaDeBarra = Object.prototype.hasOwnProperty.call(TELAS_BARRA, pathname);
   // Onboarding é a única tela sem casca: quem está completando o cadastro não
   // deve ter atalho pra sair pelo rodapé.
-  const semBarra = pathname.startsWith("/completar-cadastro") || pathname === "/inscricao-formulario";
+  const semBarra = !chromeDaTela(pathname).dock;
 
   // Rota atual num ref: o listener de AppState é montado UMA vez e leria um
   // pathname congelado se dependesse do closure.
@@ -137,12 +127,12 @@ export default function AppLayout() {
       <CadastroGate>
         <View style={{ flex: 1, backgroundColor: colors.background }}>
           {!semBarra && <StatusBar style={pathname === "/" || mode === "dark" ? "light" : "dark"} />}
-          {!semBarra && pathname !== "/" && <TopBar mostrarVoltar={telaDeBarra || pathname === "/agenda"} />}
 
           {/* Conteúdo ocupa a tela inteira e passa por trás do dock. */}
           <View style={{ flex: 1 }}>
-            <DockInsetContext.Provider value={semBarra || pathname === "/" ? 0 : dockHeight}>
+            <DockInsetContext.Provider value={dockHeight}>
             <Stack
+              screenLayout={({ route, children }) => <AppScreenFrame rota={route.name}>{children}</AppScreenFrame>}
               screenOptions={{
                 headerShown: false,
                 freezeOnBlur: true,
@@ -172,7 +162,8 @@ export default function AppLayout() {
             </DockInsetContext.Provider>
           </View>
 
-          {!semBarra && pathname !== "/" && <BottomBar onLayout={(event) => setDockHeight(event.nativeEvent.layout.height)} />}
+          {/* Uma única instância fora do Stack, inclusive na Home e durante o gesto de voltar. */}
+          {!semBarra && <BottomBar onLayout={(event) => setDockHeight(event.nativeEvent.layout.height)} />}
         </View>
       </CadastroGate>
       </MenuProvider>

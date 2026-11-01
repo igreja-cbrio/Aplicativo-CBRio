@@ -1,5 +1,5 @@
 import { Text } from "@/components/ui/Typography";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, RefreshControl, Image, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type ImageSourcePropType } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -7,7 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useT } from "@/lib/i18n";
 import { BRAND_FONT } from "@/lib/fonts";
-import { QuickLinks } from "@/components/navigation/QuickLinks";
+import { DockInsetContext } from "@/components/navigation/DockContent";
 import { useMenu } from "@/contexts/MenuContext";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -25,6 +25,7 @@ const PHOTO_CROP = { x: 972, width: 1340 };
 export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACKGROUND, refreshing = false, onRefresh }: { notices: HomeNotice[]; unreadCount?: number; background?: ImageSourcePropType; refreshing?: boolean; onRefresh?: () => void }) {
   const { height, width, fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const dockHeight = useContext(DockInsetContext);
   const [viewportHeight, setViewportHeight] = useState(height);
   const router = useRouter();
   const t = useT();
@@ -63,7 +64,7 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
         </View> : null}
         <LinearGradient colors={background ? ["rgba(12,32,38,0.42)", "rgba(12,32,38,0.46)", "rgba(12,32,38,0.62)"] : ["#49656b", "#314b51", "#142e34"]} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} />
       </View>
-      <ScrollView style={styles.scroll} contentContainerStyle={{ minHeight: viewportHeight, paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 20), paddingLeft: Math.max(insets.left, 20), paddingRight: Math.max(insets.right, 20) }} showsVerticalScrollIndicator={false} contentInsetAdjustmentBehavior="never" alwaysBounceVertical={!!onRefresh} bounces={!!onRefresh} overScrollMode="never" refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" colors={["#314b51"]} progressViewOffset={insets.top} /> : undefined}>
+      <ScrollView style={styles.scroll} contentContainerStyle={{ minHeight: viewportHeight, paddingTop: insets.top + 12, paddingBottom: Math.max(dockHeight, insets.bottom, 20), paddingLeft: Math.max(insets.left, 20), paddingRight: Math.max(insets.right, 20) }} showsVerticalScrollIndicator={false} contentInsetAdjustmentBehavior="never" alwaysBounceVertical={!!onRefresh} bounces={!!onRefresh} overScrollMode="never" refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" colors={["#314b51"]} progressViewOffset={insets.top} /> : undefined}>
       <View style={styles.frame}>
         <View style={styles.header}>
           <View style={styles.logoFrame}><Image source={require("@/assets/images/cbrio-wordmark.png")} style={styles.logo} resizeMode="contain" tintColor="#fff" accessible accessibilityLabel="CBRio" /></View>
@@ -118,7 +119,6 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
               </ScrollView>
             ) : null}
           </View>
-          <QuickLinks />
         </View>
       </View>
       </ScrollView>
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   title: { color: "#fff", fontFamily: BRAND_FONT, textAlign: "center", includeFontPadding: false },
   news: { borderWidth: 1.5, borderColor: "rgba(255,255,255,0.9)", borderRadius: 40, paddingHorizontal: 18, paddingVertical: 13, minHeight: 48, flexDirection: "row", alignItems: "center", gap: 10, marginTop: 18, maxWidth: "100%", backgroundColor: "rgba(12,32,38,0.16)" },
   newsLabel: { color: "#fff", fontSize: 14, flexShrink: 1, textAlign: "center" },
-  footer: { paddingTop: 8, paddingBottom: 12 },
+  footer: { paddingTop: 8 },
   notice: { minHeight: 58, flexDirection: "row", alignItems: "center", paddingVertical: 2, paddingHorizontal: 16, borderRadius: 999, borderWidth: 1.2, borderColor: "rgba(255,255,255,0.95)", backgroundColor: "transparent", marginBottom: 20 },
   noticeLargeText: { paddingVertical: 12, borderRadius: 30, gap: 12 },
   noticeLeading: { width: "40%", alignItems: "flex-start" },

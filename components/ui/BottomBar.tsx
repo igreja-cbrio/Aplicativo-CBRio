@@ -14,5 +14,5 @@ export function BottomBar({ onLayout }: { onLayout?: (event: LayoutChangeEvent) 
     return () => { show.remove(); hide.remove(); };
   }, []);
   if (keyboard) return null;
-  return <View pointerEvents="box-none" onLayout={onLayout} style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 10, paddingHorizontal: 20, paddingBottom: Math.max(insets.bottom, 12), backgroundColor: "transparent" }}><QuickLinks /></View>;
+  return <View pointerEvents="box-none" onLayout={onLayout} style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 10, paddingHorizontal: 20, paddingBottom: Math.max(insets.bottom, 12), backgroundColor: "transparent" }}><View style={{ width: "100%", maxWidth: 680, alignSelf: "center" }}><QuickLinks /></View></View>;
 }
