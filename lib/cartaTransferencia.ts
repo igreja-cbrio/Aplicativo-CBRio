@@ -1,9 +1,11 @@
-import { apiGet, apiPost } from './api';
+import { apiGet, apiPost } from "./api";
 export type PedidoTransferencia = {
   id: string;
   igreja_destino: string;
-  status: 'em_cuidados' | 'aguardando_integracao' | 'finalizada' | 'cancelada';
+  status: "em_cuidados" | "aguardando_integracao" | "finalizada" | "cancelada";
   created_at: string;
+  carta_publicada_em?: string | null;
+  carta_disponivel?: boolean;
   encaminhado_em?: string | null;
   finalizado_em?: string | null;
 };
@@ -13,23 +15,42 @@ export type MeusPedidosTransferencia = {
   pedidos: PedidoTransferencia[];
 };
 export const STATUS_TRANSFERENCIA = {
-  em_cuidados: 'Em atendimento por Cuidados',
-  aguardando_integracao: 'Aguardando Integração',
-  finalizada: 'Transferência finalizada',
-  cancelada: 'Pedido cancelado',
+  em_cuidados: "Em atendimento por Cuidados",
+  aguardando_integracao: "Aguardando Integração",
+  finalizada: "Transferência finalizada",
+  cancelada: "Pedido cancelado",
 } as const;
 export function pedidoAberto(pedidos: PedidoTransferencia[]) {
   return pedidos.find(
-    (p) => p.status === 'em_cuidados' || p.status === 'aguardando_integracao',
+    (p) => p.status === "em_cuidados" || p.status === "aguardando_integracao",
   );
 }
 export function nomeIgrejaValido(nome: string) {
-  const n = nome.trim().replace(/\s+/g, ' ');
+  const n = nome.trim().replace(/\s+/g, " ");
   return n.length >= 2 && n.length <= 160 && !/[\u0000-\u001f\u007f]/.test(n);
 }
 export const carregarTransferencias = () =>
-  apiGet<MeusPedidosTransferencia>('/app/carta-transferencia');
+  apiGet<MeusPedidosTransferencia>("/app/carta-transferencia");
 export const solicitarTransferencia = (igreja: string) =>
-  apiPost<{ pedido: PedidoTransferencia }>('/app/carta-transferencia', {
-    igreja_destino: igreja.trim().replace(/\s+/g, ' '),
+  apiPost<{ pedido: PedidoTransferencia }>("/app/carta-transferencia", {
+    igreja_destino: igreja.trim().replace(/\s+/g, " "),
   });
+
+export async function obterCartaPdf(id: string): Promise<{ url: string }> {
+  const r = await apiGet<{ url: string }>(
+    `/app/carta-transferencia/${encodeURIComponent(id)}/pdf`,
+  );
+  let u: URL;
+  try {
+    u = new URL(r.url);
+  } catch {
+    throw new Error("Não foi possível abrir a carta. Tente novamente.");
+  }
+  if (
+    u.protocol !== "https:" ||
+    u.host !== "hhntwfawfnxvuobhdfkb.supabase.co" ||
+    !u.pathname.startsWith("/storage/v1/object/sign/cartas-transferencia/")
+  )
+    throw new Error("Não foi possível abrir a carta. Tente novamente.");
+  return r;
+}

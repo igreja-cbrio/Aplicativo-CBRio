@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Carta de transferência e PDF pronto (2026-11-01)
+
 - Campos nativos para inscrição de outro participante (2026-10-28)
 
 - Inscrever outra pessoa pelo app (2026-10-28)
@@ -583,3 +585,12 @@ legadas (NEXT, Batismo, Grupos, Servir) também mantêm o formulário público.
 Não afirmar que todos os formulários viraram nativos. Pagamento pendente não é
 confirmação. Testes cobrem o POST real mockado sem sessão/IDs, aceite, erro e
 seleção conservadora do contrato; não fazer inscrição real para testar.
+
+## Carta de transferência e PDF pronto (2026-11-01)
+
+### Carta de transferência de igreja
+
+Tela nativa `/carta-transferencia`, acessível em Cuidados e menu Você, para iOS/Android. Usa `/app/carta-transferencia` (GET/POST), identidade exclusivamente por `profiles.membro_id` da sessão. Só pede igreja de destino; não pergunta motivo de saída nem repete dados pessoais. Mostra etapas recebidas do servidor e não expõe observações internas. O pedido NÃO desliga o membro: Cuidados trata e encaminha; Integração finaliza atomicamente no ERP. Modelo da carta ainda pendente; nenhuma geração automática prometida. Publicar somente após migration/backend ERP disponíveis. `lib/cartaTransferencia.ts` concentra contrato/estados; testes em `test/cartaTransferencia.test.ts`.
+
+### Carta pronta em PDF (2026-11-01)
+O pedido mostra disponibilidade do PDF publicado pela Integração, inclusive após inativação. API autenticada confere vínculo antes de emitir URL de 120s no bucket privado. `cartaPdf.ts` baixa em cache e compartilha pelo sistema; preserva o arquivo após o chooser Android e limpa somente PDFs próprios após 24h, no próximo uso. Push e sino (`carta_transferencia_pronta`) abrem a tela. Nenhum módulo nativo novo. Backend/migration precisam estar publicados antes do OTA.

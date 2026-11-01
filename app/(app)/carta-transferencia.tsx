@@ -1,16 +1,17 @@
-import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Keyboard, Pressable, View } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { ScrollView } from '@/components/navigation/DockContent';
-import { Text } from '@/components/ui/Typography';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { useDialogo } from '@/components/ui/Dialogo';
-import { TecladoSeguro } from '@/components/ui/TecladoSeguro';
-import { useColors } from '@/contexts/ThemeContext';
-import { useT } from '@/lib/i18n';
+import { useCallback, useRef, useState } from "react";
+import { ActivityIndicator, Keyboard, Pressable, View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { ScrollView } from "@/components/navigation/DockContent";
+import { Text } from "@/components/ui/Typography";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { useDialogo } from "@/components/ui/Dialogo";
+import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
+import { compartilharCartaPdf } from "@/lib/cartaPdf";
+import { useColors } from "@/contexts/ThemeContext";
+import { useT } from "@/lib/i18n";
 import {
   carregarTransferencias,
   solicitarTransferencia,
@@ -18,7 +19,7 @@ import {
   nomeIgrejaValido,
   STATUS_TRANSFERENCIA,
   type MeusPedidosTransferencia,
-} from '@/lib/cartaTransferencia';
+} from "@/lib/cartaTransferencia";
 
 export default function CartaTransferencia() {
   const colors = useColors();
@@ -26,17 +27,20 @@ export default function CartaTransferencia() {
   const router = useRouter();
   const dlg = useDialogo();
   const [dados, setDados] = useState<MeusPedidosTransferencia | null>(null);
-  const [igreja, setIgreja] = useState('');
-  const [erro, setErro] = useState('');
+  const [igreja, setIgreja] = useState("");
+  const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
+  const [pdfAberto, setPdfAberto] = useState<string | null>(null);
+  const [erroPdf, setErroPdf] = useState("");
+  const travaPdf = useRef(false);
   const ativa = useRef(false);
   const sequencia = useRef(0);
   const trava = useRef(false);
   const carregar = useCallback(async () => {
     const seq = ++sequencia.current;
     setCarregando(true);
-    setErro('');
+    setErro("");
     try {
       const r = await carregarTransferencias();
       if (ativa.current && seq === sequencia.current) setDados(r);
@@ -45,7 +49,7 @@ export default function CartaTransferencia() {
         setErro(
           e instanceof Error
             ? e.message
-            : 'Não foi possível carregar seu pedido.',
+            : "Não foi possível carregar seu pedido.",
         );
     } finally {
       if (ativa.current && seq === sequencia.current) setCarregando(false);
@@ -72,7 +76,7 @@ export default function CartaTransferencia() {
       return;
     trava.current = true;
     setEnviando(true);
-    setErro('');
+    setErro("");
     Keyboard.dismiss();
     try {
       const { pedido } = await solicitarTransferencia(igreja);
@@ -88,18 +92,37 @@ export default function CartaTransferencia() {
               }
             : d,
         );
-        setIgreja('');
+        setIgreja("");
       }
     } catch (e) {
       if (ativa.current)
         setErro(
           e instanceof Error
             ? e.message
-            : 'Não foi possível enviar seu pedido. Tente novamente.',
+            : "Não foi possível enviar seu pedido. Tente novamente.",
         );
     } finally {
       trava.current = false;
       setEnviando(false);
+    }
+  }
+  async function abrirPdf(id: string) {
+    if (travaPdf.current) return;
+    travaPdf.current = true;
+    setPdfAberto(id);
+    setErroPdf("");
+    try {
+      await compartilharCartaPdf(id);
+    } catch (e) {
+      if (ativa.current)
+        setErroPdf(
+          e instanceof Error
+            ? e.message
+            : "Não foi possível abrir a carta. Tente novamente.",
+        );
+    } finally {
+      travaPdf.current = false;
+      setPdfAberto(null);
     }
   }
   const aberto = dados && pedidoAberto(dados.pedidos);
@@ -114,7 +137,7 @@ export default function CartaTransferencia() {
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: colors.background }}
-      edges={['left', 'right']}
+      edges={["left", "right"]}
     >
       <TecladoSeguro style={{ flex: 1 }}>
         <ScrollView
@@ -122,11 +145,11 @@ export default function CartaTransferencia() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
-          <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+          <View style={{ flexDirection: "row", gap: 16, alignItems: "center" }}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={t('Voltar')}
-              onPress={() => router.navigate('/cuidados')}
+              accessibilityLabel={t("Voltar")}
+              onPress={() => router.navigate("/cuidados")}
               hitSlop={12}
             >
               <Ionicons name="chevron-back" size={28} color={colors.text} />
@@ -135,24 +158,24 @@ export default function CartaTransferencia() {
               style={{
                 flex: 1,
                 fontSize: 24,
-                fontWeight: '700',
+                fontWeight: "700",
                 color: colors.text,
               }}
             >
-              {t('Carta de transferência')}
+              {t("Carta de transferência")}
             </Text>
           </View>
           <Text
             style={{ fontSize: 16, lineHeight: 24, color: colors.textMuted }}
           >
             {t(
-              'Vai para outra igreja? Envie seu pedido à equipe de Cuidados. Depois do atendimento, Integração cuidará da sua transferência.',
+              "Vai para outra igreja? Envie seu pedido à equipe de Cuidados. Depois do atendimento, Integração cuidará da sua transferência.",
             )}
           </Text>
           {carregando && (
             <ActivityIndicator
               color={colors.primary}
-              accessibilityLabel={t('Carregando...')}
+              accessibilityLabel={t("Carregando…")}
             />
           )}
           {!!erro && (
@@ -161,7 +184,7 @@ export default function CartaTransferencia() {
                 {t(erro)}
               </Text>
               <Button
-                title={t('Tentar novamente')}
+                title={t("Tentar novamente")}
                 variant="ghost"
                 onPress={carregar}
                 disabled={carregando || enviando}
@@ -174,30 +197,30 @@ export default function CartaTransferencia() {
                 <Text
                   style={{
                     fontSize: 18,
-                    fontWeight: '700',
+                    fontWeight: "700",
                     color: colors.text,
                   }}
                 >
-                  {t('Seus dados cadastrais')}
+                  {t("Seus dados cadastrais")}
                 </Text>
                 <Text style={{ color: colors.text }}>{dados.pessoa.nome}</Text>
                 <Text style={{ color: colors.textMuted }}>
-                  {dados.pessoa.email || t('E-mail não cadastrado')}
+                  {dados.pessoa.email || t("E-mail não cadastrado")}
                 </Text>
                 <Text style={{ color: colors.textMuted }}>
-                  {dados.pessoa.telefone || t('Telefone não cadastrado')}
+                  {dados.pessoa.telefone || t("Telefone não cadastrado")}
                 </Text>
                 <Button
-                  title={t('Atualizar meu cadastro')}
+                  title={t("Atualizar meu cadastro")}
                   variant="ghost"
-                  onPress={() => router.navigate('/perfil')}
+                  onPress={() => router.navigate("/perfil")}
                   disabled={enviando}
                 />
               </View>
               {!aberto && dados.pode_solicitar && (
                 <View style={card}>
                   <Input
-                    label={t('Igreja de destino')}
+                    label={t("Igreja de destino")}
                     value={igreja}
                     onChangeText={setIgreja}
                     maxLength={160}
@@ -208,21 +231,21 @@ export default function CartaTransferencia() {
                   />
                   <Text style={{ color: colors.textMuted, lineHeight: 22 }}>
                     {t(
-                      'Não é necessário informar o motivo da saída. Seu vínculo com a membresia continua ativo durante o atendimento.',
+                      "Não é necessário informar o motivo da saída. Seu vínculo com a membresia continua ativo durante o atendimento.",
                     )}
                   </Text>
                   <Button
-                    title={t('Solicitar transferência')}
+                    title={t("Solicitar transferência")}
                     loading={enviando}
                     disabled={carregando || !nomeIgrejaValido(igreja)}
                     onPress={async () => {
                       Keyboard.dismiss();
                       if (
                         await dlg.confirmar({
-                          titulo: t('Enviar pedido de transferência?'),
+                          titulo: t("Enviar pedido de transferência?"),
                           mensagem: igreja.trim(),
-                          acao: t('Enviar pedido'),
-                          cancelar: t('Voltar'),
+                          acao: t("Enviar pedido"),
+                          cancelar: t("Voltar"),
                         })
                       )
                         await enviar();
@@ -233,7 +256,7 @@ export default function CartaTransferencia() {
               {!aberto && !dados.pode_solicitar && (
                 <Text style={{ color: colors.textMuted, lineHeight: 24 }}>
                   {t(
-                    'Este pedido está disponível para membros ativos. Se precisar de ajuda com seu cadastro, fale com a equipe de Cuidados.',
+                    "Novos pedidos estão disponíveis para membros ativos. Suas cartas já publicadas continuam acessíveis abaixo.",
                   )}
                 </Text>
               )}
@@ -242,16 +265,24 @@ export default function CartaTransferencia() {
                   <Text
                     style={{
                       fontSize: 20,
-                      fontWeight: '700',
+                      fontWeight: "700",
                       color: colors.text,
                     }}
                   >
-                    {t('Meus pedidos')}
+                    {t("Meus pedidos")}
                   </Text>
+                  {!!erroPdf && (
+                    <Text
+                      accessibilityRole="alert"
+                      style={{ color: colors.danger }}
+                    >
+                      {t(erroPdf)}
+                    </Text>
+                  )}
                   {dados.pedidos.map((p) => (
                     <View key={p.id} style={card}>
                       <Text
-                        style={{ color: colors.primary, fontWeight: '700' }}
+                        style={{ color: colors.primary, fontWeight: "700" }}
                       >
                         {t(STATUS_TRANSFERENCIA[p.status])}
                       </Text>
@@ -261,17 +292,39 @@ export default function CartaTransferencia() {
                       <Text style={{ color: colors.textMuted }}>
                         {new Date(p.created_at).toLocaleDateString()}
                       </Text>
-                      {p.status === 'em_cuidados' && (
+                      {p.carta_disponivel && (
+                        <View style={{ gap: 12 }}>
+                          <Text
+                            style={{ color: colors.text, fontWeight: "700" }}
+                          >
+                            {t("Sua carta está pronta")}
+                          </Text>
+                          <Text
+                            style={{ color: colors.textMuted, lineHeight: 22 }}
+                          >
+                            {t(
+                              "Salve o PDF ou compartilhe com a igreja de destino.",
+                            )}
+                          </Text>
+                          <Button
+                            title={t("Salvar ou compartilhar PDF")}
+                            loading={pdfAberto === p.id}
+                            disabled={!!pdfAberto}
+                            onPress={() => abrirPdf(p.id)}
+                          />
+                        </View>
+                      )}
+                      {p.status === "em_cuidados" && (
                         <Text style={{ color: colors.textMuted }}>
                           {t(
-                            'Seu pedido foi recebido. A equipe de Cuidados entrará em contato com você.',
+                            "Seu pedido foi recebido. A equipe de Cuidados entrará em contato com você.",
                           )}
                         </Text>
                       )}
-                      {p.status === 'finalizada' && (
+                      {p.status === "finalizada" && (
                         <Text style={{ color: colors.textMuted }}>
                           {t(
-                            'Sua transferência foi concluída e seu vínculo de membresia com a CBRio foi encerrado.',
+                            "Sua transferência foi concluída e seu vínculo de membresia com a CBRio foi encerrado.",
                           )}
                         </Text>
                       )}

@@ -67,6 +67,9 @@ export function attachNotifTapListener(): () => void {
     if (!data || typeof data !== "object") return;
     const tipo = (data as { tipo?: string }).tipo;
     switch (tipo) {
+      case "carta_transferencia_pronta":
+        router.navigate("/carta-transferencia");
+        return;
       case "escala":
         router.navigate("/voluntariado");
         return;
