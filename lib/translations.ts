@@ -6,6 +6,14 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Novos pedidos estão disponíveis para membros ativos. Suas cartas já publicadas continuam acessíveis abaixo.": {"en": "New requests are available to active members. Your published letters remain accessible below.", "es": "Las nuevas solicitudes están disponibles para miembros activos. Tus cartas publicadas siguen accesibles abajo."},
+  "Sua carta está pronta": {"en": "Your letter is ready", "es": "Tu carta está lista"},
+  "Salve o PDF ou compartilhe com a igreja de destino.": {"en": "Save the PDF or share it with your destination church.", "es": "Guarda el PDF o compártelo con la iglesia de destino."},
+  "Salvar ou compartilhar PDF": {"en": "Save or share PDF", "es": "Guardar o compartir PDF"},
+  "Não foi possível abrir a carta. Tente novamente.": {"en": "Unable to open the letter. Please try again.", "es": "No se pudo abrir la carta. Inténtalo de nuevo."},
+  "Não foi possível baixar a carta. Tente novamente.": {"en": "Unable to download the letter. Please try again.", "es": "No se pudo descargar la carta. Inténtalo de nuevo."},
+  "Compartilhamento indisponível neste dispositivo.": {"en": "Sharing is unavailable on this device.", "es": "No se puede compartir en este dispositivo."},
+
   "Carta de transferência": {"en": "Church transfer letter", "es": "Carta de transferencia"},
   "Peça sua transferência para outra igreja e acompanhe o atendimento.": {"en": "Request your transfer to another church and track its progress.", "es": "Solicita tu transferencia a otra iglesia y sigue su progreso."},
   "Vai para outra igreja? Envie seu pedido à equipe de Cuidados. Depois do atendimento, Integração cuidará da sua transferência.": {"en": "Moving to another church? Send your request to the Care team. After they assist you, Integration will handle your transfer.", "es": "¿Vas a otra iglesia? Envía tu solicitud al equipo de Cuidados. Después de la atención, Integración se encargará de tu transferencia."},

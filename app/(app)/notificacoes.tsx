@@ -21,6 +21,7 @@ import { destinoNotificacaoEvento } from "@/lib/eventoDestino";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
+  carta_transferencia_pronta: "document-text",
   escala: "hand-left",
   sos: "alert-circle",
   cuidado: "heart",
@@ -38,6 +39,7 @@ const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
 
 // tipo técnico -> categoria amigável (pros filtros)
 const CATEGORIA: Record<string, string> = {
+  carta_transferencia_pronta: "Cuidados",
   escala: "Voluntariado",
   sos: "Cuidados",
   cuidado: "Cuidados",
@@ -117,6 +119,8 @@ export default function NotificacoesScreen() {
     if (!n.lida_em) marcarLida(n.id);
     const data = n.data ?? {};
     switch (n.tipo) {
+      case "carta_transferencia_pronta":
+        router.navigate("/carta-transferencia"); return;
       case "escala":
         irPara("/voluntariado"); return;
       case "sos":
