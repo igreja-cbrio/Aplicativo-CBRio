@@ -34,3 +34,15 @@ export const MENU_SECTIONS = [
     { label: "Ajuda com o app", icon: "help-buoy-outline", href: "/ajuda-app" },
   ] },
 ] as const;
+
+/** A casca é definida pela própria tela, nunca pela rota que está por cima dela. */
+export function chromeDaTela(rota: string) {
+  const caminho = rota === "index" ? "/" : rota.startsWith("/") ? rota : `/${rota}`;
+  const semBarra = caminho.startsWith("/completar-cadastro") || caminho === "/inscricao-formulario";
+  return {
+    caminho,
+    dock: !semBarra,
+    header: !semBarra && caminho !== "/",
+    voltar: ["/meu-grupo", "/voluntariado", "/cuidados", "/devocional", "/menu", "/agenda"].includes(caminho),
+  };
+}
