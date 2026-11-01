@@ -5,7 +5,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -26,6 +26,7 @@ export default function LoginScreen() {
   const { signIn, signInWithGoogle, signInWithApple, rememberPref, enterPreview } =
     useAuth();
   const t = useT();
+  const router = useRouter();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [email, setEmail] = useState("");
@@ -79,7 +80,7 @@ export default function LoginScreen() {
               <CbrioHeart size={44} color={colors.brandPale} />
             </View>
             <Text style={styles.brand}>CBRio</Text>
-            <Text style={styles.subtitle}>{t("Bem-vindo de volta")}</Text>
+            <Text style={styles.subtitle}>{t("Bem-vindo à CBRio")}</Text>
 
             <View style={styles.form}>
               <Input
@@ -117,6 +118,17 @@ export default function LoginScreen() {
                 onPress={handleLogin}
                 loading={loading === "email"}
               />
+
+              {/* Primeiro acesso (01/11): quem baixou o app e nunca entrou não tem
+                  senha — o "Criar conta" do rodapé ficava fora da vista. */}
+              <Button
+                title={t("Primeiro acesso")}
+                variant="ghost"
+                onPress={() => router.push("/(auth)/cadastro")}
+              />
+              <Text style={styles.hint}>
+                {t("Nunca entrou no app? Toque em Primeiro acesso para criar sua senha.")}
+              </Text>
 
               <View style={styles.dividerRow}>
                 <View style={styles.divider} />
@@ -217,6 +229,7 @@ const makeStyles = (colors: Palette) =>
   },
   forgot: { color: colors.brandMid, fontSize: font.size.sm, fontWeight: "600" },
   error: { color: colors.danger, fontSize: font.size.sm },
+  hint: { color: colors.textMuted, fontSize: font.size.sm, textAlign: "center", marginTop: -spacing.xs },
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",

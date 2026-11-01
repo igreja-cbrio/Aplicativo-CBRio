@@ -505,6 +505,8 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "ou continue com": { en: "or continue with", es: "o continúa con" },
   "Ainda não tem conta?": { en: "Don't have an account yet?", es: "¿Aún no tienes cuenta?" },
   "Criar conta": { en: "Create account", es: "Crear cuenta" },
+  "Primeiro acesso": { en: "First time here", es: "Primer acceso" },
+  "Nunca entrou no app? Toque em Primeiro acesso para criar sua senha.": { en: "Never signed in? Tap First time here to create your password.", es: "¿Nunca entraste en la app? Toca Primer acceso para crear tu contraseña." },
   "Entrar como visitante (preview)": { en: "Enter as guest (preview)", es: "Entrar como invitado (vista previa)" },
   "Continuar com Google": { en: "Continue with Google", es: "Continuar con Google" },
   "Continuar com Apple": { en: "Continue with Apple", es: "Continuar con Apple" },
