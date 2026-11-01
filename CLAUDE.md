@@ -633,3 +633,7 @@ revoga TODAS as sessões da conta, e a conta é a mesma nos 3 lugares.
   "Sair" da tela de biometria. `test/logout.test.ts` vigia o padrão.
 - **Sem botão "sair de todos os aparelhos"** (decisão do Marcos, 27/10).
 - Pares: CBRio-Staff #42 e SISTEMA_INTEGRADO_CBRIO #3511 (mesma troca).
+
+### Carta de transferência de igreja
+
+Tela nativa `/carta-transferencia`, acessível em Cuidados e menu Você, para iOS/Android. Usa `/app/carta-transferencia` (GET/POST), identidade exclusivamente por `profiles.membro_id` da sessão. Só pede igreja de destino; não pergunta motivo de saída nem repete dados pessoais. Mostra etapas recebidas do servidor e não expõe observações internas. O pedido NÃO desliga o membro: Cuidados trata e encaminha; Integração finaliza atomicamente no ERP. Modelo da carta ainda pendente; nenhuma geração automática prometida. Publicar somente após migration/backend ERP disponíveis. `lib/cartaTransferencia.ts` concentra contrato/estados; testes em `test/cartaTransferencia.test.ts`.

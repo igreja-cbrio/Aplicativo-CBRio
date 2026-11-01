@@ -23,6 +23,7 @@ export const MENU_SECTIONS = [
     { label: "Conteúdos", icon: "library-outline", href: "/conteudos" },
   ] },
   { title: "Você", items: [
+    { label: "Carta de transferência", icon: "document-text-outline", href: "/carta-transferencia" },
     { label: "Meu perfil", icon: "person-outline", href: "/perfil" },
     { label: "Minha família", icon: "people-outline", href: "/familia" },
     { label: "Sua jornada", icon: "trail-sign-outline", href: "/jornada" },
