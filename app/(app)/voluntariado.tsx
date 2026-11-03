@@ -40,7 +40,7 @@ import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { SecaoRecolhivel } from "@/components/ui/SecaoRecolhivel";
 import { resumoEscalas } from "@/lib/resumoEscalas";
 
-const MAX_AREAS = 3;
+const MAX_AREAS = 2;
 
 function fmtDataIso(iso: string) {
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -232,7 +232,7 @@ export default function VoluntariadoScreen() {
     setAreas((prev) =>
       prev.includes(a)
         ? prev.filter((x) => x !== a)
-        : prev.length >= MAX_AREAS
+        : prev.length >= MAX_AREAS || (opcoes.find(o => o.label === a)?.ministerio && prev.some(x => opcoes.find(o => o.label === x)?.ministerio === opcoes.find(o => o.label === a)?.ministerio))
         ? prev
         : [...prev, a]
     );
@@ -589,7 +589,7 @@ export default function VoluntariadoScreen() {
               )}
 
               <Text style={styles.fieldLabel}>
-                {t("Onde você quer servir? (até")} {MAX_AREAS})
+                {t("Escolha seu primeiro e segundo interesse")}
               </Text>
               {opcoesLoading ? (
                 <Text style={styles.muted}>{t("Carregando áreas…")}</Text>
@@ -599,7 +599,7 @@ export default function VoluntariadoScreen() {
                 <View style={styles.chips}>
                   {opcoes.map((o) => {
                     const sel = areas.includes(o.label);
-                    const disabled = !sel && areas.length >= MAX_AREAS;
+                    const disabled = !sel && (areas.length >= MAX_AREAS || (!!o.ministerio && areas.some(a => opcoes.find(x => x.label === a)?.ministerio === o.ministerio)));
                     return (
                       <Pressable
                         key={o.label}
@@ -610,12 +610,16 @@ export default function VoluntariadoScreen() {
                         ]}
                         onPress={() => !disabled && toggleArea(o.label)}
                       >
-                        <Text style={[styles.chipTxt, sel && styles.chipTxtSel]}>{o.label}</Text>
+                        <Text style={[styles.chipTxt, sel && styles.chipTxtSel]}>{sel ? `${areas.indexOf(o.label) + 1}º · ` : ""}{o.label}</Text>
                       </Pressable>
                     );
                   })}
                 </View>
               )}
+
+              <Text style={styles.muted}>{t("O segundo interesse é opcional e deve ser de outro ministério. A coordenação fará o primeiro contato.")}</Text>
+              {areas.map((a, i) => <Text key={a} style={styles.fieldLabel}>{i + 1}º {t("interesse")}: {a}</Text>)}
+              {areas.length === 2 && <Button title={t("Inverter interesses")} onPress={() => setAreas(([a,b]) => [b,a])} />}
 
               {/* Antecedentes (Kids/Bridge — vem do form-opcoes) */}
               {opcoesAntecedentes.map((o) => (

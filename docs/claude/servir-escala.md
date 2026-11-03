@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Inscrição · dois interesses ordenados (2026-11-03)
+
 - ⚠️⚠️ SERVIR · "Pessoas do Servir" abre pra LÍDER, recortada aos times dele (24/09/2026)
 - ⚠️ SERVIR · o "Adicionar" separa QUEM É DA VAGA do resto do time (24/09/2026)
 - ⚠️⚠️ SERVIR · "PESSOAS DO SERVIR" — o ADMIN vincula pessoa × time × cultos pelo app (24/09/2026)
@@ -409,3 +411,11 @@ concessão de líder do time no ERP (`/app/voluntariado/admin/pessoas/:id/lidera
 o servidor decide quem pode e recusa tirar a própria liderança. Sem cadastro ligado ao
 perfil, a seção avisa em vez de mostrar botões. Servidor antigo (sem `tem_cadastro`):
 a seção não aparece.
+
+## Inscrição · dois interesses ordenados (2026-11-03)
+
+O formulário permite primeiro interesse e segundo opcional, com botão para inverter a
+prioridade. Ministérios devem ser distintos; o catálogo do servidor informa `ministerio`,
+preservando rótulos de subárea. A validação definitiva fica no backend. A inscrição segue
+para contato inicial da Ariel, depois para a primeira área. Publicar após a migration e
+a versão correspondente do ERP; nenhuma dependência nativa nova.

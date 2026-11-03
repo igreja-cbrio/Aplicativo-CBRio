@@ -329,6 +329,7 @@ export function getVoluntarioDetalhe(volProfileId: string) {
 
 // ===== Tipos do form de voluntariado =====
 export type VoluntariadoOpcao = {
+  ministerio?: string | null;
   label: string;
   area_canonica: string;
   exige_dados_menor: boolean;
