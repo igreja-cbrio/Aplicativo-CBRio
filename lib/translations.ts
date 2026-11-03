@@ -6,6 +6,10 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Escolha seu primeiro e segundo interesse": {en: "Choose your first and second preferences", es: "Elige tu primera y segunda preferencia"},
+  "O segundo interesse é opcional e deve ser de outro ministério. A coordenação fará o primeiro contato.": {en: "The second preference is optional and must be a different ministry. The coordination team will contact you first.", es: "La segunda preferencia es opcional y debe ser de otro ministerio. El equipo de coordinación hará el primer contacto."},
+  "interesse": {en: "preference", es: "preferencia"},
+  "Inverter interesses": {en: "Swap preferences", es: "Invertir preferencias"},
   "Novos pedidos estão disponíveis para membros ativos. Suas cartas já publicadas continuam acessíveis abaixo.": {"en": "New requests are available to active members. Your published letters remain accessible below.", "es": "Las nuevas solicitudes están disponibles para miembros activos. Tus cartas publicadas siguen accesibles abajo."},
   "Sua carta está pronta": {"en": "Your letter is ready", "es": "Tu carta está lista"},
   "Salve o PDF ou compartilhe com a igreja de destino.": {"en": "Save the PDF or share it with your destination church.", "es": "Guarda el PDF o compártelo con la iglesia de destino."},
