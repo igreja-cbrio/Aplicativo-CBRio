@@ -432,10 +432,6 @@ export type VoluntariadoMe = {
   rodizio_semana?: number | null;
   /** Semanas do mês (1..5) em que está disponível · [] = todas (09/11/2026). */
   rodizio_semanas?: number[];
-  /** Tipos de culto em que está disponível · [] = todos. */
-  cultos_disponiveis?: string[];
-  /** Catálogo de cultos pra escolher · null = servidor ainda sem a migration. */
-  cultos_opcoes?: CultoOpcao[] | null;
   escalas?: Array<{
     id: string;
     data: string;
@@ -455,21 +451,48 @@ export async function getVoluntariadoMe(): Promise<VoluntariadoMe> {
 export type DisponibilidadeSalva = {
   rodizio_semana: number | null;
   rodizio_semanas: number[] | null;
-  cultos_disponiveis: string[] | null;
 };
 
 /**
- * A pessoa declara em quais SEMANAS (1..5, várias) e CULTOS está disponível
- * (09/11/2026). Campo ausente não mexe. Lista vazia = disponível em tudo.
- * ⚠️ Fora do que marcou, o preenchimento automático não escala (decisão do Marcos).
+ * A pessoa declara em quais SEMANAS do mês (1..5, várias) está disponível
+ * (09/11/2026). Lista vazia = disponível em todas. Os cultos são POR TIME
+ * (`salvarCultosDoTime`). Fora do que marcou, o automático não escala.
  */
-export function salvarDisponibilidade(d: { semanas?: number[]; cultos?: string[] }) {
+export function salvarDisponibilidade(d: { semanas: number[] }) {
   return apiPatch<DisponibilidadeSalva>("/app/voluntariado/me/rodizio", d);
 }
 
-/** O admin/líder ajusta a disponibilidade de alguém (mesmo corpo). */
-export function salvarDisponibilidadeDe(pessoaId: string, d: { semanas?: number[]; cultos?: string[] }) {
+/** O admin/líder ajusta as semanas de alguém (mesmo corpo). */
+export function salvarDisponibilidadeDe(pessoaId: string, d: { semanas: number[] }) {
   return apiPatch<DisponibilidadeSalva>(`/app/voluntariado/admin/pessoas/${pessoaId}/rodizio`, d);
+}
+
+// ===== MEUS TIMES · a pessoa vê onde está e decide (09/11/2026) =====
+export type MeuTime = {
+  team_id: string;
+  team_name: string;
+  area: string | null;
+  funcoes: string[];
+  /** Cultos em que serve NESTE time · null = todos. */
+  cultos: string[] | null;
+};
+
+/** Os times da própria pessoa + o catálogo de cultos pra escolher. */
+export function getMeusTimes() {
+  return apiGet<{ times: MeuTime[]; cultos_opcoes: CultoOpcao[] }>("/app/voluntariado/me/times");
+}
+
+/** Escolhe os cultos em que serve NESTE time (mínimo 1; todos = sem restrição). */
+export function salvarCultosDoTime(teamId: string, serviceTypeIds: string[]) {
+  return apiPatch<{ ok: boolean; cultos: string[] | null }>(
+    `/app/voluntariado/me/times/${encodeURIComponent(teamId)}/cultos`,
+    { service_type_ids: serviceTypeIds },
+  );
+}
+
+/** Sai do time (o servidor desativa o vínculo; a coordenação desfaz pelo sistema). */
+export function sairDoTime(teamId: string) {
+  return apiDelete<{ ok: boolean }>(`/app/voluntariado/me/times/${encodeURIComponent(teamId)}`);
 }
 
 // ===== ADMIN do Servir · pessoas × times × cultos (só papel admin; o servidor trava com 403) =====
@@ -489,10 +512,7 @@ export type AdminPessoaDetalhe = {
     id: string; full_name: string; avatar_url: string | null; telefone: string | null; rodizio_semana: number | null;
     /** Disponibilidade declarada (09/11/2026) · ausente = servidor antigo. */
     rodizio_semanas?: number[] | null;
-    cultos_disponiveis?: string[] | null;
   };
-  /** Catálogo de cultos · null/ausente = servidor sem a migration. */
-  cultos_opcoes?: CultoOpcao[] | null;
   /** admin vê tudo; lider vê só os times que lidera. */
   escopo?: "admin" | "lider";
   vinculos: AdminVinculo[];

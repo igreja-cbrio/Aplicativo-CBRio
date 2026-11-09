@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- ⚠️⚠️ SERVIR · "Meus times": a pessoa escolhe os cultos de CADA time e sai do time · datas viram botão (2026-11-09 tarde)
 - ⚠️⚠️ SERVIR · "Quando posso servir": cultos × semanas 1–5 (várias) · virou DISPONIBILIDADE (2026-11-09)
 - Inscrição · dois interesses ordenados (2026-11-03)
 
@@ -445,3 +446,24 @@ A régua mora no ERP (`backend/utils/disponibilidadeDeclarada.js`); o app só l�
 - `servir-pessoas`: chips 1ª–5ª múltiplos + cultos da pessoa (o "Domingo de
   preferência" de um valor só sobrescreveria as várias semanas que a pessoa marcou).
 - Nada marcado = disponível em tudo. O servidor grava NULL pra "nada" e pra "tudo".
+
+## ⚠️⚠️ SERVIR · "Meus times": a pessoa escolhe os cultos de CADA time e sai do time · datas viram botão (2026-11-09 tarde)
+
+Ideia do Marcos logo depois do "Quando posso servir": *"ela vê qual time ela foi
+colocada em qual culto, ela tem apenas duas opções: um 'x' para sair do time, com
+confirmação, e poder escolher quais cultos"* — servir na produção no sábado e na
+recepção no domingo.
+
+- Ordem da aba Servir: **Quando posso servir** (só semanas 1ª–5ª) → **Meus times**
+  (`components/voluntariado/MeusTimes.tsx`) → **datas bloqueadas**
+  (`Disponibilidade.tsx`, que sem nenhuma data vira só um botão; com data ou erro
+  volta o quadro).
+- Os cultos são os do TIME (`vol_team_members.service_type_ids`, mesma regra do líder
+  no sistema). Desmarcar o último não deixa (voltaria a "todos"); pra deixar o time
+  existe o × com confirmação (diálogo da casa). Endpoints: `GET /app/voluntariado/me/times`,
+  `PATCH .../me/times/:teamId/cultos`, `DELETE .../me/times/:teamId` (`getMeusTimes`,
+  `salvarCultosDoTime`, `sairDoTime`).
+- Saíram os cultos POR PESSOA do "Quando posso servir" e do "Pessoas do Servir"
+  (lá ficam os cultos por time, que já existiam). `normalizarCultos` saiu de
+  `lib/disponibilidadeSemanas.ts`.
+- O rótulo da escala ganhou o motivo "não marcou este culto neste time" (vem do servidor).

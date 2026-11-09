@@ -6,7 +6,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { salvarDisponibilidade } from "@/lib/api";
-import { alternar, SEMANAS_DO_MES, type CultoOpcao } from "@/lib/disponibilidadeSemanas";
+import { alternar, SEMANAS_DO_MES } from "@/lib/disponibilidadeSemanas";
 
 /**
  * Semanas e cultos em que posso servir (09/11/2026 · era "Meu domingo de
@@ -22,32 +22,22 @@ import { alternar, SEMANAS_DO_MES, type CultoOpcao } from "@/lib/disponibilidade
  * ⚠️ Salva a cada toque (como era), um pedido por vez. Se falhar, desfaz o
  * toque e avisa. A escolha local fica na tela mesmo quando o servidor guarda
  * "tudo marcado" como vazio.
- * ⚠️ `cultos === null` = servidor sem a migration ⇒ a parte de cultos some.
+ * ⚠️ (09/11 à tarde) Os CULTOS saíram daqui: são POR TIME, no cartão "Meus
+ * times" logo abaixo (a pessoa pode servir na produção no sábado e na recepção
+ * no domingo). Aqui ficam só as semanas.
  */
-export function MinhaDisponibilidade({
-  semanasIniciais,
-  cultosIniciais,
-  cultos,
-}: {
-  semanasIniciais: number[];
-  cultosIniciais: string[];
-  cultos: CultoOpcao[] | null;
-}) {
+export function MinhaDisponibilidade({ semanasIniciais }: { semanasIniciais: number[] }) {
   const colors = useColors();
   const t = useT();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [semanas, setSemanas] = useState<number[]>(semanasIniciais);
-  const [meusCultos, setMeusCultos] = useState<string[]>(cultosIniciais);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   // Recarregou a tela com outro valor do servidor: assume o novo.
   const chaveSem = semanasIniciais.join(",");
-  const chaveCul = cultosIniciais.join(",");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { setSemanas(semanasIniciais); }, [chaveSem]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { setMeusCultos(cultosIniciais); }, [chaveCul]);
 
   async function trocarSemana(n: number) {
     if (salvando) return;
@@ -59,17 +49,7 @@ export function MinhaDisponibilidade({
     finally { setSalvando(false); }
   }
 
-  async function trocarCulto(id: string) {
-    if (salvando) return;
-    const anterior = meusCultos;
-    const nova = alternar(meusCultos, id);
-    setMeusCultos(nova); setErro(null); setSalvando(true);
-    try { await salvarDisponibilidade({ cultos: nova }); }
-    catch (e) { setMeusCultos(anterior); setErro(e instanceof Error && e.message ? e.message : t("Não deu pra salvar. Tente de novo.")); }
-    finally { setSalvando(false); }
-  }
-
-  const nadaMarcado = semanas.length === 0 && (cultos === null || meusCultos.length === 0);
+  const nadaMarcado = semanas.length === 0;
 
   return (
     <View style={styles.box}>
@@ -78,7 +58,7 @@ export function MinhaDisponibilidade({
         <Text style={styles.titulo}>{t("Quando posso servir")}</Text>
       </View>
       <Text style={styles.hint}>
-        {t("Marque as semanas do mês e os cultos em que você pode ser escalado. Fora deles, a escala automática não te coloca. Sem nada marcado, você fica disponível em todos.")}
+        {t("Marque as semanas do mês em que você pode ser escalado. Fora delas, a escala automática não te coloca. Sem nada marcado, você fica disponível em todas.")}
       </Text>
 
       <Text style={styles.rotulo}>{t("Semanas do mês")}</Text>
@@ -104,33 +84,7 @@ export function MinhaDisponibilidade({
         {t("A semana conta a vez daquele dia no mês: quem serve no sábado e marca a 2ª está disponível no 2º sábado. A 5ª só existe em alguns meses.")}
       </Text>
 
-      {cultos && cultos.length > 0 && (
-        <>
-          <Text style={styles.rotulo}>{t("Cultos")}</Text>
-          <View style={styles.chips}>
-            {cultos.map((c) => {
-              const ativo = meusCultos.includes(c.id);
-              const hora = c.recurrence_time ? c.recurrence_time.slice(0, 5) : "";
-              return (
-                <Pressable
-                  key={c.id}
-                  onPress={() => trocarCulto(c.id)}
-                  disabled={salvando}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: ativo, disabled: salvando }}
-                  style={[styles.chip, ativo && styles.chipAtivo]}
-                >
-                  <Text style={[styles.chipTxt, ativo && styles.chipTxtAtivo]}>
-                    {c.name}{hora && !c.name.includes(hora) ? ` · ${hora}` : ""}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </>
-      )}
-
-      {nadaMarcado && <Text style={styles.pequeno}>{t("Hoje você está disponível em todas as semanas e cultos.")}</Text>}
+      {nadaMarcado && <Text style={styles.pequeno}>{t("Hoje você está disponível em todas as semanas.")}</Text>}
       {erro && <Text style={styles.erro}>{erro}</Text>}
     </View>
   );
