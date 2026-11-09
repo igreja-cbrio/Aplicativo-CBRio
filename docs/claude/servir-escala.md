@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- ⚠️⚠️ SERVIR · "Quando posso servir": cultos × semanas 1–5 (várias) · virou DISPONIBILIDADE (2026-11-09)
 - Inscrição · dois interesses ordenados (2026-11-03)
 
 - ⚠️⚠️ SERVIR · "Pessoas do Servir" abre pra LÍDER, recortada aos times dele (24/09/2026)
@@ -419,3 +420,28 @@ prioridade. Ministérios devem ser distintos; o catálogo do servidor informa `m
 preservando rótulos de subárea. A validação definitiva fica no backend. A inscrição segue
 para contato inicial da Ariel, depois para a primeira área. Publicar após a migration e
 a versão correspondente do ERP; nenhuma dependência nativa nova.
+
+## ⚠️⚠️ SERVIR · "Quando posso servir": cultos × semanas 1–5 (várias) · virou DISPONIBILIDADE (2026-11-09)
+
+Pedido do Marcos (09/11): (1) o voluntário marca os **cultos** em que pode ser
+escalado; (2) as semanas viram **múltipla escolha**; (3) **5ª semana**, contada como
+"a N-ésima vez daquele dia no mês" (sábado + 2ª = 2º sábado).
+
+**Decisão dele: é DISPONIBILIDADE.** Fora do que a pessoa marcou, o preenchimento
+automático do ERP não escala; na escala à mão ela aparece no fim, com aviso.
+A régua mora no ERP (`backend/utils/disponibilidadeDeclarada.js`); o app só lê e grava.
+
+- `components/voluntariado/MinhaDisponibilidade.tsx` substitui o `DomingoPreferido`
+  (apagado). Salva a cada toque, um pedido por vez; erro desfaz o toque. Só aparece
+  quando `/me` manda `rodizio_semanas`; a parte de cultos só com `cultos_opcoes`
+  (servidor com a migration `20261109140000`).
+- `lib/disponibilidadeSemanas.ts` (pura · `test/disponibilidadeSemanas.test.ts`):
+  normaliza semanas (cai em `rodizio_semana` antiga), cultos e catálogo.
+- `PATCH /app/voluntariado/me/rodizio { semanas?, cultos? }` (`salvarDisponibilidade`)
+  e o do admin (`salvarDisponibilidadeDe`). `salvarRodizioSemana`/`salvarRodizioDe`
+  saíram.
+- `escala-supervisor`: o rótulo da pessoa vem do servidor — "disponível neste culto"
+  (verde) ou `fora_motivo` (laranja). Saíram `semanaDoCulto`/`ehDomingo` desta tela.
+- `servir-pessoas`: chips 1ª–5ª múltiplos + cultos da pessoa (o "Domingo de
+  preferência" de um valor só sobrescreveria as várias semanas que a pessoa marcou).
+- Nada marcado = disponível em tudo. O servidor grava NULL pra "nada" e pra "tudo".

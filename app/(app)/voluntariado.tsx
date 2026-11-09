@@ -32,7 +32,7 @@ type EscalaApi = {
 type CheckinHist = { id: string; checked_in_at: string | null; servico: string | null; data: string | null };
 type EscalasResp = { escalas: EscalaApi[]; historico: CheckinHist[]; vol_profile_id: string | null };
 import { Disponibilidade } from "@/components/voluntariado/Disponibilidade";
-import { DomingoPreferido } from "@/components/voluntariado/DomingoPreferido";
+import { MinhaDisponibilidade } from "@/components/voluntariado/MinhaDisponibilidade";
 import { isValidCPF, maskCPF, onlyDigits } from "@/lib/validators";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -491,9 +491,16 @@ export default function VoluntariadoScreen() {
               </SecaoRecolhivel>
 
               {volProfileId && <Disponibilidade volProfileId={volProfileId} />}
-              {/* Domingo de preferência (24/09): quem monta a escala vê esta pessoa
-                  primeiro nos cultos dessa semana. `undefined` = servidor antigo. */}
-              {volProfileId && me?.rodizio_semana !== undefined && <DomingoPreferido inicial={me?.rodizio_semana ?? null} />}
+              {/* Semanas e cultos em que posso servir (09/11/2026 · era o domingo de
+                  preferência de 24/09). É DISPONIBILIDADE: fora do que a pessoa marcou o
+                  automático não escala. `undefined` = servidor antigo ⇒ sem card. */}
+              {volProfileId && me?.rodizio_semanas !== undefined && (
+                <MinhaDisponibilidade
+                  semanasIniciais={me.rodizio_semanas}
+                  cultosIniciais={me.cultos_disponiveis ?? []}
+                  cultos={me.cultos_opcoes ?? null}
+                />
+              )}
 
               {historico.length > 0 && (
                 <SecaoRecolhivel titulo={t("Histórico de check-in")} resumo={String(historico.length)}>

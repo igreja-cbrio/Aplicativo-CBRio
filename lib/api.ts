@@ -7,6 +7,7 @@
 //
 // Use api.get / api.post sempre que precisar falar com o backend.
 
+import type { CultoOpcao } from "./disponibilidadeSemanas";
 import { supabase } from "./supabase";
 import type { Marcadores } from "./marcadoresJornada";
 
@@ -240,8 +241,12 @@ export type PoolVoluntario = {
   planning_center_id: string | null;
   /** Semana do mês (1..4) que a pessoa prefere servir · null = não declarou. */
   rodizio_semana?: number | null;
-  /** A preferência dela bate com a semana do culto pedido — o servidor já ordenou por isso. */
+  /** Ela marcou cultos/semanas e ESTE culto está dentro — o servidor já ordenou por isso. */
   prefere_este_culto?: boolean;
+  /** Ela marcou cultos/semanas e este culto está FORA (09/11/2026). Continua escalável à mão; vem no fim. */
+  fora_da_disponibilidade?: boolean;
+  /** Texto do servidor: "não marcou este culto" / "não marcou esta semana"… */
+  fora_motivo?: string | null;
   /** Veio da lista do TIME (team_id), não da busca geral. */
   do_time?: boolean;
   /** As funções desta pessoa NESTE time (uma por vínculo). Só vem com `team_id`. */
@@ -425,6 +430,12 @@ export type VoluntariadoMe = {
   voluntario_ativo: boolean;
   /** Semana do mês (1..4) que a pessoa prefere servir · null = não declarou. */
   rodizio_semana?: number | null;
+  /** Semanas do mês (1..5) em que está disponível · [] = todas (09/11/2026). */
+  rodizio_semanas?: number[];
+  /** Tipos de culto em que está disponível · [] = todos. */
+  cultos_disponiveis?: string[];
+  /** Catálogo de cultos pra escolher · null = servidor ainda sem a migration. */
+  cultos_opcoes?: CultoOpcao[] | null;
   escalas?: Array<{
     id: string;
     data: string;
@@ -441,9 +452,24 @@ export async function getVoluntariadoMe(): Promise<VoluntariadoMe> {
   return normalizarVoluntariadoMe(await apiGet<unknown>("/app/voluntariado/me"));
 }
 
-/** A pessoa declara a semana do mês que prefere servir (1..4) ou tira (null). Preferência, não bloqueio. */
-export function salvarRodizioSemana(semana: number | null) {
-  return apiPatch<{ rodizio_semana: number | null }>("/app/voluntariado/me/rodizio", { semana });
+export type DisponibilidadeSalva = {
+  rodizio_semana: number | null;
+  rodizio_semanas: number[] | null;
+  cultos_disponiveis: string[] | null;
+};
+
+/**
+ * A pessoa declara em quais SEMANAS (1..5, várias) e CULTOS está disponível
+ * (09/11/2026). Campo ausente não mexe. Lista vazia = disponível em tudo.
+ * ⚠️ Fora do que marcou, o preenchimento automático não escala (decisão do Marcos).
+ */
+export function salvarDisponibilidade(d: { semanas?: number[]; cultos?: string[] }) {
+  return apiPatch<DisponibilidadeSalva>("/app/voluntariado/me/rodizio", d);
+}
+
+/** O admin/líder ajusta a disponibilidade de alguém (mesmo corpo). */
+export function salvarDisponibilidadeDe(pessoaId: string, d: { semanas?: number[]; cultos?: string[] }) {
+  return apiPatch<DisponibilidadeSalva>(`/app/voluntariado/admin/pessoas/${pessoaId}/rodizio`, d);
 }
 
 // ===== ADMIN do Servir · pessoas × times × cultos (só papel admin; o servidor trava com 403) =====
@@ -459,7 +485,14 @@ export type AdminVinculo = {
   is_active: boolean;
 };
 export type AdminPessoaDetalhe = {
-  pessoa: { id: string; full_name: string; avatar_url: string | null; telefone: string | null; rodizio_semana: number | null };
+  pessoa: {
+    id: string; full_name: string; avatar_url: string | null; telefone: string | null; rodizio_semana: number | null;
+    /** Disponibilidade declarada (09/11/2026) · ausente = servidor antigo. */
+    rodizio_semanas?: number[] | null;
+    cultos_disponiveis?: string[] | null;
+  };
+  /** Catálogo de cultos · null/ausente = servidor sem a migration. */
+  cultos_opcoes?: CultoOpcao[] | null;
   /** admin vê tudo; lider vê só os times que lidera. */
   escopo?: "admin" | "lider";
   vinculos: AdminVinculo[];
@@ -518,9 +551,6 @@ export function tirarEditorDeCulto(pessoaId: string, culto: string) {
 /** Link da ficha de inscrição do voluntariado, com o nome pré-preenchido, e o texto pro WhatsApp. */
 export function conviteServir(nome: string) {
   return apiGet<{ url: string; texto: string }>(`/app/voluntariado/admin/convite?nome=${encodeURIComponent(nome)}`);
-}
-export function salvarRodizioDe(pessoaId: string, semana: number | null) {
-  return apiPatch<{ rodizio_semana: number | null }>(`/app/voluntariado/admin/pessoas/${pessoaId}/rodizio`, { semana });
 }
 
 // ===== /app/grupos/* (líder/supervisor aprova inscrições do grupo) =====
