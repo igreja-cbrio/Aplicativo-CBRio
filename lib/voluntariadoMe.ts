@@ -18,6 +18,7 @@
 // ============================================================================
 
 import { type VoluntariadoMe } from "./api";
+import { normalizarCultos, normalizarCultosOpcoes, normalizarSemanas } from "./disponibilidadeSemanas";
 
 /**
  * Normaliza a resposta do servidor.
@@ -47,6 +48,14 @@ export function normalizarVoluntariadoMe(raw: unknown): VoluntariadoMe {
     // Só entra quando o servidor mandou — servidor antigo não tem o campo e a
     // tela trata `undefined` como "não sei", não como "sem preferência".
     ...(obj && "rodizio_semana" in obj ? { rodizio_semana: normalizarSemana(obj.rodizio_semana) } : {}),
+    // Disponibilidade declarada (09/11/2026): semanas 1..5 (várias) e cultos.
+    // Só entram quando o servidor manda o campo — servidor antigo = `undefined`
+    // e a tela cai no comportamento de antes.
+    ...(obj && ("rodizio_semanas" in obj || "rodizio_semana" in obj)
+      ? { rodizio_semanas: normalizarSemanas(obj.rodizio_semanas, obj.rodizio_semana) }
+      : {}),
+    ...(obj && "cultos_disponiveis" in obj ? { cultos_disponiveis: normalizarCultos(obj.cultos_disponiveis) } : {}),
+    ...(obj && "cultos_opcoes" in obj ? { cultos_opcoes: normalizarCultosOpcoes(obj.cultos_opcoes) } : {}),
   } as VoluntariadoMe;
 }
 
@@ -54,6 +63,9 @@ type Cru = {
   voluntario_ativo?: unknown;
   inscricao?: unknown;
   rodizio_semana?: unknown;
+  rodizio_semanas?: unknown;
+  cultos_disponiveis?: unknown;
+  cultos_opcoes?: unknown;
   escalas?: VoluntariadoMe["escalas"];
 };
 

@@ -49,7 +49,7 @@ import {
 } from "@/lib/api";
 import {
   agruparCultosPorTipo, cultoInicial, montarTimes, resumoDoCulto, destinoDoArraste, xParaCentralizar,
-  semanaDoCulto, ehDomingo, filtrarPool, dividirPorVaga,
+  filtrarPool, dividirPorVaga,
   SEM_EQUIPE, SEM_FUNCAO, SEM_TIPO, type Time, type PosicaoDoTime,
 } from "@/lib/escalaTimes";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
@@ -354,12 +354,13 @@ export default function EscalaSupervisorScreen() {
   const posicaoDoAdd = addPosicao && !outraFuncao.trim() ? (timeDoAdd?.posicoes ?? []).find(p => p.nome === addPosicao) : undefined;
   const vagaEmFoco = noTime && addPosicao && !outraFuncao.trim() ? { id: posicaoDoAdd?.position_id ?? null, nome: addPosicao } : null;
   const secoesAdd = dividirPorVaga(listaAdd, vagaEmFoco);
-  const semanaCulto = semanaDoCulto(servicoSel?.scheduled_at ?? null);
-  const cultoDeDomingo = ehDomingo(servicoSel?.scheduled_at ?? null);
-  const rotuloPreferencia = (v: PoolVoluntario) => {
-    if (!v.rodizio_semana) return null;
-    if (v.prefere_este_culto) return cultoDeDomingo ? t("prefere este domingo") : t("prefere esta semana do mês");
-    return (cultoDeDomingo ? t("prefere o {n}º domingo") : t("prefere a {n}ª semana do mês")).replace("{n}", String(v.rodizio_semana));
+  // Disponibilidade declarada (09/11/2026): o SERVIDOR decide quem cabe neste
+  // culto e já ordena (quem marcou e cabe · quem não marcou · quem está fora).
+  // Fora continua escalável à mão — a tela só avisa.
+  const rotuloPreferencia = (v: PoolVoluntario): { txt: string; fora: boolean } | null => {
+    if (v.fora_da_disponibilidade) return { txt: v.fora_motivo ? t(v.fora_motivo) : t("fora da disponibilidade"), fora: true };
+    if (v.prefere_este_culto) return { txt: t("disponível neste culto"), fora: false };
+    return null;
   };
 
   async function carregarPoolDoTime(teamId: string | null | undefined) {
@@ -474,7 +475,7 @@ export default function EscalaSupervisorScreen() {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.pessoaNome} numberOfLines={1}>{v.full_name}</Text>
-          {pref && <Text style={[styles.pequeno, { color: v.prefere_este_culto ? colors.success : colors.textMuted }]} numberOfLines={1}>{pref}</Text>}
+          {pref && <Text style={[styles.pequeno, { color: pref.fora ? colors.warning : colors.success }]} numberOfLines={1}>{pref.txt}</Text>}
         </View>
         {salvandoId === v.id ? <ActivityIndicator color={colors.primary} />
           : escalado ? <Text style={[styles.pequeno, { color: colors.textMuted }]}>{t("nesta equipe")}</Text>
@@ -843,9 +844,7 @@ export default function EscalaSupervisorScreen() {
                     ? t("Buscando fora do time")
                     : poolErro
                       ? t("Não deu pra carregar o time. Busque pelo nome.")
-                      : semanaCulto && cultoDeDomingo
-                        ? t("Pessoas do time · quem prefere o {n}º domingo vem primeiro").replace("{n}", String(semanaCulto))
-                        : t("Pessoas do time")}
+                      : t("Pessoas do time · quem marcou que pode neste culto vem primeiro")}
                 </Text>
                 <Pressable onPress={alternarForaDoTime} hitSlop={8} accessibilityRole="button">
                   <Text style={[styles.pequeno, { color: colors.primary, fontWeight: "700" }]}>{noTime ? t("Buscar fora do time") : t("Voltar ao time")}</Text>
