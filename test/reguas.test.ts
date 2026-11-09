@@ -155,6 +155,7 @@ describe("hierarquia · a árvore do `cd ..`", () => {
     expect(rotaPai("/trocar-senha")).toBe("/configuracoes");
     expect(rotaPai("/cartoes")).toBe("/perfil");
     expect(rotaPai("/kids-filho")).toBe("/kids");
+    expect(rotaPai("/kids-aviso")).toBe("/kids-filho");
     expect(rotaPai("/evento")).toBe("/inscricoes");
     expect(rotaPai("/next-turma")).toBe("/next");
     expect(rotaPai("/next-espera")).toBe("/next");
@@ -170,6 +171,7 @@ describe("hierarquia · a árvore do `cd ..`", () => {
     expect(paramsDoPai("/devocional-plano-dia", { planoId: ["p1"] })).toEqual({ planoId: "p1" });
     expect(paramsDoPai("/devocional-plano-dia", {})).toEqual({});
     expect(paramsDoPai("/kids-filho", { id: "x" })).toEqual({});
+    expect(paramsDoPai("/kids-aviso", { id: "c1", nome: "Ana" })).toEqual({ id: "c1" });
   });
 
   it("rota fora do mapa cai na Home (destino previsível, não adivinhação)", () => {
@@ -190,7 +192,7 @@ describe("hierarquia · a árvore do `cd ..`", () => {
       "/meu-grupo", "/voluntariado", "/cuidados", "/devocional", "/menu",
       "/grupos", "/grupo-detalhe", "/grupo-membros", "/grupo-visita", "/grupo-inscricoes", "/grupo-editar",
       "/escala-supervisor", "/anotacoes", "/perfil", "/cartoes", "/familia", "/kids",
-      "/kids-filho", "/kids-solicitar-vinculo", "/jornada", "/generosidade",
+      "/kids-filho", "/kids-aviso", "/kids-solicitar-vinculo", "/jornada", "/generosidade",
       "/comprovante-doacoes", "/inscricoes", "/batismo", "/inscricao-batismo", "/next",
       "/next-turma", "/evento", "/videos", "/configuracoes", "/trocar-senha",
       "/fale-conosco", "/sobre", "/notificacoes", "/mural", "/modo-culto", "/culto-detalhe",

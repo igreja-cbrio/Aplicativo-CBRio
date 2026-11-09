@@ -45,7 +45,7 @@ import { router, type Href } from "expo-router";
  *   │   └── /anotacoes         (tela antiga; segue no mapa)
  *   ├── /menu              barra
  *   │   ├── /perfil → /cartoes
- *   │   ├── /familia → /kids → /kids-filho, /kids-solicitar-vinculo
+ *   │   ├── /familia → /kids → /kids-filho → /kids-aviso, /kids-solicitar-vinculo
  *   │   ├── /jornada
  *   │   ├── /generosidade → /comprovante-doacoes
  *   │   ├── /inscricoes → /batismo → /inscricao-batismo
@@ -112,6 +112,7 @@ const PAI: Record<string, string> = {
   "/familia": "/menu",
   "/kids": "/familia",
   "/kids-filho": "/kids",
+  "/kids-aviso": "/kids-filho",
   "/kids-solicitar-vinculo": "/kids",
   "/jornada": "/menu",
   "/censo": "/menu",
@@ -184,6 +185,8 @@ export function registrarRotaAtual(rota: string, params?: Record<string, unknown
 // senão o plano seria outra instância). Parâmetro ausente simplesmente não sobe.
 const PARAMS_QUE_SOBEM: Record<string, string[]> = {
   "/devocional-plano-dia": ["planoId"],
+  // O aviso é da CRIANÇA: voltar sem o `id` abriria a ficha vazia.
+  "/kids-aviso": ["id"],
 };
 
 /** Os parâmetros que o pai herda da rota atual (vazio na maioria). */

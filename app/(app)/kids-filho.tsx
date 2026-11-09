@@ -44,6 +44,7 @@ type Detalhe = {
     tem_alergia: boolean | null; alergia_qual: string | null;
     tem_limitacao_fisica: boolean | null; limitacao_fisica_qual: string | null;
     parentesco: string | null; foto_url: string | null; foto_consentida?: boolean;
+    pode_avisar_necessidade?: boolean;
   };
   sala_sugerida: { nome: string; cor: string } | null;
   total_checkins: number;
@@ -297,6 +298,18 @@ export default function KidsFilhoScreen() {
               </View>
             )}
 
+            {/* O BACKEND decide se há o que avisar; o app só obedece. */}
+            {c.pode_avisar_necessidade ? (
+              <Pressable
+                style={styles.avisoBtn}
+                onPress={() => router.push({ pathname: "/kids-aviso", params: { id: c.id, filhoId: c.id, nome: c.nome } })}
+                accessibilityRole="button">
+                <Ionicons name="megaphone-outline" size={18} color={colors.brandMid} />
+                <Text style={styles.avisoBtnTxt}>{t("Avisar que vou a um culto")}</Text>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </Pressable>
+            ) : null}
+
             {/* Saúde da criança (editável pelo responsável · a equipe Kids vê no check-in) */}
             <View style={styles.saudeCard}>
               <Text style={styles.saudeTitulo}>{t("Saúde da criança")}</Text>
@@ -400,6 +413,8 @@ const makeStyles = (colors: Palette) =>
     btnPrimTxt: { color: "#fff", fontSize: font.size.md, fontWeight: "800" },
     alerta: { flexDirection: "row", gap: spacing.sm, backgroundColor: "rgba(245,158,11,0.12)", borderWidth: 1, borderColor: "rgba(245,158,11,0.3)", borderRadius: radius.md, padding: spacing.md },
     alertaTxt: { color: "#92400E", fontSize: font.size.sm, lineHeight: 19 },
+    avisoBtn: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.glassBorder, borderRadius: radius.lg, padding: spacing.md },
+    avisoBtnTxt: { color: colors.text, fontSize: font.size.md, fontWeight: "700", flex: 1 },
     saudeCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.glassBorder, borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm },
     saudeTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800" },
     saudeSub: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 18, marginBottom: spacing.xs },
