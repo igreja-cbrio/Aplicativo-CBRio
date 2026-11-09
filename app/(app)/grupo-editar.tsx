@@ -272,11 +272,17 @@ export default function GrupoEditarScreen() {
                 <Text style={styles.capaHint}>{t("Toque para escolher a capa")}</Text>
               </View>
             )}
-            <View style={styles.capaBadge}>
+            {/* ⚠️ Com foto, o selo DIZ "Trocar foto" (09/11/2026): só a
+                câmera não deixava claro que dava pra trocar — chegou o relato
+                de líder que pôs a foto e "não tem a função de alterar depois". */}
+            <View style={[styles.capaBadge, !!grupo.foto_url && !uploading && styles.capaBadgeTexto]}>
               {uploading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Ionicons name="camera" size={18} color="#fff" />
+                <>
+                  <Ionicons name="camera" size={18} color="#fff" />
+                  {!!grupo.foto_url && <Text style={styles.capaBadgeTxt}>{t("Trocar foto")}</Text>}
+                </>
               )}
             </View>
           </Pressable>
@@ -285,9 +291,14 @@ export default function GrupoEditarScreen() {
           <View style={styles.capaAcoes}>
             <Text style={styles.capaAviso}>{t("A capa aparece na lista de grupos do app e do site.")}</Text>
             {!!grupo.foto_url && (
-              <Pressable onPress={removerCapa} disabled={uploading} hitSlop={8} accessibilityRole="button">
-                <Text style={styles.capaRemover}>{t("Remover")}</Text>
-              </Pressable>
+              <>
+                <Pressable onPress={escolherCapa} disabled={uploading} hitSlop={8} accessibilityRole="button">
+                  <Text style={styles.capaTrocar}>{t("Trocar foto")}</Text>
+                </Pressable>
+                <Pressable onPress={removerCapa} disabled={uploading} hitSlop={8} accessibilityRole="button">
+                  <Text style={styles.capaRemover}>{t("Remover")}</Text>
+                </Pressable>
+              </>
             )}
           </View>
 
@@ -389,6 +400,9 @@ const makeStyles = (colors: Palette) =>
     capaAcoes: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, marginTop: -spacing.xs },
     capaAviso: { color: colors.textMuted, fontSize: font.size.sm, flex: 1 },
     capaRemover: { color: "#ef4444", fontSize: font.size.sm, fontWeight: "700" },
+    capaTrocar: { color: colors.primary, fontSize: font.size.sm, fontWeight: "700" },
+    capaBadgeTexto: { width: "auto", flexDirection: "row", gap: 6, paddingHorizontal: 12 },
+    capaBadgeTxt: { color: "#fff", fontSize: font.size.sm, fontWeight: "700" },
     capaBadge: {
       position: "absolute",
       right: spacing.md,

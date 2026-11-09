@@ -13,6 +13,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 - ⚠️ GERENCIAR GRUPO · 4 abas + editar (2026-08-05)
 - ⚠️ Grupos · UMA tela, e o CPF que travava a inscrição (05/08/2026)
 - ⚠️⚠️ Grupos · 6 mudanças na tela de gerenciar (2026-08-25 · ERP #migration `20260825170000`)
+- Grupos · "Trocar foto" explícito + próximo encontro visível quando há atrasado (2026-11-09)
 
 ---
 
@@ -638,3 +639,22 @@ mortos (3 na régua de janela, 2 na guarda estática dos becos).
 ⏳ **PENDENTE: publicar o OTA** (`npm run ota -- "msg"` — **NUNCA `eas update`
 cru**, ver a lei no topo deste arquivo). Os itens 3, 4, 5 e 6 são tela; o item 2
 já vale sem OTA porque é servidor.
+
+## Grupos · "Trocar foto" explícito + próximo encontro visível quando há atrasado (2026-11-09)
+
+Dois relatos do Marcos:
+
+1. **"O líder põe a foto mas depois não consegue alterar."** A troca SEMPRE existiu
+   (`grupo-editar.tsx` → toque na capa → `POST /app/grupos/:id/foto`), mas com foto
+   o único sinal era uma câmera de 36px no canto. Agora o selo diz **"Trocar foto"**
+   e o rodapé da capa tem **Trocar foto · Remover**. Nada de servidor mudou.
+2. **"Mostra o encontro do dia 3/11 (vencido) e eu não vejo o do 9/11."** Com chamada
+   atrasada, o herói de `grupo-membros.tsx` só mostrava o atrasado, e o "Alterar data"
+   do canto abria o PRÓXIMO sem dizer qual — parecia mexer no dia 3. Agora:
+   - o canto ("Alterar") mexe no encontro que o herói MOSTRA — abre o modal em modo
+     passado com a ocorrência da timeline (`ocAtrasada`); sem ela, o canto some;
+   - uma linha **Próximo encontro · data · hora · Alterar** embaixo abre o modal da
+     agenda no próximo (e de lá "Escolher outro encontro" alcança os seguintes).
+   Estados normal/registrado ficam como estavam (lá o herói já fala do próximo).
+
+Só tela → precisa de OTA (`npm run ota -- "msg"`).

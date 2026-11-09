@@ -1842,6 +1842,9 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "às": { en: "at", es: "a las" },
   "Motivo": { en: "Reason", es: "Motivo" },
   "Alterar data": { en: "Change date", es: "Cambiar fecha" },
+  "Alterar": { en: "Change", es: "Cambiar" },
+  "Alterar o próximo encontro": { en: "Change the next meeting", es: "Cambiar el próximo encuentro" },
+  "Trocar foto": { en: "Change photo", es: "Cambiar foto" },
 
   // ─────── Grupos · agenda da temporada (Marcos · 18/08) ───────
   "Ver a agenda da temporada": { en: "See the season schedule", es: "Ver la agenda de la temporada" },
