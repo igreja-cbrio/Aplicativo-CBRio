@@ -18,7 +18,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { useColors } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/lib/i18n";
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet, apiPost, type AvisoNecessidadeAtivo } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { useDialogo } from "@/components/ui/Dialogo";
@@ -44,11 +44,13 @@ type Detalhe = {
     tem_alergia: boolean | null; alergia_qual: string | null;
     tem_limitacao_fisica: boolean | null; limitacao_fisica_qual: string | null;
     parentesco: string | null; foto_url: string | null; foto_consentida?: boolean;
-    pode_avisar_necessidade?: boolean;
   };
   sala_sugerida: { nome: string; cor: string } | null;
   total_checkins: number;
   historico: Checkin[];
+  // TOPO da resposta (não dentro de `crianca`): o backend decide a régua.
+  pode_avisar_necessidade?: boolean;
+  avisos_ativos?: AvisoNecessidadeAtivo[];
 };
 
 function idadeLabel(meses: number | null): string {
@@ -299,7 +301,7 @@ export default function KidsFilhoScreen() {
             )}
 
             {/* O BACKEND decide se há o que avisar; o app só obedece. */}
-            {c.pode_avisar_necessidade ? (
+            {d?.pode_avisar_necessidade ? (
               <Pressable
                 style={styles.avisoBtn}
                 onPress={() => router.push({ pathname: "/kids-aviso", params: { id: c.id, filhoId: c.id, nome: c.nome } })}

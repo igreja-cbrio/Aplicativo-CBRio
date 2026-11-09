@@ -1394,9 +1394,15 @@ export function removerDaFamilia(outroId: string): Promise<MinhaFamilia & { ok: 
 
 // ===== Kids · aviso de necessidade especial =====
 export type CultoKids = { id: string; nome: string; data: string; hora: string | null };
+/** Shape PLANO do backend (`avisos_ativos` de GET /app/kids/filho/:id). */
 export type AvisoNecessidadeAtivo = {
   id: string;
-  culto: { nome: string; data: string; hora: string | null };
+  culto_id: string;
+  culto_nome: string;
+  culto_data: string;
+  culto_hora: string | null;
+  nota_do_dia?: string | null;
+  created_at?: string;
 };
 export type NovoAvisoNecessidade = {
   culto_id: string;

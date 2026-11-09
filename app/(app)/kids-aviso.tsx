@@ -129,7 +129,12 @@ export default function KidsAvisoScreen() {
         {!cultos && !erro ? (
           <View style={styles.center}><ActivityIndicator color={colors.brandMid} /></View>
         ) : erro ? (
-          <View style={styles.center}><Text style={styles.vazio}>{erro}</Text></View>
+          <View style={styles.center}>
+            <Text style={styles.vazio}>{erro}</Text>
+            <Pressable onPress={() => { setErro(null); carregar(); }} style={styles.btnPrim} accessibilityRole="button">
+              <Text style={styles.btnPrimTxt}>{t("Tentar novamente")}</Text>
+            </Pressable>
+          </View>
         ) : (
           <>
             {ativos.length > 0 && (
@@ -138,8 +143,8 @@ export default function KidsAvisoScreen() {
                 {ativos.map((a) => (
                   <View key={a.id} style={styles.ativoRow}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.itemTitulo}>{a.culto.nome}</Text>
-                      <Text style={styles.itemSub}>{quando(a.culto.data, a.culto.hora)}</Text>
+                      <Text style={styles.itemTitulo}>{a.culto_nome}</Text>
+                      <Text style={styles.itemSub}>{quando(a.culto_data, a.culto_hora)}</Text>
                     </View>
                     <Pressable onPress={() => cancelar(a.id)} disabled={cancelando === a.id} hitSlop={6} accessibilityRole="button">
                       {cancelando === a.id
@@ -219,7 +224,7 @@ const makeStyles = (colors: Palette) =>
     back: { width: 24 },
     title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800", flex: 1, textAlign: "center" },
     sub: { color: colors.textMuted, fontSize: font.size.md, textAlign: "center" },
-    center: { alignItems: "center", paddingVertical: spacing.xl },
+    center: { alignItems: "center", paddingVertical: spacing.xl, gap: spacing.md },
     vazio: { color: colors.textMuted, fontSize: font.size.md, textAlign: "center", paddingVertical: spacing.md },
     card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.glassBorder, borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm },
     cardTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800" },
@@ -231,6 +236,6 @@ const makeStyles = (colors: Palette) =>
     itemSub: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 1 },
     input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.sm, color: colors.text, fontSize: font.size.md, minHeight: 70, textAlignVertical: "top" },
     consentTxt: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 19 },
-    btnPrim: { backgroundColor: colors.primary, paddingVertical: 14, borderRadius: radius.full, alignItems: "center" },
+    btnPrim: { backgroundColor: colors.primary, paddingHorizontal: spacing.lg, paddingVertical: 14, borderRadius: radius.full, alignItems: "center" },
     btnPrimTxt: { color: "#fff", fontSize: font.size.md, fontWeight: "800" },
   });
