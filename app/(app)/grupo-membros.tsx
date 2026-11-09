@@ -611,6 +611,18 @@ export default function GrupoMembrosScreen() {
     ultimaISO: agendaAnterior,
     proximaISO: proximoDaAgenda,
   });
+  // ⚠️⚠️ ATRASADO mostra DOIS encontros (Marcos · 09/11/2026): *"mostra o do
+  // dia 3/11, mas eu não vejo o encontro do dia 9/11 porque não preenchi a
+  // frequência"*. Antes o herói só dizia o atrasado, e o "Alterar data" do canto
+  // abria o PRÓXIMO sem dizer qual era — parecia mexer no dia 3. Agora:
+  //   · o canto mexe no encontro que o herói MOSTRA (o atrasado, modo passado);
+  //   · uma linha embaixo mostra o próximo, com o seu próprio "Alterar".
+  // Sem a ocorrência na timeline (backend antigo/falha), o canto some — melhor
+  // não ter o botão do que ter um que mexe em outro dia.
+  const ocAtrasada =
+    estado.tipo === "atrasado"
+      ? (ocorrencias || []).find((o) => o.data === estado.data && !o.avulso) || null
+      : null;
   const semGente = membros.length === 0;
 
   // ── ZONA 2 · presença média (últimos 6 encontros ÷ roster ativo) ───────
@@ -768,7 +780,19 @@ export default function GrupoMembrosScreen() {
                           que o herói já diz em corpo 28 — "deixa muita
                           informação". Ação secundária no canto, e a agenda da
                           temporada foi pra DENTRO do modal. */}
-                      {proximoDaAgendaOc ? (
+                      {estado.tipo === "atrasado" ? (
+                        ocAtrasada ? (
+                          <Pressable
+                            style={styles.heroAcao}
+                            onPress={() => setOcorrenciaAlvo(ocAtrasada)}
+                            accessibilityRole="button"
+                            hitSlop={8}
+                          >
+                            <Ionicons name="create-outline" size={15} color={colors.textMuted} />
+                            <Text style={styles.heroAcaoTxt}>{t("Alterar")}</Text>
+                          </Pressable>
+                        ) : null
+                      ) : proximoDaAgendaOc ? (
                         <Pressable
                           style={styles.heroAcao}
                           onPress={() => setAgendaAlvo(proximoDaAgendaOc)}
@@ -807,6 +831,28 @@ export default function GrupoMembrosScreen() {
                         </Text>
                       </Pressable>
                     )}
+                    {/* O PRÓXIMO, quando o herói está ocupado com o atrasado
+                        (ver `ocAtrasada`). Toque abre o modal da agenda nele —
+                        e de lá "Escolher outro encontro" alcança os seguintes. */}
+                    {estado.tipo === "atrasado" && proximoDaAgendaOc ? (
+                      <Pressable
+                        style={styles.heroProx}
+                        onPress={() => setAgendaAlvo(proximoDaAgendaOc)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t("Alterar o próximo encontro")}: ${dataLonga(proximoDaAgendaOc.data)}`}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.heroProxRot}>{t("Próximo encontro")}</Text>
+                          <Text style={styles.heroProxData} numberOfLines={1}>
+                            {dataLonga(proximoDaAgendaOc.data)}
+                            {proximoDaAgendaOc.horario ? ` · ${proximoDaAgendaOc.horario.slice(0, 5)}` : ""}
+                            {proximoDaAgendaOc.status === "remarcado" ? ` · ${t("remarcado")}` : ""}
+                          </Text>
+                        </View>
+                        <Ionicons name="create-outline" size={15} color={colors.textMuted} />
+                        <Text style={styles.heroAcaoTxt}>{t("Alterar")}</Text>
+                      </Pressable>
+                    ) : null}
                   </View>
                 );
               })()}
@@ -1898,6 +1944,12 @@ function makeStyles(c: Palette) {
     heroRotLinha: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
     heroAcao: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 2, paddingLeft: 8 },
     heroAcaoTxt: { fontSize: font.size.sm, color: c.textMuted, fontWeight: "600" },
+    heroProx: {
+      flexDirection: "row", alignItems: "center", gap: 4,
+      borderTopWidth: 1, borderTopColor: c.glassBorder, paddingTop: 11,
+    },
+    heroProxRot: { color: c.textMuted, fontSize: 10.5, fontWeight: "800", textTransform: "uppercase", letterSpacing: 1.1 },
+    heroProxData: { color: c.text, fontSize: 15, fontWeight: "700", marginTop: 2 },
     agendaAvisoLinha: { fontSize: font.size.sm, color: c.warning, marginTop: spacing.sm },
     apoio: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingTop: 13, paddingHorizontal: 4 },
     apoioTxt: { flex: 1, color: c.textMuted, fontSize: 13.5 },
