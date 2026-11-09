@@ -848,6 +848,7 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Séries": { en: "Series", es: "Series" },
   // Conteúdos (21/10/2026)
   "Conteúdos": { en: "Content", es: "Contenidos" },
+  "Vídeos e séries": { en: "Videos and series", es: "Videos y series" },
   "Buscar por título": { en: "Search by title", es: "Buscar por título" },
   "Mais recentes": { en: "Newest first", es: "Más recientes" },
   "Mais antigos": { en: "Oldest first", es: "Más antiguos" },

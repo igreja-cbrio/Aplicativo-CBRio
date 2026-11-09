@@ -20,7 +20,6 @@ export const MENU_SECTIONS = [
   ] },
   { title: "Conteúdo", items: [
     { label: "Pregações", icon: "play-circle-outline", href: "/videos" },
-    { label: "Conteúdos", icon: "library-outline", href: "/conteudos" },
   ] },
   { title: "Você", items: [
     { label: "Carta de transferência", icon: "document-text-outline", href: "/carta-transferencia" },

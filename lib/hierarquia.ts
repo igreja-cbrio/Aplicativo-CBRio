@@ -40,6 +40,7 @@ import { router, type Href } from "expo-router";
  *   │   ├── /biblia
  *   │   ├── /devocional-planos → /devocional-diario
  *   │   ├── /devocional-plano → /devocional-plano-dia   (plano por inscrição · 24/09/2026)
+ *   │   ├── /conteudos → /conteudo-pasta → /conteudo-video   (Vimeo; movido pra cá)
  *   │   ├── /devocional-mural  /devocional-registros  /devocional-leituras
  *   │   └── /anotacoes         (tela antiga; segue no mapa)
  *   ├── /menu              barra
@@ -132,7 +133,7 @@ const PAI: Record<string, string> = {
   // Conteúdos (21/10/2026): catálogo → pasta → vídeo. A seta do vídeo sobe
   // pro CATÁLOGO (cd ..), mesmo quando se chegou por uma pasta — o mapa é
   // estático e o catálogo é o pai previsível.
-  "/conteudos": "/",
+  "/conteudos": "/devocional",
   "/conteudo-pasta": "/conteudos",
   "/conteudo-video": "/conteudos",
   "/configuracoes": "/menu",

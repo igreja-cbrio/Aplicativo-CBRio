@@ -207,6 +207,14 @@ describe("hierarquia · a árvore do `cd ..`", () => {
     expect(navegacoes).toEqual(["/configuracoes"]);
   });
 
+  it("Conteúdos vive dentro do Devocional; as filhas continuam subindo pra ele", () => {
+    expect(rotaPai("/conteudos")).toBe("/devocional");
+    expect(rotaPai("/conteudo-pasta")).toBe("/conteudos");
+    expect(rotaPai("/conteudo-video")).toBe("/conteudos");
+    subirUmNivel("/conteudos");
+    expect(navegacoes).toEqual(["/devocional"]);
+  });
+
   // ⚠️ MUTATION GUARD: se alguém trocar `navigate` por `back()`, isto quebra —
   // e `back()` é justamente o comportamento de histórico que o Marcos pediu pra
   // abandonar ("que esse voltar fosse um comando cd .. no terminal").
