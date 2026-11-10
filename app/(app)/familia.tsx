@@ -171,7 +171,7 @@ export default function FamiliaScreen() {
                 de criança é o responsável, e é nesta tela que ele cuida da
                 própria família. */}
             <Pressable
-              onPress={() => router.navigate("/kids")}
+              onPress={() => router.navigate("/kids-area")}
               style={({ pressed }) => [styles.kidsCard, pressed && { opacity: 0.7 }]}
               accessibilityRole="button"
               accessibilityLabel={t("Check-in das crianças")}
