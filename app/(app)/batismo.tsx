@@ -139,13 +139,10 @@ export default function BatismoScreen() {
           <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
             <Ionicons name='chevron-back' size={24} color={colors.text} />
           </Pressable>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.title}>{t('Batismo')}</Text>
-            <Text style={styles.gestaoSub}>{t('Gestão da equipe')}</Text>
-          </View>
+          <View style={{ flex: 1 }} />
           <View style={{ width: 24 }} />
         </View>
-        <ValorHeader style={{ paddingHorizontal: spacing.lg }} />
+        <ValorHeader rotulo={t('Gestão da equipe')} style={{ paddingHorizontal: spacing.lg }} />
         <BatismoGestaoScreen />
       </SafeAreaView>
     );
@@ -173,10 +170,9 @@ export default function BatismoScreen() {
           <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>{t("Meu batismo")}</Text>
           <View style={{ width: 24 }} />
         </View>
-        <ValorHeader />
+        <ValorHeader rotulo={t("Meu batismo")} />
 
         {loadingMembro || carregando || podeGerenciar === null ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />

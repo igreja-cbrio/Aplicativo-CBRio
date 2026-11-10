@@ -122,10 +122,9 @@ export default function ModoCulto() {
           <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>{t("No culto")}</Text>
           <View style={{ width: 24 }} />
         </View>
-        <ValorHeader />
+        <ValorHeader rotulo={t("No culto")} />
 
         {carregando ? (
           <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
