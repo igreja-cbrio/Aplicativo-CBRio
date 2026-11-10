@@ -38,7 +38,7 @@ import { router, type Href } from "expo-router";
  *   ├── /cuidados          barra
  *   ├── /devocional        barra (casa de 5 portas · 23/09/2026)
  *   │   ├── /biblia
- *   │   ├── /devocional-planos → /devocional-diario
+ *   │   ├── /devocional-planos (+ Sugeridos) → /devocional-plano
  *   │   ├── /devocional-plano → /devocional-plano-dia   (plano por inscrição · 24/09/2026)
  *   │   ├── /conteudos → /conteudo-pasta → /conteudo-video   (Vimeo; movido pra cá)
  *   │   ├── /devocional-mural  /devocional-registros  /devocional-leituras

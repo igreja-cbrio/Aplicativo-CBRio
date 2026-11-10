@@ -1,4 +1,5 @@
 import { ScrollView } from "@/components/navigation/DockContent";
+import { ValorHeader } from "@/components/ui/ValorHeader";
 import { Text } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -78,6 +79,7 @@ export default function CultoDetalheScreen() {
           <Text style={styles.title}>{t("Culto")}</Text>
           <View style={{ width: 24 }} />
         </View>
+        <ValorHeader />
 
         {loading ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />

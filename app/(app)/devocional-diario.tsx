@@ -1,3 +1,7 @@
+// LEGADO/órfã — decisão de remover pendente (toca o KPI Investir via mem_devocionais).
+// Nada no app navega pra esta tela (só a hierarquia em lib/hierarquia.ts a referencia).
+// NÃO apagar a tela nem a rota sem decisão do Matheus: o check-in diário grava em
+// `mem_devocionais`, que alimenta o KPI do valor "Investir".
 import { ScrollView } from "@/components/navigation/DockContent";
 import { Text, TextInput } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useState } from "react";

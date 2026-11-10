@@ -1,4 +1,5 @@
 import { ScrollView } from "@/components/navigation/DockContent";
+import { ValorHeader } from "@/components/ui/ValorHeader";
 import { Text, TextInput } from "@/components/ui/Typography";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -110,9 +111,7 @@ export default function GenerosidadeScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Aba raiz do dock: sem botão "voltar" (HIG — navegação por abas). */}
-        <View style={styles.header}>
-          <Text style={styles.title}>{t("Generosidade")}</Text>
-        </View>
+        <ValorHeader />
 
         <Text style={styles.intro}>
           {t("Sua generosidade alimenta a missão. Toda contribuição vai pra sustentar a obra da CBRio.")}

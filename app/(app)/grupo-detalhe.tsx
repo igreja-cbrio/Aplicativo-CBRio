@@ -1,4 +1,5 @@
 import { ScrollView } from "@/components/navigation/DockContent";
+import { ValorHeader } from "@/components/ui/ValorHeader";
 import { Text } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -205,6 +206,7 @@ export default function GrupoDetalheScreen() {
           <Text style={styles.title}>{t("Grupo")}</Text>
           <View style={{ width: 24 }} />
         </View>
+        <ValorHeader />
 
         {!grupo ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />

@@ -1,4 +1,5 @@
 import { Modal, ScrollView } from "@/components/navigation/DockContent";
+import { ValorHeader } from "@/components/ui/ValorHeader";
 import { Text } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -313,6 +314,7 @@ export default function VoluntariadoScreen() {
         <ScrollView
           automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <ValorHeader />
           <View style={styles.header}>
             <View style={styles.badge}>
               <Ionicons name="hand-left" size={28} color={colors.brandPale} />

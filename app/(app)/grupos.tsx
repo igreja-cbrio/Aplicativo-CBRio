@@ -1,4 +1,5 @@
 import { ScrollView } from "@/components/navigation/DockContent";
+import { ValorHeader } from "@/components/ui/ValorHeader";
 import { Text, TextInput } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -318,6 +319,7 @@ export function BuscadorGrupos({ embutido = false }: { embutido?: boolean }) {
           <View style={{ width: 24 }} />
         </View>
         )}
+        {!embutido && <ValorHeader style={{ marginBottom: 0 }} />}
 
         <View style={styles.toggle}>
           <Pressable
