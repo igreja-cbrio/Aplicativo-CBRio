@@ -45,7 +45,8 @@ import { router, type Href } from "expo-router";
  *   │   └── /anotacoes         (tela antiga; segue no mapa)
  *   ├── /menu              barra
  *   │   ├── /perfil → /cartoes
- *   │   ├── /familia → /kids-area → /kids → /kids-filho → /kids-aviso, /kids-solicitar-vinculo
+ *   │   ├── /familia → /kids-area (KIDS, menu) → /kids → /kids-filho → /kids-aviso, /kids-solicitar-vinculo
+ *   │   │                        └→ /kids-mural  /kids-eventos  /kids-horarios  /kids-salas
  *   │   ├── /jornada
  *   │   ├── /generosidade → /comprovante-doacoes
  *   │   ├── /inscricoes → /batismo → /inscricao-batismo
@@ -110,8 +111,12 @@ const PAI: Record<string, string> = {
   "/perfil": "/menu",
   "/cartoes": "/perfil",
   "/familia": "/menu",
-  // Área do Kids = hub (mural, eventos, horários, salas); o check-in desce dela.
+  // KIDS = menu; cada item é uma tela própria e o check-in (/kids) também desce dele.
   "/kids-area": "/familia",
+  "/kids-mural": "/kids-area",
+  "/kids-eventos": "/kids-area",
+  "/kids-horarios": "/kids-area",
+  "/kids-salas": "/kids-area",
   "/kids": "/kids-area",
   "/kids-filho": "/kids",
   "/kids-aviso": "/kids-filho",
