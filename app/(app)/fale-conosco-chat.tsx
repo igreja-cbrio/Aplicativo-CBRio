@@ -83,7 +83,8 @@ export default function FaleConoscoChatScreen() {
       const q = desdeRef.current ? `?desde=${encodeURIComponent(desdeRef.current)}` : "";
       const r = await apiGet<RespostaLista>(`/app/assistente/${encodeURIComponent(id)}/mensagens${q}`);
       aplicar(Array.isArray(r?.mensagens) ? r.mensagens : []);
-    } catch {
+    } catch (e: any) {
+      if (e?.status === 404 || e?.status === 403) return "morta" as const;
       semNovidade.current += 1; // falha de rede: só espaça, tenta de novo
     } finally {
       emVoo.current = false;
@@ -110,6 +111,11 @@ export default function FaleConoscoChatScreen() {
 
   // Restaura a conversa ativa (a resposta da equipe pode ter chegado com o app fechado).
   useEffect(() => {
+    // identidade mudou (ou 1ª montagem): zera tudo ANTES de restaurar
+    if (timer.current) clearTimeout(timer.current);
+    conversaRef.current = null; desdeRef.current = null; msgsRef.current = [];
+    semNovidade.current = 0;
+    setMsgs([]); setEscalado(false); setErro(null);
     if (!chave) return;
     let vivo = true;
     AsyncStorage.getItem(chave).then(async (raw) => {
@@ -117,8 +123,14 @@ export default function FaleConoscoChatScreen() {
       if (!c || !vivo || conversaRef.current) return;
       conversaRef.current = c.conversa_id;
       setEscalado(c.escalado);
-      await buscar();
-      if (vivo) agendar();
+      const ok = await buscar();
+      if (!vivo) return;
+      if (ok === "morta") {
+        conversaRef.current = null; setEscalado(false);
+        AsyncStorage.removeItem(chave).catch(() => {});
+        return;
+      }
+      agendar();
     }).catch(() => {});
     return () => { vivo = false; };
   }, [chave, buscar, agendar]);
@@ -257,7 +269,7 @@ export default function FaleConoscoChatScreen() {
             {t("Está demorando mais que o normal. Se preferir, toque em “Falar com uma pessoa”.")}
           </Text>
         ) : null}
-        {msgs.length > 0 ? (
+        {msgs.length > 0 || conversaRef.current ? (
           <Pressable onPress={novaConversa} accessibilityRole="button" accessibilityLabel={t("Nova conversa")} hitSlop={6} style={{ alignSelf: "center" }}>
             <Text style={styles.link}>{t("Nova conversa")}</Text>
           </Pressable>
