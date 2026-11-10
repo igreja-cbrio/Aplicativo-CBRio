@@ -2,6 +2,8 @@ import { Text, TextInput } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, Linking, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAuth } from "@/contexts/AuthContext";
 import { Stack, router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/ui/Button";
@@ -11,7 +13,11 @@ import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { apiGet, apiPost } from "@/lib/api";
 import {
-  PEDIDO_DE_PESSOA,
+  FRASE_PEDIR_HUMANO,
+  LIMITE_DIGITANDO_MS,
+  chaveConversa,
+  restaurarConversa,
+  serializarConversa,
   aguardandoResposta,
   maiorCriadoEm,
   mensagemLocal,
@@ -38,11 +44,14 @@ export default function FaleConoscoChatScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
+  const { user } = useAuth();
+  const chave = user?.id ? chaveConversa(user.id) : null;
 
   const [msgs, setMsgs] = useState<MensagemChat[]>([]);
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [escalado, setEscalado] = useState(false);
+  const [demorou, setDemorou] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   const msgsRef = useRef<MensagemChat[]>([]);
@@ -55,6 +64,8 @@ export default function FaleConoscoChatScreen() {
   const emVoo = useRef(false);
   const lista = useRef<FlatList<MensagemChat>>(null);
   const enviandoRef = useRef(false);
+  const escaladoRef = useRef(false);
+  escaladoRef.current = escalado;
 
   const aplicar = useCallback((recebidas: MensagemChat[]) => {
     const r = mesclarMensagens(msgsRef.current, recebidas, desdeRef.current);
@@ -92,6 +103,43 @@ export default function FaleConoscoChatScreen() {
     }, espera);
   }, [buscar]);
 
+  const guardar = useCallback((escaladoAgora: boolean) => {
+    if (!chave || !conversaRef.current) return;
+    AsyncStorage.setItem(chave, serializarConversa({ conversa_id: conversaRef.current, escalado: escaladoAgora })).catch(() => {});
+  }, [chave]);
+
+  // Restaura a conversa ativa (a resposta da equipe pode ter chegado com o app fechado).
+  useEffect(() => {
+    if (!chave) return;
+    let vivo = true;
+    AsyncStorage.getItem(chave).then(async (raw) => {
+      const c = restaurarConversa(raw);
+      if (!c || !vivo || conversaRef.current) return;
+      conversaRef.current = c.conversa_id;
+      setEscalado(c.escalado);
+      await buscar();
+      if (vivo) agendar();
+    }).catch(() => {});
+    return () => { vivo = false; };
+  }, [chave, buscar, agendar]);
+
+  // "Digitando…" não dura para sempre: passado o limite, troca por uma dica.
+  const ultimaId = msgs[msgs.length - 1]?.id;
+  useEffect(() => {
+    setDemorou(false);
+    if (!aguardandoResposta(msgsRef.current, enviando) || escalado) return;
+    const h = setTimeout(() => setDemorou(true), LIMITE_DIGITANDO_MS);
+    return () => clearTimeout(h);
+  }, [ultimaId, enviando, escalado]);
+
+  const novaConversa = useCallback(() => {
+    if (timer.current) clearTimeout(timer.current);
+    conversaRef.current = null; desdeRef.current = null; msgsRef.current = [];
+    semNovidade.current = 0;
+    setMsgs([]); setEscalado(false); setErro(null);
+    if (chave) AsyncStorage.removeItem(chave).catch(() => {});
+  }, [chave]);
+
   useFocusEffect(
     useCallback(() => {
       focada.current = true;
@@ -123,6 +171,7 @@ export default function FaleConoscoChatScreen() {
       });
       conversaRef.current = r.conversa_id;
       if (r.escalado) setEscalado(true);
+      guardar(!!r.escalado || escaladoRef.current);
       if (r.limitado) {
         seq.current += 1;
         aplicar([mensagemLocal(seq.current, "assistente", r.resposta, marca)]);
@@ -139,9 +188,10 @@ export default function FaleConoscoChatScreen() {
       setEnviando(false);
       agendar();
     }
-  }, [aplicar, buscar, agendar, t]);
+  }, [aplicar, buscar, agendar, guardar, t]);
 
-  const digitando = aguardandoResposta(msgs, enviando) && !escalado;
+  const aguardando = aguardandoResposta(msgs, enviando) && !escalado;
+  const digitando = aguardando && !demorou;
 
   return (
     <SafeAreaView style={styles.safe} edges={["left", "right"]}>
@@ -167,7 +217,7 @@ export default function FaleConoscoChatScreen() {
             title={t("Falar com uma pessoa")}
             variant="ghost"
             disabled={enviando || escalado}
-            onPress={() => enviar(PEDIDO_DE_PESSOA)}
+            onPress={() => enviar(FRASE_PEDIR_HUMANO)}
           />
           <View style={styles.links}>
             <Pressable onPress={() => router.navigate("/fale-conosco")} accessibilityRole="button" accessibilityLabel={t("Outros canais")} hitSlop={6}>
@@ -201,6 +251,17 @@ export default function FaleConoscoChatScreen() {
           renderItem={({ item }) => <Bolha m={item} styles={styles} t={t} />}
           ListFooterComponent={digitando ? <Text style={styles.digitando} accessibilityLiveRegion="polite">{t("Digitando…")}</Text> : null}
         />
+
+        {aguardando && demorou ? (
+          <Text style={styles.digitando} accessibilityLiveRegion="polite">
+            {t("Está demorando mais que o normal. Se preferir, toque em “Falar com uma pessoa”.")}
+          </Text>
+        ) : null}
+        {msgs.length > 0 ? (
+          <Pressable onPress={novaConversa} accessibilityRole="button" accessibilityLabel={t("Nova conversa")} hitSlop={6} style={{ alignSelf: "center" }}>
+            <Text style={styles.link}>{t("Nova conversa")}</Text>
+          </Pressable>
+        ) : null}
 
         {erro ? <Text style={styles.erro} accessibilityRole="alert">{erro}</Text> : null}
 

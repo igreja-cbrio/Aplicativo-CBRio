@@ -513,6 +513,8 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Equipe CBRio": { en: "CBRio team", es: "Equipo CBRio" },
   "Enviar": { en: "Send", es: "Enviar" },
   "Não foi possível enviar. Tente de novo.": { en: "Could not send. Try again.", es: "No se pudo enviar. Inténtalo de nuevo." },
+  "Está demorando mais que o normal. Se preferir, toque em “Falar com uma pessoa”.": { en: "This is taking longer than usual. If you prefer, tap “Talk to a person”.", es: "Está tardando más de lo normal. Si prefieres, toca “Hablar con una persona”." },
+  "Nova conversa": { en: "New conversation", es: "Nueva conversación" },
   "Voltar": { en: "Back", es: "Volver" },
   "Ok": { en: "OK", es: "OK" },
   "Erro": { en: "Error", es: "Error" },

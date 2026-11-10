@@ -14,8 +14,36 @@ export type MensagemChat = {
   created_at: string;
 };
 
-/** Frase enviada pelo botão "Falar com uma pessoa" (o backend escala). */
-export const PEDIDO_DE_PESSOA = "Quero falar com uma pessoa.";
+/**
+ * Frase enviada pelo botão "Falar com uma pessoa".
+ * ⚠️ PRECISA casar com `RE_PEDIU_HUMANO` do backend (é ela que força a escalada).
+ * Mudou aqui, muda lá.
+ */
+export const FRASE_PEDIR_HUMANO = "Quero falar com uma pessoa.";
+
+/** Espera sem resposta (ms) antes de trocar o "Digitando…" por uma dica. */
+export const LIMITE_DIGITANDO_MS = 18000;
+
+/** Conversa ativa guardada no aparelho (uma por membro). */
+export type ConversaGuardada = { conversa_id: string; escalado: boolean };
+
+export const chaveConversa = (userId: string): string => `assistente_conversa:${userId}`;
+
+export function serializarConversa(c: ConversaGuardada): string {
+  return JSON.stringify({ conversa_id: c.conversa_id, escalado: !!c.escalado });
+}
+
+/** Lê o valor guardado; qualquer lixo vira null (começa conversa nova). */
+export function restaurarConversa(raw: string | null | undefined): ConversaGuardada | null {
+  if (!raw) return null;
+  try {
+    const o = JSON.parse(raw);
+    if (o && typeof o.conversa_id === "string" && o.conversa_id) {
+      return { conversa_id: o.conversa_id, escalado: o.escalado === true };
+    }
+  } catch {}
+  return null;
+}
 
 const LOCAL = "local-";
 

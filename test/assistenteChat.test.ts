@@ -5,6 +5,8 @@ import {
   mensagemLocal,
   mesclarMensagens,
   proximoIntervalo,
+  restaurarConversa,
+  serializarConversa,
   type MensagemChat,
 } from "@/lib/assistenteChat";
 
@@ -62,5 +64,22 @@ describe("aguardandoResposta / proximoIntervalo", () => {
     expect(proximoIntervalo(0, true)).toBeLessThan(proximoIntervalo(0, false) + 1);
     expect(proximoIntervalo(0, false)).toBeLessThan(proximoIntervalo(3, false));
     expect(proximoIntervalo(999, false)).toBe(20000);
+  });
+});
+
+describe("conversa guardada", () => {
+  it("ida e volta", () => {
+    const c = { conversa_id: "abc", escalado: true };
+    expect(restaurarConversa(serializarConversa(c))).toEqual(c);
+  });
+  it("lixo ou vazio vira null", () => {
+    expect(restaurarConversa(null)).toBeNull();
+    expect(restaurarConversa("{")).toBeNull();
+    expect(restaurarConversa('{"conversa_id":1}')).toBeNull();
+  });
+  it("restaurar + histórico completo (desde nulo) preenche a lista", () => {
+    const r = mesclarMensagens([], [m("1", "membro", "01"), m("2", "equipe", "05")], null);
+    expect(r.mensagens).toHaveLength(2);
+    expect(r.desde).toBe("2026-11-10T12:00:05Z");
   });
 });
