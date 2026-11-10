@@ -45,7 +45,8 @@ export default function DevocionalHome() {
       <View style={styles.grid}>
         <Tile icon="chatbubbles-outline" titulo={t("Comentários")} legenda={t("Converse com sua comunidade")} onPress={() => router.navigate("/devocional-mural")} styles={styles} colors={colors} />
         <Tile icon="bookmark-outline" titulo={t("Anotações e Marcações")} legenda={t("O que você guardou da Palavra")} onPress={() => router.navigate("/devocional-registros")} styles={styles} colors={colors} />
-        <Tile icon="stats-chart-outline" titulo={t("Leituras da Bíblia")} legenda={t("Seu ritmo e planos concluídos")} onPress={() => router.navigate("/devocional-leituras")} styles={styles} colors={colors} largo />
+        <Tile icon="stats-chart-outline" titulo={t("Leituras da Bíblia")} legenda={t("Seu ritmo e planos concluídos")} onPress={() => router.navigate("/devocional-leituras")} styles={styles} colors={colors} />
+        <Tile icon="library-outline" titulo={t("Conteúdos")} legenda={t("Vídeos e séries")} onPress={() => router.navigate("/conteudos")} styles={styles} colors={colors} largo />
       </View>
       <View style={styles.divider}><View style={styles.dividerLine} /><Ionicons name="compass-outline" size={15} color={colors.primary} /><View style={styles.dividerLine} /></View>
       <Text style={styles.sectionLabel}>{t("PLANOS SUGERIDOS")}</Text>

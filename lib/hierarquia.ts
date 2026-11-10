@@ -40,11 +40,12 @@ import { router, type Href } from "expo-router";
  *   │   ├── /biblia
  *   │   ├── /devocional-planos → /devocional-diario
  *   │   ├── /devocional-plano → /devocional-plano-dia   (plano por inscrição · 24/09/2026)
+ *   │   ├── /conteudos → /conteudo-pasta → /conteudo-video   (Vimeo; movido pra cá)
  *   │   ├── /devocional-mural  /devocional-registros  /devocional-leituras
  *   │   └── /anotacoes         (tela antiga; segue no mapa)
  *   ├── /menu              barra
  *   │   ├── /perfil → /cartoes
- *   │   ├── /familia → /kids → /kids-filho, /kids-solicitar-vinculo
+ *   │   ├── /familia → /kids → /kids-filho → /kids-aviso, /kids-solicitar-vinculo
  *   │   ├── /jornada
  *   │   ├── /generosidade → /comprovante-doacoes
  *   │   ├── /inscricoes → /batismo → /inscricao-batismo
@@ -111,6 +112,7 @@ const PAI: Record<string, string> = {
   "/familia": "/menu",
   "/kids": "/familia",
   "/kids-filho": "/kids",
+  "/kids-aviso": "/kids-filho",
   "/kids-solicitar-vinculo": "/kids",
   "/jornada": "/menu",
   "/censo": "/menu",
@@ -132,7 +134,7 @@ const PAI: Record<string, string> = {
   // Conteúdos (21/10/2026): catálogo → pasta → vídeo. A seta do vídeo sobe
   // pro CATÁLOGO (cd ..), mesmo quando se chegou por uma pasta — o mapa é
   // estático e o catálogo é o pai previsível.
-  "/conteudos": "/",
+  "/conteudos": "/devocional",
   "/conteudo-pasta": "/conteudos",
   "/conteudo-video": "/conteudos",
   "/configuracoes": "/menu",
@@ -183,6 +185,8 @@ export function registrarRotaAtual(rota: string, params?: Record<string, unknown
 // senão o plano seria outra instância). Parâmetro ausente simplesmente não sobe.
 const PARAMS_QUE_SOBEM: Record<string, string[]> = {
   "/devocional-plano-dia": ["planoId"],
+  // O aviso é da CRIANÇA: voltar sem o `id` abriria a ficha vazia.
+  "/kids-aviso": ["id"],
 };
 
 /** Os parâmetros que o pai herda da rota atual (vazio na maioria). */
