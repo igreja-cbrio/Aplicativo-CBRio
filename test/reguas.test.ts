@@ -191,7 +191,7 @@ describe("hierarquia · a árvore do `cd ..`", () => {
     const rotas = [
       "/meu-grupo", "/voluntariado", "/cuidados", "/devocional", "/menu",
       "/grupos", "/grupo-detalhe", "/grupo-membros", "/grupo-visita", "/grupo-inscricoes", "/grupo-editar",
-      "/escala-supervisor", "/anotacoes", "/perfil", "/cartoes", "/familia", "/kids",
+      "/escala-supervisor", "/anotacoes", "/perfil", "/cartoes", "/familia", "/kids-area", "/kids",
       "/kids-filho", "/kids-aviso", "/kids-solicitar-vinculo", "/jornada", "/generosidade",
       "/comprovante-doacoes", "/inscricoes", "/batismo", "/inscricao-batismo", "/next",
       "/next-turma", "/evento", "/videos", "/configuracoes", "/trocar-senha",
@@ -202,6 +202,12 @@ describe("hierarquia · a árvore do `cd ..`", () => {
       const paiSobeMais = pai === "/" || rotas.includes(pai);
       expect(paiSobeMais, `o pai de ${r} é ${pai}, que não está na árvore`).toBe(true);
     }
+  });
+
+  it("Área do Kids é o hub: /kids-area sobe pra /familia e o check-in (/kids) sobe pra Área", () => {
+    subirUmNivel("/kids-area");
+    subirUmNivel("/kids");
+    expect(navegacoes).toEqual(["/familia", "/kids-area"]);
   });
 
   it("subirUmNivel navega pro pai (é o que a seta e o botão físico chamam)", () => {

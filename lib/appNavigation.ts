@@ -25,6 +25,7 @@ export const MENU_SECTIONS = [
     { label: "Carta de transferência", icon: "document-text-outline", href: "/carta-transferencia" },
     { label: "Meu perfil", icon: "person-outline", href: "/perfil" },
     { label: "Minha família", icon: "people-outline", href: "/familia" },
+    { label: "Área do Kids", icon: "happy-outline", href: "/kids-area" },
     { label: "Sua jornada", icon: "trail-sign-outline", href: "/jornada" },
     { label: "Censo", icon: "clipboard-outline", href: "/censo" },
   ] },
