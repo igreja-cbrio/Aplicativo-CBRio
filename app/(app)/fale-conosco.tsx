@@ -53,6 +53,20 @@ export default function FaleConoscoScreen() {
 
           <Text style={styles.intro}>{t("Estamos aqui pra você. Escolha um canal ou mande uma mensagem.")}</Text>
 
+          {/* Porta principal: chat com o assistente automático (a pessoa humana
+              e os canais diretos abaixo seguem aqui — adicionar, não substituir). */}
+          <Pressable
+            style={styles.card}
+            onPress={() => router.navigate("/fale-conosco-chat")}
+            accessibilityRole="button"
+            accessibilityLabel={t("Conversar com o assistente")}
+          >
+            <Text style={styles.cardTitle}>{t("Conversar com o assistente")}</Text>
+            <Text style={styles.cardText}>
+              {t("Assistente automático para dúvidas rápidas. Dá pra falar com uma pessoa a qualquer momento.")}
+            </Text>
+          </Pressable>
+
           {/* Canais diretos */}
           <View style={styles.canais}>
             <Canal icon="logo-whatsapp" label="WhatsApp" onPress={() => Linking.openURL(WHATSAPP)} colors={colors} styles={styles} t={t} />

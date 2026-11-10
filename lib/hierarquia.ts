@@ -147,6 +147,7 @@ const PAI: Record<string, string> = {
   "/configuracoes": "/menu",
   "/trocar-senha": "/configuracoes",
   "/fale-conosco": "/configuracoes",
+  "/fale-conosco-chat": "/fale-conosco",
   "/sobre": "/configuracoes",
 
   // avisos e culto
