@@ -1,4 +1,5 @@
 import { ScrollView } from "@/components/navigation/DockContent";
+import { ValorHeader } from "@/components/ui/ValorHeader";
 import { Text } from "@/components/ui/Typography";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
@@ -34,7 +35,7 @@ export default function DevocionalHome() {
   return <SafeAreaView style={styles.safe} edges={["left", "right"]}>
     <Stack.Screen options={{ headerShown: false }} />
     <ScrollView contentContainerStyle={styles.content}>
-      <View style={styles.intro}><Text style={styles.eyebrow}>{t("SUA JORNADA COM A PALAVRA")}</Text><Text style={styles.title}>{t("Devocional")}</Text><Text style={styles.subtitle}>{t("Leia, reflita e guarde o que Deus falou com você.")}</Text></View>
+      <View style={styles.intro}><ValorHeader style={{ marginBottom: 6 }} /><Text style={styles.title}>{t("Devocional")}</Text><Text style={styles.subtitle}>{t("Leia, reflita e guarde o que Deus falou com você.")}</Text></View>
       <Text style={styles.sectionLabel}>{t("LER E ACOMPANHAR")}</Text>
       <View style={styles.featuredRow}>
         <Tile destaque icon="book-outline" titulo={t("Bíblia")} legenda={t("Leia por livro e capítulo")} onPress={() => router.navigate("/biblia")} styles={styles} colors={colors} />

@@ -1,4 +1,5 @@
 import { FlatList, Modal, ScrollView } from "@/components/navigation/DockContent";
+import { ValorHeader } from "@/components/ui/ValorHeader";
 import { Text } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -144,6 +145,7 @@ export default function BatismoScreen() {
           </View>
           <View style={{ width: 24 }} />
         </View>
+        <ValorHeader style={{ paddingHorizontal: spacing.lg }} />
         <BatismoGestaoScreen />
       </SafeAreaView>
     );
@@ -174,6 +176,7 @@ export default function BatismoScreen() {
           <Text style={styles.title}>{t("Meu batismo")}</Text>
           <View style={{ width: 24 }} />
         </View>
+        <ValorHeader />
 
         {loadingMembro || carregando || podeGerenciar === null ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />

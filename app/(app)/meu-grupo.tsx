@@ -1,4 +1,5 @@
 import { Modal, ScrollView } from "@/components/navigation/DockContent";
+import { ValorHeader } from "@/components/ui/ValorHeader";
 import { Text } from "@/components/ui/Typography";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -210,6 +211,7 @@ export default function MeuGrupoScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       {/* Sem cabeçalho local: a seta e o título vivem na faixa superior
           global (components/ui/TopBar.tsx) — esta é uma tela de barra. */}
+      <ValorHeader style={{ marginHorizontal: spacing.lg, marginTop: spacing.md, marginBottom: 0 }} />
       <View style={styles.abas}>
         {(["meus", "encontrar"] as const).map((k) => {
           const sel = aba === k;
