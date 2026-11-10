@@ -192,6 +192,7 @@ describe("hierarquia · a árvore do `cd ..`", () => {
       "/meu-grupo", "/voluntariado", "/cuidados", "/devocional", "/menu",
       "/grupos", "/grupo-detalhe", "/grupo-membros", "/grupo-visita", "/grupo-inscricoes", "/grupo-editar",
       "/escala-supervisor", "/anotacoes", "/perfil", "/cartoes", "/familia", "/kids-area", "/kids",
+      "/kids-mural", "/kids-eventos", "/kids-horarios", "/kids-salas",
       "/kids-filho", "/kids-aviso", "/kids-solicitar-vinculo", "/jornada", "/generosidade",
       "/comprovante-doacoes", "/inscricoes", "/batismo", "/inscricao-batismo", "/next",
       "/next-turma", "/evento", "/videos", "/configuracoes", "/trocar-senha",
@@ -204,7 +205,15 @@ describe("hierarquia · a árvore do `cd ..`", () => {
     }
   });
 
-  it("Área do Kids é o hub: /kids-area sobe pra /familia e o check-in (/kids) sobe pra Área", () => {
+  it("KIDS é o menu: as 4 telas-filha sobem pra /kids-area", () => {
+    for (const r of ["/kids-mural", "/kids-eventos", "/kids-horarios", "/kids-salas"]) {
+      expect(rotaPai(r)).toBe("/kids-area");
+      subirUmNivel(r);
+    }
+    expect(navegacoes).toEqual(Array(4).fill("/kids-area"));
+  });
+
+  it("KIDS é o menu: /kids-area sobe pra /familia e o check-in (/kids) sobe pra Área", () => {
     subirUmNivel("/kids-area");
     subirUmNivel("/kids");
     expect(navegacoes).toEqual(["/familia", "/kids-area"]);

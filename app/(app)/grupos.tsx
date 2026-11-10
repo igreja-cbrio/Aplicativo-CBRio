@@ -315,11 +315,10 @@ export function BuscadorGrupos({ embutido = false }: { embutido?: boolean }) {
               títulos iguais em telas diferentes foi exatamente a confusão que
               o Marcos relatou em 05/08/2026. Esta tela é o BUSCADOR — chega-se
               nela de dentro de Meus grupos. */}
-          <Text style={styles.title}>{t("Encontrar um grupo")}</Text>
           <View style={{ width: 24 }} />
         </View>
         )}
-        {!embutido && <ValorHeader style={{ marginBottom: 0 }} />}
+        {!embutido && <ValorHeader rotulo={t("Encontrar um grupo")} style={{ marginBottom: 0 }} />}
 
         <View style={styles.toggle}>
           <Pressable

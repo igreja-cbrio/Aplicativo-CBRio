@@ -76,10 +76,9 @@ export default function CultoDetalheScreen() {
           <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>{t("Culto")}</Text>
           <View style={{ width: 24 }} />
         </View>
-        <ValorHeader />
+        <ValorHeader rotulo={t("Culto")} />
 
         {loading ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />

@@ -319,7 +319,6 @@ export default function VoluntariadoScreen() {
             <View style={styles.badge}>
               <Ionicons name="hand-left" size={28} color={colors.brandPale} />
             </View>
-            <Text style={styles.title}>{t("Voluntariado")}</Text>
           </View>
 
           {ehSupervisor && (

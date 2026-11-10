@@ -15,7 +15,7 @@ export default function DevocionalHome() {
   return <SafeAreaView style={styles.safe} edges={["left", "right"]}>
     <Stack.Screen options={{ headerShown: false }} />
     <ScrollView contentContainerStyle={styles.content}>
-      <View style={styles.intro}><ValorHeader style={{ marginBottom: 6 }} /><Text style={styles.title}>{t("Devocional")}</Text><Text style={styles.subtitle}>{t("Leia, reflita e guarde o que Deus falou com você.")}</Text></View>
+      <View style={styles.intro}><ValorHeader style={{ marginBottom: 6 }} /><Text style={styles.subtitle}>{t("Leia, reflita e guarde o que Deus falou com você.")}</Text></View>
       <Text style={styles.sectionLabel}>{t("LER A PALAVRA")}</Text>
       <View style={styles.featuredRow}>
         <Tile destaque icon="book-outline" titulo={t("Bíblia")} legenda={t("Leia por livro e capítulo")} onPress={() => router.navigate("/biblia")} styles={styles} colors={colors} />
