@@ -61,6 +61,7 @@ export default function FaleConoscoChatScreen() {
   const [erro, setErro] = useState<string | null>(null);
   const [anexo, setAnexo] = useState<ArquivoImagem | null>(null);
   const [falhouFoto, setFalhouFoto] = useState(false);
+  const [falhouErro, setFalhouErro] = useState<string | null>(null);
 
   // client_id da foto pendente: o MESMO no retry (o servidor casa a otimista por ele)
   const clientIdFoto = useRef<string | null>(null);
@@ -245,6 +246,7 @@ export default function FaleConoscoChatScreen() {
     setEnviando(true);
     setErro(null);
     setFalhouFoto(false);
+    setFalhouErro(null);
     const limpo = corpo.trim();
     if (!clientIdFoto.current) clientIdFoto.current = Crypto.randomUUID();
     const client_id = clientIdFoto.current;
@@ -272,7 +274,7 @@ export default function FaleConoscoChatScreen() {
       msgsRef.current = msgsRef.current.filter((m) => m.id !== local.id);
       setMsgs(msgsRef.current);
       setFalhouFoto(true);
-      setErro(e?.message || null);
+      setFalhouErro(e?.message || null);
     } finally {
       enviandoRef.current = false;
       setEnviando(false);
@@ -293,7 +295,7 @@ export default function FaleConoscoChatScreen() {
           </Pressable>
           <Text style={styles.title}>{t("Fale conosco")}</Text>
           {msgs.length > 0 || conversaRef.current ? (
-            <Pressable onPress={confirmarNovaConversa} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Nova conversa")}>
+            <Pressable onPress={confirmarNovaConversa} disabled={enviando} hitSlop={8} style={[styles.back, enviando && { opacity: 0.4 }]} accessibilityRole="button" accessibilityLabel={t("Nova conversa")}>
               <Ionicons name="create-outline" size={22} color={colors.text} />
             </Pressable>
           ) : (
@@ -355,7 +357,7 @@ export default function FaleConoscoChatScreen() {
         ) : null}
         {falhouFoto && anexo ? (
           <Pressable onPress={() => enviarComFoto(anexo, texto)} accessibilityRole="button" hitSlop={6}>
-            <Text style={styles.erro} accessibilityRole="alert">{t("Não enviou. Toque para reenviar")}</Text>
+            <Text style={styles.erro} accessibilityRole="alert">{falhouErro ? `${t("Não enviou")}: ${falhouErro}. ${t("Toque para reenviar ou escolha outra foto")}` : t("Não enviou. Toque para reenviar")}</Text>
           </Pressable>
         ) : erro ? <Text style={styles.erro} accessibilityRole="alert">{erro}</Text> : null}
 

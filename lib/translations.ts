@@ -2060,4 +2060,6 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Escolha uma imagem menor.": { en: "Choose a smaller image.", es: "Elige una imagen más pequeña." },
   "Formato não aceito": { en: "Format not supported", es: "Formato no admitido" },
   "Use uma imagem JPG, PNG ou WebP.": { en: "Use a JPG, PNG or WebP image.", es: "Usa una imagen JPG, PNG o WebP." },
+  "Não enviou": { en: "Not sent", es: "No se envió" },
+  "Toque para reenviar ou escolha outra foto": { en: "Tap to resend or choose another photo", es: "Toca para reenviar o elige otra foto" },
 };

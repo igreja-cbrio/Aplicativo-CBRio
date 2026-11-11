@@ -8,7 +8,7 @@ import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/contexts/ThemeContext";
 import { radius, spacing } from "@/constants/theme";
-import { FAB_POS_KEY, lerFabPos, limitesFab, posParaPx, pxParaPos, type FabPos } from "@/lib/fabPos";
+import { FAB_PADRAO_ACIMA, FAB_POS_KEY, lerFabPos, limitesFab, posParaPx, pxParaPos, type FabPos } from "@/lib/fabPos";
 
 const TAMANHO = 56;
 
@@ -40,7 +40,7 @@ export function ChatFab({ bottomOffset = 0 }: { bottomOffset?: number }) {
   );
 
   const tx = useSharedValue(lim.xDir);
-  const ty = useSharedValue(lim.maxY);
+  const ty = useSharedValue(Math.max(lim.minY, lim.maxY - FAB_PADRAO_ACIMA));
   const ctxX = useSharedValue(0);
   const ctxY = useSharedValue(0);
   const limX = useSharedValue(lim.xEsq);
