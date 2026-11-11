@@ -15,9 +15,12 @@ describe("menu lateral e atalhos do app", () => {
   it("mantém acessíveis recursos retirados do antigo bloco da Home", () => {
     const destinations = items.map((item) => item.href);
     // Inscrições reúne Batismo/NEXT/apresentação; Kids fica em família/agenda.
-    for (const href of ["/agenda", "/familia", "/inscricoes", "/conteudos"]) {
+    for (const href of ["/agenda", "/familia", "/inscricoes"]) {
       expect(destinations).toContain(href);
     }
+    // Conteúdos mudou pra dentro do Devocional (porta própria), fora do menu.
+    expect(destinations).not.toContain("/conteudos");
+    expect(destinations).toContain("/videos");
   });
   it("Home, rodapé e menu usam os mesmos destinos dos cinco atalhos", () => {
     expect(QUICK_LINKS).toHaveLength(5);

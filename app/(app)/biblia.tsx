@@ -92,7 +92,7 @@ export default function Biblia() {
       })));
       setMarcacoes(atuais => { const proximas = { ...atuais }; selecionados.forEach(v => { proximas[v] = cor; }); return proximas; });
       setSelecionados([]);
-      Alert.alert(t("Marcação salva"), t("Você encontra esse texto em Anotações e Marcações."));
+      Alert.alert(t("Marcação salva"), t("Você encontra esse texto em Minhas anotações."));
     }
     catch (e) { Alert.alert(t("Não foi possível salvar"), e instanceof Error ? e.message : t("Tente novamente.")); }
   }

@@ -38,13 +38,15 @@ import { router, type Href } from "expo-router";
  *   ├── /cuidados          barra
  *   ├── /devocional        barra (casa de 5 portas · 23/09/2026)
  *   │   ├── /biblia
- *   │   ├── /devocional-planos → /devocional-diario
+ *   │   ├── /devocional-planos (+ Sugeridos) → /devocional-plano
  *   │   ├── /devocional-plano → /devocional-plano-dia   (plano por inscrição · 24/09/2026)
+ *   │   ├── /conteudos → /conteudo-pasta → /conteudo-video   (Vimeo; movido pra cá)
  *   │   ├── /devocional-mural  /devocional-registros  /devocional-leituras
  *   │   └── /anotacoes         (tela antiga; segue no mapa)
  *   ├── /menu              barra
  *   │   ├── /perfil → /cartoes
- *   │   ├── /familia → /kids → /kids-filho, /kids-solicitar-vinculo
+ *   │   ├── /familia → /kids-area (KIDS, menu) → /kids → /kids-filho → /kids-aviso, /kids-solicitar-vinculo
+ *   │   │                        └→ /kids-mural  /kids-eventos  /kids-horarios  /kids-salas
  *   │   ├── /jornada
  *   │   ├── /generosidade → /comprovante-doacoes
  *   │   ├── /inscricoes → /batismo → /inscricao-batismo
@@ -109,8 +111,15 @@ const PAI: Record<string, string> = {
   "/perfil": "/menu",
   "/cartoes": "/perfil",
   "/familia": "/menu",
-  "/kids": "/familia",
+  // KIDS = menu; cada item é uma tela própria e o check-in (/kids) também desce dele.
+  "/kids-area": "/familia",
+  "/kids-mural": "/kids-area",
+  "/kids-eventos": "/kids-area",
+  "/kids-horarios": "/kids-area",
+  "/kids-salas": "/kids-area",
+  "/kids": "/kids-area",
   "/kids-filho": "/kids",
+  "/kids-aviso": "/kids-filho",
   "/kids-solicitar-vinculo": "/kids",
   "/jornada": "/menu",
   "/censo": "/menu",
@@ -132,12 +141,13 @@ const PAI: Record<string, string> = {
   // Conteúdos (21/10/2026): catálogo → pasta → vídeo. A seta do vídeo sobe
   // pro CATÁLOGO (cd ..), mesmo quando se chegou por uma pasta — o mapa é
   // estático e o catálogo é o pai previsível.
-  "/conteudos": "/",
+  "/conteudos": "/devocional",
   "/conteudo-pasta": "/conteudos",
   "/conteudo-video": "/conteudos",
   "/configuracoes": "/menu",
   "/trocar-senha": "/configuracoes",
   "/fale-conosco": "/configuracoes",
+  "/fale-conosco-chat": "/fale-conosco",
   "/sobre": "/configuracoes",
 
   // avisos e culto
@@ -183,6 +193,8 @@ export function registrarRotaAtual(rota: string, params?: Record<string, unknown
 // senão o plano seria outra instância). Parâmetro ausente simplesmente não sobe.
 const PARAMS_QUE_SOBEM: Record<string, string[]> = {
   "/devocional-plano-dia": ["planoId"],
+  // O aviso é da CRIANÇA: voltar sem o `id` abriria a ficha vazia.
+  "/kids-aviso": ["id"],
 };
 
 /** Os parâmetros que o pai herda da rota atual (vazio na maioria). */

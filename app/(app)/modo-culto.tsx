@@ -1,4 +1,5 @@
 import { ScrollView } from "@/components/navigation/DockContent";
+import { ValorHeader } from "@/components/ui/ValorHeader";
 import { Text, TextInput } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -121,9 +122,9 @@ export default function ModoCulto() {
           <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>{t("No culto")}</Text>
           <View style={{ width: 24 }} />
         </View>
+        <ValorHeader rotulo={t("No culto")} />
 
         {carregando ? (
           <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>

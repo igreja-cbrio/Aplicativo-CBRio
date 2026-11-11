@@ -1,4 +1,5 @@
 import { ScrollView } from "@/components/navigation/DockContent";
+import { ValorHeader } from "@/components/ui/ValorHeader";
 import { Text } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -202,9 +203,9 @@ export default function GrupoDetalheScreen() {
           <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>{t("Grupo")}</Text>
           <View style={{ width: 24 }} />
         </View>
+        <ValorHeader rotulo={t("Grupo")} />
 
         {!grupo ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />

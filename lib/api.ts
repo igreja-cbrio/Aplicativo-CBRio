@@ -1412,6 +1412,40 @@ export function removerDaFamilia(outroId: string): Promise<MinhaFamilia & { ok: 
   return apiDelete(`/app/familia/vinculo/${encodeURIComponent(outroId)}`);
 }
 
+// ===== Kids · aviso de necessidade especial =====
+export type CultoKids = { id: string; nome: string; data: string; hora: string | null };
+/** Shape PLANO do backend (`avisos_ativos` de GET /app/kids/filho/:id). */
+export type AvisoNecessidadeAtivo = {
+  id: string;
+  culto_id: string;
+  culto_nome: string;
+  culto_data: string;
+  culto_hora: string | null;
+  nota_do_dia?: string | null;
+  created_at?: string;
+};
+export type NovoAvisoNecessidade = {
+  culto_id: string;
+  nota_do_dia?: string | null;
+  consentimento: true;
+  consentimento_versao: string;
+};
+
+/** Cultos futuros em que dá pra avisar (pode vir vazio). */
+export function listarCultosKids(): Promise<{ cultos: CultoKids[] }> {
+  return apiGet<{ cultos: CultoKids[] }>("/app/kids/cultos-disponiveis");
+}
+
+/** 201 → `{ aviso_id }`; 409 = já há aviso ativo p/ o culto; 422 = recusado. */
+export function criarAvisoNecessidade(filhoId: string, body: NovoAvisoNecessidade): Promise<{ aviso_id: string }> {
+  return apiPost<{ aviso_id: string }>(`/app/kids/filho/${encodeURIComponent(filhoId)}/aviso-necessidade`, body);
+}
+
+/** Só quem criou o aviso consegue cancelar. */
+export function cancelarAvisoNecessidade(avisoId: string): Promise<{ ok?: boolean }> {
+  return apiPost<{ ok?: boolean }>(`/app/kids/aviso-necessidade/${encodeURIComponent(avisoId)}/cancelar`, {});
+}
+
 // ===== Inscrições · eventos publicados (espinha /inscricoes do sistema) =====
 /** Campo EXTRA do form-builder do evento (os padrão vêm do cadastro). */
 export type CampoEvento = {

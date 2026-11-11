@@ -114,6 +114,10 @@ export function attachNotifTapListener(): () => void {
       case "kids_vinculo":
         router.navigate("/kids");
         return;
+      // Kids chamando o responsável no culto: leva à área Kids (sem dado clínico).
+      case "kids_chamar_responsavel":
+        router.navigate("/kids");
+        return;
       case "comunicado":
         router.navigate("/mural");
         return;

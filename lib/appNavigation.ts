@@ -20,12 +20,12 @@ export const MENU_SECTIONS = [
   ] },
   { title: "Conteúdo", items: [
     { label: "Pregações", icon: "play-circle-outline", href: "/videos" },
-    { label: "Conteúdos", icon: "library-outline", href: "/conteudos" },
   ] },
   { title: "Você", items: [
     { label: "Carta de transferência", icon: "document-text-outline", href: "/carta-transferencia" },
     { label: "Meu perfil", icon: "person-outline", href: "/perfil" },
     { label: "Minha família", icon: "people-outline", href: "/familia" },
+    { label: "KIDS", icon: "happy-outline", href: "/kids-area" },
     { label: "Sua jornada", icon: "trail-sign-outline", href: "/jornada" },
     { label: "Censo", icon: "clipboard-outline", href: "/censo" },
   ] },
