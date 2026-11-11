@@ -153,8 +153,26 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
     setCalendario(null);
   }
 
+  // ⚠️ Sem bloqueio nenhum, o quadro vira só um BOTÃO (Marcos · 09/11/2026):
+  // a aba Servir ganhou "Quando posso servir" e "Meus times", e um quadro grande
+  // dizendo "nenhum bloqueio" só empurrava o resto pra baixo. Com data
+  // bloqueada (ou erro de carregamento, que não pode virar silêncio) o quadro volta.
+  const compacto = !carregando && !erro && itens.length === 0;
+
   return (
-    <View style={styles.box}>
+    <View style={compacto ? undefined : styles.box}>
+      {compacto ? (
+        <Pressable
+          onPress={() => setAberto(true)}
+          style={({ pressed }) => [styles.botaoCompacto, pressed && { opacity: 0.7 }]}
+          accessibilityRole="button"
+        >
+          <Ionicons name="calendar-clear-outline" size={18} color={colors.brandMid} />
+          <Text style={styles.botaoCompactoTxt}>{t("Bloquear datas em que não posso servir")}</Text>
+          <Ionicons name="add" size={18} color={colors.primary} />
+        </Pressable>
+      ) : (
+      <>
       <View style={styles.headerRow}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <Ionicons name="calendar-clear-outline" size={18} color={colors.brandMid} />
@@ -201,6 +219,8 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
             </Pressable>
           </View>
         ))
+      )}
+      </>
       )}
 
       {/*
@@ -334,6 +354,18 @@ const makeStyles = (colors: Palette) =>
       backgroundColor: colors.surface,
       gap: spacing.sm,
     },
+    botaoCompacto: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 12,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      backgroundColor: colors.surface,
+    },
+    botaoCompactoTxt: { flex: 1, color: colors.text, fontSize: font.size.sm, fontWeight: "700" },
     headerRow: {
       flexDirection: "row",
       alignItems: "center",

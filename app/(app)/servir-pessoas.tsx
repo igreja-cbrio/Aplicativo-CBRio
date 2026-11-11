@@ -36,7 +36,7 @@ function iniciais(nome: string): string {
   return (nome || "").split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]?.toUpperCase() ?? "").join("");
 }
 
-import { alternar, normalizarCultos, normalizarSemanas, SEMANAS_DO_MES } from "@/lib/disponibilidadeSemanas";
+import { alternar, normalizarSemanas, SEMANAS_DO_MES } from "@/lib/disponibilidadeSemanas";
 
 // Etapas da fila de inscrição do voluntariado (vocabulário do ERP).
 const ETAPA_INSCRICAO: Record<string, string> = {
@@ -234,17 +234,12 @@ export default function ServirPessoasScreen() {
       t("Erro ao salvar o editor de culto"));
   }
 
-  // Disponibilidade da PESSOA (09/11/2026): semanas 1..5 (várias) e cultos. É a
-  // mesma que ela marca no app; fora dela o automático não escala.
+  // Semanas da PESSOA (09/11/2026, 1..5, várias): as mesmas que ela marca no
+  // app; fora delas o automático não escala. Cultos são por time (abaixo).
   const semanasDet = det ? normalizarSemanas(det.pessoa.rodizio_semanas, det.pessoa.rodizio_semana) : [];
-  const cultosDet = det ? normalizarCultos(det.pessoa.cultos_disponiveis) : [];
   function mudarSemana(n: number) {
     if (!aberta || !det || det.pode_rodizio === false) return;
     void agir(`semana:${n}`, () => salvarDisponibilidadeDe(aberta.id, { semanas: alternar(semanasDet, n) }).then(() => {}), t("Erro ao salvar a disponibilidade"));
-  }
-  function mudarCultoDisp(id: string) {
-    if (!aberta || !det || det.pode_rodizio === false) return;
-    void agir(`cultodisp:${id}`, () => salvarDisponibilidadeDe(aberta.id, { cultos: alternar(cultosDet, id) }).then(() => {}), t("Erro ao salvar a disponibilidade"));
   }
 
   const timeEscolhido = det?.times.find(x => x.id === timeNovo);
@@ -366,22 +361,9 @@ export default function ServirPessoasScreen() {
                     );
                   })}
                 </View>
-                {!!det.cultos_opcoes?.length && (
-                  <View style={[styles.chips, { marginTop: 8 }, det.pode_rodizio === false && { opacity: 0.45 }]} pointerEvents={det.pode_rodizio === false ? "none" : "auto"}>
-                    {det.cultos_opcoes.map(c => {
-                      const ativo = cultosDet.includes(c.id);
-                      return (
-                        <Pressable key={c.id} onPress={() => mudarCultoDisp(c.id)} accessibilityRole="checkbox" accessibilityState={{ checked: ativo }}
-                          style={[styles.chip, ativo && styles.chipAtivo]}>
-                          <Text style={[styles.chipTxt, ativo && styles.chipTxtAtivo]}>{c.name}</Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                )}
                 <Text style={[styles.pequeno, { color: colors.textMuted, marginTop: 6 }]}>
-                  {semanasDet.length === 0 && cultosDet.length === 0
-                    ? t("Nada marcado: disponível em todas as semanas e cultos.")
+                  {semanasDet.length === 0
+                    ? t("Nada marcado: disponível em todas as semanas.")
                     : t("Fora do que está marcado, a escala automática não coloca esta pessoa.")}
                 </Text>
 

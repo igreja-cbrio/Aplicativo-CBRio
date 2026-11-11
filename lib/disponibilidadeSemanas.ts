@@ -1,9 +1,9 @@
 /**
  * Disponibilidade DECLARADA na aba Servir · semanas × cultos (09/11/2026).
  *
- * Pedido do Marcos: o voluntário marca em QUAIS CULTOS pode ser escalado e em
- * QUAIS SEMANAS do mês — várias (1 e 3, 2 e 4…), incluindo a 5ª. "Semana N" é a
- * N-ésima vez daquele dia no mês: sábado + 2 = o 2º sábado.
+ * Pedido do Marcos: o voluntário marca em QUAIS SEMANAS do mês pode ser escalado
+ * — várias (1 e 3, 2 e 4…), incluindo a 5ª. "Semana N" é a N-ésima vez daquele
+ * dia no mês: sábado + 2 = o 2º sábado. Os CULTOS são por time ("Meus times").
  *
  * ⚠️ Quem decide o que vale é o SERVIDOR (`utils/disponibilidadeDeclarada` no
  * ERP): fora do que a pessoa marcou o preenchimento automático não escala, e
@@ -25,12 +25,6 @@ export function normalizarSemanas(lista: unknown, legado?: unknown): number[] {
   return Number.isInteger(n) && n >= 1 && n <= 5 ? [n] : [];
 }
 
-/** Ids de culto como string, sem repetição. Qualquer coisa que não seja lista vira []. */
-export function normalizarCultos(lista: unknown): string[] {
-  if (!Array.isArray(lista)) return [];
-  return [...new Set(lista.filter((x) => x !== null && x !== undefined && x !== "").map(String))];
-}
-
 /** Liga/desliga um item, mantendo números em ordem. */
 export function alternar<T extends number | string>(lista: T[], item: T): T[] {
   const tem = lista.includes(item);
@@ -42,7 +36,7 @@ export function alternar<T extends number | string>(lista: T[], item: T): T[] {
 
 export type CultoOpcao = { id: string; name: string; recurrence_day: number | null; recurrence_time: string | null };
 
-/** Catálogo de cultos que o servidor mandou. `null` = servidor sem a migration ⇒ a tela esconde os cultos. */
+/** Catálogo de cultos que o servidor mandou (usado em "Meus times"). Não-lista ⇒ `null`. */
 export function normalizarCultosOpcoes(v: unknown): CultoOpcao[] | null {
   if (!Array.isArray(v)) return null;
   return v

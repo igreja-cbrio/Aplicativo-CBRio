@@ -34,6 +34,7 @@ type CheckinHist = { id: string; checked_in_at: string | null; servico: string |
 type EscalasResp = { escalas: EscalaApi[]; historico: CheckinHist[]; vol_profile_id: string | null };
 import { Disponibilidade } from "@/components/voluntariado/Disponibilidade";
 import { MinhaDisponibilidade } from "@/components/voluntariado/MinhaDisponibilidade";
+import { MeusTimes } from "@/components/voluntariado/MeusTimes";
 import { isValidCPF, maskCPF, onlyDigits } from "@/lib/validators";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -491,17 +492,15 @@ export default function VoluntariadoScreen() {
               )}
               </SecaoRecolhivel>
 
-              {volProfileId && <Disponibilidade volProfileId={volProfileId} />}
-              {/* Semanas e cultos em que posso servir (09/11/2026 · era o domingo de
-                  preferência de 24/09). É DISPONIBILIDADE: fora do que a pessoa marcou o
-                  automático não escala. `undefined` = servidor antigo ⇒ sem card. */}
+              {/* Ordem pedida pelo Marcos (09/11/2026): "Quando posso servir" (semanas)
+                  → "Meus times" (cultos por time + sair) → datas bloqueadas, que sem
+                  nenhuma data viram só um botão. É DISPONIBILIDADE: fora do que a
+                  pessoa marcou o automático não escala. `undefined` = servidor antigo. */}
               {volProfileId && me?.rodizio_semanas !== undefined && (
-                <MinhaDisponibilidade
-                  semanasIniciais={me.rodizio_semanas}
-                  cultosIniciais={me.cultos_disponiveis ?? []}
-                  cultos={me.cultos_opcoes ?? null}
-                />
+                <MinhaDisponibilidade semanasIniciais={me.rodizio_semanas} />
               )}
+              {volProfileId && <MeusTimes />}
+              {volProfileId && <Disponibilidade volProfileId={volProfileId} />}
 
               {historico.length > 0 && (
                 <SecaoRecolhivel titulo={t("Histórico de check-in")} resumo={String(historico.length)}>

@@ -1,7 +1,7 @@
 // Disponibilidade declarada na aba Servir (09/11/2026) · lib/disponibilidadeSemanas.ts
 // O que vale é o servidor; aqui garantimos que a tela lê e monta a escolha certo.
 import { describe, expect, it } from "vitest";
-import { alternar, normalizarCultos, normalizarCultosOpcoes, normalizarSemanas } from "@/lib/disponibilidadeSemanas";
+import { alternar, normalizarCultosOpcoes, normalizarSemanas } from "@/lib/disponibilidadeSemanas";
 
 describe("normalizarSemanas", () => {
   it("aceita várias e a 5ª, em ordem e sem repetir", () => {
@@ -33,11 +33,7 @@ describe("alternar", () => {
 });
 
 describe("cultos", () => {
-  it("normaliza ids", () => {
-    expect(normalizarCultos(["a", "a", null, ""])).toEqual(["a"]);
-    expect(normalizarCultos("a")).toEqual([]);
-  });
-  it("catálogo ausente = null (servidor sem a migration esconde os cultos)", () => {
+  it("catálogo ausente = null", () => {
     expect(normalizarCultosOpcoes(undefined)).toBeNull();
     expect(normalizarCultosOpcoes(null)).toBeNull();
   });
