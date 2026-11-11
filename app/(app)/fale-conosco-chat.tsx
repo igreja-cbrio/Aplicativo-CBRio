@@ -1,22 +1,26 @@
 import { Text, TextInput } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FlatList, Linking, Pressable, StyleSheet, View } from "react-native";
+import { Alert, FlatList, Image, Linking, Pressable, StyleSheet, View } from "react-native";
+import * as Crypto from "expo-crypto";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@/contexts/AuthContext";
 import { Stack, router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/ui/Button";
+import { useDialogo } from "@/components/ui/Dialogo";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { linkify } from "@/lib/linkify";
 import { subirUmNivel } from "@/lib/hierarquia";
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet, apiPost, enviarAnexoAssistente } from "@/lib/api";
+import { escolherImagem, type ArquivoImagem } from "@/lib/escolherImagem";
 import {
   FRASE_PEDIR_HUMANO,
   LIMITE_DIGITANDO_MS,
   chaveConversa,
+  ehLocal,
   restaurarConversa,
   serializarConversa,
   aguardandoResposta,
@@ -46,6 +50,7 @@ export default function FaleConoscoChatScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
   const { user } = useAuth();
+  const dlg = useDialogo();
   const chave = user?.id ? chaveConversa(user.id) : null;
 
   const [msgs, setMsgs] = useState<MensagemChat[]>([]);
@@ -54,7 +59,11 @@ export default function FaleConoscoChatScreen() {
   const [escalado, setEscalado] = useState(false);
   const [demorou, setDemorou] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [anexo, setAnexo] = useState<ArquivoImagem | null>(null);
+  const [falhouFoto, setFalhouFoto] = useState(false);
 
+  // client_id da foto pendente: o MESMO no retry (o servidor casa a otimista por ele)
+  const clientIdFoto = useRef<string | null>(null);
   const msgsRef = useRef<MensagemChat[]>([]);
   const conversaRef = useRef<string | null>(null);
   const desdeRef = useRef<string | null>(null);
@@ -150,8 +159,34 @@ export default function FaleConoscoChatScreen() {
     conversaRef.current = null; desdeRef.current = null; msgsRef.current = [];
     semNovidade.current = 0;
     setMsgs([]); setEscalado(false); setErro(null);
+    setAnexo(null); setFalhouFoto(false); clientIdFoto.current = null;
     if (chave) AsyncStorage.removeItem(chave).catch(() => {});
   }, [chave]);
+
+  const confirmarNovaConversa = useCallback(async () => {
+    const ok = await dlg.confirmar({
+      titulo: t("Começar uma nova conversa?"),
+      mensagem: t("A conversa atual será encerrada."),
+      acao: t("Começar"),
+    });
+    if (ok) novaConversa();
+  }, [dlg, t, novaConversa]);
+
+  const anexar = useCallback(() => {
+    if (enviandoRef.current) return;
+    const pegar = async (origem: "camera" | "galeria") => {
+      const f = await escolherImagem(origem, t);
+      if (!f) return;
+      clientIdFoto.current = Crypto.randomUUID();
+      setFalhouFoto(false); setErro(null);
+      setAnexo(f);
+    };
+    Alert.alert(t("Anexar foto"), t("Como você quer enviar?"), [
+      { text: t("Tirar foto"), onPress: () => { pegar("camera"); } },
+      { text: t("Escolher da galeria"), onPress: () => { pegar("galeria"); } },
+      { text: t("Cancelar"), style: "cancel" },
+    ]);
+  }, [t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -203,11 +238,53 @@ export default function FaleConoscoChatScreen() {
     }
   }, [aplicar, buscar, agendar, guardar, t]);
 
+  // Foto (com ou sem legenda). Caminho separado do texto puro, que segue por /app/assistente.
+  const enviarComFoto = useCallback(async (arquivo: ArquivoImagem, corpo: string) => {
+    if (enviandoRef.current) return;
+    enviandoRef.current = true;
+    setEnviando(true);
+    setErro(null);
+    setFalhouFoto(false);
+    const limpo = corpo.trim();
+    if (!clientIdFoto.current) clientIdFoto.current = Crypto.randomUUID();
+    const client_id = clientIdFoto.current;
+    const marca = maiorCriadoEm(msgsRef.current) ?? "1970-01-01T00:00:00Z";
+    seq.current += 1;
+    const local = mensagemLocal(seq.current, "membro", limpo, marca, { client_id, anexo_url: arquivo.uri });
+    msgsRef.current = [...msgsRef.current, local];
+    setMsgs(msgsRef.current);
+    try {
+      const r = await enviarAnexoAssistente(arquivo, {
+        texto: limpo || undefined,
+        conversa_id: conversaRef.current || undefined,
+        client_id,
+      });
+      conversaRef.current = r.conversa_id;
+      if (r.escalado) setEscalado(true);
+      guardar(!!r.escalado || escaladoRef.current);
+      setAnexo(null);
+      setTexto("");
+      clientIdFoto.current = null;
+      semNovidade.current = 0;
+      await buscar();
+    } catch (e: any) {
+      // mantém a foto e o texto para reenviar; tira só a bolha otimista
+      msgsRef.current = msgsRef.current.filter((m) => m.id !== local.id);
+      setMsgs(msgsRef.current);
+      setFalhouFoto(true);
+      setErro(e?.message || null);
+    } finally {
+      enviandoRef.current = false;
+      setEnviando(false);
+      agendar();
+    }
+  }, [buscar, agendar, guardar]);
+
   const aguardando = aguardandoResposta(msgs, enviando) && !escalado;
   const digitando = aguardando && !demorou;
 
   return (
-    <SafeAreaView style={styles.safe} edges={["left", "right", "bottom"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "left", "right", "bottom"]}>
       <Stack.Screen options={{ headerShown: false }} />
       <TecladoSeguro style={{ flex: 1 }}>
         <View style={styles.header}>
@@ -215,7 +292,13 @@ export default function FaleConoscoChatScreen() {
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
           <Text style={styles.title}>{t("Fale conosco")}</Text>
-          <View style={{ width: 24 }} />
+          {msgs.length > 0 || conversaRef.current ? (
+            <Pressable onPress={confirmarNovaConversa} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Nova conversa")}>
+              <Ionicons name="create-outline" size={22} color={colors.text} />
+            </Pressable>
+          ) : (
+            <View style={{ width: 24 }} />
+          )}
         </View>
 
         <View style={styles.banner} accessibilityRole="text">
@@ -261,7 +344,7 @@ export default function FaleConoscoChatScreen() {
           ListEmptyComponent={
             <Text style={styles.vazio}>{t("Escreva sua dúvida (horários, eventos, grupos, batismo…) que o assistente tenta ajudar.")}</Text>
           }
-          renderItem={({ item }) => <Bolha m={item} styles={styles} t={t} />}
+          renderItem={({ item }) => <Bolha m={item} styles={styles} t={t} subindo={enviando && ehLocal(item)} />}
           ListFooterComponent={digitando ? <Text style={styles.digitando} accessibilityLiveRegion="polite">{t("Digitando…")}</Text> : null}
         />
 
@@ -270,15 +353,38 @@ export default function FaleConoscoChatScreen() {
             {t("Está demorando mais que o normal. Se preferir, toque em “Falar com uma pessoa”.")}
           </Text>
         ) : null}
-        {msgs.length > 0 || conversaRef.current ? (
-          <Pressable onPress={novaConversa} accessibilityRole="button" accessibilityLabel={t("Nova conversa")} hitSlop={6} style={{ alignSelf: "center" }}>
-            <Text style={styles.link}>{t("Nova conversa")}</Text>
+        {falhouFoto && anexo ? (
+          <Pressable onPress={() => enviarComFoto(anexo, texto)} accessibilityRole="button" hitSlop={6}>
+            <Text style={styles.erro} accessibilityRole="alert">{t("Não enviou. Toque para reenviar")}</Text>
           </Pressable>
+        ) : erro ? <Text style={styles.erro} accessibilityRole="alert">{erro}</Text> : null}
+
+        {anexo ? (
+          <View style={styles.previa}>
+            <Image source={{ uri: anexo.uri }} style={styles.miniatura} resizeMode="cover" accessibilityIgnoresInvertColors />
+            <Pressable
+              style={styles.removerAnexo}
+              onPress={() => { setAnexo(null); setFalhouFoto(false); clientIdFoto.current = null; }}
+              disabled={enviando}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t("Remover foto")}
+            >
+              <Ionicons name="close" size={14} color="#fff" />
+            </Pressable>
+          </View>
         ) : null}
 
-        {erro ? <Text style={styles.erro} accessibilityRole="alert">{erro}</Text> : null}
-
         <View style={styles.compor}>
+          <Pressable
+            style={[styles.clipe, enviando && { opacity: 0.4 }]}
+            onPress={anexar}
+            disabled={enviando}
+            accessibilityRole="button"
+            accessibilityLabel={t("Anexar foto")}
+          >
+            <Ionicons name="attach" size={24} color={colors.textMuted} />
+          </Pressable>
           <TextInput
             style={styles.input}
             value={texto}
@@ -290,28 +396,41 @@ export default function FaleConoscoChatScreen() {
             accessibilityLabel={t("Sua mensagem")}
           />
           <Pressable
-            style={[styles.enviar, (!texto.trim() || enviando) && { opacity: 0.4 }]}
-            disabled={!texto.trim() || enviando}
-            onPress={() => { const c = texto; setTexto(""); enviar(c); }}
+            style={[styles.enviar, ((!texto.trim() && !anexo) || enviando) && { opacity: 0.4 }]}
+            disabled={(!texto.trim() && !anexo) || enviando}
+            onPress={() => {
+              if (anexo) { enviarComFoto(anexo, texto); return; }
+              const c = texto; setTexto(""); enviar(c);
+            }}
             accessibilityRole="button"
             accessibilityLabel={t("Enviar")}
           >
             <Ionicons name="send" size={20} color="#fff" />
           </Pressable>
         </View>
+        <dlg.Dialogo />
       </TecladoSeguro>
     </SafeAreaView>
   );
 }
 
-function Bolha({ m, styles, t }: { m: MensagemChat; styles: ReturnType<typeof makeStyles>; t: (s: string) => string }) {
+function Bolha({ m, styles, t, subindo }: { m: MensagemChat; styles: ReturnType<typeof makeStyles>; t: (s: string) => string; subindo?: boolean }) {
   const meu = m.autor === "membro";
   const rotulo = m.autor === "assistente" ? t("Assistente automático") : m.autor === "equipe" ? t("Equipe CBRio") : null;
   return (
     <View style={[styles.linha, meu ? styles.linhaMeu : styles.linhaOutro]}>
       {rotulo ? <Text style={styles.rotulo}>{rotulo}</Text> : null}
-      <View style={[styles.bolha, meu ? styles.bolhaMeu : styles.bolhaOutro]}>
-        <Text style={meu ? styles.txtMeu : styles.txtOutro}>
+      <View style={[styles.bolha, meu ? styles.bolhaMeu : styles.bolhaOutro, subindo && !!m.anexo_url && { opacity: 0.6 }]}>
+        {m.anexo_url ? (
+          <Image
+            source={{ uri: m.anexo_url }}
+            style={[styles.foto, !!m.corpo && { marginBottom: 6 }]}
+            resizeMode="cover"
+            accessibilityIgnoresInvertColors
+            accessibilityLabel={t("Foto enviada")}
+          />
+        ) : null}
+        {m.corpo ? <Text style={meu ? styles.txtMeu : styles.txtOutro}>
           {linkify(m.corpo).map((p, i) =>
             p.tipo === "link" ? (
               <Text
@@ -326,7 +445,8 @@ function Bolha({ m, styles, t }: { m: MensagemChat; styles: ReturnType<typeof ma
               p.texto
             ),
           )}
-        </Text>
+        </Text> : null}
+        {subindo && !!m.anexo_url ? <Text style={styles.subindo}>{t("Enviando…")}</Text> : null}
       </View>
     </View>
   );
@@ -368,5 +488,11 @@ const makeStyles = (colors: Palette) =>
       flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
       paddingHorizontal: spacing.md, paddingVertical: 10, color: colors.text, fontSize: font.size.md, maxHeight: 120,
     },
+    clipe: { width: 40, height: 44, alignItems: "center", justifyContent: "center" },
+    previa: { marginHorizontal: spacing.lg, marginTop: spacing.sm, width: 64, height: 64 },
+    miniatura: { width: 64, height: 64, borderRadius: radius.md, backgroundColor: colors.surface },
+    removerAnexo: { position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.danger, alignItems: "center", justifyContent: "center" },
+    foto: { width: 220, aspectRatio: 4 / 3, borderRadius: radius.md, backgroundColor: colors.surface },
+    subindo: { color: "#fff", fontSize: font.size.sm, marginTop: 4, opacity: 0.85 },
     enviar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.brandMid, alignItems: "center", justifyContent: "center" },
   });
