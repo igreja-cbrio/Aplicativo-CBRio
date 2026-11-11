@@ -9,10 +9,14 @@ import { CadastroGate } from "@/components/auth/CadastroGate";
 import { AppScreenFrame } from "@/components/navigation/AppScreenFrame";
 import { chromeDaTela } from "@/lib/appNavigation";
 import { BottomBar } from "@/components/ui/BottomBar";
+import { ChatFab } from "@/components/chat/ChatFab";
 import { useColors, useTheme } from "@/contexts/ThemeContext";
 import { MenuProvider } from "@/contexts/MenuContext";
 import { StatusBar } from "expo-status-bar";
 import { ehRaiz, registrarRotaAtual, subirUmNivel } from "@/lib/hierarquia";
+
+/** Só as 7 telas-base mostram o atalho do assistente; detalhe/formulário e o próprio chat nunca. */
+const ROTAS_COM_CHAT_FAB = new Set(["/", "/meu-grupo", "/voluntariado", "/cuidados", "/devocional", "/generosidade", "/menu"]);
 
 /** Navegação comum: marca no topo, menu lateral e atalhos da nova Home. */
 
@@ -161,6 +165,8 @@ export default function AppLayout() {
             </Stack>
             </DockInsetContext.Provider>
           </View>
+
+          {ROTAS_COM_CHAT_FAB.has(pathname) && <ChatFab bottomOffset={dockHeight} />}
 
           {/* Uma única instância fora do Stack, inclusive na Home e durante o gesto de voltar. */}
           {!semBarra && <BottomBar onLayout={(event) => setDockHeight(event.nativeEvent.layout.height)} />}
