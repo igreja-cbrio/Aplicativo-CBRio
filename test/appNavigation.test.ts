@@ -50,3 +50,9 @@ describe("casca durante a volta interativa para a Home", () => {
     expect(chromeDaTela("notificacoes").voltar).toBe(false);
   });
 });
+
+describe("chat do assistente", () => {
+  it("é tela focada: sem dock nem cabeçalho da casca", () => {
+    expect(chromeDaTela("/fale-conosco-chat")).toMatchObject({ dock: false, header: false });
+  });
+});
