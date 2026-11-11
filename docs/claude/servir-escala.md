@@ -467,3 +467,7 @@ recepção no domingo.
   (lá ficam os cultos por time, que já existiam). `normalizarCultos` saiu de
   `lib/disponibilidadeSemanas.ts`.
 - O rótulo da escala ganhou o motivo "não marcou este culto neste time" (vem do servidor).
+
+## Kids só domingo e quarta (11/11/2026)
+
+Marcos: os times do Kids só servem no domingo e na quarta (não há Kids no AMI nem no Bridge). Quem decide é o servidor (`backend/utils/cultosDoTime.js` no ERP): "Meus times" usa `times[].cultos_opcoes` e Pessoas do Servir usa `vinculos[].tipos_permitidos`. Servidor antigo sem esses campos = lista geral, como antes.

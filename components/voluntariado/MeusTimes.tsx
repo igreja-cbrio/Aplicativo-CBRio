@@ -47,9 +47,15 @@ export function MeusTimes() {
 
   useEffect(() => { void carregar(); }, [carregar]);
 
+  // Cultos que o TIME oferece (Kids: só domingo e quarta · 11/11). Servidor
+  // antigo não manda por time: vale a lista geral.
+  function opcoesDo(time: MeuTime): CultoOpcao[] {
+    return normalizarCultosOpcoes(time.cultos_opcoes) ?? opcoes;
+  }
+
   async function trocarCulto(time: MeuTime, cultoId: string) {
     if (ocupado) return;
-    const todos = opcoes.map((o) => o.id);
+    const todos = opcoesDo(time).map((o) => o.id);
     const atual = time.cultos ?? todos;
     const novo = alternar(atual, cultoId);
     if (novo.length === 0) {
@@ -111,7 +117,8 @@ export function MeusTimes() {
         <Text style={styles.hint}>{t("Você ainda não está em nenhum time.")}</Text>
       ) : (
         times.map((time) => {
-          const marcados = time.cultos ?? opcoes.map((o) => o.id);
+          const opcoesTime = opcoesDo(time);
+          const marcados = time.cultos ?? opcoesTime.map((o) => o.id);
           const salvando = ocupado === time.team_id;
           return (
             <View key={time.team_id} style={styles.card}>
@@ -136,7 +143,7 @@ export function MeusTimes() {
                 )}
               </View>
               <View style={styles.chips}>
-                {opcoes.map((o) => {
+                {opcoesTime.map((o) => {
                   const ativo = marcados.includes(o.id);
                   const hora = o.recurrence_time ? o.recurrence_time.slice(0, 5) : "";
                   return (

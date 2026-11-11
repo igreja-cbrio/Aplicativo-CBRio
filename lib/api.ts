@@ -475,6 +475,8 @@ export type MeuTime = {
   funcoes: string[];
   /** Cultos em que serve NESTE time · null = todos. */
   cultos: string[] | null;
+  /** Cultos que ESTE time oferece (Kids: só domingo e quarta · 11/11). Ausente = servidor antigo. */
+  cultos_opcoes?: unknown;
 };
 
 /** Os times da própria pessoa + o catálogo de cultos pra escolher. */
@@ -505,6 +507,8 @@ export type AdminVinculo = {
   position_id: string | null; position_name: string | null;
   /** null = serve em TODOS os cultos deste time. */
   service_type_ids: string[] | null;
+  /** Cultos que o TIME oferece (Kids: só domingo e quarta · 11/11). Ausente = servidor antigo. */
+  tipos_permitidos?: string[];
   is_active: boolean;
 };
 export type AdminPessoaDetalhe = {
