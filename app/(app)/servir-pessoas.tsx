@@ -130,9 +130,10 @@ export default function ServirPessoasScreen() {
 
   // Vínculos agrupados por time: o time é o card; as funções são linhas dentro.
   const porTime = useMemo(() => {
-    const m = new Map<string, { team_id: string; nome: string; linhas: AdminVinculo[]; tipos: string[] | null }>();
+    const m = new Map<string, { team_id: string; nome: string; linhas: AdminVinculo[]; tipos: string[] | null; permitidos: string[] | null }>();
     for (const v of det?.vinculos ?? []) {
-      const g = m.get(v.team_id) ?? { team_id: v.team_id, nome: v.team_name || t("Sem nome"), linhas: [], tipos: v.service_type_ids };
+      // `tipos_permitidos`: cultos que o TIME oferece (Kids: domingo e quarta · 11/11).
+      const g = m.get(v.team_id) ?? { team_id: v.team_id, nome: v.team_name || t("Sem nome"), linhas: [], tipos: v.service_type_ids, permitidos: v.tipos_permitidos ?? null };
       g.linhas.push(v);
       m.set(v.team_id, g);
     }
@@ -147,8 +148,13 @@ export default function ServirPessoasScreen() {
     finally { setOcupado(null); }
   }
 
-  function alternarCulto(grupo: { linhas: AdminVinculo[]; tipos: string[] | null }, tipoId: string) {
-    const todos = (det?.tipos ?? []).map(x => x.id);
+  function tiposDoGrupo(grupo: { permitidos: string[] | null }) {
+    const lista = det?.tipos ?? [];
+    return grupo.permitidos ? lista.filter(x => grupo.permitidos!.includes(x.id)) : lista;
+  }
+
+  function alternarCulto(grupo: { linhas: AdminVinculo[]; tipos: string[] | null; permitidos: string[] | null }, tipoId: string) {
+    const todos = tiposDoGrupo(grupo).map(x => x.id);
     const atual = grupo.tipos ?? todos;                       // null = serve em todos
     const novo = atual.includes(tipoId) ? atual.filter(x => x !== tipoId) : [...atual, tipoId];
     // ⚠️ Desmarcar o ÚLTIMO voltaria a NULL no servidor (= todos) — o oposto do
@@ -396,7 +402,7 @@ export default function ServirPessoasScreen() {
                       {g.tipos === null ? t("Serve em todos os cultos") : t("Serve só nestes cultos:")}
                     </Text>
                     <View style={styles.chips}>
-                      {det.tipos.map(tp => {
+                      {tiposDoGrupo(g).map(tp => {
                         const marcado = g.tipos === null || g.tipos.includes(tp.id);
                         const salvando = ocupado === `tipo:${g.linhas[0].id}:${tp.id}`;
                         return (
