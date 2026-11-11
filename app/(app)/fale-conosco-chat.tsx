@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { linkify } from "@/lib/linkify";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { apiGet, apiPost } from "@/lib/api";
 import {
@@ -206,7 +207,7 @@ export default function FaleConoscoChatScreen() {
   const digitando = aguardando && !demorou;
 
   return (
-    <SafeAreaView style={styles.safe} edges={["left", "right"]}>
+    <SafeAreaView style={styles.safe} edges={["left", "right", "bottom"]}>
       <Stack.Screen options={{ headerShown: false }} />
       <TecladoSeguro style={{ flex: 1 }}>
         <View style={styles.header}>
@@ -310,7 +311,22 @@ function Bolha({ m, styles, t }: { m: MensagemChat; styles: ReturnType<typeof ma
     <View style={[styles.linha, meu ? styles.linhaMeu : styles.linhaOutro]}>
       {rotulo ? <Text style={styles.rotulo}>{rotulo}</Text> : null}
       <View style={[styles.bolha, meu ? styles.bolhaMeu : styles.bolhaOutro]}>
-        <Text style={meu ? styles.txtMeu : styles.txtOutro}>{m.corpo}</Text>
+        <Text style={meu ? styles.txtMeu : styles.txtOutro}>
+          {linkify(m.corpo).map((p, i) =>
+            p.tipo === "link" ? (
+              <Text
+                key={i}
+                style={meu ? styles.linkMeu : styles.linkBolha}
+                accessibilityRole="link"
+                onPress={() => { Promise.resolve(Linking.openURL(p.url)).catch(() => {}); }}
+              >
+                {p.texto}
+              </Text>
+            ) : (
+              p.texto
+            ),
+          )}
+        </Text>
       </View>
     </View>
   );
@@ -343,6 +359,8 @@ const makeStyles = (colors: Palette) =>
     bolhaOutro: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
     txtMeu: { color: "#fff", fontSize: font.size.md, lineHeight: 21 },
     txtOutro: { color: colors.text, fontSize: font.size.md, lineHeight: 21 },
+    linkBolha: { color: colors.brandMid, textDecorationLine: "underline" },
+    linkMeu: { color: "#fff", textDecorationLine: "underline" },
     digitando: { color: colors.textMuted, fontSize: font.size.sm, fontStyle: "italic", marginTop: spacing.xs },
     erro: { color: colors.danger, fontSize: font.size.sm, paddingHorizontal: spacing.lg },
     compor: { flexDirection: "row", alignItems: "flex-end", gap: spacing.sm, padding: spacing.lg, paddingTop: spacing.sm },

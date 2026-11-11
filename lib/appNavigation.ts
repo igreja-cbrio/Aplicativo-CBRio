@@ -38,7 +38,7 @@ export const MENU_SECTIONS = [
 /** A casca é definida pela própria tela, nunca pela rota que está por cima dela. */
 export function chromeDaTela(rota: string) {
   const caminho = rota === "index" ? "/" : rota.startsWith("/") ? rota : `/${rota}`;
-  const semBarra = caminho.startsWith("/completar-cadastro") || caminho === "/inscricao-formulario";
+  const semBarra = caminho.startsWith("/completar-cadastro") || caminho === "/inscricao-formulario" || caminho === "/fale-conosco-chat";
   return {
     caminho,
     dock: !semBarra,
