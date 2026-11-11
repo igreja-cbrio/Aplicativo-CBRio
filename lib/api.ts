@@ -159,9 +159,11 @@ export async function apiUpload<T>(
   path: string,
   campo: string,
   arquivo: { uri: string; name: string; type: string },
+  campos?: Record<string, string>,
 ): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json", ...(await authHeaders()) };
   const form = new FormData();
+  for (const [k, v] of Object.entries(campos || {})) form.append(k, v);
   form.append(campo, arquivo as unknown as Blob);
   const resp = await fetch(`${BASE}${path}`, { method: "POST", headers, body: form });
   if (!resp.ok) {
@@ -755,6 +757,18 @@ export async function enviarFotoPerfil(
     "/app/membro/foto", "foto", arquivo,
   );
   return r?.avatar_url ?? null;
+}
+
+/** Foto no chat do assistente (multipart: `foto` + texto/conversa_id/client_id). */
+export function enviarAnexoAssistente(
+  arquivo: { uri: string; name: string; type: string },
+  opts: { texto?: string; conversa_id?: string; client_id: string },
+): Promise<{ conversa_id: string; resposta: string | null; escalado: boolean }> {
+  return apiUpload("/app/assistente/anexo", "foto", arquivo, {
+    ...(opts.texto ? { texto: opts.texto } : {}),
+    ...(opts.conversa_id ? { conversa_id: opts.conversa_id } : {}),
+    client_id: opts.client_id,
+  });
 }
 
 /** Tira a capa do grupo (o app só sabia SUBSTITUIR — foto errada não tinha desfazer). */
