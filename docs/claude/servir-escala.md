@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Minhas escalas · escala aguardando resposta fica EMPILHADA (texto em cima, botões embaixo) (2026-11-12)
 - ⚠️⚠️ SERVIR · "Meus times": a pessoa escolhe os cultos de CADA time e sai do time · datas viram botão (2026-11-09 tarde)
 - ⚠️⚠️ SERVIR · "Quando posso servir": cultos × semanas 1–5 (várias) · virou DISPONIBILIDADE (2026-11-09)
 - Inscrição · dois interesses ordenados (2026-11-03)
@@ -471,3 +472,7 @@ recepção no domingo.
 ## Kids só domingo e quarta (11/11/2026)
 
 Marcos: os times do Kids só servem no domingo e na quarta (não há Kids no AMI nem no Bridge). Quem decide é o servidor (`backend/utils/cultosDoTime.js` no ERP): "Meus times" usa `times[].cultos_opcoes` e Pessoas do Servir usa `vinculos[].tipos_permitidos`. Servidor antigo sem esses campos = lista geral, como antes.
+
+## Minhas escalas · escala aguardando resposta empilhada (12/11/2026)
+
+Relato de um voluntário do Kids (print de 29/10, Samsung com letra grande): no cartão com "Recusar" e "Confirmar" lado a lado do texto, os dois botões tomavam a largura e o nome do culto quebrava letra por letra ("CBK / IDS / - Ma / nhã"). O cartão confirmado não quebrava porque os controles ficam em coluna. Em `voluntariado.tsx`, a escala que ainda espera resposta (`aguardando`) usa `escalaAguardando` (coluna) + `escalaInfoAguardando` (SEM `flex: 1`: numa coluna de altura livre o texto encolheria a zero) e os botões dividem a linha de baixo (`acaoLarga`). Os outros estados seguem em linha. ⚠️ Cartão com dois botões ao lado de texto não cabe com letra grande: empilhar.
