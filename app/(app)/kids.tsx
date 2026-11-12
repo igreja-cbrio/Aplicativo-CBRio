@@ -1,3 +1,4 @@
+import { KidsSerieAnual } from '@/components/kids/KidsSerieAnual';
 import { ScrollView } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 import { useCallback, useMemo, useState } from "react";
@@ -162,6 +163,8 @@ export default function KidsScreen() {
         <Text style={styles.intro}>
           {t("Prepare o check-in dos seus filhos pelo celular. No totem, a equipe escaneia seu código, confere com você e imprime as etiquetas. A entrada e a retirada continuam presenciais.")}
         </Text>
+
+        {filhos.map(f => <KidsSerieAnual key={f.id} criancaId={f.id} nome={f.nome} />)}
 
         {/* Solicitações de vínculo em análise / recusadas */}
         {solicitacoesFalhou && solicitacoes.length === 0 && (

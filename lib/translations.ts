@@ -6,6 +6,22 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Não foi possível verificar a série. O pré-check-in pode continuar.": {"en": "Unable to check the school grade. Pre-check-in is still available.", "es": "No se pudo consultar el grado escolar. El pre-check-in sigue disponible."},
+  "Selecione a série escolar.": {"en": "Select the school grade.", "es": "Selecciona el grado escolar."},
+  "Não foi possível salvar. Sua escolha foi mantida. Tente novamente.": {"en": "Unable to save. Your selection was kept. Try again.", "es": "No se pudo guardar. Se conservó tu selección. Inténtalo de nuevo."},
+  "Os dados ou o ano mudaram. Confira a série e confirme novamente.": {"en": "The details or year changed. Check the grade and confirm again.", "es": "Los datos o el año cambiaron. Revisa el grado y vuelve a confirmar."},
+  "Confirme a série escolar de {nome} em {ano}": {"en": "Confirm {nome}'s school grade for {ano}", "es": "Confirma el grado escolar de {nome} en {ano}"},
+  "Série de {nome} confirmada para {ano}": {"en": "{nome}'s grade confirmed for {ano}", "es": "Grado de {nome} confirmado para {ano}"},
+  "Última série informada": {"en": "Last reported grade", "es": "Último grado informado"},
+  "Série": {"en": "School grade", "es": "Grado escolar"},
+  "Série ainda não informada": {"en": "School grade not reported yet", "es": "Grado escolar aún no informado"},
+  "Qual série a criança cursará neste ano? Pode ser a mesma do ano anterior.": {"en": "Which grade will the child attend this year? It can be the same as last year.", "es": "¿Qué grado cursará el niño este año? Puede ser el mismo del año anterior."},
+  "Confirmar série": {"en": "Confirm grade", "es": "Confirmar grado"},
+  "Informar depois": {"en": "Provide later", "es": "Informar después"},
+  "Atualizar dados da tela": {"en": "Refresh details", "es": "Actualizar datos"},
+  "Revisar série": {"en": "Review grade", "es": "Revisar grado"},
+  "Pode informar depois. ": {"en": "You can provide it later. ", "es": "Puedes informarlo después. "},
+  "O pré-check-in continua disponível. Confirmou aqui, vale também no totem.": {"en": "Pre-check-in is still available. Confirmation here also applies at the check-in kiosk.", "es": "El pre-check-in sigue disponible. La confirmación aquí también vale en el tótem."},
   "Escolha seu primeiro e segundo interesse": {en: "Choose your first and second preferences", es: "Elige tu primera y segunda preferencia"},
   "O segundo interesse é opcional e deve ser de outro ministério. A coordenação fará o primeiro contato.": {en: "The second preference is optional and must be a different ministry. The coordination team will contact you first.", es: "La segunda preferencia es opcional y debe ser de otro ministerio. El equipo de coordinación hará el primer contacto."},
   "interesse": {en: "preference", es: "preferencia"},
