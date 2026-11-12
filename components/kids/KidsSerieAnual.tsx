@@ -32,7 +32,7 @@ export function KidsSerieAnual({ criancaId, nome }: { criancaId: string; nome: s
   const carregar = useCallback(async () => {
     try { const e = await apiGet<Estado>(`/app/kids/filho/${encodeURIComponent(criancaId)}/serie-escolar`); setEstado(e); setErro(''); }
     catch { setErro(t("Não foi possível verificar a série. O pré-check-in pode continuar.")); }
-  }, [criancaId]);
+  }, [criancaId, t]);
   useFocusEffect(useCallback(() => {
     void carregar();
     const sub = AppState.addEventListener('change', s => { if (s === 'active' && !editandoRef.current) void carregar(); });
