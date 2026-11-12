@@ -17,6 +17,7 @@ export function KidsSerieAnual({ criancaId, nome }: { criancaId: string; nome: s
     small: { color: colors.textMuted, fontSize: 12, lineHeight: 18 },
     option: { minHeight: 46, borderWidth: 1, borderColor: colors.textMuted, borderRadius: 8, padding: 12, justifyContent: 'center' },
     optionText: { color: colors.text, fontSize: 14 },
+    secondary: { minHeight: 48, borderWidth: 1, borderColor: colors.border, borderRadius: 24, padding: 12, alignItems: 'center', justifyContent: 'center' },
     error: { color: colors.danger, fontSize: 14, lineHeight: 21 },
   }), [colors]);
   const [estado, setEstado] = useState<Estado | null>(null);
@@ -57,8 +58,8 @@ export function KidsSerieAnual({ criancaId, nome }: { criancaId: string; nome: s
       {estado.opcoes.map(opcao => <Pressable key={opcao} disabled={salvando} accessibilityRole="radio" accessibilityState={{ checked: serie === opcao, disabled: salvando }} onPress={() => { setSerie(opcao); setErro(''); }} style={[styles.option, serie === opcao && { borderColor: colors.brandMid, borderWidth: 2 }]}><Text style={styles.optionText}>{serie === opcao ? '✓ ' : ''}{opcao}</Text></Pressable>)}
       {!!erro && <Text style={styles.error} accessibilityRole="alert">{erro}</Text>}
       <Button title={salvando ? 'Salvando…' : 'Confirmar série'} disabled={salvando || !serie} onPress={confirmar}/>
-      <Button variant="ghost" title="Informar depois" disabled={salvando} onPress={() => { setEditando(false); setAdiado(true); setErro(''); }}/>
-      <Button variant="ghost" title="Atualizar dados da tela" disabled={salvando} onPress={async () => { await carregar(); setSerie(''); }}/>
+      <Pressable accessibilityRole="button" accessibilityState={{ disabled: salvando }} disabled={salvando} style={styles.secondary} onPress={() => { setEditando(false); setAdiado(true); setErro(''); }}><Text style={styles.optionText}>Informar depois</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityState={{ disabled: salvando }} disabled={salvando} style={styles.secondary} onPress={async () => { await carregar(); setSerie(''); }}><Text style={styles.optionText}>Atualizar dados da tela</Text></Pressable>
     </View> : <Button title={estado.pendente ? 'Confirmar série' : 'Revisar série'} onPress={() => { setEditando(true); setSerie(estado.pendente ? '' : estado.serie || ''); setErro(''); }}/>} 
     {estado.pendente && <Text style={styles.small}>{adiado ? 'Pode informar depois. ' : ''}O pré-check-in continua disponível. Confirmou aqui, vale também no totem.</Text>}
   </GlassCard>;
