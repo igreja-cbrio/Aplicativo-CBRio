@@ -576,6 +576,8 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Assistente automático para dúvidas rápidas. Dá pra falar com uma pessoa a qualquer momento.": { en: "Automated assistant for quick questions. You can talk to a person at any time.", es: "Asistente automático para dudas rápidas. Puedes hablar con una persona en cualquier momento." },
   "Você está falando com o assistente automático da CBRio. Para falar com uma pessoa, use o botão abaixo.": { en: "You are talking to CBRio's automated assistant. To talk to a person, use the button below.", es: "Estás hablando con el asistente automático de CBRio. Para hablar con una persona, usa el botón de abajo." },
   "Falar com uma pessoa": { en: "Talk to a person", es: "Hablar con una persona" },
+  "Escrever para a Equipe CBRio": { en: "Write to the CBRio team", es: "Escribir al equipo CBRio" },
+  "Escrever neste chat": { en: "Write in this chat", es: "Escribir en este chat" },
   "Outros canais": { en: "Other channels", es: "Otros canales" },
   "Falar com um pastor": { en: "Talk to a pastor", es: "Hablar con un pastor" },
   "A pessoa certa vai te responder aqui. Pode fechar a tela: a resposta fica guardada.": { en: "The right person will reply here. You can close the screen: the reply is kept.", es: "La persona indicada te responderá aquí. Puedes cerrar la pantalla: la respuesta queda guardada." },

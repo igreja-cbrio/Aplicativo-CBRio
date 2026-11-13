@@ -547,3 +547,11 @@ O cabeçalho também deixou de ficar fora do Stack: AppScreenFrame usa `screenLa
 - Mantém e-mail, senha, lembrar, recuperação, Entrar, Primeiro acesso, Google e Apple. Remove explicação/rodapé de cadastro redundantes; diminui padding/gaps sem reduzir campos/botões.
 - `TecladoSeguro` é o único compensador de teclado no login. Rolagem permanece como escape para teclado, texto ampliado e telas excepcionalmente pequenas; não bloquear acesso aos campos para prometer ausência de scroll em qualquer situação.
 - Ajuste visual validado por código/empacotamento; Mac bloqueado impediu conferência no simulador neste turno.
+
+## Chat: digitação durante envio e acessos à equipe (13/11/2026)
+
+`fale-conosco-chat.tsx` mantém o campo editável enquanto a requisição está em andamento; apenas envio/anexos continuam serializados. O teclado não é dispensado ao tocar na lista (arrastar ainda o recolhe). A legenda da foto é limpa no início do envio, para a resposta não apagar o rascunho seguinte.
+
+Os acessos ficam abaixo do cabeçalho, com alvos de ao menos 60 px. Em atendimento humano, “Equipe CBRio / Escrever neste chat” foca o campo e leva ao fim da conversa, sem novo pedido de transferência. “Outros canais” abre `/fale-conosco` e permanece disponível durante o envio.
+
+Validação: 610 testes + tipos/i18n; tela real renderizada em React Native Web com rede/nativos simulados, verificando rascunho durante envio, sucesso/falha/upload, bloqueio de duplo envio, foco da equipe e navegação de canais, em 320/390 px e temas claro/escuro. Isso não substitui verificação do teclado físico iOS/Android.

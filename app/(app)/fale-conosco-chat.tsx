@@ -1,7 +1,7 @@
 import { AnexoChatEquipe } from "@/components/AnexoChatEquipe";
 import { Text, TextInput } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AppState, ActivityIndicator, FlatList, Image, Keyboard, Linking, Pressable, StyleSheet, View } from "react-native";
+import { AppState, ActivityIndicator, FlatList, Image, Keyboard, Linking, Pressable, StyleSheet, View, type TextInput as NativeTextInput } from "react-native";
 import * as Crypto from "expo-crypto";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -122,6 +122,7 @@ export default function FaleConoscoChatScreen() {
   const focada = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lista = useRef<FlatList<MensagemChat>>(null);
+  const campoMensagem = useRef<NativeTextInput>(null);
   const enviandoRef = useRef(false);
   const escaladoRef = useRef(false);
   escaladoRef.current = escalado;
@@ -378,6 +379,7 @@ export default function FaleConoscoChatScreen() {
     acompanharFim.current = true;
     revisaoAcao.current++;
     setEnviando(true);
+    setTexto("");
     setErro(null);
     setFalhouFoto(false);
     setFalhouErro(null);
@@ -404,7 +406,6 @@ export default function FaleConoscoChatScreen() {
       setMsgs(msgsRef.current);
       guardar(!!r.escalado || escaladoRef.current);
       setAnexo(null);
-      setTexto("");
       clientIdFoto.current = null;
       semNovidade.current = 0;
       await buscar();
@@ -413,6 +414,7 @@ export default function FaleConoscoChatScreen() {
       // mantém a foto e o texto para reenviar; tira só a bolha otimista
       msgsRef.current = msgsRef.current.filter((m) => m.id !== local.id);
       setMsgs(msgsRef.current);
+      setTexto(atual => atual || corpo);
       setFalhouFoto(true);
       setFalhouErro(e?.message || null);
     } finally {
@@ -453,7 +455,8 @@ export default function FaleConoscoChatScreen() {
     }
   }, [aplicar, aplicarAcao, buscar, agendar, guardar, ciclo, cancelarVoz, t]);
 
-  const bloqueado = enviando || restaurando || carregandoConversa || erroConversa || !user?.id;
+  const campoBloqueado = restaurando || carregandoConversa || erroConversa || !user?.id;
+  const bloqueado = enviando || campoBloqueado;
   const aguardando = aguardandoResposta(msgs, enviando) && !escalado;
   const digitando = aguardando && !demorou;
 
@@ -472,6 +475,32 @@ export default function FaleConoscoChatScreen() {
           </Pressable>
         </View>
 
+        <View style={styles.apoio}>
+          <Pressable style={[styles.apoioPrincipal, !escalado && bloqueado && styles.desabilitado]}
+            onPress={() => {
+              cancelarVoz();
+              if (escalado) {
+                acompanharFim.current = true;
+                lista.current?.scrollToEnd({ animated: true });
+                campoMensagem.current?.focus();
+              } else enviar(FRASE_PEDIR_HUMANO);
+            }}
+            disabled={(escalado ? campoBloqueado : bloqueado) || voz.ativo} accessibilityRole="button"
+            accessibilityLabel={escalado ? t("Escrever para a Equipe CBRio") : t("Falar com uma pessoa")}>
+            <Ionicons name="chatbubbles-outline" size={22} color={colors.brandMid} />
+            <View style={styles.apoioRotulos}>
+              <Text style={styles.apoioTexto}>{escalado ? t("Equipe CBRio") : t("Falar com uma pessoa")}</Text>
+              {escalado ? <Text style={styles.apoioLegenda}>{t("Escrever neste chat")}</Text> : null}
+            </View>
+          </Pressable>
+          <Pressable onPress={() => { cancelarVoz(); Keyboard.dismiss(); router.navigate("/fale-conosco"); }}
+            style={styles.apoioPrincipal} accessibilityRole="button" accessibilityLabel={t("Outros canais")}>
+            <Ionicons name="call-outline" size={22} color={colors.brandMid} />
+            <Text style={styles.apoioTexto}>{t("Outros canais")}</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </Pressable>
+        </View>
+
         {escalado && (
           <View style={styles.aviso} accessibilityLiveRegion="polite">
             <Text style={styles.avisoTxt}>{t("A pessoa certa vai te responder aqui. Pode fechar a tela: a resposta fica guardada.")}</Text>
@@ -485,7 +514,6 @@ export default function FaleConoscoChatScreen() {
           contentContainerStyle={styles.lista}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-          onTouchStart={() => Keyboard.dismiss()}
           maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
           onScroll={({ nativeEvent: e }) => { acompanharFim.current = e.contentSize.height - e.layoutMeasurement.height - e.contentOffset.y < 80; }}
           scrollEventThrottle={100}
@@ -547,17 +575,6 @@ export default function FaleConoscoChatScreen() {
           </View>
         ) : null}
 
-        <View style={styles.apoio}>
-          <Pressable style={styles.apoioPrincipal} onPress={() => { cancelarVoz(); enviar(FRASE_PEDIR_HUMANO); }}
-            disabled={bloqueado || escalado || voz.ativo} accessibilityRole="button">
-            <View style={styles.apoioIcone}><Ionicons name="chatbubbles-outline" size={24} color={colors.brandMid} /></View>
-            <Text style={styles.apoioTexto}>{escalado ? t("Equipe CBRio") : t("Falar com uma pessoa")}</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-          </Pressable>
-          <Pressable onPress={() => router.navigate("/fale-conosco")} style={styles.outros} accessibilityRole="button">
-            <Text style={styles.link}>{t("Outros canais")}</Text>
-          </Pressable>
-        </View>
         {voz.ativo ? <View style={styles.voz} accessibilityLiveRegion="polite">
           <ActivityIndicator size="small" color={colors.brandMid} />
           <Text style={styles.vozTexto}>{voz.estado === "permissao" ? t("Aguardando permissão…") : voz.estado === "finalizando" ? t("Concluindo transcrição…") : t("Ouvindo… Toque em parar para revisar.")}</Text>
@@ -568,8 +585,8 @@ export default function FaleConoscoChatScreen() {
             accessibilityRole="button" accessibilityLabel={t("Escolher da galeria")}>
             <Ionicons name="add" size={28} color={colors.text} />
           </Pressable>
-          <TextInput style={styles.input} value={texto} onChangeText={setTexto}
-            editable={!bloqueado && !voz.ativo} placeholder={t("Pergunte algo")}
+          <TextInput ref={campoMensagem} style={styles.input} value={texto} onChangeText={setTexto}
+            editable={!campoBloqueado && !voz.ativo} placeholder={t("Pergunte algo")}
             placeholderTextColor={colors.textMuted} multiline maxLength={1000} accessibilityLabel={t("Sua mensagem")} />
           <Pressable style={styles.clipe} onPress={() => anexar("camera")} disabled={bloqueado || voz.ativo}
             accessibilityRole="button" accessibilityLabel={t("Tirar foto")}>
@@ -579,7 +596,7 @@ export default function FaleConoscoChatScreen() {
             onPress={() => {
               if (voz.ativo) { voz.parar(); return; }
               if (anexo) { enviarComFoto(anexo, texto); return; }
-              if (texto.trim()) { const c = texto; setTexto(""); enviar(c); return; }
+              if (texto.trim()) { const c = texto; campoMensagem.current?.focus(); setTexto(""); enviar(c); return; }
               setErro(null); Keyboard.dismiss(); voz.iniciar(texto, lang === "en" ? "en-US" : lang === "es" ? "es-ES" : lang);
             }} accessibilityRole="button" accessibilityLabel={voz.ativo ? t("Parar ditado") : texto.trim() || anexo ? t("Enviar") : t("Ditar mensagem")}>
             {enviando ? <ActivityIndicator color="#fff" /> : <Ionicons name={voz.ativo ? "stop" : texto.trim() || anexo ? "arrow-up" : "mic-outline"} size={25} color="#fff" />}
@@ -644,10 +661,12 @@ const makeStyles = (colors: Palette) =>
     lista: { padding: spacing.lg, gap: spacing.sm, flexGrow: 1 },
     boasVindas: { paddingTop: 30, gap: 4 },
     saudacao: { fontSize: 29, lineHeight: 38, fontWeight: "700", color: colors.text },
-    apoio: { paddingHorizontal: 20, paddingTop: 8 },
-    apoioPrincipal: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 24, backgroundColor: colors.surfaceAlt },
-    apoioIcone: { width: 42, height: 42, borderRadius: 16, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
-    apoioTexto: { flex: 1, color: colors.text, fontSize: 16 },
+    apoio: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
+    apoioPrincipal: { flex: 1, minHeight: 60, flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 18, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
+    apoioRotulos: { flex: 1, gap: 3 },
+    apoioLegenda: { color: colors.textMuted, fontSize: 12 },
+    desabilitado: { opacity: 0.5 },
+    apoioTexto: { flexShrink: 1, color: colors.text, fontSize: 14, fontWeight: "600" },
     outros: { alignSelf: "center", minHeight: 36, justifyContent: "center" },
     voz: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, gap: 8 },
     vozTexto: { flex: 1, color: colors.textMuted, fontSize: 13 },
