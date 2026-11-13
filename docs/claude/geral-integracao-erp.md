@@ -594,3 +594,24 @@ Tela nativa `/carta-transferencia`, acessível em Cuidados e menu Você, para iO
 
 ### Carta pronta em PDF (2026-11-01)
 O pedido mostra disponibilidade do PDF publicado pela Integração, inclusive após inativação. API autenticada confere vínculo antes de emitir URL de 120s no bucket privado. `cartaPdf.ts` baixa em cache e compartilha pelo sistema; preserva o arquivo após o chooser Android e limpa somente PDFs próprios após 24h, no próximo uso. Push e sino (`carta_transferencia_pronta`) abrem a tela. Nenhum módulo nativo novo. Backend/migration precisam estar publicados antes do OTA.
+
+## 2026-11-13 · Assistente: composição, histórico e ditado revisável
+
+Chat adota cabeçalho Assistente/histórico, saudação, compositor único arredondado
+com galeria (+), câmera e microfone quando não há texto/anexo. Texto/anexo troca
+microfone por envio. Atendimento humano permanece sempre visível; outros canais
+continuam acessíveis. Não há cartão fictício de tarefas.
+
+Histórico consulta GET /app/assistente/conversas por sessão, paginado em 20;
+seleção usa mensagens existentes (últimas 200). Nova conversa não encerra a
+anterior. Geração + ID da conversa descartam respostas atrasadas de polling,
+restauração, uploads e envios; primeiro envio invalida restauração pendente.
+
+Ditado usa expo-speech-recognition 3.1.3 (SDK54), carregamento OPCIONAL via Expo.
+Nunca importar entrypoint obrigatório do pacote: binários anteriores continuam
+no runtime 1.0.0. Microfone sem módulo informa atualização necessária. Novo
+binário exige plugin/permissões nas duas plataformas. Captura somente no toque,
+fala vira rascunho editável, sem envio automático. Parar finaliza, cancelar
+restaura rascunho; sair/background interrompe. Uma sessão nativa aguarda end antes
+de permitir a próxima (eventos nativos são globais). Não salvamos arquivo de voz;
+o reconhecimento é feito pelo serviço de fala do sistema e pode usar rede.

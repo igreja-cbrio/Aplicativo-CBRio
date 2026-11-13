@@ -81,11 +81,6 @@ export const CONFIRMACOES_NATIVAS_QUE_FICAM: readonly ConfirmacaoNativa[] = [
     porque: "A gestão do batismo inteira vive dentro de um <Modal presentationStyle='pageSheet'>; qualquer diálogo irmão fica atrás dela.",
   },
   {
-    arquivo: "app/(app)/fale-conosco-chat.tsx",
-    titulos: ["Anexar foto"],
-    porque: "Três opções (tirar foto / escolher da galeria / cancelar) no clipe do chat do assistente. O diálogo da casa tem dois botões; mesmo caso do kids-filho.",
-  },
-  {
     arquivo: "app/(app)/kids-filho.tsx",
     titulos: ["Foto da criança"],
     porque: "Três opções (tirar foto / escolher da galeria / cancelar). O diálogo da casa tem dois botões; um action sheet é outro componente.",
