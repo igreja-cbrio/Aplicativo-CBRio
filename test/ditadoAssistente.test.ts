@@ -57,3 +57,12 @@ it('espera end global do cancelamento, inclusive em outro controlador/tela', asy
   expect(f.motor.start).toHaveBeenCalledTimes(2);
   f.listeners.result({ results: [{ transcript: 'nova fala' }] }); expect(cb.texto).toHaveBeenCalledWith('nova fala');
 });
+
+it('blur mais unmount abortam uma única vez e timeout libera só a interface', async () => {
+  const f = fixture(); await f.controle.iniciar('', 'pt-BR');
+  f.controle.cancelar(); f.controle.cancelar(); expect(f.motor.abort).toHaveBeenCalledTimes(1);
+  vi.advanceTimersByTime(5000); expect(f.callbacks.estado).toHaveBeenLastCalledWith('parado');
+  await f.controle.iniciar('', 'pt-BR'); expect(f.motor.start).toHaveBeenCalledTimes(1);
+  expect(f.callbacks.erro).toHaveBeenLastCalledWith('indisponivel');
+  f.listeners.end(null); await f.controle.iniciar('', 'pt-BR'); expect(f.motor.start).toHaveBeenCalledTimes(2);
+});

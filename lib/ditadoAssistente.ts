@@ -13,27 +13,27 @@ export function criarDitado(motor: MotorDitado | null, callbacks: {
   texto: (value: string) => void; estado: (value: EstadoDitado) => void;
   erro: (value: 'atualizar' | 'permissao' | 'indisponivel' | 'falha' | 'silencio') => void;
 }) {
-  let geracao = 0, ativo = false, nativo = false, aceitar = false, base = '';
+  let geracao = 0, ativo = false, nativo = false, aceitar = false, encerrando = false, base = '';
   let ouvintes: { remove(): void }[] = [];
   let prazo: ReturnType<typeof setTimeout> | undefined;
   function concluir() {
-    geracao++; ativo = false; nativo = false; aceitar = false;
+    geracao++; ativo = false; nativo = false; aceitar = false; encerrando = false;
     ouvintes.forEach(s => s.remove()); ouvintes = []; clearTimeout(prazo);
     if (motor) ocupados.delete(motor);
     callbacks.estado('parado');
   }
   function cancelar(restaurar = false) {
-    if (!ativo) return;
-    aceitar = false;
+    if (!ativo || encerrando) return;
+    encerrando = true; aceitar = false;
     if (restaurar) callbacks.texto(base);
     if (!nativo) { concluir(); return; }
     callbacks.estado('finalizando'); clearTimeout(prazo);
     // Não libera uma nova sessão antes de end: abort é assíncrono em iOS/Android.
     try { motor?.abort(); } catch { callbacks.erro('falha'); }
-    prazo = setTimeout(() => callbacks.erro('indisponivel'), 5000);
+    if (ativo) prazo = setTimeout(() => { callbacks.estado('parado'); callbacks.erro('indisponivel'); }, 5000);
   }
   async function iniciar(texto: string, idioma: string) {
-    if (ativo) return;
+    if (ativo) { if (encerrando) callbacks.erro('indisponivel'); return; }
     if (!motor) { callbacks.erro('atualizar'); return; }
     if (ocupados.has(motor)) { callbacks.erro('indisponivel'); return; }
     try { if (!motor.isRecognitionAvailable()) { callbacks.erro('indisponivel'); return; } }
