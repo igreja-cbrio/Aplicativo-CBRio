@@ -12,6 +12,11 @@ export type MensagemChat = {
   autor: AutorChat;
   corpo: string;
   created_at: string;
+  /** Foto anexada (URL assinada do servidor, ou URI local na mensagem otimista). */
+  anexo_url?: string | null;
+  anexo_mime?: string | null;
+  /** Id gerado no app; casa a mensagem otimista com a do servidor. */
+  client_id?: string;
 };
 
 /**
@@ -57,8 +62,9 @@ export function mensagemLocal(
   autor: AutorChat,
   corpo: string,
   agoraIso: string,
+  extra?: Partial<MensagemChat>,
 ): MensagemChat {
-  return { id: `${LOCAL}${autor}-${seq}`, autor, corpo, created_at: agoraIso };
+  return { id: `${LOCAL}${autor}-${seq}`, autor, corpo, created_at: agoraIso, ...extra };
 }
 
 const ms = (iso: string): number => {
@@ -80,7 +86,7 @@ export function maiorCriadoEm(msgs: MensagemChat[]): string | null {
  * Junta o que veio do polling ao que a tela já tem.
  *  - dedupe por `id` (o cursor do backend pode reenviar a linha mais nova);
  *  - uma mensagem otimista do membro some quando chega a versão do servidor
- *    com o mesmo corpo;
+ *    com o mesmo `client_id` (ou, sem ele, o mesmo corpo);
  *  - ordena por `created_at` (estável; locais ficam no fim em caso de empate);
  *  - `desde` = maior `created_at` do servidor (nunca recua).
  * `houveNovidade` = chegou id que a tela ainda não tinha.
@@ -99,7 +105,13 @@ export function mesclarMensagens(
   let base = atuais;
   for (const n of unicas) {
     if (n.autor !== "membro") continue;
-    const i = base.findIndex((m) => ehLocal(m) && m.autor === "membro" && m.corpo === n.corpo);
+    // Com client_id o casamento é por ele (foto sem texto tem corpo vazio e
+    // colidiria por corpo); sem client_id vale o corpo, como antes (texto puro).
+    const i = base.findIndex((m) =>
+      ehLocal(m) &&
+      m.autor === "membro" &&
+      (n.client_id ? m.client_id === n.client_id : !m.client_id && m.corpo === n.corpo),
+    );
     if (i >= 0) base = base.filter((_, j) => j !== i);
   }
 

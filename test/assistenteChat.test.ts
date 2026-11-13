@@ -83,3 +83,25 @@ describe("conversa guardada", () => {
     expect(r.desde).toBe("2026-11-10T12:00:05Z");
   });
 });
+
+describe("anexo + client_id no merge", () => {
+  it("foto otimista (corpo vazio) é trocada pela do servidor com o mesmo client_id", () => {
+    const loc = mensagemLocal(1, "membro", "", "2026-11-10T12:00:00Z", { client_id: "X", anexo_url: "file:///a.jpg" });
+    expect(loc.client_id).toBe("X");
+    expect(loc.anexo_url).toBe("file:///a.jpg");
+    const srv = { ...m("9", "membro", "01", ""), client_id: "X", anexo_url: "https://s/a.jpg", anexo_mime: "image/jpeg" };
+    const r = mesclarMensagens([loc], [srv]);
+    expect(r.mensagens.map((x) => x.id)).toEqual(["9"]);
+  });
+  it("duas fotos sem texto com client_ids diferentes não colidem", () => {
+    const a = mensagemLocal(1, "membro", "", "2026-11-10T12:00:00Z", { client_id: "A" });
+    const b = mensagemLocal(2, "membro", "", "2026-11-10T12:00:01Z", { client_id: "B" });
+    const r = mesclarMensagens([a, b], [{ ...m("9", "membro", "02", ""), client_id: "B" }]);
+    expect(r.mensagens.map((x) => x.id)).toEqual(["local-membro-1", "9"]);
+  });
+  it("texto puro sem client_id segue casando por corpo", () => {
+    const loc = mensagemLocal(1, "membro", "oi", "2026-11-10T12:00:00Z");
+    const r = mesclarMensagens([loc], [m("9", "membro", "01", "oi")]);
+    expect(r.mensagens.map((x) => x.id)).toEqual(["9"]);
+  });
+});
