@@ -618,3 +618,25 @@ Implementação preparada; publicação e validação em aparelho ainda pendente
   backend compatível, depois atualização do app. Rodar `npm run verificar`, checks
   de CI e validar em aparelho troca de conta, retorno por notificação, transferência
   e resposta humana. Não publicar OTA a partir de branch de trabalho.
+
+## 2026-11-13 · Assistente: composição, histórico e ditado revisável
+
+Chat adota cabeçalho Assistente/histórico, saudação, compositor único arredondado
+com galeria (+), câmera e microfone quando não há texto/anexo. Texto/anexo troca
+microfone por envio. Atendimento humano permanece sempre visível; outros canais
+continuam acessíveis. Não há cartão fictício de tarefas.
+
+Histórico consulta GET /app/assistente/conversas por sessão, paginado em 20;
+seleção carrega o histórico existente, paginado por sequência. Nova conversa não
+encerra a anterior. Ciclo, conversa e usuário descartam respostas atrasadas de
+polling, restauração, uploads e envios. Envio aguarda a restauração; consultas
+revalidam o usuário esperado antes de usar a sessão.
+
+Ditado usa expo-speech-recognition 3.1.3 (SDK54), carregamento OPCIONAL via Expo.
+Nunca importar entrypoint obrigatório do pacote: binários anteriores continuam
+no runtime 1.0.0. Microfone sem módulo informa atualização necessária. Novo
+binário exige plugin/permissões nas duas plataformas. Captura somente no toque,
+fala vira rascunho editável, sem envio automático. Parar finaliza, cancelar
+restaura rascunho; sair/background interrompe. Uma sessão nativa aguarda end antes
+de permitir a próxima (eventos nativos são globais). Não salvamos arquivo de voz;
+o reconhecimento é feito pelo serviço de fala do sistema e pode usar rede.

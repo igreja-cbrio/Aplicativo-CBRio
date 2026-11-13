@@ -1,6 +1,7 @@
 import { Text } from "@/components/ui/Typography";
 import { useMemo, useState } from "react";
 import {
+  Image,
   Platform,
   StyleSheet,
   View,
@@ -13,7 +14,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { SocialButton } from "@/components/ui/SocialButton";
-import { CbrioHeart } from "@/components/brand/CbrioHeart";
+import { StatusBar } from "expo-status-bar";
+import { alturaVideoLogin } from "@/lib/loginLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
@@ -33,7 +35,9 @@ export default function LoginScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const { height: alturaTela } = useWindowDimensions();
-  const alturaFaixa = Math.max(260, Math.round(alturaTela * 0.4));
+  const [alturaDisponivel, setAlturaDisponivel] = useState(alturaTela - insets.bottom);
+  const [alturaFormulario, setAlturaFormulario] = useState(0);
+  const alturaFaixa = alturaVideoLogin(alturaDisponivel, alturaFormulario, insets.top);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(rememberPref);
@@ -73,22 +77,31 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["bottom", "left", "right"]}>
-      <TecladoSeguro        style={styles.flex}>
+      <StatusBar style="light" />
+      <TecladoSeguro style={styles.flex}>
         {/* FormularioRolavel (23/09): o foco rola até o campo — ver o componente. */}
         <FormularioRolavel
           keyboardShouldPersistTaps="handled"
-          automaticallyAdjustKeyboardInsets
+          automaticallyAdjustKeyboardInsets={false}
+          contentInsetAdjustmentBehavior="never"
+          bounces={false}
+          alwaysBounceVertical={false}
+          showsVerticalScrollIndicator={false}
+          onLayout={(event) => setAlturaDisponivel(event.nativeEvent.layout.height)}
           contentContainerStyle={styles.scroll}>
           {/* Faixa de topo com o vídeo (Hub): só visual, a lógica de login não muda. */}
           <LoginHeroVideo height={alturaFaixa} paddingTop={insets.top}>
-            <View style={styles.logoCircle}>
-              <CbrioHeart size={44} color={colors.brandPale} />
-            </View>
-            <Text style={styles.brand}>CBRio</Text>
-            <Text style={styles.subtitle}>{t("Bem-vindo à CBRio")}</Text>
+            <Image
+              source={require("@/assets/images/cbrio-wordmark.png")}
+              style={styles.logo}
+              resizeMode="contain"
+              tintColor="#fff"
+              accessible
+              accessibilityLabel="CBRio"
+            />
           </LoginHeroVideo>
 
-          <View style={styles.body}>
+          <View style={styles.body} onLayout={(event) => setAlturaFormulario(event.nativeEvent.layout.height)}>
           <View style={styles.card}>
             <View style={styles.form}>
               <Input
@@ -134,10 +147,6 @@ export default function LoginScreen() {
                 variant="ghost"
                 onPress={() => router.push("/(auth)/cadastro")}
               />
-              <Text style={styles.hint}>
-                {t("Nunca entrou no app? Toque em Primeiro acesso para criar sua senha.")}
-              </Text>
-
               <View style={styles.dividerRow}>
                 <View style={styles.divider} />
                 <Text style={styles.dividerText}>{t("ou continue com")}</Text>
@@ -149,7 +158,7 @@ export default function LoginScreen() {
                 onPress={() => handleProvider("google")}
                 loading={loading === "google"}
               />
-              {/* Apple Sign-In desativado até ter conta paga Apple Developer */}
+              {/* Login Apple disponível no iPhone. */}
               {APPLE_SIGNIN_ENABLED && Platform.OS === "ios" && (
                 <SocialButton
                   provider="apple"
@@ -158,13 +167,6 @@ export default function LoginScreen() {
                 />
               )}
             </View>
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>{t("Ainda não tem conta?")}</Text>
-            <Link href="/(auth)/cadastro" style={styles.footerLink}>
-              {t("Criar conta")}
-            </Link>
           </View>
 
           {__DEV__ && (
@@ -198,44 +200,27 @@ const makeStyles = (colors: Palette) =>
   scroll: {
     flexGrow: 1,
   },
-  body: { padding: spacing.lg, gap: spacing.lg },
+  body: { width: "100%", maxWidth: 520, alignSelf: "center", paddingHorizontal: spacing.md, paddingVertical: 12, gap: spacing.sm },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    padding: spacing.xl,
+    padding: spacing.md,
     alignItems: "center",
   },
-  logoCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: radius.full,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-  },
-  brand: {
-    color: "#fff",
-    fontSize: font.size.xxl,
-    fontWeight: "800",
-    letterSpacing: 1,
-  },
-  subtitle: {
-    color: "rgba(255,255,255,0.9)",
-    fontSize: font.size.md,
-    marginTop: spacing.xs,
-  },
-  form: { width: "100%", gap: spacing.md },
+  logo: { width: 154, height: 58 },
+  form: { width: "100%", gap: spacing.sm },
   rowBetween: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    flexWrap: "wrap",
+    columnGap: spacing.sm,
+    minHeight: 44,
   },
-  forgot: { color: colors.brandMid, fontSize: font.size.sm, fontWeight: "600" },
+  forgot: { color: colors.brandMid, fontSize: font.size.sm, fontWeight: "600", paddingVertical: 12 },
   error: { color: colors.danger, fontSize: font.size.sm },
-  hint: { color: colors.textMuted, fontSize: font.size.sm, textAlign: "center", marginTop: -spacing.xs },
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -244,15 +229,4 @@ const makeStyles = (colors: Palette) =>
   },
   divider: { flex: 1, height: 1, backgroundColor: colors.border },
   dividerText: { color: colors.textMuted, fontSize: font.size.sm },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: spacing.xs,
-  },
-  footerText: { color: colors.textMuted, fontSize: font.size.md },
-  footerLink: {
-    color: colors.brandMid,
-    fontSize: font.size.md,
-    fontWeight: "700",
-  },
 });

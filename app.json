@@ -2,7 +2,7 @@
   "expo": {
     "name": "CBRio",
     "slug": "aplicativo-cbrio",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "scheme": "cbrio",
     "userInterfaceStyle": "automatic",
@@ -79,7 +79,14 @@
           "faceIDPermission": "O CBRio usa o Face ID para você desbloquear o app com segurança, sem digitar sua senha."
         }
       ],
-      "@bacons/apple-targets"
+      "@bacons/apple-targets",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "O CBRio usa o microfone para transformar sua fala em texto. Você revisa antes de enviar.",
+          "speechRecognitionPermission": "O CBRio usa o reconhecimento de fala para preencher sua mensagem com a sua voz."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
