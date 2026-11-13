@@ -1,3 +1,4 @@
+import { destinoAvisoKids } from "@/lib/kidsAvisoDestino";
 import { destinoNotificacaoChat } from "@/lib/assistenteChat";
 import { router } from "expo-router";
 import * as Notifications from "expo-notifications";
@@ -70,6 +71,8 @@ export function attachNotifTapListener(): () => void {
     switch (tipo) {
       case "chat_assistente":
         router.navigate(destinoNotificacaoChat(data)); return;
+      case "kids_mural":
+        router.navigate(destinoAvisoKids(data)); return;
       case "carta_transferencia_pronta":
         router.navigate("/carta-transferencia");
         return;

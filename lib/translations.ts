@@ -6,6 +6,11 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Não foi possível carregar o aviso. Confira sua conexão e tente novamente.": {"en": "Unable to load the notice. Check your connection and try again.", "es": "No se pudo cargar el aviso. Revisa tu conexión e inténtalo de nuevo."},
+  "Este aviso pode ter sido retirado ou não estar disponível para você.": {"en": "This notice may have been removed or may not be available to you.", "es": "Este aviso puede haberse retirado o no estar disponible para ti."},
+  "Voltar ao mural": {"en": "Back to noticeboard", "es": "Volver al mural"},
+  "Não foi possível carregar a foto. Puxe a tela para atualizar.": {"en": "Unable to load the photo. Pull down to refresh.", "es": "No se pudo cargar la foto. Desliza hacia abajo para actualizar."},
+  "Ampliar foto do aviso": {"en": "Enlarge notice photo", "es": "Ampliar foto del aviso"},
   "Esta proposta expirou. Peça uma nova inscrição no chat.": { en: "This proposal expired. Ask to register again in the chat.", es: "Esta propuesta venció. Solicita una nueva inscripción en el chat." },
   "Revisei os dados e aceito os termos acima.": { en: "I reviewed the details and accept the terms above.", es: "Revisé los datos y acepto los términos anteriores." },
   "Completar inscrição": { en: "Complete registration", es: "Completar inscripción" },
