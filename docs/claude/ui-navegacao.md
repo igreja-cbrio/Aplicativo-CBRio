@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Login compacto e logo única no vídeo (13/11/2026)
+
 - Dock único e volta interativa da Home (2026-11-01)
 
 - Recorte da referência final e atalhos UIKit (26/10/2026)
@@ -537,3 +539,11 @@ o enquadramento aprovado. A prévia web não reproduzia essa altura intrínseca.
 Ao voltar de Notificações por gesto no iOS, apareciam duas UITabBar: QuickLinks dentro de MarketingHero e BottomBar fora do Stack. Agora somente BottomBar monta QuickLinks, incluindo na Home. A barra persiste fora das transições e continua escondendo com teclado e nas rotas sem casca. MarketingHero reserva a altura medida via DockInsetContext, sem remontar o controle ou mover o fundo ao puxar para atualizar.
 
 O cabeçalho também deixou de ficar fora do Stack: AppScreenFrame usa `screenLayout` do React Navigation e a própria `route.name` para montar TopBar dentro de cada tela. Assim a Home sob Notificações permanece com altura integral durante ida, gesto parcial, cancelamento e volta; não depende do pathname da tela ativa para definir seu cabeçalho. Rotas de cadastro/formulário preservam a casca vazia. Não altera o módulo nativo, gesto UIKit ou dependências; vale para iOS/Android e runtime 1.0.0.
+
+
+## Login compacto e logo única no vídeo (13/11/2026)
+- Vídeo do login contém somente o wordmark oficial branco, sem círculo, título ou boas-vindas repetidos. Barra de status clara sobre a imagem.
+- Formulário mede sua altura real; `alturaVideoLogin` limita o vídeo ao espaço restante (teto240pt, preferido28%). Não usar novamente piso260pt/40% que escondia os provedores.
+- Mantém e-mail, senha, lembrar, recuperação, Entrar, Primeiro acesso, Google e Apple. Remove explicação/rodapé de cadastro redundantes; diminui padding/gaps sem reduzir campos/botões.
+- `TecladoSeguro` é o único compensador de teclado no login. Rolagem permanece como escape para teclado, texto ampliado e telas excepcionalmente pequenas; não bloquear acesso aos campos para prometer ausência de scroll em qualquer situação.
+- Ajuste visual validado por código/empacotamento; Mac bloqueado impediu conferência no simulador neste turno.
