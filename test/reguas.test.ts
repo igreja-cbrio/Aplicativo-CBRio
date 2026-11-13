@@ -205,12 +205,13 @@ describe("hierarquia · a árvore do `cd ..`", () => {
     }
   });
 
-  it("KIDS é o menu: as 4 telas-filha sobem pra /kids-area", () => {
-    for (const r of ["/kids-mural", "/kids-eventos", "/kids-horarios", "/kids-salas"]) {
+  it("KIDS mantém o calendário dentro do mural", () => {
+    for (const r of ["/kids-mural", "/kids-horarios", "/kids-salas"]) {
       expect(rotaPai(r)).toBe("/kids-area");
       subirUmNivel(r);
     }
-    expect(navegacoes).toEqual(Array(4).fill("/kids-area"));
+    expect(navegacoes).toEqual(Array(3).fill("/kids-area"));
+    expect(rotaPai("/kids-eventos")).toBe("/kids-mural");
   });
 
   it("KIDS é o menu: /kids-area sobe pra /familia e o check-in (/kids) sobe pra Área", () => {

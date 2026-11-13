@@ -1,6 +1,7 @@
+import { AnexoChatEquipe } from "@/components/AnexoChatEquipe";
 import { Text, TextInput } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, Image, Keyboard, Linking, Pressable, StyleSheet, View } from "react-native";
+import { AppState, ActivityIndicator, FlatList, Image, Keyboard, Linking, Pressable, StyleSheet, View } from "react-native";
 import * as Crypto from "expo-crypto";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -55,6 +56,12 @@ export default function FaleConoscoChatScreen() {
   const { user } = useAuth();
   const { membro } = useMembro();
   const { lang } = useLang();
+  const [audioAtivo, setAudioAtivo] = useState<string | null>(null);
+  useFocusEffect(useCallback(() => () => setAudioAtivo(null), []));
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", estado => { if (estado !== "active") setAudioAtivo(null); });
+    return () => sub.remove();
+  }, []);
   const [historico, setHistorico] = useState(false);
   const [carregandoConversa, setCarregandoConversa] = useState(false);
   const [erroConversa, setErroConversa] = useState(false);
@@ -403,7 +410,7 @@ export default function FaleConoscoChatScreen() {
               <Text style={styles.vazio}>{t("Assistente automático da CBRio")}</Text>
             </View>
           }
-          renderItem={({ item }) => <Bolha m={item} styles={styles} t={t} subindo={enviando && ehLocal(item)} />}
+          renderItem={({ item }) => <Bolha conversa={conversaRef.current || ""} identidade={escopo} ativo={audioAtivo === `${escopo}:${conversaRef.current}:${item.id}`} ativar={() => setAudioAtivo(`${escopo}:${conversaRef.current}:${item.id}`)} m={item} styles={styles} t={t} subindo={enviando && ehLocal(item)} />}
           ListFooterComponent={digitando ? <Text style={styles.digitando} accessibilityLiveRegion="polite">{t("Digitando…")}</Text> : null}
         />
 
@@ -479,14 +486,16 @@ export default function FaleConoscoChatScreen() {
   );
 }
 
-function Bolha({ m, styles, t, subindo }: { m: MensagemChat; styles: ReturnType<typeof makeStyles>; t: (s: string) => string; subindo?: boolean }) {
+function Bolha({ m, styles, t, subindo, conversa, identidade, ativo, ativar }: { conversa: string; identidade: string; ativo: boolean; ativar: () => void; m: MensagemChat; styles: ReturnType<typeof makeStyles>; t: (s: string) => string; subindo?: boolean }) {
   const meu = m.autor === "membro";
   const rotulo = m.autor === "assistente" ? t("Assistente automático") : m.autor === "equipe" ? t("Equipe CBRio") : null;
   return (
     <View style={[styles.linha, meu ? styles.linhaMeu : styles.linhaOutro]}>
       {rotulo ? <Text style={styles.rotulo}>{rotulo}</Text> : null}
       <View style={[styles.bolha, meu ? styles.bolhaMeu : styles.bolhaOutro, subindo && !!m.anexo_url && { opacity: 0.6 }]}>
-        {m.anexo_url ? (
+        {m.anexo_mime && !m.anexo_mime.startsWith("image/") ? (
+          <AnexoChatEquipe key={`${identidade}:${conversa}:${m.id}`} conversa={conversa} mensagem={m.id} mime={m.anexo_mime} ativo={ativo} ativar={ativar} />
+        ) : m.anexo_url ? (
           <Image
             source={{ uri: m.anexo_url }}
             style={[styles.foto, !!m.corpo && { marginBottom: 6 }]}

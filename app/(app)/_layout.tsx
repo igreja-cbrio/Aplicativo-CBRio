@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useEffect, useRef, useState } from "react";
 import { Stack, router, useGlobalSearchParams, usePathname } from "expo-router";
 import { AppState, BackHandler, Platform, View } from "react-native";
+import { KidsThemeProvider } from "@/contexts/KidsThemeContext";
 import { MembroProvider } from "@/contexts/MembroContext";
 import { CadastroGate } from "@/components/auth/CadastroGate";
 import { AppScreenFrame } from "@/components/navigation/AppScreenFrame";
@@ -124,7 +125,7 @@ export default function AppLayout() {
 
   return (
     <MembroProvider>
-      <MenuProvider>
+      <KidsThemeProvider><MenuProvider>
       {/* Portão de cadastro: quem entrou sem cadastro de gente (nome real +
           telefone + nascimento) é levado a /completar-cadastro. Não bloqueia
           render — só navega quando o servidor confirma que falta algo. */}
@@ -172,7 +173,7 @@ export default function AppLayout() {
           {!semBarra && <BottomBar onLayout={(event) => setDockHeight(event.nativeEvent.layout.height)} />}
         </View>
       </CadastroGate>
-      </MenuProvider>
+      </MenuProvider></KidsThemeProvider>
     </MembroProvider>
   );
 }
