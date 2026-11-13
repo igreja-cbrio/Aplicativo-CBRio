@@ -1,7 +1,7 @@
 // Chat "Fale conosco" (assistente automático): régua PURA do polling.
 //
 // ⚠️ Polling, NÃO websocket: há o risco conhecido de 401 em massa por bundle
-// velho no realtime. A tela chama o GET `…/mensagens?desde=` em intervalo
+// velho no realtime. A tela chama o GET `…/mensagens?apos=` em intervalo
 // adaptativo enquanto focada; aqui mora só a conta (mescla, cursor, intervalo),
 // para ser testável sem React.
 
@@ -12,6 +12,8 @@ export type MensagemChat = {
   autor: AutorChat;
   corpo: string;
   created_at: string;
+  sequencia?: number;
+  transitoria?: boolean;
 };
 
 /**
@@ -38,11 +40,26 @@ export function restaurarConversa(raw: string | null | undefined): ConversaGuard
   if (!raw) return null;
   try {
     const o = JSON.parse(raw);
-    if (o && typeof o.conversa_id === "string" && o.conversa_id) {
+    if (o && idConversaValido(o.conversa_id)) {
       return { conversa_id: o.conversa_id, escalado: o.escalado === true };
     }
   } catch {}
   return null;
+}
+
+export function idConversaValido(valor: unknown): valor is string {
+  return typeof valor === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(valor);
+}
+
+export function destinoNotificacaoChat(data: { conversa_id?: unknown }) {
+  return idConversaValido(data.conversa_id)
+    ? { pathname: "/fale-conosco-chat" as const, params: { conversa_id: data.conversa_id } }
+    : "/fale-conosco-chat" as const;
+}
+
+export function maiorSequencia(msgs: MensagemChat[]): number | null {
+  const seqs = msgs.filter(m => !ehLocal(m) && Number.isSafeInteger(m.sequencia) && m.sequencia! > 0).map(m => m.sequencia!);
+  return seqs.length ? Math.max(...seqs) : null;
 }
 
 const LOCAL = "local-";
@@ -59,6 +76,11 @@ export function mensagemLocal(
   agoraIso: string,
 ): MensagemChat {
   return { id: `${LOCAL}${autor}-${seq}`, autor, corpo, created_at: agoraIso };
+}
+
+/** Remove avisos locais de tentativas anteriores; não toca no envio em andamento. */
+export function limparMensagensTransitorias(msgs: MensagemChat[]): MensagemChat[] {
+  return msgs.filter(m => !(ehLocal(m) && m.transitoria));
 }
 
 const ms = (iso: string): number => {
@@ -81,8 +103,9 @@ export function maiorCriadoEm(msgs: MensagemChat[]): string | null {
  *  - dedupe por `id` (o cursor do backend pode reenviar a linha mais nova);
  *  - uma mensagem otimista do membro some quando chega a versão do servidor
  *    com o mesmo corpo;
- *  - ordena por `created_at` (estável; locais ficam no fim em caso de empate);
- *  - `desde` = maior `created_at` do servidor (nunca recua).
+ *  - ordena mensagens confirmadas pela sequência do servidor; locais ficam no fim;
+ *  - mensagens legadas sem sequência mantêm a ordem cronológica antes das novas;
+ *  - `desde` continua disponível para compatibilidade com o cursor legado.
  * `houveNovidade` = chegou id que a tela ainda não tinha.
  */
 export function mesclarMensagens(
@@ -105,7 +128,14 @@ export function mesclarMensagens(
 
   const todas = [...base, ...unicas]
     .map((m, i) => ({ m, i }))
-    .sort((a, b) => ms(a.m.created_at) - ms(b.m.created_at) || a.i - b.i)
+    .sort((a, b) => {
+      const grupo = (m: MensagemChat) => ehLocal(m) ? 2 : Number.isSafeInteger(m.sequencia) && m.sequencia! > 0 ? 1 : 0;
+      const ga = grupo(a.m), gb = grupo(b.m);
+      if (ga !== gb) return ga - gb;
+      if (ga === 1) return a.m.sequencia! - b.m.sequencia! || a.i - b.i;
+      if (ga === 2) return a.i - b.i;
+      return ms(a.m.created_at) - ms(b.m.created_at) || a.i - b.i;
+    })
     .map((x) => x.m);
 
   const topo = maiorCriadoEm(todas);

@@ -4,7 +4,7 @@ import { FlatList, Linking, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@/contexts/AuthContext";
-import { Stack, router, useFocusEffect } from "expo-router";
+import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/ui/Button";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
@@ -21,18 +21,22 @@ import {
   serializarConversa,
   aguardandoResposta,
   maiorCriadoEm,
+  maiorSequencia,
+  idConversaValido,
   mensagemLocal,
   mesclarMensagens,
+  limparMensagensTransitorias,
   proximoIntervalo,
   type MensagemChat,
 } from "@/lib/assistenteChat";
+import { criarCicloChat, persistirChat } from "@/lib/assistenteChatCiclo";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const WHATSAPP = "https://wa.me/5521997567770";
 const MARCA_WHATSAPP = "WhatsApp"; // marca, não texto de interface
 
-type RespostaEnvio = { conversa_id: string; resposta: string; escalado: boolean; limitado?: boolean };
-type RespostaLista = { mensagens: MensagemChat[] };
+type RespostaEnvio = { conversa_id: string | null; resposta: string | null; escalado: boolean; limitado?: boolean; persistido?: boolean };
+type RespostaLista = { mensagens: MensagemChat[]; status?: string };
 
 /**
  * Chat "Fale conosco" com o assistente automático. É a porta PRINCIPAL, mas:
@@ -47,6 +51,16 @@ export default function FaleConoscoChatScreen() {
   const t = useT();
   const { user } = useAuth();
   const chave = user?.id ? chaveConversa(user.id) : null;
+  const usuarioRef = useRef(user?.id);
+  usuarioRef.current = user?.id;
+  const parametros = useLocalSearchParams<{ conversa_id?: string }>();
+  const destino = idConversaValido(parametros.conversa_id) ? parametros.conversa_id : null;
+  const escopo = `${chave || ''}:${destino || ''}`;
+  const escopoRef = useRef(escopo);
+  escopoRef.current = escopo;
+  const ciclo = useRef(criarCicloChat()).current;
+  const restaurandoRef = useRef(true);
+  const [restaurando, setRestaurando] = useState(true);
 
   const [msgs, setMsgs] = useState<MensagemChat[]>([]);
   const [texto, setTexto] = useState("");
@@ -62,7 +76,6 @@ export default function FaleConoscoChatScreen() {
   const seq = useRef(0);
   const focada = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const emVoo = useRef(false);
   const lista = useRef<FlatList<MensagemChat>>(null);
   const enviandoRef = useRef(false);
   const escaladoRef = useRef(false);
@@ -78,63 +91,76 @@ export default function FaleConoscoChatScreen() {
 
   const buscar = useCallback(async () => {
     const id = conversaRef.current;
-    if (!id || emVoo.current) return;
-    emVoo.current = true;
+    const revisao = ciclo.atual();
+    const origem = escopoRef.current;
+    const usuario = usuarioRef.current;
+    if (!id || !usuario) return;
+    const token = ciclo.iniciarConsulta();
+    if (!token) return;
+    const vigente = () => ciclo.vigente(revisao) && escopoRef.current === origem && conversaRef.current === id;
     try {
-      const q = desdeRef.current ? `?desde=${encodeURIComponent(desdeRef.current)}` : "";
-      const r = await apiGet<RespostaLista>(`/app/assistente/${encodeURIComponent(id)}/mensagens${q}`);
+      const apos = maiorSequencia(msgsRef.current);
+      const q = apos !== null ? `?apos=${apos}` : "";
+      const r = await apiGet<RespostaLista>(`/app/assistente/${encodeURIComponent(id)}/mensagens${q}`, { expectedUserId: usuario });
+      if (!vigente()) return;
       aplicar(Array.isArray(r?.mensagens) ? r.mensagens : []);
+      if (r.status === "humano") { escaladoRef.current = true; setEscalado(true); }
     } catch (e: any) {
+      if (!vigente()) return;
       if (e?.status === 404 || e?.status === 403) return "morta" as const;
-      semNovidade.current += 1; // falha de rede: só espaça, tenta de novo
+      semNovidade.current += 1;
     } finally {
-      emVoo.current = false;
+      ciclo.terminarConsulta(token);
     }
-  }, [aplicar]);
+  }, [aplicar, ciclo]);
 
   const agendar = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
-    if (!focada.current || !conversaRef.current) return;
-    const espera = proximoIntervalo(
-      semNovidade.current,
-      aguardandoResposta(msgsRef.current, enviandoRef.current),
-    );
+    if (!focada.current || !conversaRef.current || restaurandoRef.current) return;
+    const revisao = ciclo.atual();
+    const origem = escopoRef.current;
+    const espera = proximoIntervalo(semNovidade.current, aguardandoResposta(msgsRef.current, enviandoRef.current));
     timer.current = setTimeout(async () => {
       await buscar();
-      agendar();
+      if (ciclo.vigente(revisao) && escopoRef.current === origem) agendar();
     }, espera);
-  }, [buscar]);
+  }, [buscar, ciclo]);
 
   const guardar = useCallback((escaladoAgora: boolean) => {
-    if (!chave || !conversaRef.current) return;
-    AsyncStorage.setItem(chave, serializarConversa({ conversa_id: conversaRef.current, escalado: escaladoAgora })).catch(() => {});
+    const id = conversaRef.current;
+    if (!chave || !id) return;
+    persistirChat(() => AsyncStorage.setItem(chave, serializarConversa({ conversa_id: id, escalado: escaladoAgora }))).catch(() => {});
   }, [chave]);
 
-  // Restaura a conversa ativa (a resposta da equipe pode ter chegado com o app fechado).
   useEffect(() => {
-    // identidade mudou (ou 1ª montagem): zera tudo ANTES de restaurar
+    const revisao = ciclo.reiniciar();
+    const vigente = () => ciclo.vigente(revisao) && escopoRef.current === escopo;
     if (timer.current) clearTimeout(timer.current);
     conversaRef.current = null; desdeRef.current = null; msgsRef.current = [];
-    semNovidade.current = 0;
-    setMsgs([]); setEscalado(false); setErro(null);
-    if (!chave) return;
-    let vivo = true;
-    AsyncStorage.getItem(chave).then(async (raw) => {
-      const c = restaurarConversa(raw);
-      if (!c || !vivo || conversaRef.current) return;
-      conversaRef.current = c.conversa_id;
-      setEscalado(c.escalado);
-      const ok = await buscar();
-      if (!vivo) return;
-      if (ok === "morta") {
-        conversaRef.current = null; setEscalado(false);
-        AsyncStorage.removeItem(chave).catch(() => {});
-        return;
+    semNovidade.current = 0; enviandoRef.current = false; escaladoRef.current = false;
+    restaurandoRef.current = true;
+    setMsgs([]); setTexto(""); setEscalado(false); setErro(null); setEnviando(false); setRestaurando(true);
+    (async () => {
+      try {
+        if (!chave) return;
+        const raw = await persistirChat(() => AsyncStorage.getItem(chave));
+        if (!vigente()) return;
+        const c = destino ? { conversa_id: destino, escalado: false } : restaurarConversa(raw);
+        if (!c) return;
+        conversaRef.current = c.conversa_id;
+        escaladoRef.current = c.escalado; setEscalado(c.escalado);
+        const ok = await buscar();
+        if (!vigente()) return;
+        if (ok === "morta") {
+          conversaRef.current = null; escaladoRef.current = false; setEscalado(false);
+          await persistirChat(() => AsyncStorage.removeItem(chave));
+        } else guardar(escaladoRef.current);
+      } finally {
+        if (vigente()) { restaurandoRef.current = false; setRestaurando(false); agendar(); }
       }
-      agendar();
-    }).catch(() => {});
-    return () => { vivo = false; };
-  }, [chave, buscar, agendar]);
+    })().catch(() => {});
+    return () => { ciclo.reiniciar(); if (timer.current) clearTimeout(timer.current); };
+  }, [chave, destino, escopo, buscar, agendar, guardar, ciclo]);
 
   // "Digitando…" não dura para sempre: passado o limite, troca por uma dica.
   const ultimaId = msgs[msgs.length - 1]?.id;
@@ -146,12 +172,14 @@ export default function FaleConoscoChatScreen() {
   }, [ultimaId, enviando, escalado]);
 
   const novaConversa = useCallback(() => {
+    if (enviandoRef.current || restaurandoRef.current) return;
+    ciclo.reiniciar(); escaladoRef.current = false;
     if (timer.current) clearTimeout(timer.current);
     conversaRef.current = null; desdeRef.current = null; msgsRef.current = [];
     semNovidade.current = 0;
     setMsgs([]); setEscalado(false); setErro(null);
-    if (chave) AsyncStorage.removeItem(chave).catch(() => {});
-  }, [chave]);
+    if (chave) persistirChat(() => AsyncStorage.removeItem(chave)).catch(() => {});
+  }, [chave, ciclo]);
 
   useFocusEffect(
     useCallback(() => {
@@ -167,7 +195,11 @@ export default function FaleConoscoChatScreen() {
 
   const enviar = useCallback(async (corpo: string) => {
     const limpo = corpo.trim();
-    if (!limpo || enviandoRef.current) return;
+    const usuario = usuarioRef.current;
+    if (!usuario || !limpo || enviandoRef.current || restaurandoRef.current || !chave) return;
+    const revisao = ciclo.atual();
+    const origem = escopoRef.current;
+    const vigente = () => ciclo.vigente(revisao) && escopoRef.current === origem;
     enviandoRef.current = true;
     setEnviando(true);
     setErro(null);
@@ -181,27 +213,34 @@ export default function FaleConoscoChatScreen() {
       const r = await apiPost<RespostaEnvio>("/app/assistente", {
         texto: limpo,
         ...(conversaRef.current ? { conversa_id: conversaRef.current } : {}),
-      });
-      conversaRef.current = r.conversa_id;
-      if (r.escalado) setEscalado(true);
+      }, { expectedUserId: usuario });
+      if (!vigente()) return;
+      if (idConversaValido(r.conversa_id)) conversaRef.current = r.conversa_id;
+      if (r.escalado) { escaladoRef.current = true; setEscalado(true); }
       guardar(!!r.escalado || escaladoRef.current);
-      if (r.limitado) {
+      if ((r.limitado || r.persistido === false) && r.resposta) {
         seq.current += 1;
-        aplicar([mensagemLocal(seq.current, "assistente", r.resposta, marca)]);
+        msgsRef.current = msgsRef.current.map(m => m.id === local.id ? { ...m, transitoria: true } : m);
+        aplicar([{ ...mensagemLocal(seq.current, "assistente", r.resposta, marca), transitoria: true }]);
+      } else if (!r.limitado && r.persistido !== false) {
+        msgsRef.current = limparMensagensTransitorias(msgsRef.current);
+        setMsgs(msgsRef.current);
       }
       semNovidade.current = 0;
       await buscar();
     } catch (e: any) {
+      if (!vigente()) return;
       msgsRef.current = msgsRef.current.filter((m) => m.id !== local.id);
       setMsgs(msgsRef.current);
       setTexto((atual) => atual || limpo);
       setErro(e?.message || t("Não foi possível enviar. Tente de novo."));
     } finally {
+      if (!vigente()) return;
       enviandoRef.current = false;
       setEnviando(false);
       agendar();
     }
-  }, [aplicar, buscar, agendar, guardar, t]);
+  }, [aplicar, buscar, agendar, guardar, t, chave, ciclo]);
 
   const aguardando = aguardandoResposta(msgs, enviando) && !escalado;
   const digitando = aguardando && !demorou;
@@ -221,7 +260,7 @@ export default function FaleConoscoChatScreen() {
         <View style={styles.banner} accessibilityRole="text">
           <Ionicons name="sparkles" size={16} color={colors.brandMid} />
           <Text style={styles.bannerTxt}>
-            {t("Você está falando com o assistente automático da CBRio. Para falar com uma pessoa, use o botão abaixo.")}
+            {escalado ? t("Equipe CBRio") : t("Você está falando com o assistente automático da CBRio. Para falar com uma pessoa, use o botão abaixo.")}
           </Text>
         </View>
 
@@ -229,7 +268,7 @@ export default function FaleConoscoChatScreen() {
           <Button
             title={t("Falar com uma pessoa")}
             variant="ghost"
-            disabled={enviando || escalado}
+            disabled={enviando || escalado || restaurando}
             onPress={() => enviar(FRASE_PEDIR_HUMANO)}
           />
           <View style={styles.links}>
@@ -271,7 +310,7 @@ export default function FaleConoscoChatScreen() {
           </Text>
         ) : null}
         {msgs.length > 0 || conversaRef.current ? (
-          <Pressable onPress={novaConversa} accessibilityRole="button" accessibilityLabel={t("Nova conversa")} hitSlop={6} style={{ alignSelf: "center" }}>
+          <Pressable disabled={enviando || restaurando} onPress={novaConversa} accessibilityRole="button" accessibilityLabel={t("Nova conversa")} hitSlop={6} style={{ alignSelf: "center" }}>
             <Text style={styles.link}>{t("Nova conversa")}</Text>
           </Pressable>
         ) : null}
@@ -281,6 +320,7 @@ export default function FaleConoscoChatScreen() {
         <View style={styles.compor}>
           <TextInput
             style={styles.input}
+            editable={!restaurando}
             value={texto}
             onChangeText={setTexto}
             placeholder={t("Sua mensagem…")}
@@ -290,8 +330,8 @@ export default function FaleConoscoChatScreen() {
             accessibilityLabel={t("Sua mensagem")}
           />
           <Pressable
-            style={[styles.enviar, (!texto.trim() || enviando) && { opacity: 0.4 }]}
-            disabled={!texto.trim() || enviando}
+            style={[styles.enviar, (!texto.trim() || enviando || restaurando) && { opacity: 0.4 }]}
+            disabled={!texto.trim() || enviando || restaurando}
             onPress={() => { const c = texto; setTexto(""); enviar(c); }}
             accessibilityRole="button"
             accessibilityLabel={t("Enviar")}

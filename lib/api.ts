@@ -15,10 +15,16 @@ import type { Marcadores } from "./marcadoresJornada";
 // alguns clients dropam o header Authorization na hora de seguir.
 const BASE = "https://www.cbrio.org/api";
 
-async function authHeaders(): Promise<Record<string, string>> {
+async function authHeaders(expectedUserId?: string): Promise<Record<string, string>> {
   let {
     data: { session },
   } = await supabase.auth.getSession();
+  const conferirPessoa = () => {
+    if (expectedUserId !== undefined && session?.user?.id !== expectedUserId) {
+      throw new Error("Sua sessão mudou. Abra novamente a conversa antes de enviar.");
+    }
+  };
+  conferirPessoa();
   // Renova proativamente se o token expirou (ou expira em <60s). O backend
   // valida o JWT via getUser; um access_token vencido vira 401 "Token inválido"
   // (sintoma: telas que batem no backend — Kids, Avisos, Meu grupo — quebram,
@@ -36,6 +42,7 @@ async function authHeaders(): Promise<Record<string, string>> {
       throw new Error("Não foi possível conectar. Verifique sua internet e tente novamente.");
     }
   }
+  conferirPessoa();
   const token = session?.access_token;
   if (!token) throw new Error("Sessão expirada. Faça login novamente.");
   return { Authorization: `Bearer ${token}` };
@@ -86,9 +93,9 @@ async function erroDaResposta(resp: Response): Promise<ErroApi> {
   return err;
 }
 
-export async function apiGet<T>(path: string, opts?: { auth?: boolean }): Promise<T> {
+export async function apiGet<T>(path: string, opts?: { auth?: boolean; expectedUserId?: string }): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json" };
-  if (opts?.auth !== false) Object.assign(headers, await authHeaders());
+  if (opts?.auth !== false) Object.assign(headers, await authHeaders(opts?.expectedUserId));
   const resp = await fetch(`${BASE}${path}`, { headers });
   if (!resp.ok) {
     // ⚠️ `apiGet` era o ÚNICO dos quatro verbos que lançava SEM o status
@@ -102,13 +109,13 @@ export async function apiGet<T>(path: string, opts?: { auth?: boolean }): Promis
 export async function apiPost<T>(
   path: string,
   body: unknown,
-  opts?: { auth?: boolean }
+  opts?: { auth?: boolean; expectedUserId?: string }
 ): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
   };
-  if (opts?.auth !== false) Object.assign(headers, await authHeaders());
+  if (opts?.auth !== false) Object.assign(headers, await authHeaders(opts?.expectedUserId));
   const resp = await fetch(`${BASE}${path}`, {
     method: "POST",
     headers,
