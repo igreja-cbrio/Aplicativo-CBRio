@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   aguardandoResposta,
   maiorCriadoEm,
+  maiorSequencia,
+  destinoNotificacaoChat,
   mensagemLocal,
   mesclarMensagens,
+  limparMensagensTransitorias,
   proximoIntervalo,
   restaurarConversa,
   serializarConversa,
@@ -69,7 +72,7 @@ describe("aguardandoResposta / proximoIntervalo", () => {
 
 describe("conversa guardada", () => {
   it("ida e volta", () => {
-    const c = { conversa_id: "abc", escalado: true };
+    const c = { conversa_id: "d7af12a0-62bf-4f50-a45c-49dcb129ff00", escalado: true };
     expect(restaurarConversa(serializarConversa(c))).toEqual(c);
   });
   it("lixo ou vazio vira null", () => {
@@ -81,6 +84,61 @@ describe("conversa guardada", () => {
     const r = mesclarMensagens([], [m("1", "membro", "01"), m("2", "equipe", "05")], null);
     expect(r.mensagens).toHaveLength(2);
     expect(r.desde).toBe("2026-11-10T12:00:05Z");
+  });
+});
+
+
+describe("cursor de sequência e notificações", () => {
+  it("mantém otimistas ao final mesmo com relógios divergentes", () => {
+    const a = { ...m("1", "equipe", "09"), sequencia: 1 };
+    const b = { ...m("2", "equipe", "01"), sequencia: 2 };
+    const local = mensagemLocal(1, "membro", "nova pergunta", "2020-01-01T00:00:00Z");
+    for (const lote of [[a, b], [b, a]]) {
+      expect(mesclarMensagens([local], lote).mensagens.map(x => x.id)).toEqual(["1", "2", local.id]);
+    }
+  });
+  it("preserva mensagens no mesmo instante e ordena pela sequência do servidor", () => {
+    const primeira = { ...m("1", "membro", "01"), sequencia: 1 };
+    const segunda = { ...m("2", "equipe", "01"), sequencia: 2 };
+    const terceira = { ...m("3", "equipe", "00"), sequencia: 3 };
+    const r = mesclarMensagens([primeira], [terceira, segunda, segunda]);
+    expect(r.mensagens.map(x => x.id)).toEqual(["1", "2", "3"]);
+    expect(maiorSequencia(r.mensagens)).toBe(3);
+    expect(maiorSequencia([mensagemLocal(99, "membro", "oi", "2030-01-01")])).toBeNull();
+  });
+  it("abre a conversa exata do aviso e descarta destinos inválidos", () => {
+    const id = "d7af12a0-62bf-4f50-a45c-49dcb129ff00";
+    expect(destinoNotificacaoChat({ conversa_id: id })).toEqual({ pathname: "/fale-conosco-chat", params: { conversa_id: id } });
+    for (const conversa_id of [undefined, "/outro", [id], 123]) {
+      expect(destinoNotificacaoChat({ conversa_id })).toBe("/fale-conosco-chat");
+    }
+    expect(restaurarConversa('{"conversa_id":"abc"}')).toBeNull();
+  });
+});
+
+
+describe("avisos locais transitórios", () => {
+  it("limite → novo envio confirmado → equipe remove aviso antigo e preserva otimista vigente", () => {
+    const recusada = { ...mensagemLocal(1, "membro", "oi", "2020-01-01"), transitoria: true };
+    const aviso = { ...mensagemLocal(2, "assistente", "Aguarde um instante", "2020-01-01"), transitoria: true };
+    const nova = mensagemLocal(3, "membro", "preciso de ajuda", "2020-01-01");
+    const antes = [recusada, aviso, nova];
+    const limpas = limparMensagensTransitorias(antes);
+    expect(limpas).toEqual([nova]);
+    expect(antes).toHaveLength(3);
+    expect(aguardandoResposta(limpas, false)).toBe(true);
+    const entrada = { ...m("entrada", "membro", "01", nova.corpo), sequencia: 1 };
+    const equipe = { ...m("resposta", "equipe", "02", "Vamos ajudar"), sequencia: 2 };
+    const confirmado = mesclarMensagens(limpas, [entrada]).mensagens;
+    expect(aguardandoResposta(confirmado, false)).toBe(true);
+    const final = mesclarMensagens(confirmado, [equipe]).mensagens;
+    expect(final.map(x => x.id)).toEqual(["entrada", "resposta"]);
+    expect(aguardandoResposta(final, false)).toBe(false);
+  });
+  it("não remove mensagem persistida nem otimista sem marca transitória", () => {
+    const real = { ...m("servidor", "assistente", "01"), transitoria: true };
+    const otimista = mensagemLocal(1, "membro", "oi", "2020-01-01");
+    expect(limparMensagensTransitorias([real, otimista])).toEqual([real, otimista]);
   });
 });
 
@@ -97,7 +155,7 @@ describe("anexo + client_id no merge", () => {
     const a = mensagemLocal(1, "membro", "", "2026-11-10T12:00:00Z", { client_id: "A" });
     const b = mensagemLocal(2, "membro", "", "2026-11-10T12:00:01Z", { client_id: "B" });
     const r = mesclarMensagens([a, b], [{ ...m("9", "membro", "02", ""), client_id: "B" }]);
-    expect(r.mensagens.map((x) => x.id)).toEqual(["local-membro-1", "9"]);
+    expect(r.mensagens.map((x) => x.id)).toEqual(["9", "local-membro-1"]);
   });
   it("texto puro sem client_id segue casando por corpo", () => {
     const loc = mensagemLocal(1, "membro", "oi", "2026-11-10T12:00:00Z");

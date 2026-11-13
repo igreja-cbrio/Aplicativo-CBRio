@@ -6,6 +6,7 @@ import { Text } from '@/components/ui/Typography';
 import { useColors } from '@/contexts/ThemeContext';
 import { useLang, useT } from '@/lib/i18n';
 import { apiGet } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 export type ConversaAssistente = { id: string; titulo: string; status: string; created_at: string };
 type Pagina = { conversas: ConversaAssistente[]; proximo: string | null };
@@ -14,21 +15,27 @@ export function HistoricoAssistente({ aberto, fechar, selecionar, nova, identida
   nova: () => void; identidade: string | null;
 }) {
   const c = useColors(), t = useT(), { lang } = useLang();
+  const { user } = useAuth();
+  const usuario = user?.id;
+  const contexto = useRef({ identidade, usuario, aberto });
+  contexto.current = { identidade, usuario, aberto };
   const [itens, setItens] = useState<ConversaAssistente[]>([]);
   const [proximo, setProximo] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false), [erro, setErro] = useState(false);
   const geracao = useRef(0), ocupado = useRef(false);
   const carregar = useCallback(async (cursor?: string) => {
-    if (ocupado.current || !identidade) return;
-    const g = geracao.current; ocupado.current = true; setCarregando(true); setErro(false);
+    if (ocupado.current || !identidade || !usuario || !aberto) return;
+    const g = geracao.current;
+    const vigente = () => g === geracao.current && contexto.current.identidade === identidade && contexto.current.usuario === usuario && contexto.current.aberto;
+    ocupado.current = true; setCarregando(true); setErro(false);
     try {
-      const r = await apiGet<Pagina>('/app/assistente/conversas' + (cursor ? '?antes=' + encodeURIComponent(cursor) : ''));
-      if (g !== geracao.current) return;
+      const r = await apiGet<Pagina>('/app/assistente/conversas' + (cursor ? '?antes=' + encodeURIComponent(cursor) : ''), { expectedUserId: usuario });
+      if (!vigente()) return;
       setItens(prev => cursor ? [...prev, ...r.conversas.filter(x => !prev.some(y => y.id === x.id))] : r.conversas);
       setProximo(r.proximo);
-    } catch { if (g === geracao.current) setErro(true); }
-    finally { if (g === geracao.current) { ocupado.current = false; setCarregando(false); } }
-  }, [identidade]);
+    } catch { if (vigente()) setErro(true); }
+    finally { if (vigente()) { ocupado.current = false; setCarregando(false); } }
+  }, [identidade, usuario, aberto]);
   useEffect(() => {
     geracao.current++; ocupado.current = false; setItens([]); setProximo(null); setErro(false);
     if (aberto) void carregar();

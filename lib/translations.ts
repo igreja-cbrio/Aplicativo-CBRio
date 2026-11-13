@@ -2095,7 +2095,7 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "A divisão das salas será divulgada em breve.": { en: "Room assignments will be announced soon.", es: "La división de salas se anunciará pronto." },
   "Anexar foto": { en: "Attach photo", es: "Adjuntar foto" },
   "Começar uma nova conversa?": { en: "Start a new conversation?", es: "¿Empezar una conversación nueva?" },
-  "A conversa atual será encerrada.": { en: "The current conversation will be ended.", es: "La conversación actual se cerrará." },
+  "Você começará uma nova conversa. O atendimento anterior continuará registrado.": { en: "You will start a new conversation. The previous conversation will remain on record.", es: "Empezarás una conversación nueva. La atención anterior seguirá registrada." },
   "Não enviou. Toque para reenviar": { en: "Not sent. Tap to resend", es: "No se envió. Toca para reenviar" },
   "Foto enviada": { en: "Photo sent", es: "Foto enviada" },
   "Permita o acesso à câmera nos Ajustes para enviar imagens.": { en: "Allow camera access in Settings to send images.", es: "Permite el acceso a la cámara en Ajustes para enviar imágenes." },

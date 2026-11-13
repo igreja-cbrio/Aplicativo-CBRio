@@ -5,7 +5,7 @@ import * as Crypto from "expo-crypto";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@/contexts/AuthContext";
-import { Stack, router, useFocusEffect } from "expo-router";
+import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useMembro } from "@/contexts/MembroContext";
 import { HistoricoAssistente, type ConversaAssistente } from "@/components/HistoricoAssistente";
@@ -26,16 +26,20 @@ import {
   serializarConversa,
   aguardandoResposta,
   maiorCriadoEm,
+  maiorSequencia,
+  idConversaValido,
   mensagemLocal,
   mesclarMensagens,
+  limparMensagensTransitorias,
   proximoIntervalo,
   type MensagemChat,
 } from "@/lib/assistenteChat";
+import { criarCicloChat, persistirChat } from "@/lib/assistenteChatCiclo";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 
-type RespostaEnvio = { conversa_id: string; resposta: string; escalado: boolean; limitado?: boolean };
-type RespostaLista = { mensagens: MensagemChat[] };
+type RespostaEnvio = { conversa_id: string | null; resposta: string | null; escalado: boolean; limitado?: boolean; persistido?: boolean };
+type RespostaLista = { mensagens: MensagemChat[]; status?: string };
 
 /**
  * Chat "Fale conosco" com o assistente automático. É a porta PRINCIPAL, mas:
@@ -55,6 +59,16 @@ export default function FaleConoscoChatScreen() {
   const [carregandoConversa, setCarregandoConversa] = useState(false);
   const [erroConversa, setErroConversa] = useState(false);
   const chave = user?.id ? chaveConversa(user.id) : null;
+  const usuarioRef = useRef(user?.id);
+  usuarioRef.current = user?.id;
+  const parametros = useLocalSearchParams<{ conversa_id?: string }>();
+  const destino = idConversaValido(parametros.conversa_id) ? parametros.conversa_id : null;
+  const escopo = `${chave || ''}:${destino || ''}`;
+  const escopoRef = useRef(escopo);
+  escopoRef.current = escopo;
+  const ciclo = useRef(criarCicloChat()).current;
+  const restaurandoRef = useRef(true);
+  const [restaurando, setRestaurando] = useState(true);
 
   const [msgs, setMsgs] = useState<MensagemChat[]>([]);
   const [texto, setTexto] = useState("");
@@ -86,8 +100,6 @@ export default function FaleConoscoChatScreen() {
   const seq = useRef(0);
   const focada = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const emVoo = useRef<number | null>(null);
-  const geracao = useRef(0);
   const lista = useRef<FlatList<MensagemChat>>(null);
   const enviandoRef = useRef(false);
   const escaladoRef = useRef(false);
@@ -103,73 +115,82 @@ export default function FaleConoscoChatScreen() {
 
   const buscar = useCallback(async () => {
     const id = conversaRef.current;
-    if (!id || emVoo.current === geracao.current) return;
-    const g = geracao.current;
-    emVoo.current = g;
+    const revisao = ciclo.atual();
+    const origem = escopoRef.current;
+    const usuario = usuarioRef.current;
+    if (!id || !usuario) return;
+    const token = ciclo.iniciarConsulta();
+    if (!token) return;
+    const vigente = () => ciclo.vigente(revisao) && escopoRef.current === origem && conversaRef.current === id;
     try {
-      const q = desdeRef.current ? `?desde=${encodeURIComponent(desdeRef.current)}` : "";
-      const r = await apiGet<RespostaLista>(`/app/assistente/${encodeURIComponent(id)}/mensagens${q}`);
-      if (g !== geracao.current || id !== conversaRef.current) return;
+      const apos = maiorSequencia(msgsRef.current);
+      const q = apos !== null ? `?apos=${apos}` : "";
+      const r = await apiGet<RespostaLista>(`/app/assistente/${encodeURIComponent(id)}/mensagens${q}`, { expectedUserId: usuario });
+      if (!vigente()) return;
       aplicar(Array.isArray(r?.mensagens) ? r.mensagens : []);
+      if (r.status === "humano") { escaladoRef.current = true; setEscalado(true); }
       setErroConversa(false);
     } catch (e: any) {
-      if (g !== geracao.current) return;
+      if (!vigente()) return;
       if (e?.status === 404 || e?.status === 403) return "morta" as const;
       semNovidade.current += 1;
       return "falha" as const;
     } finally {
-      if (g === geracao.current) emVoo.current = null;
+      ciclo.terminarConsulta(token);
     }
-  }, [aplicar]);
+  }, [aplicar, ciclo]);
 
   const agendar = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
-    if (!focada.current || !conversaRef.current) return;
-    const espera = proximoIntervalo(
-      semNovidade.current,
-      aguardandoResposta(msgsRef.current, enviandoRef.current),
-    );
+    if (!focada.current || !conversaRef.current || restaurandoRef.current) return;
+    const revisao = ciclo.atual();
+    const origem = escopoRef.current;
+    const espera = proximoIntervalo(semNovidade.current, aguardandoResposta(msgsRef.current, enviandoRef.current));
     timer.current = setTimeout(async () => {
       await buscar();
-      agendar();
+      if (ciclo.vigente(revisao) && escopoRef.current === origem) agendar();
     }, espera);
-  }, [buscar]);
+  }, [buscar, ciclo]);
 
   const guardar = useCallback((escaladoAgora: boolean) => {
-    if (!chave || !conversaRef.current) return;
-    AsyncStorage.setItem(chave, serializarConversa({ conversa_id: conversaRef.current, escalado: escaladoAgora })).catch(() => {});
+    const id = conversaRef.current;
+    if (!chave || !id) return;
+    persistirChat(() => AsyncStorage.setItem(chave, serializarConversa({ conversa_id: id, escalado: escaladoAgora }))).catch(() => {});
   }, [chave]);
 
-  // Restaura a conversa ativa (a resposta da equipe pode ter chegado com o app fechado).
   useEffect(() => {
-    geracao.current++;
-    const g = geracao.current;
-    cancelarVoz(); setHistorico(false); setTexto(""); setAnexo(null);
-    enviandoRef.current = false; setEnviando(false);
-    // identidade mudou (ou 1ª montagem): zera tudo ANTES de restaurar
+    const revisao = ciclo.reiniciar();
+    cancelarVoz(); setHistorico(false); setErroConversa(false); setCarregandoConversa(false);
+    const vigente = () => ciclo.vigente(revisao) && escopoRef.current === escopo;
     if (timer.current) clearTimeout(timer.current);
     conversaRef.current = null; desdeRef.current = null; msgsRef.current = [];
-    semNovidade.current = 0;
-    setMsgs([]); setEscalado(false); setErro(null); setErroConversa(false); setCarregandoConversa(false);
-    if (!chave) return;
-    let vivo = true;
-    AsyncStorage.getItem(chave).then(async (raw) => {
-      const c = restaurarConversa(raw);
-      if (!c || !vivo || g !== geracao.current || conversaRef.current) return;
-      conversaRef.current = c.conversa_id;
-      setEscalado(c.escalado); setCarregandoConversa(true);
-      const ok = await buscar();
-      if (!vivo || g !== geracao.current) return;
-      setCarregandoConversa(false); setErroConversa(ok === "falha");
-      if (ok === "morta") {
-        conversaRef.current = null; setEscalado(false);
-        AsyncStorage.removeItem(chave).catch(() => {});
-        return;
+    semNovidade.current = 0; enviandoRef.current = false; escaladoRef.current = false;
+    restaurandoRef.current = true;
+    setAnexo(null); setFalhouFoto(false); setFalhouErro(null); clientIdFoto.current = null;
+    setMsgs([]); setTexto(""); setEscalado(false); setErro(null); setEnviando(false); setRestaurando(true);
+    (async () => {
+      try {
+        if (!chave) return;
+        const raw = await persistirChat(() => AsyncStorage.getItem(chave));
+        if (!vigente()) return;
+        const c = destino ? { conversa_id: destino, escalado: false } : restaurarConversa(raw);
+        if (!c) return;
+        conversaRef.current = c.conversa_id;
+        escaladoRef.current = c.escalado; setEscalado(c.escalado);
+        setCarregandoConversa(true);
+        const ok = await buscar();
+        if (!vigente()) return;
+        setErroConversa(ok === "falha");
+        if (ok === "morta") {
+          conversaRef.current = null; escaladoRef.current = false; setEscalado(false);
+          await persistirChat(() => AsyncStorage.removeItem(chave));
+        } else guardar(escaladoRef.current);
+      } finally {
+        if (vigente()) { restaurandoRef.current = false; setRestaurando(false); setCarregandoConversa(false); agendar(); }
       }
-      agendar();
-    }).catch(() => {});
-    return () => { vivo = false; };
-  }, [chave, buscar, agendar, cancelarVoz]);
+    })().catch(() => {});
+    return () => { ciclo.reiniciar(); if (timer.current) clearTimeout(timer.current); };
+  }, [chave, destino, escopo, buscar, agendar, guardar, ciclo, cancelarVoz]);
 
   // "Digitando…" não dura para sempre: passado o limite, troca por uma dica.
   const ultimaId = msgs[msgs.length - 1]?.id;
@@ -181,39 +202,47 @@ export default function FaleConoscoChatScreen() {
   }, [ultimaId, enviando, escalado]);
 
   const novaConversa = useCallback(() => {
-    geracao.current++; cancelarVoz(); setTexto(""); setHistorico(false); setFalhouErro(null);
+    if (enviandoRef.current || restaurandoRef.current) return;
+    ciclo.reiniciar(); escaladoRef.current = false;
+    cancelarVoz(); setHistorico(false); setErroConversa(false); setCarregandoConversa(false);
     if (timer.current) clearTimeout(timer.current);
     conversaRef.current = null; desdeRef.current = null; msgsRef.current = [];
     semNovidade.current = 0;
-    setMsgs([]); setEscalado(false); setErro(null); setErroConversa(false); setCarregandoConversa(false);
-    setAnexo(null); setFalhouFoto(false); clientIdFoto.current = null;
-    if (chave) AsyncStorage.removeItem(chave).catch(() => {});
-  }, [chave, cancelarVoz]);
+    setMsgs([]); setEscalado(false); setErro(null);
+    setAnexo(null); setFalhouFoto(false); setFalhouErro(null); setTexto(""); clientIdFoto.current = null;
+    if (chave) persistirChat(() => AsyncStorage.removeItem(chave)).catch(() => {});
+  }, [chave, ciclo, cancelarVoz]);
 
   const selecionarConversa = useCallback(async (c: ConversaAssistente) => {
+    if (enviandoRef.current || restaurandoRef.current || !usuarioRef.current) return;
     novaConversa();
     conversaRef.current = c.id;
-    setEscalado(c.status === "humano"); guardar(c.status === "humano");
-    const g = geracao.current;
-    setCarregandoConversa(true);
+    escaladoRef.current = c.status === "humano";
+    setEscalado(escaladoRef.current); guardar(escaladoRef.current);
+    const revisao = ciclo.atual();
+    const origem = escopoRef.current;
+    restaurandoRef.current = true; setRestaurando(true); setCarregandoConversa(true);
     const resultado = await buscar();
-    if (g !== geracao.current) return;
+    if (!ciclo.vigente(revisao) || escopoRef.current !== origem) return;
+    restaurandoRef.current = false; setRestaurando(false);
     setCarregandoConversa(false); setErroConversa(resultado === "falha");
     if (resultado === "morta") { novaConversa(); setErro(t("Conversa não encontrada.")); }
     else { if (resultado === "falha") setErro(t("Não foi possível carregar as mensagens. Tente novamente.")); agendar(); }
-  }, [novaConversa, guardar, buscar, agendar, t]);
+  }, [novaConversa, guardar, buscar, agendar, t, ciclo]);
 
   const anexar = useCallback(async (origem: "camera" | "galeria") => {
-    if (enviandoRef.current) return;
+    if (enviandoRef.current || restaurandoRef.current) return;
     cancelarVoz(); Keyboard.dismiss();
-    const g = geracao.current;
+    const revisao = ciclo.atual();
+    const escopoInicial = escopoRef.current;
+    const vigente = () => ciclo.vigente(revisao) && escopoRef.current === escopoInicial && !enviandoRef.current && !restaurandoRef.current;
     try {
       const f = await escolherImagem(origem, t);
-      if (!f || g !== geracao.current) return;
+      if (!f || !vigente()) return;
       clientIdFoto.current = Crypto.randomUUID();
       setFalhouFoto(false); setErro(null); setAnexo(f);
-    } catch { if (g === geracao.current) setErro(t("Não foi possível abrir a foto. Tente novamente.")); }
-  }, [t, cancelarVoz]);
+    } catch { if (vigente()) setErro(t("Não foi possível abrir a foto. Tente novamente.")); }
+  }, [t, cancelarVoz, ciclo]);
 
   useFocusEffect(
     useCallback(() => {
@@ -225,13 +254,14 @@ export default function FaleConoscoChatScreen() {
       };
     }, [buscar, agendar, cancelarVoz]),
   );
-  useEffect(() => () => { geracao.current++; if (timer.current) clearTimeout(timer.current); }, []);
 
   const enviar = useCallback(async (corpo: string) => {
     const limpo = corpo.trim();
-    if (!limpo || enviandoRef.current) return;
-    if (!conversaRef.current) geracao.current++; // invalida restauração local ainda pendente
-    const g = geracao.current;
+    const usuario = usuarioRef.current;
+    if (!usuario || !limpo || enviandoRef.current || restaurandoRef.current || !chave) return;
+    const revisao = ciclo.atual();
+    const origem = escopoRef.current;
+    const vigente = () => ciclo.vigente(revisao) && escopoRef.current === origem;
     enviandoRef.current = true;
     setEnviando(true);
     setErro(null);
@@ -245,33 +275,42 @@ export default function FaleConoscoChatScreen() {
       const r = await apiPost<RespostaEnvio>("/app/assistente", {
         texto: limpo,
         ...(conversaRef.current ? { conversa_id: conversaRef.current } : {}),
-      });
-      if (g !== geracao.current) return;
-      conversaRef.current = r.conversa_id;
-      if (r.escalado) setEscalado(true);
+      }, { expectedUserId: usuario });
+      if (!vigente()) return;
+      if (idConversaValido(r.conversa_id)) conversaRef.current = r.conversa_id;
+      if (r.escalado) { escaladoRef.current = true; setEscalado(true); }
       guardar(!!r.escalado || escaladoRef.current);
-      if (r.limitado) {
+      if ((r.limitado || r.persistido === false) && r.resposta) {
         seq.current += 1;
-        aplicar([mensagemLocal(seq.current, "assistente", r.resposta, marca)]);
+        msgsRef.current = msgsRef.current.map(m => m.id === local.id ? { ...m, transitoria: true } : m);
+        aplicar([{ ...mensagemLocal(seq.current, "assistente", r.resposta, marca), transitoria: true }]);
+      } else if (!r.limitado && r.persistido !== false) {
+        msgsRef.current = limparMensagensTransitorias(msgsRef.current);
+        setMsgs(msgsRef.current);
       }
       semNovidade.current = 0;
       await buscar();
     } catch (e: any) {
-      if (g !== geracao.current) return;
+      if (!vigente()) return;
       msgsRef.current = msgsRef.current.filter((m) => m.id !== local.id);
       setMsgs(msgsRef.current);
       setTexto((atual) => atual || limpo);
       setErro(e?.message || t("Não foi possível enviar. Tente de novo."));
     } finally {
-      if (g === geracao.current) { enviandoRef.current = false; setEnviando(false); agendar(); }
+      if (!vigente()) return;
+      enviandoRef.current = false;
+      setEnviando(false);
+      agendar();
     }
-  }, [aplicar, buscar, agendar, guardar, t]);
+  }, [aplicar, buscar, agendar, guardar, t, chave, ciclo]);
 
   // Foto (com ou sem legenda). Caminho separado do texto puro, que segue por /app/assistente.
   const enviarComFoto = useCallback(async (arquivo: ArquivoImagem, corpo: string) => {
-    if (enviandoRef.current) return;
-    if (!conversaRef.current) geracao.current++; // invalida restauração local ainda pendente
-    const g = geracao.current;
+    const usuario = usuarioRef.current;
+    if (!usuario || !chave || enviandoRef.current || restaurandoRef.current) return;
+    const revisao = ciclo.atual();
+    const origem = escopoRef.current;
+    const vigente = () => ciclo.vigente(revisao) && escopoRef.current === origem;
     enviandoRef.current = true;
     setEnviando(true);
     setErro(null);
@@ -290,10 +329,13 @@ export default function FaleConoscoChatScreen() {
         texto: limpo || undefined,
         conversa_id: conversaRef.current || undefined,
         client_id,
+        expectedUserId: usuario,
       });
-      if (g !== geracao.current) return;
-      conversaRef.current = r.conversa_id;
-      if (r.escalado) setEscalado(true);
+      if (!vigente()) return;
+      if (idConversaValido(r.conversa_id)) conversaRef.current = r.conversa_id;
+      if (r.escalado) { escaladoRef.current = true; setEscalado(true); }
+      msgsRef.current = limparMensagensTransitorias(msgsRef.current);
+      setMsgs(msgsRef.current);
       guardar(!!r.escalado || escaladoRef.current);
       setAnexo(null);
       setTexto("");
@@ -301,18 +343,21 @@ export default function FaleConoscoChatScreen() {
       semNovidade.current = 0;
       await buscar();
     } catch (e: any) {
+      if (!vigente()) return;
       // mantém a foto e o texto para reenviar; tira só a bolha otimista
-      if (g !== geracao.current) return;
       msgsRef.current = msgsRef.current.filter((m) => m.id !== local.id);
       setMsgs(msgsRef.current);
       setFalhouFoto(true);
       setFalhouErro(e?.message || null);
     } finally {
-      if (g === geracao.current) { enviandoRef.current = false; setEnviando(false); agendar(); }
+      if (!vigente()) return;
+      enviandoRef.current = false;
+      setEnviando(false);
+      agendar();
     }
-  }, [buscar, agendar, guardar]);
+  }, [buscar, agendar, guardar, chave, ciclo]);
 
-  const bloqueado = enviando || carregandoConversa || erroConversa;
+  const bloqueado = enviando || restaurando || carregandoConversa || erroConversa || !user?.id;
   const aguardando = aguardandoResposta(msgs, enviando) && !escalado;
   const digitando = aguardando && !demorou;
 
@@ -325,7 +370,7 @@ export default function FaleConoscoChatScreen() {
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
           <Text style={styles.title}>{t("Assistente")}</Text>
-          <Pressable onPress={() => { cancelarVoz(); Keyboard.dismiss(); setHistorico(true); }} disabled={enviando}
+          <Pressable onPress={() => { cancelarVoz(); Keyboard.dismiss(); setHistorico(true); }} disabled={enviando || restaurando}
             style={styles.back} accessibilityRole="button" accessibilityLabel={t("Histórico de conversas")}>
             <Ionicons name="time-outline" size={26} color={colors.brandMid} />
           </Pressable>
@@ -379,7 +424,7 @@ export default function FaleConoscoChatScreen() {
             <Pressable
               style={styles.removerAnexo}
               onPress={() => { setAnexo(null); setFalhouFoto(false); clientIdFoto.current = null; }}
-              disabled={enviando}
+              disabled={enviando || restaurando}
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={t("Remover foto")}

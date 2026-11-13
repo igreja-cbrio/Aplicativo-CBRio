@@ -1,3 +1,4 @@
+import { destinoNotificacaoChat } from "@/lib/assistenteChat";
 import { ScrollView, SectionList } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 import { useMemo, useState } from "react";
@@ -119,6 +120,8 @@ export default function NotificacoesScreen() {
     if (!n.lida_em) marcarLida(n.id);
     const data = n.data ?? {};
     switch (n.tipo) {
+      case "chat_assistente":
+        router.navigate(destinoNotificacaoChat(data)); return;
       case "carta_transferencia_pronta":
         router.navigate("/carta-transferencia"); return;
       case "escala":

@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Chat: base compartilhada e continuidade com a equipe (2026-11-13)
+
 - Carta de transferência e PDF pronto (2026-11-01)
 
 - Campos nativos para inscrição de outro participante (2026-10-28)
@@ -595,6 +597,28 @@ Tela nativa `/carta-transferencia`, acessível em Cuidados e menu Você, para iO
 ### Carta pronta em PDF (2026-11-01)
 O pedido mostra disponibilidade do PDF publicado pela Integração, inclusive após inativação. API autenticada confere vínculo antes de emitir URL de 120s no bucket privado. `cartaPdf.ts` baixa em cache e compartilha pelo sistema; preserva o arquivo após o chooser Android e limpa somente PDFs próprios após 24h, no próximo uso. Push e sino (`carta_transferencia_pronta`) abrem a tela. Nenhum módulo nativo novo. Backend/migration precisam estar publicados antes do OTA.
 
+
+## Chat: base compartilhada e continuidade com a equipe (2026-11-13)
+
+Implementação preparada; publicação e validação em aparelho ainda pendentes.
+
+- O ERP fornece a base pública atualizada para app e WhatsApp. O app não mantém
+  cópia própria da base nem configura agente diretamente na ElevenLabs.
+- Conversa mantém contexto público curto no servidor. Pedidos sensíveis e fotos
+  seguem para a equipe; não entram no histórico fornecido à IA.
+- A transferência copia o histórico persistido para o inbox do canal app em uma
+  transação. Respostas atrasadas do bot não aparecem após nova entrada ou tomada
+  pela equipe. Mensagens são ordenadas por sequência, não só por horário.
+- Notificação abre a conversa específica. Polling, restauração e envio possuem
+  ciclo por usuário/conversa; resultado antigo não pode substituir conversa atual.
+  A requisição revalida o usuário esperado antes e depois da renovação de sessão.
+- Avisos locais de limite/falha não persistidos saem da tela apenas após o próximo
+  envio confirmado, preservando a mensagem otimista que estiver em andamento.
+- Ordem de publicação: migration ERP `20261113032130_app_chat_continuidade.sql`,
+  backend compatível, depois atualização do app. Rodar `npm run verificar`, checks
+  de CI e validar em aparelho troca de conta, retorno por notificação, transferência
+  e resposta humana. Não publicar OTA a partir de branch de trabalho.
+
 ## 2026-11-13 · Assistente: composição, histórico e ditado revisável
 
 Chat adota cabeçalho Assistente/histórico, saudação, compositor único arredondado
@@ -603,9 +627,10 @@ microfone por envio. Atendimento humano permanece sempre visível; outros canais
 continuam acessíveis. Não há cartão fictício de tarefas.
 
 Histórico consulta GET /app/assistente/conversas por sessão, paginado em 20;
-seleção usa mensagens existentes (últimas 200). Nova conversa não encerra a
-anterior. Geração + ID da conversa descartam respostas atrasadas de polling,
-restauração, uploads e envios; primeiro envio invalida restauração pendente.
+seleção carrega o histórico existente, paginado por sequência. Nova conversa não
+encerra a anterior. Ciclo, conversa e usuário descartam respostas atrasadas de
+polling, restauração, uploads e envios. Envio aguarda a restauração; consultas
+revalidam o usuário esperado antes de usar a sessão.
 
 Ditado usa expo-speech-recognition 3.1.3 (SDK54), carregamento OPCIONAL via Expo.
 Nunca importar entrypoint obrigatório do pacote: binários anteriores continuam

@@ -1,3 +1,4 @@
+import { destinoNotificacaoChat } from "@/lib/assistenteChat";
 import { router } from "expo-router";
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -67,6 +68,8 @@ export function attachNotifTapListener(): () => void {
     if (!data || typeof data !== "object") return;
     const tipo = (data as { tipo?: string }).tipo;
     switch (tipo) {
+      case "chat_assistente":
+        router.navigate(destinoNotificacaoChat(data)); return;
       case "carta_transferencia_pronta":
         router.navigate("/carta-transferencia");
         return;
