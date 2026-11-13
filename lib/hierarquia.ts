@@ -114,7 +114,7 @@ const PAI: Record<string, string> = {
   // KIDS = menu; cada item é uma tela própria e o check-in (/kids) também desce dele.
   "/kids-area": "/familia",
   "/kids-mural": "/kids-area",
-  "/kids-eventos": "/kids-area",
+  "/kids-eventos": "/kids-mural",
   "/kids-horarios": "/kids-area",
   "/kids-salas": "/kids-area",
   "/kids": "/kids-area",

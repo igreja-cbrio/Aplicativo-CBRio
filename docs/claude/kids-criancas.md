@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Kids: mural, calendário e cor por responsável (2026-11-13)
+
 - ⚠️ HOME · card do Kids nos dias de culto (29/08/2026)
 - ⚠️⚠️ KIDS NO APP · ARQUIVADO PELO MARCOS — e 3 achados que ficam (11/08/2026)
 - ⚠️ APRESENTAÇÃO DE BEBÊS · o card do app é LINK MORTO (medido 11/08/2026)
@@ -316,3 +318,11 @@ uma técnica que não faz nada quando ele cabe.
 `scripts/mutantes.mjs` **não pode conter escape** (`\n`, `\u00a0`) — o JS os
 interpreta e a string para de casar o texto do arquivo. A 1ª versão dos dois
 mutantes morreu com `ÂNCORA PERDIDA` por isso.
+
+
+## Kids: mural, calendário e cor por responsável (2026-11-13)
+
+- Menu Kids reúne avisos e eventos em Mural de avisos. Ícone de calendário abre `/kids-eventos`, com mês, dias marcados e filtro por dia; troca de mês limpa seleção. Link antigo continua válido, agora filho do mural.
+- `KidsThemeProvider` salva amarelo/azul/verde/lilás/rosa por UID no AsyncStorage deste aparelho; default amarelo, sem herdar preferência de outra conta. Não é escolha da criança nem sincronização entre aparelhos.
+- Horários continuam vindo do ERP. Regra de quarta (3–12 completos) é verificada no backend antes de gerar/cancelar códigos, nunca recalculada como autoridade no app.
+- Segmentação/foto/agendamento de avisos do pedido de 11/11 não fazem parte desta alteração.

@@ -1,15 +1,17 @@
 // KIDS › Divisão das salas.
+import { useKidsTheme } from "@/contexts/KidsThemeContext";
 import { Text } from "@/components/ui/Typography";
 import { useMemo } from "react";
 import { Image, View } from "react-native";
-import { useColors } from "@/contexts/ThemeContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { KidsSecao, makeCardStyles } from "@/components/kids/KidsSecao";
 import { corValida } from "@/lib/kidsArea";
 
 export default function KidsSalasScreen() {
-  const colors = useColors();
-  const s = useMemo(() => makeCardStyles(colors), [colors]);
+  const { colors, mode } = useTheme();
+  const { tema } = useKidsTheme();
+  const s = useMemo(() => makeCardStyles(colors, mode === "dark" ? tema.fundo : tema.tinta), [colors, tema, mode]);
   const t = useT();
   return (
     <KidsSecao
