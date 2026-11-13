@@ -3,6 +3,7 @@ import {
   aguardandoResposta,
   maiorCriadoEm,
   maiorSequencia,
+  menorSequencia,
   destinoNotificacaoChat,
   mensagemLocal,
   mesclarMensagens,
@@ -15,6 +16,24 @@ import {
 
 const m = (id: string, autor: MensagemChat["autor"], t: string, corpo = id): MensagemChat => ({
   id, autor, corpo, created_at: `2026-11-10T12:00:${t}Z`,
+});
+
+describe('paginação para trás', () => {
+  it('carrega 450 mensagens sem perder ordem, deduplicar incorretamente ou recuar cursor de polling', () => {
+    const todas = Array.from({ length: 450 }, (_, i) => ({ ...m(String(i + 1), 'membro', '01'), sequencia: i + 1 }));
+    const recente = todas.slice(250);
+    const meio = mesclarMensagens(recente, todas.slice(50, 250)).mensagens;
+    const completo = mesclarMensagens(meio, todas.slice(0, 50)).mensagens;
+    expect(completo.map(x => x.sequencia)).toEqual(todas.map(x => x.sequencia));
+    expect(menorSequencia(recente)).toBe(251);
+    expect(menorSequencia(completo)).toBe(1);
+    expect(maiorSequencia(completo)).toBe(450);
+  });
+  it('não usa mensagem otimista ou sequência inválida como cursor anterior', () => {
+    expect(menorSequencia([mensagemLocal(1, 'membro', 'oi', '', { sequencia: 1 }),
+      { ...m('server', 'membro', '01'), sequencia: 7 }, { ...m('bad', 'membro', '01'), sequencia: -1 }])).toBe(7);
+    expect(menorSequencia([])).toBeNull();
+  });
 });
 
 describe("mesclarMensagens", () => {

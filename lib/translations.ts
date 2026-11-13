@@ -6,6 +6,11 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Esta proposta expirou. Peça uma nova inscrição no chat.": { en: "This proposal expired. Ask to register again in the chat.", es: "Esta propuesta venció. Solicita una nueva inscripción en el chat." },
+  "Revisei os dados e aceito os termos acima.": { en: "I reviewed the details and accept the terms above.", es: "Revisé los datos y acepto los términos anteriores." },
+  "Completar inscrição": { en: "Complete registration", es: "Completar inscripción" },
+  "Não foi possível confirmar o resultado. Consulte as mensagens antes de tentar novamente.": { en: "Unable to confirm the result. Check the messages before trying again.", es: "No se pudo confirmar el resultado. Revisa los mensajes antes de intentarlo de nuevo." },
+  "Carregar mensagens anteriores": { en: "Load earlier messages", es: "Cargar mensajes anteriores" },
   "Próximo mês": {"en": "Next month", "es": "Próximo mes"},
   "Mês anterior": {"en": "Previous month", "es": "Mes anterior"},
   "Não foi possível abrir o anexo. Tente novamente.": {"en": "Could not open the attachment. Try again.", "es": "No se pudo abrir el adjunto. Inténtalo de nuevo."},
