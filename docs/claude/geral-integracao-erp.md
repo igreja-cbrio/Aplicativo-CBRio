@@ -7,6 +7,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 ## Índice de seções
 
 - Chat: base compartilhada e continuidade com a equipe (2026-11-13)
+- Chat: confirmação de inscrições e mensagens anteriores (2026-11-13)
 
 - Carta de transferência e PDF pronto (2026-11-01)
 
@@ -640,3 +641,23 @@ fala vira rascunho editável, sem envio automático. Parar finaliza, cancelar
 restaura rascunho; sair/background interrompe. Uma sessão nativa aguarda end antes
 de permitir a próxima (eventos nativos são globais). Não salvamos arquivo de voz;
 o reconhecimento é feito pelo serviço de fala do sistema e pode usar rede.
+
+## Chat: confirmação de inscrições e mensagens anteriores (2026-11-13)
+
+- Proposta de Next/batismo vem do servidor com ID, resumo, termos e validade. O
+  cartão exige revisão e aceite explícito antes de POST `/app/assistente/acao`;
+  camisa é escolhida no cartão quando o servidor fornece as opções. Cancelar é
+  explícito. Resultado incerto não gera nova confirmação automática.
+- A proposta pertence à conversa e à sessão; GET mensagens devolve a pendente
+  ou `null`. Polling iniciado antes/durante uma escrita não restaura proposta
+  antiga. Troca de conta/conversa e atendimento humano descartam o cartão.
+- Dados insuficientes abrem a porta existente indicada pelo servidor; destinos
+  aceitos somente perfil, inscrição Next ou batismo. O app não inventa regras
+  de matrícula, datas, opções ou elegibilidade.
+- Histórico carrega mensagens anteriores com `antes=<sequencia>` e
+  `tem_anteriores`, mantendo o maior cursor para polling. Carregar mensagens
+  antigas não pula a leitura para o final. Resposta atrasada de outra conversa
+  é descartada; o histórico não fica limitado às 200 mensagens mais recentes.
+- Backend compatível deve estar disponível antes do app. Validação em aparelho
+  continua necessária para aceite, camisa, retorno após fechar o chat e rolagem
+  de conversas longas. Nenhuma publicação é realizada por esta implementação.

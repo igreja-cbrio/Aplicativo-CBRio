@@ -9,6 +9,8 @@ import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router
 import { Ionicons } from "@expo/vector-icons";
 import { useMembro } from "@/contexts/MembroContext";
 import { HistoricoAssistente, type ConversaAssistente } from "@/components/HistoricoAssistente";
+import { ConfirmacaoAssistente } from "@/components/chat/AcaoAssistente";
+import { lerAcaoAssistente, podeConfirmarAcao, type AcaoAssistente } from "@/lib/assistenteAcao";
 import { useDitadoAssistente } from "@/hooks/useDitadoAssistente";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { useColors } from "@/contexts/ThemeContext";
@@ -27,6 +29,7 @@ import {
   aguardandoResposta,
   maiorCriadoEm,
   maiorSequencia,
+  menorSequencia,
   idConversaValido,
   mensagemLocal,
   mesclarMensagens,
@@ -38,8 +41,8 @@ import { criarCicloChat, persistirChat } from "@/lib/assistenteChatCiclo";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 
-type RespostaEnvio = { conversa_id: string | null; resposta: string | null; escalado: boolean; limitado?: boolean; persistido?: boolean };
-type RespostaLista = { mensagens: MensagemChat[]; status?: string };
+type RespostaEnvio = { conversa_id: string | null; resposta: string | null; escalado: boolean; limitado?: boolean; persistido?: boolean; acao?: unknown };
+type RespostaLista = { mensagens: MensagemChat[]; status?: string; tem_anteriores?: boolean; acao?: unknown };
 
 /**
  * Chat "Fale conosco" com o assistente automático. É a porta PRINCIPAL, mas:
@@ -58,6 +61,17 @@ export default function FaleConoscoChatScreen() {
   const [historico, setHistorico] = useState(false);
   const [carregandoConversa, setCarregandoConversa] = useState(false);
   const [erroConversa, setErroConversa] = useState(false);
+  const [temAnteriores, setTemAnteriores] = useState(false);
+  const [carregandoAnteriores, setCarregandoAnteriores] = useState(false);
+  const anterioresRef = useRef<symbol | null>(null);
+  const acompanharFim = useRef(true);
+  const [acao, setAcao] = useState<AcaoAssistente | null>(null);
+  const acaoRef = useRef<AcaoAssistente | null>(null);
+  const revisaoAcao = useRef(0);
+  const aplicarAcao = useCallback((valor: unknown) => {
+    const proxima = lerAcaoAssistente(valor);
+    acaoRef.current = proxima; setAcao(proxima);
+  }, []);
   const chave = user?.id ? chaveConversa(user.id) : null;
   const usuarioRef = useRef(user?.id);
   usuarioRef.current = user?.id;
@@ -118,6 +132,8 @@ export default function FaleConoscoChatScreen() {
     const revisao = ciclo.atual();
     const origem = escopoRef.current;
     const usuario = usuarioRef.current;
+    const versaoAcao = revisaoAcao.current;
+    const duranteEnvio = enviandoRef.current;
     if (!id || !usuario) return;
     const token = ciclo.iniciarConsulta();
     if (!token) return;
@@ -128,7 +144,12 @@ export default function FaleConoscoChatScreen() {
       const r = await apiGet<RespostaLista>(`/app/assistente/${encodeURIComponent(id)}/mensagens${q}`, { expectedUserId: usuario });
       if (!vigente()) return;
       aplicar(Array.isArray(r?.mensagens) ? r.mensagens : []);
-      if (r.status === "humano") { escaladoRef.current = true; setEscalado(true); }
+      if (apos === null) setTemAnteriores(r.tem_anteriores === true);
+      if (versaoAcao === revisaoAcao.current && !duranteEnvio && !enviandoRef.current && r.acao !== undefined) aplicarAcao(r.acao);
+      if (versaoAcao === revisaoAcao.current && !duranteEnvio && (r.status === "humano" || r.status === "bot")) {
+        escaladoRef.current = r.status === "humano"; setEscalado(escaladoRef.current);
+        if (escaladoRef.current) aplicarAcao(null);
+      }
       setErroConversa(false);
     } catch (e: any) {
       if (!vigente()) return;
@@ -138,7 +159,32 @@ export default function FaleConoscoChatScreen() {
     } finally {
       ciclo.terminarConsulta(token);
     }
-  }, [aplicar, ciclo]);
+  }, [aplicar, aplicarAcao, ciclo]);
+
+  const buscarAnteriores = useCallback(async () => {
+    const id = conversaRef.current;
+    const usuario = usuarioRef.current;
+    const antes = menorSequencia(msgsRef.current);
+    if (!id || !usuario || antes === null || anterioresRef.current || restaurandoRef.current) return;
+    const token = Symbol('anteriores');
+    anterioresRef.current = token;
+    const revisao = ciclo.atual();
+    const origem = escopoRef.current;
+    const vigente = () => ciclo.vigente(revisao) && escopoRef.current === origem && conversaRef.current === id;
+    setCarregandoAnteriores(true); setErro(null);
+    acompanharFim.current = false;
+    try {
+      const r = await apiGet<RespostaLista>(`/app/assistente/${encodeURIComponent(id)}/mensagens?antes=${antes}`, { expectedUserId: usuario });
+      if (!vigente()) return;
+      aplicar(Array.isArray(r.mensagens) ? r.mensagens : []);
+      setTemAnteriores(r.tem_anteriores === true);
+    } catch {
+      if (vigente()) setErro(t("Não foi possível carregar as mensagens. Tente novamente."));
+    } finally {
+      if (anterioresRef.current === token) anterioresRef.current = null;
+      if (vigente()) setCarregandoAnteriores(false);
+    }
+  }, [aplicar, ciclo, t]);
 
   const agendar = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -160,6 +206,9 @@ export default function FaleConoscoChatScreen() {
 
   useEffect(() => {
     const revisao = ciclo.reiniciar();
+    anterioresRef.current = null; acompanharFim.current = true;
+    revisaoAcao.current++; aplicarAcao(null);
+    setTemAnteriores(false); setCarregandoAnteriores(false);
     cancelarVoz(); setHistorico(false); setErroConversa(false); setCarregandoConversa(false);
     const vigente = () => ciclo.vigente(revisao) && escopoRef.current === escopo;
     if (timer.current) clearTimeout(timer.current);
@@ -190,7 +239,7 @@ export default function FaleConoscoChatScreen() {
       }
     })().catch(() => {});
     return () => { ciclo.reiniciar(); if (timer.current) clearTimeout(timer.current); };
-  }, [chave, destino, escopo, buscar, agendar, guardar, ciclo, cancelarVoz]);
+  }, [chave, destino, escopo, buscar, agendar, guardar, ciclo, cancelarVoz, aplicarAcao]);
 
   // "Digitando…" não dura para sempre: passado o limite, troca por uma dica.
   const ultimaId = msgs[msgs.length - 1]?.id;
@@ -204,6 +253,9 @@ export default function FaleConoscoChatScreen() {
   const novaConversa = useCallback(() => {
     if (enviandoRef.current || restaurandoRef.current) return;
     ciclo.reiniciar(); escaladoRef.current = false;
+    anterioresRef.current = null; acompanharFim.current = true;
+    revisaoAcao.current++; aplicarAcao(null);
+    setTemAnteriores(false); setCarregandoAnteriores(false);
     cancelarVoz(); setHistorico(false); setErroConversa(false); setCarregandoConversa(false);
     if (timer.current) clearTimeout(timer.current);
     conversaRef.current = null; desdeRef.current = null; msgsRef.current = [];
@@ -211,7 +263,7 @@ export default function FaleConoscoChatScreen() {
     setMsgs([]); setEscalado(false); setErro(null);
     setAnexo(null); setFalhouFoto(false); setFalhouErro(null); setTexto(""); clientIdFoto.current = null;
     if (chave) persistirChat(() => AsyncStorage.removeItem(chave)).catch(() => {});
-  }, [chave, ciclo, cancelarVoz]);
+  }, [chave, ciclo, cancelarVoz, aplicarAcao]);
 
   const selecionarConversa = useCallback(async (c: ConversaAssistente) => {
     if (enviandoRef.current || restaurandoRef.current || !usuarioRef.current) return;
@@ -263,6 +315,8 @@ export default function FaleConoscoChatScreen() {
     const origem = escopoRef.current;
     const vigente = () => ciclo.vigente(revisao) && escopoRef.current === origem;
     enviandoRef.current = true;
+    acompanharFim.current = true;
+    revisaoAcao.current++;
     setEnviando(true);
     setErro(null);
     // otimista: o "agora" herda o cursor (sem relógio) para cair no fim da lista
@@ -278,7 +332,9 @@ export default function FaleConoscoChatScreen() {
       }, { expectedUserId: usuario });
       if (!vigente()) return;
       if (idConversaValido(r.conversa_id)) conversaRef.current = r.conversa_id;
+      if (r.acao !== undefined) aplicarAcao(r.acao);
       if (r.escalado) { escaladoRef.current = true; setEscalado(true); }
+      if (r.escalado) aplicarAcao(null);
       guardar(!!r.escalado || escaladoRef.current);
       if ((r.limitado || r.persistido === false) && r.resposta) {
         seq.current += 1;
@@ -302,7 +358,7 @@ export default function FaleConoscoChatScreen() {
       setEnviando(false);
       agendar();
     }
-  }, [aplicar, buscar, agendar, guardar, t, chave, ciclo]);
+  }, [aplicar, buscar, agendar, guardar, t, chave, ciclo, aplicarAcao]);
 
   // Foto (com ou sem legenda). Caminho separado do texto puro, que segue por /app/assistente.
   const enviarComFoto = useCallback(async (arquivo: ArquivoImagem, corpo: string) => {
@@ -312,6 +368,8 @@ export default function FaleConoscoChatScreen() {
     const origem = escopoRef.current;
     const vigente = () => ciclo.vigente(revisao) && escopoRef.current === origem;
     enviandoRef.current = true;
+    acompanharFim.current = true;
+    revisaoAcao.current++;
     setEnviando(true);
     setErro(null);
     setFalhouFoto(false);
@@ -334,6 +392,7 @@ export default function FaleConoscoChatScreen() {
       if (!vigente()) return;
       if (idConversaValido(r.conversa_id)) conversaRef.current = r.conversa_id;
       if (r.escalado) { escaladoRef.current = true; setEscalado(true); }
+      if (r.escalado) aplicarAcao(null);
       msgsRef.current = limparMensagensTransitorias(msgsRef.current);
       setMsgs(msgsRef.current);
       guardar(!!r.escalado || escaladoRef.current);
@@ -355,7 +414,37 @@ export default function FaleConoscoChatScreen() {
       setEnviando(false);
       agendar();
     }
-  }, [buscar, agendar, guardar, chave, ciclo]);
+  }, [buscar, agendar, guardar, chave, ciclo, aplicarAcao]);
+
+  const confirmarAcao = useCallback(async (confirmar: boolean, campos: Record<string, string>) => {
+    const proposta = acaoRef.current;
+    const id = conversaRef.current;
+    const usuario = usuarioRef.current;
+    if (!proposta || proposta.tipo === 'abrir_formulario' || !id || !usuario || enviandoRef.current || restaurandoRef.current || escaladoRef.current) return;
+    if (confirmar && !podeConfirmarAcao(proposta, true, campos, Date.now())) return;
+    const revisao = ciclo.atual(); const origem = escopoRef.current;
+    const vigente = () => ciclo.vigente(revisao) && escopoRef.current === origem && conversaRef.current === id;
+    enviandoRef.current = true; revisaoAcao.current++; acompanharFim.current = true;
+    setEnviando(true); setErro(null); cancelarVoz();
+    try {
+      const r = await apiPost<RespostaEnvio>('/app/assistente/acao', {
+        conversa_id: id, acao_id: proposta.id, confirmar, termos_aceitos: confirmar, campos,
+      }, { expectedUserId: usuario });
+      if (!vigente()) return;
+      aplicarAcao(r.acao ?? null);
+      if (r.escalado) { escaladoRef.current = true; setEscalado(true); aplicarAcao(null); }
+      guardar(escaladoRef.current);
+      if (r.persistido === false && r.resposta) {
+        seq.current++;
+        aplicar([mensagemLocal(seq.current, 'assistente', r.resposta, maiorCriadoEm(msgsRef.current) ?? '1970-01-01T00:00:00Z', { transitoria: true })]);
+      }
+      await buscar();
+    } catch (e: any) {
+      if (vigente()) setErro(e?.message || t('Não foi possível confirmar o resultado. Consulte as mensagens antes de tentar novamente.'));
+    } finally {
+      if (vigente()) { enviandoRef.current = false; setEnviando(false); agendar(); }
+    }
+  }, [aplicar, aplicarAcao, buscar, agendar, guardar, ciclo, cancelarVoz, t]);
 
   const bloqueado = enviando || restaurando || carregandoConversa || erroConversa || !user?.id;
   const aguardando = aguardandoResposta(msgs, enviando) && !escalado;
@@ -390,7 +479,15 @@ export default function FaleConoscoChatScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           onTouchStart={() => Keyboard.dismiss()}
-          onContentSizeChange={() => lista.current?.scrollToEnd({ animated: true })}
+          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+          onScroll={({ nativeEvent: e }) => { acompanharFim.current = e.contentSize.height - e.layoutMeasurement.height - e.contentOffset.y < 80; }}
+          scrollEventThrottle={100}
+          onContentSizeChange={() => { if (acompanharFim.current && !anterioresRef.current) lista.current?.scrollToEnd({ animated: true }); }}
+          ListHeaderComponent={temAnteriores ? <Pressable accessibilityRole="button" disabled={carregandoAnteriores}
+            onPress={buscarAnteriores} style={styles.outros}>
+            {carregandoAnteriores ? <ActivityIndicator color={colors.brandMid} accessibilityLabel={t("Carregando")} />
+              : <Text style={styles.link}>{t("Carregar mensagens anteriores")}</Text>}
+          </Pressable> : null}
           ListEmptyComponent={
             conversaRef.current ? <View style={styles.boasVindas}>
               {carregandoConversa || !erroConversa ? <ActivityIndicator color={colors.brandMid} accessibilityLabel={t("Carregando")} /> : <Pressable
@@ -404,7 +501,16 @@ export default function FaleConoscoChatScreen() {
             </View>
           }
           renderItem={({ item }) => <Bolha m={item} styles={styles} t={t} subindo={enviando && ehLocal(item)} />}
-          ListFooterComponent={digitando ? <Text style={styles.digitando} accessibilityLiveRegion="polite">{t("Digitando…")}</Text> : null}
+          ListFooterComponent={<View style={{ gap: 12 }}>
+            {acao && !escalado ? acao.tipo === 'abrir_formulario' ? <View style={styles.aviso}>
+              {acao.resumo ? <Text style={styles.avisoTxt}>{acao.resumo}</Text> : null}
+              <Pressable accessibilityRole="button" disabled={bloqueado} style={styles.outros}
+                onPress={() => { if (acao.tipo === 'abrir_formulario') router.navigate(acao.destino); }}>
+                <Text style={styles.link}>{acao.titulo || t('Completar inscrição')}</Text>
+              </Pressable>
+            </View> : <ConfirmacaoAssistente key={acao.id} acao={acao} bloqueado={bloqueado || voz.ativo} confirmar={confirmarAcao} /> : null}
+            {digitando ? <Text style={styles.digitando} accessibilityLiveRegion="polite">{t("Digitando…")}</Text> : null}
+          </View>}
         />
 
         {aguardando && demorou ? (

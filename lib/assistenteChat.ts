@@ -67,6 +67,12 @@ export function maiorSequencia(msgs: MensagemChat[]): number | null {
   return seqs.length ? Math.max(...seqs) : null;
 }
 
+/** Cursor das mensagens anteriores; avisos locais nunca fazem parte da paginação. */
+export function menorSequencia(msgs: MensagemChat[]): number | null {
+  const seqs = msgs.filter(m => !ehLocal(m) && Number.isSafeInteger(m.sequencia) && m.sequencia! > 0).map(m => m.sequencia!);
+  return seqs.length ? Math.min(...seqs) : null;
+}
+
 const LOCAL = "local-";
 
 export function ehLocal(m: MensagemChat): boolean {
