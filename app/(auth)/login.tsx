@@ -4,9 +4,11 @@ import {
   Platform,
   StyleSheet,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { Link, useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { LoginHeroVideo } from "@/components/auth/LoginHeroVideo";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -29,6 +31,9 @@ export default function LoginScreen() {
   const router = useRouter();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const { height: alturaTela } = useWindowDimensions();
+  const alturaFaixa = Math.max(260, Math.round(alturaTela * 0.4));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(rememberPref);
@@ -67,21 +72,24 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={["bottom", "left", "right"]}>
       <TecladoSeguro        style={styles.flex}>
         {/* FormularioRolavel (23/09): o foco rola até o campo — ver o componente. */}
         <FormularioRolavel
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.scroll}>
-          <View style={styles.card}>
-            {/* Header com a logo do coração CBRio */}
+          {/* Faixa de topo com o vídeo (Hub): só visual, a lógica de login não muda. */}
+          <LoginHeroVideo height={alturaFaixa} paddingTop={insets.top}>
             <View style={styles.logoCircle}>
               <CbrioHeart size={44} color={colors.brandPale} />
             </View>
             <Text style={styles.brand}>CBRio</Text>
             <Text style={styles.subtitle}>{t("Bem-vindo à CBRio")}</Text>
+          </LoginHeroVideo>
 
+          <View style={styles.body}>
+          <View style={styles.card}>
             <View style={styles.form}>
               <Input
                 label={t("E-mail")}
@@ -166,6 +174,7 @@ export default function LoginScreen() {
               onPress={enterPreview}
             />
           )}
+          </View>
         </FormularioRolavel>
       </TecladoSeguro>
     </SafeAreaView>
@@ -188,10 +197,8 @@ const makeStyles = (colors: Palette) =>
   flex: { flex: 1 },
   scroll: {
     flexGrow: 1,
-    padding: spacing.lg,
-    justifyContent: "center",
-    gap: spacing.lg,
   },
+  body: { padding: spacing.lg, gap: spacing.lg },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
@@ -204,22 +211,21 @@ const makeStyles = (colors: Palette) =>
     width: 72,
     height: 72,
     borderRadius: radius.full,
-    backgroundColor: colors.glass,
+    backgroundColor: "rgba(255,255,255,0.18)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.md,
   },
   brand: {
-    color: colors.text,
+    color: "#fff",
     fontSize: font.size.xxl,
     fontWeight: "800",
     letterSpacing: 1,
   },
   subtitle: {
-    color: colors.textMuted,
+    color: "rgba(255,255,255,0.9)",
     fontSize: font.size.md,
     marginTop: spacing.xs,
-    marginBottom: spacing.lg,
   },
   form: { width: "100%", gap: spacing.md },
   rowBetween: {
