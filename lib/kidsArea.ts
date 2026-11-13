@@ -1,11 +1,10 @@
-// Dados da KIDS (mural, eventos, horários, salas) — uma chamada só, compartilhada
-// pelas 4 telas-filha. Cache SWR (lib/cache.ts) pra não repetir o fetch a cada tela.
-import { useCallback, useState } from "react";
+// Conteúdo segmentado: revalida acesso a cada foco, sem cache persistente entre contas.
+import { useCallback, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import { apiGet } from "@/lib/api";
-import { cacheSWR } from "@/lib/cache";
+import { useAuth } from "@/contexts/AuthContext";
 
-export type Mural = { id: string; titulo: string; corpo: string; destaque: boolean; publicado_em: string | null };
+export type Mural = { id: string; titulo: string; corpo: string; destaque: boolean; publicado_em: string | null; foto_url?: string | null };
 export type Evento = { id: string; titulo: string; descricao: string | null; data: string | null; hora: string | null; local: string | null; destaque: boolean };
 export type Horario = { id: string; rotulo: string; descricao: string | null; ordem: number };
 export type Sala = { id: string; nome: string; faixa: string | null; cor: string | null; logo_url: string | null };
@@ -32,30 +31,41 @@ async function buscarArea(): Promise<KidsArea> {
   return { mural: r?.mural || [], eventos: r?.eventos || [], horarios: r?.horarios || [], salas: r?.salas || [] };
 }
 
-/** Carrega a KIDS ao focar a tela; `recarregar` ignora o cache (pull-to-refresh/retry). */
+/** Revalida vínculos e publicação ao focar ou atualizar a tela. */
 export function useKidsArea() {
-  const [area, setArea] = useState<KidsArea | null>(null);
+  const { user } = useAuth();
+  const uid = user?.id;
+  const generation = useRef(0);
+  const [entry, setEntry] = useState<{ uid: string | undefined; data: KidsArea } | null>(null);
+  const area = entry?.uid === uid ? entry?.data ?? null : null;
   const [carregando, setCarregando] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [falhou, setFalhou] = useState(false);
 
-  const carregar = useCallback(async (forcar = false) => {
+  const carregar = useCallback(async () => {
+    const request = ++generation.current;
     try {
-      setArea(await cacheSWR("kids-area", buscarArea, { forcar, ttlMs: 2 * 60 * 1000 }));
+      const data = await buscarArea();
+      if (request !== generation.current) return;
+      setEntry({ uid, data });
       setFalhou(false);
     } catch {
+      if (request !== generation.current) return;
+      setEntry(null);
       setFalhou(true);
     } finally {
-      setCarregando(false);
-      setRefreshing(false);
+      if (request === generation.current) { setCarregando(false); setRefreshing(false); }
     }
-  }, []);
+  }, [uid]);
 
-  useFocusEffect(useCallback(() => { carregar(); }, [carregar]));
+  useFocusEffect(useCallback(() => {
+    setCarregando(true); setEntry(null); carregar();
+    return () => { generation.current++; setEntry(null); };
+  }, [carregar]));
 
   return {
     area, carregando, refreshing, falhou,
-    recarregar: () => { setRefreshing(true); carregar(true); },
-    tentarDeNovo: () => { setCarregando(true); carregar(true); },
+    recarregar: () => { setRefreshing(true); carregar(); },
+    tentarDeNovo: () => { setCarregando(true); carregar(); },
   };
 }
