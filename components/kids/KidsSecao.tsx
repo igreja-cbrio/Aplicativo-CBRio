@@ -14,7 +14,9 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { ROSA, useKidsArea, type KidsArea } from "@/lib/kidsArea";
 
-export function KidsSecao({ rota, titulo, vazio, itens }: {
+export function KidsSecao({ rota, titulo, vazio, itens, acaoCabecalho, antesDosItens }: {
+  acaoCabecalho?: React.ReactNode;
+  antesDosItens?: (area: KidsArea) => React.ReactNode;
   rota: string;
   titulo: string;
   vazio: string;
@@ -38,9 +40,10 @@ export function KidsSecao({ rota, titulo, vazio, itens }: {
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
           <Text style={styles.title}>{titulo}</Text>
-          <View style={{ width: 24 }} />
+          {acaoCabecalho || <View style={{ width: 24 }} />}
         </View>
 
+        {area && antesDosItens?.(area)}
         {carregando ? (
           <View style={styles.center}><ActivityIndicator color={colors.brandMid} /></View>
         ) : falhou && !area ? (
@@ -55,11 +58,11 @@ export function KidsSecao({ rota, titulo, vazio, itens }: {
   );
 }
 
-export const makeCardStyles = (colors: Palette) =>
+export const makeCardStyles = (colors: Palette, destaque = ROSA) =>
   StyleSheet.create({
     card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.glassBorder, borderRadius: radius.lg, padding: spacing.lg, gap: 4 },
-    cardDestaque: { borderColor: ROSA, borderWidth: 2 },
-    selo: { color: ROSA, fontSize: font.size.sm, fontWeight: "800" },
+    cardDestaque: { borderColor: destaque, borderWidth: 2 },
+    selo: { color: destaque, fontSize: font.size.sm, fontWeight: "800" },
     cardTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800" },
     cardCorpo: { color: colors.textMuted, fontSize: font.size.md, lineHeight: 22, marginTop: 2 },
     meta: { color: colors.brandMid, fontSize: font.size.sm, fontWeight: "700" },

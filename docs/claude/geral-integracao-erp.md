@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Chat: áudio privado da equipe (2026-11-13)
+
 - Chat: base compartilhada e continuidade com a equipe (2026-11-13)
 
 - Carta de transferência e PDF pronto (2026-11-01)
@@ -640,3 +642,11 @@ fala vira rascunho editável, sem envio automático. Parar finaliza, cancelar
 restaura rascunho; sair/background interrompe. Uma sessão nativa aguarda end antes
 de permitir a próxima (eventos nativos são globais). Não salvamos arquivo de voz;
 o reconhecimento é feito pelo serviço de fala do sistema e pode usar rede.
+
+
+## Chat: áudio privado da equipe (2026-11-13)
+
+- Respostas de áudio/documento da equipe no canal app usam `AnexoChatEquipe`; imagem preserva renderização anterior. Reutiliza WebView já embarcada para controles HTML de áudio, sem autoplay nem dependência nativa nova.
+- Ao abrir, renova URL por conversa/mensagem no backend autenticado; só aceita storage privado assinado na origem Supabase configurada. URL expirada/erro oferece nova tentativa, nunca fallback público.
+- Apenas um áudio ativo; pausa imperativa no blur/background e desmontagem. Player isolado por conta/conversa/mensagem, sem regredir cursor de sequência/ciclo.
+- Backend e migration de tipos devem anteceder OTA. Testes locais não comprovam reprodução real em iPhone/Android.

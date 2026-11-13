@@ -1,14 +1,16 @@
 // KIDS › Horários de funcionamento.
+import { useKidsTheme } from "@/contexts/KidsThemeContext";
 import { Text } from "@/components/ui/Typography";
 import { useMemo } from "react";
 import { View } from "react-native";
-import { useColors } from "@/contexts/ThemeContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { KidsSecao, makeCardStyles } from "@/components/kids/KidsSecao";
 
 export default function KidsHorariosScreen() {
-  const colors = useColors();
-  const s = useMemo(() => makeCardStyles(colors), [colors]);
+  const { colors, mode } = useTheme();
+  const { tema } = useKidsTheme();
+  const s = useMemo(() => makeCardStyles(colors, mode === "dark" ? tema.fundo : tema.tinta), [colors, tema, mode]);
   const t = useT();
   return (
     <KidsSecao
