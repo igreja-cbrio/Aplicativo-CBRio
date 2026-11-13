@@ -14,6 +14,11 @@ export type MensagemChat = {
   created_at: string;
   sequencia?: number;
   transitoria?: boolean;
+  /** Foto anexada (URL assinada do servidor, ou URI local na mensagem otimista). */
+  anexo_url?: string | null;
+  anexo_mime?: string | null;
+  /** Id gerado no app; casa a mensagem otimista com a do servidor. */
+  client_id?: string;
 };
 
 /**
@@ -74,8 +79,9 @@ export function mensagemLocal(
   autor: AutorChat,
   corpo: string,
   agoraIso: string,
+  extra?: Partial<MensagemChat>,
 ): MensagemChat {
-  return { id: `${LOCAL}${autor}-${seq}`, autor, corpo, created_at: agoraIso };
+  return { id: `${LOCAL}${autor}-${seq}`, autor, corpo, created_at: agoraIso, ...extra };
 }
 
 /** Remove avisos locais de tentativas anteriores; não toca no envio em andamento. */
@@ -102,7 +108,7 @@ export function maiorCriadoEm(msgs: MensagemChat[]): string | null {
  * Junta o que veio do polling ao que a tela já tem.
  *  - dedupe por `id` (o cursor do backend pode reenviar a linha mais nova);
  *  - uma mensagem otimista do membro some quando chega a versão do servidor
- *    com o mesmo corpo;
+ *    com o mesmo `client_id` (ou, sem ele, o mesmo corpo);
  *  - ordena mensagens confirmadas pela sequência do servidor; locais ficam no fim;
  *  - mensagens legadas sem sequência mantêm a ordem cronológica antes das novas;
  *  - `desde` continua disponível para compatibilidade com o cursor legado.
@@ -122,7 +128,13 @@ export function mesclarMensagens(
   let base = atuais;
   for (const n of unicas) {
     if (n.autor !== "membro") continue;
-    const i = base.findIndex((m) => ehLocal(m) && m.autor === "membro" && m.corpo === n.corpo);
+    // Com client_id o casamento é por ele (foto sem texto tem corpo vazio e
+    // colidiria por corpo); sem client_id vale o corpo, como antes (texto puro).
+    const i = base.findIndex((m) =>
+      ehLocal(m) &&
+      m.autor === "membro" &&
+      (n.client_id ? m.client_id === n.client_id : !m.client_id && m.corpo === n.corpo),
+    );
     if (i >= 0) base = base.filter((_, j) => j !== i);
   }
 

@@ -1,3 +1,4 @@
+import { KidsSerieAnual } from '@/components/kids/KidsSerieAnual';
 import { ScrollView } from "@/components/navigation/DockContent";
 import { Text, TextInput } from "@/components/ui/Typography";
 import { useCallback, useMemo, useState } from "react";
@@ -250,6 +251,8 @@ export default function KidsFilhoScreen() {
                   <Text style={styles.salaTxt}>{t("Sala prevista")}: {d.sala_sugerida.nome}</Text>
                 </View>
               )}
+
+              <KidsSerieAnual key={id} criancaId={String(id)} nome={c.nome} />
 
               {/* Gestão da foto (opcional · consentimento ECA/LGPD) */}
               {c.foto_url ? (

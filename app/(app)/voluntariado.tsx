@@ -421,9 +421,15 @@ export default function VoluntariadoScreen() {
                   ]
                     .filter(Boolean)
                     .join(" · ");
+                  // ⚠️ Escala esperando resposta leva DOIS botões. Lado a lado com o
+                  // texto, com a letra grande do aparelho, eles tomavam a largura
+                  // toda e o nome do culto quebrava letra por letra (relato de um
+                  // voluntário do Kids · 29/10/2026). Aqui o texto fica em cima,
+                  // com a largura inteira, e os botões embaixo.
+                  const aguardando = !passou && !confirmado && e.confirmation_status !== "declined";
                   return (
-                    <View key={e.id} style={styles.escala}>
-                      <View style={styles.escalaInfo}>
+                    <View key={e.id} style={[styles.escala, aguardando && styles.escalaAguardando]}>
+                      <View style={aguardando ? styles.escalaInfoAguardando : styles.escalaInfo}>
                         <Text style={styles.escalaMin}>{titulo}</Text>
                         {!!detalhes && <Text style={styles.escalaMeta}>{detalhes}</Text>}
                       </View>
@@ -473,7 +479,7 @@ export default function VoluntariadoScreen() {
                       ) : (
                         <View style={styles.escalaAcoes}>
                           <Pressable
-                            style={({ pressed }) => [styles.recusarBtn, pressed && { opacity: 0.6 }]}
+                            style={({ pressed }) => [styles.recusarBtn, styles.acaoLarga, pressed && { opacity: 0.6 }]}
                             onPress={() => setRecusaId(e.id)}
                             disabled={recusandoId === e.id}
                             accessibilityRole="button"
@@ -481,7 +487,12 @@ export default function VoluntariadoScreen() {
                             <Ionicons name="close-circle-outline" size={15} color={colors.danger} />
                             <Text style={styles.recusarTxt}>{t("Recusar")}</Text>
                           </Pressable>
-                          <Pressable style={styles.confirmarBtn} onPress={() => confirmar(e.id)} disabled={confirmandoId === e.id}>
+                          <Pressable
+                            style={[styles.confirmarBtn, styles.acaoLarga]}
+                            onPress={() => confirmar(e.id)}
+                            disabled={confirmandoId === e.id}
+                            accessibilityRole="button"
+                          >
                             <Text style={styles.confirmarTxt}>{confirmandoId === e.id ? "..." : t("Confirmar")}</Text>
                           </Pressable>
                         </View>
@@ -780,6 +791,11 @@ const makeStyles = (colors: Palette) =>
       padding: spacing.lg,
     },
     escalaInfo: { flex: 1, gap: 2 },
+    // Escala aguardando resposta: empilhada (texto em cima, botões embaixo).
+    // Sem `flex: 1` no texto: numa coluna de altura livre ele encolheria a zero.
+    escalaAguardando: { flexDirection: "column", alignItems: "stretch" },
+    escalaInfoAguardando: { gap: 2 },
+    acaoLarga: { flex: 1, justifyContent: "center", alignItems: "center" },
     escalaMin: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
     escalaMeta: { color: colors.textMuted, fontSize: font.size.sm },
     confirmarBtn: {
