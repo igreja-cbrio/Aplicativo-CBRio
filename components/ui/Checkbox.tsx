@@ -32,7 +32,7 @@ export function Checkbox({ checked, onChange, label }: Props) {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-    row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+    row: { flexDirection: "row", alignItems: "center", gap: spacing.sm, flexShrink: 1 },
     box: {
       width: 20,
       height: 20,
@@ -44,5 +44,7 @@ const makeStyles = (colors: Palette) =>
       backgroundColor: colors.glass,
     },
     boxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
-    label: { color: colors.textMuted, fontSize: font.size.sm },
+    // `flexShrink` e não `flex: 1`: rótulo longo quebra dentro da largura, e o
+    // checkbox curto do login continua do tamanho do texto ao lado do link.
+    label: { flexShrink: 1, color: colors.textMuted, fontSize: font.size.sm },
   });

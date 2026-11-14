@@ -200,21 +200,25 @@ export default function DevocionalDiarioScreen() {
             aqui é o que é DESTA tela: streak e atalho pras anotações. */}
         <View style={styles.header}>
           <Text style={styles.title}>{titulo || t("Devocional")}</Text>
-          {streak > 0 && (
-            <View style={styles.streakPill}>
-              <Text style={styles.streakTxt}>🔥 {streak} {streak === 1 ? t("dia") : t("dias")}</Text>
-            </View>
-          )}
-          <Pressable
-            onPress={() => router.navigate("/devocional-registros")}
-            hitSlop={8}
-            style={styles.anotacoesBtn}
-            accessibilityRole="button"
-            accessibilityLabel={t("Anotações do devocional")}
-          >
-            <Ionicons name="bookmark-outline" size={20} color={colors.brandMid} />
-          </Pressable>
-          <ControleFonte passo={fonte.passo} mudar={fonte.mudar} cor={colors.text} fundo={colors.surface} />
+          {/* Os controles andam juntos: quando não cabem ao lado do título
+              (letra grande, streak), descem inteiros pra linha de baixo. */}
+          <View style={styles.headerAcoes}>
+            {streak > 0 && (
+              <View style={styles.streakPill}>
+                <Text style={styles.streakTxt}>🔥 {streak} {streak === 1 ? t("dia") : t("dias")}</Text>
+              </View>
+            )}
+            <Pressable
+              onPress={() => router.navigate("/devocional-registros")}
+              hitSlop={8}
+              style={styles.anotacoesBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t("Anotações do devocional")}
+            >
+              <Ionicons name="bookmark-outline" size={20} color={colors.brandMid} />
+            </Pressable>
+            <ControleFonte passo={fonte.passo} mudar={fonte.mudar} cor={colors.text} fundo={colors.surface} />
+          </View>
         </View>
 
         {/* Progresso do ciclo do plano */}
@@ -370,9 +374,11 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
     content: { padding: 20, paddingBottom: 40 },
-    header: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 },
+    header: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, marginBottom: 14 },
+    headerAcoes: { flexDirection: "row", alignItems: "center", gap: 8 },
     back: { padding: 2 },
-    title: { fontSize: 24, fontWeight: "800", color: colors.text, flex: 1 },
+    // Base de 140 (e não flex: 1): é o que faz os controles descerem em vez de espremer o título.
+    title: { fontSize: 24, fontWeight: "800", color: colors.text, flexGrow: 1, flexShrink: 1, flexBasis: 140 },
     streakPill: {
       backgroundColor: colors.surface,
       borderWidth: 1,
@@ -451,7 +457,7 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
     passagemTxt: { color: colors.text, fontSize: 15, lineHeight: 23, fontStyle: "italic" },
     compartilharVersiculo: { color: "#263234", fontSize: 11, fontWeight: "800" },
     // Ações do versículo vivem DENTRO do papel da passagem — cores fixas do papel, não do tema.
-    verseActions: { flexDirection: "row", gap: 18, marginTop: 12, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#DDD8CE" },
+    verseActions: { flexDirection: "row", flexWrap: "wrap", gap: 18, rowGap: 8, marginTop: 12, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#DDD8CE" },
     corpo: { marginTop: 14 },
     verseAction: { flexDirection: "row", alignItems: "center", gap: 4 },
     secao: { color: colors.text, fontSize: 15, fontWeight: "800", marginTop: 14, marginBottom: 4 },

@@ -196,7 +196,7 @@ export default function CuidadosScreen() {
                 const st = STATUS_META[p.tratamento_status];
                 return (
                   <View key={p.id} style={styles.pedido}>
-                    <View style={{ flex: 1 }}>
+                    <View style={styles.pedidoInfo}>
                       <Text style={styles.pedidoTipo}>{t(TIPO_LABEL[p.tipo])}</Text>
                       {p.mensagem ? (
                         <Text style={styles.pedidoMsg} numberOfLines={1}>{p.mensagem}</Text>
@@ -246,7 +246,7 @@ const makeStyles = (colors: Palette) =>
       gap: spacing.sm,
     },
     sosTop: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-    sosTitle: { color: "#fff", fontSize: font.size.lg, fontWeight: "800" },
+    sosTitle: { flex: 1, color: "#fff", fontSize: font.size.lg, fontWeight: "800" },
     sosText: { color: "rgba(255,255,255,0.95)", fontSize: font.size.sm, lineHeight: 20 },
     sosBtn: {
       flexDirection: "row",
@@ -287,8 +287,11 @@ const makeStyles = (colors: Palette) =>
     cardText: { color: colors.textMuted, fontSize: font.size.md, lineHeight: 22 },
     meusWrap: { gap: spacing.sm, marginTop: spacing.sm },
     meusTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "700", marginBottom: 2 },
+    // Com wrap, a pastilha de status longa desce pra linha de baixo em vez de
+    // espremer o texto; as curtas ("Recebido") continuam ao lado.
     pedido: {
       flexDirection: "row",
+      flexWrap: "wrap",
       alignItems: "center",
       gap: spacing.sm,
       backgroundColor: colors.surface,
@@ -297,6 +300,7 @@ const makeStyles = (colors: Palette) =>
       borderRadius: radius.lg,
       padding: spacing.md,
     },
+    pedidoInfo: { flexGrow: 1, flexShrink: 1, flexBasis: 150 },
     pedidoTipo: { color: colors.text, fontSize: font.size.md, fontWeight: "600" },
     pedidoMsg: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 1 },
     pedidoData: { color: colors.textMuted, fontSize: 11, marginTop: 3 },
@@ -307,9 +311,10 @@ const makeStyles = (colors: Palette) =>
       paddingHorizontal: 10,
       paddingVertical: 5,
       borderRadius: radius.full,
+      maxWidth: "100%",
     },
     statusDot: { width: 6, height: 6, borderRadius: 999 },
-    statusTxt: { fontSize: 11, fontWeight: "700" },
+    statusTxt: { fontSize: 11, fontWeight: "700", flexShrink: 1 },
     textarea: {
       minHeight: 100,
       backgroundColor: colors.surfaceAlt,

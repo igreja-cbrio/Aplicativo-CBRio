@@ -140,7 +140,7 @@ const css = (c: any) => StyleSheet.create({
   content: { paddingHorizontal: 20, paddingBottom: 72 },
   dataLabel: { color: c.textMuted, fontSize: 12, fontWeight: "700", marginBottom: 6, letterSpacing: .6 },
   devTitulo: { color: c.text, fontSize: 22, fontWeight: "800", lineHeight: 28, marginBottom: 14 }, passagemRef: { color: c.brandMid, fontSize: 14, fontWeight: "700", marginBottom: 10 },
-  verseActions: { flexDirection: "row", gap: 18, marginTop: 12, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#DDD8CE" }, verseAction: { flexDirection: "row", alignItems: "center", gap: 5 }, verseTxt: { color: "#263234", fontSize: 11, fontWeight: "800" },
+  verseActions: { flexDirection: "row", flexWrap: "wrap", gap: 18, rowGap: 8, marginTop: 12, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#DDD8CE" }, verseAction: { flexDirection: "row", alignItems: "center", gap: 5 }, verseTxt: { color: "#263234", fontSize: 11, fontWeight: "800" },
   card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 16, padding: 18, marginTop: 14, marginBottom: 16 },
   secao: { color: c.text, fontSize: 15, fontWeight: "800", marginTop: 16, marginBottom: 6 },
   botao: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: c.primary, borderRadius: 999, paddingVertical: 15 }, botaoTxt: { color: "#fff", fontSize: 15, fontWeight: "700" },

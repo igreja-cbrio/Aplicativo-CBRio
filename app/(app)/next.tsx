@@ -422,7 +422,7 @@ const makeStyles = (colors: Palette) =>
       backgroundColor: colors.surface,
       gap: spacing.sm,
     },
-    cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+    cardHeader: { flexDirection: "row", flexWrap: "wrap", gap: 6, justifyContent: "space-between", alignItems: "center" },
     dataPill: {
       paddingHorizontal: spacing.sm,
       paddingVertical: 4,
@@ -448,7 +448,7 @@ const makeStyles = (colors: Palette) =>
       gap: spacing.sm,
       paddingVertical: spacing.sm,
     },
-    indisponivelTxt: { color: colors.textMuted, fontSize: font.size.sm },
+    indisponivelTxt: { color: colors.textMuted, fontSize: font.size.sm, flexShrink: 1 },
     turmaCard: {
       flexDirection: "row",
       alignItems: "center",

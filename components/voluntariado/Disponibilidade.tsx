@@ -174,9 +174,9 @@ export function Disponibilidade({ volProfileId }: { volProfileId: string }) {
       ) : (
       <>
       <View style={styles.headerRow}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 1 }}>
           <Ionicons name="calendar-clear-outline" size={18} color={colors.brandMid} />
-          <Text style={styles.titulo}>{t("Disponibilidade")}</Text>
+          <Text style={[styles.titulo, { flexShrink: 1 }]}>{t("Disponibilidade")}</Text>
         </View>
         {!aberto && (
           <Pressable onPress={() => setAberto(true)} hitSlop={6}>
@@ -335,7 +335,12 @@ function CampoData({
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${valor || placeholder}`}
       >
-        <Text style={valor ? styles.campoValor : styles.campoPlaceholder}>
+        <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
+          style={valor ? styles.campoValor : styles.campoPlaceholder}
+        >
           {valor || placeholder}
         </Text>
         <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
@@ -366,10 +371,13 @@ const makeStyles = (colors: Palette) =>
       backgroundColor: colors.surface,
     },
     botaoCompactoTxt: { flex: 1, color: colors.text, fontSize: font.size.sm, fontWeight: "700" },
+    // Com letra grande o link "+ Bloquear datas" desce para a linha de baixo.
     headerRow: {
       flexDirection: "row",
+      flexWrap: "wrap",
       alignItems: "center",
       justifyContent: "space-between",
+      gap: spacing.sm,
     },
     topo: {
       flexDirection: "row",
@@ -419,13 +427,14 @@ const makeStyles = (colors: Palette) =>
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      height: 52,
+      gap: 6,
+      minHeight: 52,
       paddingHorizontal: spacing.md,
       backgroundColor: colors.surfaceAlt,
       borderRadius: radius.md,
       borderWidth: 1,
       borderColor: colors.border,
     },
-    campoValor: { color: colors.text, fontSize: font.size.md, fontWeight: "600" },
-    campoPlaceholder: { color: colors.textMuted, fontSize: font.size.md },
+    campoValor: { flexShrink: 1, color: colors.text, fontSize: font.size.md, fontWeight: "600" },
+    campoPlaceholder: { flexShrink: 1, color: colors.textMuted, fontSize: font.size.md },
   });

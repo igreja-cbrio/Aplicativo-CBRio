@@ -220,7 +220,7 @@ export function BatismoGestaoScreen() {
       >
         <View style={styles.hero}>
           <View style={styles.heroTop}>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.eyebrow}>{t('Equipe de Batismo')}</Text>
               <Text style={styles.heroTitle}>{t('Cuidar de cada história')}</Text>
             </View>
@@ -237,7 +237,7 @@ export function BatismoGestaoScreen() {
         </View>
 
         <View style={styles.sectionHead}>
-          <View>
+          <View style={styles.sectionCopy}>
             <Text style={styles.sectionLabel}>{t('Dia do Batismo')}</Text>
             <Text style={styles.sectionHint}>{t('A data mais próxima já vem selecionada')}</Text>
           </View>
@@ -507,7 +507,7 @@ function makeStyles(c: Palette) {
     retryTxt: { color: c.primary, fontWeight: '700' },
     content: { padding: spacing.lg, paddingBottom: 130, gap: spacing.md },
     hero: { backgroundColor: c.primary, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md, overflow: 'hidden' },
-    heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.sm },
     eyebrow: { color: 'rgba(255,255,255,0.72)', fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.2 },
     heroTitle: { color: '#fff', fontFamily: BRAND_FONT, fontSize: font.size.xl, marginTop: 3 },
     drop: { width: 43, height: 43, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.18)' },
@@ -517,7 +517,9 @@ function makeStyles(c: Palette) {
     statValue: { color: '#fff', fontFamily: BRAND_FONT, fontSize: 24 },
     statLabel: { color: 'rgba(255,255,255,0.76)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.4 },
     statDiv: { width: 1, height: 28, backgroundColor: 'rgba(255,255,255,0.2)' },
-    sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xs },
+    // Com letra grande o botão desce para a linha de baixo em vez de sair da tela.
+    sectionHead: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginTop: spacing.xs },
+    sectionCopy: { flexGrow: 1, flexShrink: 1, flexBasis: 180 },
     sectionLabel: { color: c.text, fontSize: font.size.md, fontWeight: '800' },
     sectionHint: { color: c.textMuted, fontSize: 11, marginTop: 2 },
     addMini: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: c.primary, borderRadius: radius.full, paddingHorizontal: 13, paddingVertical: 9 },
@@ -533,7 +535,7 @@ function makeStyles(c: Palette) {
     tabs: { flexDirection: 'row', padding: 4, borderRadius: radius.full, backgroundColor: c.surfaceAlt, borderWidth: 1, borderColor: c.glassBorder },
     tab: { flex: 1, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: radius.full },
     tabActive: { backgroundColor: c.surface },
-    tabTxt: { color: c.textMuted, fontSize: 12, fontWeight: '700' },
+    tabTxt: { flexShrink: 1, textAlign: 'center', color: c.textMuted, fontSize: 12, fontWeight: '700' },
     tabTxtActive: { color: c.text },
     tabCount: { minWidth: 21, height: 21, borderRadius: 11, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: c.glass },
     tabCountActive: { backgroundColor: c.primary },
@@ -559,7 +561,7 @@ function makeStyles(c: Palette) {
     removeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderWidth: 1, borderColor: c.danger + '66', borderRadius: radius.full, paddingHorizontal: 12, paddingVertical: 10 },
     removeTxt: { color: c.danger, fontSize: 12, fontWeight: '700' },
     primaryBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: c.primary, borderRadius: radius.full, paddingHorizontal: 12, paddingVertical: 11 },
-    primaryBtnTxt: { color: '#fff', fontSize: 12, fontWeight: '800' },
+    primaryBtnTxt: { flexShrink: 1, textAlign: 'center', color: '#fff', fontSize: 12, fontWeight: '800' },
     undoBtn: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.primary },
     modalPage: { flex: 1, backgroundColor: c.background },
     modalHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: c.glassBorder },

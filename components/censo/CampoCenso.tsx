@@ -128,8 +128,8 @@ export default function CampoCenso({ pergunta: p, valor, onChange, faltando }: P
         </View>
         {(p.rotulos?.min || p.rotulos?.max) && (
           <View style={s.rotulos}>
-            <Text style={s.rotulo}>{p.rotulos?.min || ""}</Text>
-            <Text style={s.rotulo}>{p.rotulos?.max || ""}</Text>
+            <Text style={[s.rotulo, { flex: 1 }]}>{p.rotulos?.min || ""}</Text>
+            <Text style={[s.rotulo, { flex: 1, textAlign: "right" }]}>{p.rotulos?.max || ""}</Text>
           </View>
         )}
         {p.permite_nao_se_aplica && (
@@ -333,7 +333,7 @@ function makeStyles(c: Palette, erro: boolean) {
     notaOn: { borderColor: c.primary, backgroundColor: c.surfaceAlt },
     notaTexto: { color: c.text, fontSize: font.size.md, fontWeight: "600" },
     notaTextoOn: { color: c.primary },
-    rotulos: { flexDirection: "row", justifyContent: "space-between", marginTop: spacing.xs },
+    rotulos: { flexDirection: "row", justifyContent: "space-between", gap: spacing.sm, marginTop: spacing.xs },
     rotulo: { color: c.textMuted, fontSize: font.size.sm },
   });
 }

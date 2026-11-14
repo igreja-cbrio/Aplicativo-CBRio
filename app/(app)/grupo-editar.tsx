@@ -291,14 +291,14 @@ export default function GrupoEditarScreen() {
           <View style={styles.capaAcoes}>
             <Text style={styles.capaAviso}>{t("A capa aparece na lista de grupos do app e do site.")}</Text>
             {!!grupo.foto_url && (
-              <>
+              <View style={styles.capaLinks}>
                 <Pressable onPress={escolherCapa} disabled={uploading} hitSlop={8} accessibilityRole="button">
                   <Text style={styles.capaTrocar}>{t("Trocar foto")}</Text>
                 </Pressable>
                 <Pressable onPress={removerCapa} disabled={uploading} hitSlop={8} accessibilityRole="button">
                   <Text style={styles.capaRemover}>{t("Remover")}</Text>
                 </Pressable>
-              </>
+              </View>
             )}
           </View>
 
@@ -397,8 +397,11 @@ const makeStyles = (colors: Palette) =>
     capa: { width: "100%", aspectRatio: 16 / 9, backgroundColor: colors.surfaceAlt },
     capaPlaceholder: { alignItems: "center", justifyContent: "center", gap: spacing.xs, borderWidth: 1, borderColor: colors.glassBorder, borderStyle: "dashed" },
     capaHint: { color: colors.textMuted, fontSize: font.size.sm },
-    capaAcoes: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, marginTop: -spacing.xs },
-    capaAviso: { color: colors.textMuted, fontSize: font.size.sm, flex: 1 },
+    // Empilhado: aviso em cima, os dois links embaixo. Lado a lado, com letra
+    // grande, o aviso ficava com ~130dp e virava 4-5 linhas.
+    capaAcoes: { gap: spacing.sm, marginTop: -spacing.xs },
+    capaAviso: { color: colors.textMuted, fontSize: font.size.sm },
+    capaLinks: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", columnGap: spacing.md, rowGap: spacing.sm },
     capaRemover: { color: "#ef4444", fontSize: font.size.sm, fontWeight: "700" },
     capaTrocar: { color: colors.primary, fontSize: font.size.sm, fontWeight: "700" },
     capaBadgeTexto: { width: "auto", flexDirection: "row", gap: 6, paddingHorizontal: 12 },

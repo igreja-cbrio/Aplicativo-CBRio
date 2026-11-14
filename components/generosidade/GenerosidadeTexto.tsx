@@ -150,9 +150,9 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
     content: { padding: spacing.lg, paddingBottom: 40, gap: spacing.md },
-    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
     back: { width: 24 },
-    title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
+    title: { flex: 1, textAlign: "center", color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
     selo: {
       width: 56, height: 56, borderRadius: radius.full, alignSelf: "center",
       backgroundColor: colors.primary, alignItems: "center", justifyContent: "center",

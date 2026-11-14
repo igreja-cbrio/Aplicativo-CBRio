@@ -380,9 +380,9 @@ function makeStyles(c: Palette) {
     resumo: { color: c.textMuted, fontSize: font.size.sm, fontWeight: "700", marginBottom: spacing.sm },
     areaHeader: {
       flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-      marginBottom: spacing.xs, paddingHorizontal: spacing.xs,
+      marginBottom: spacing.xs, paddingHorizontal: spacing.xs, gap: spacing.sm,
     },
-    areaTitulo: { color: c.text, fontSize: font.size.sm, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.4 },
+    areaTitulo: { flex: 1, color: c.text, fontSize: font.size.sm, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.4 },
     areaConta: { color: c.textMuted, fontSize: font.size.sm, fontWeight: "700" },
     linha: {
       flexDirection: "row", alignItems: "center", gap: spacing.md,

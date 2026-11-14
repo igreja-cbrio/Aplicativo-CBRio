@@ -223,7 +223,7 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
     content: { padding: 20, paddingBottom: 40 },
     header: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
     back: { padding: 2 },
-    title: { fontSize: 24, fontWeight: "800", color: colors.text },
+    title: { flex: 1, fontSize: 24, fontWeight: "800", color: colors.text },
     intro: { fontSize: 14, color: colors.textMuted, lineHeight: 20, marginBottom: 16 },
     anosRow: { flexDirection: "row", gap: 8, marginBottom: 16 },
     anoChip: {

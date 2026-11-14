@@ -567,6 +567,6 @@ const makeStyles = (c: Palette) =>
     cardTimeNome: { color: c.text, fontSize: font.size.md, fontWeight: "800", marginBottom: 4 },
     funcaoLinha: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 },
     botao: { marginTop: spacing.sm, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: c.primary, borderRadius: radius.md, paddingVertical: 12 },
-    botaoTxt: { color: "#fff", fontWeight: "800", fontSize: font.size.md },
+    botaoTxt: { color: "#fff", fontWeight: "800", fontSize: font.size.md, flexShrink: 1 },
     liderBox: { marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: c.border },
   });

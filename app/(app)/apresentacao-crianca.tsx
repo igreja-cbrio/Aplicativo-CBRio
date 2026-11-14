@@ -284,7 +284,7 @@ export default function ApresentacaoCriancaScreen() {
                   {dados.historico.map((p) => (
                     <View key={p.id} style={styles.histLinha}>
                       <Ionicons name="checkmark-circle" size={15} color={colors.primary} />
-                      <Text style={styles.jaTxt}>
+                      <Text style={[styles.jaTxt, { flex: 1 }]}>
                         {p.crianca_nome} · {dataBonita(p.data_apresentacao)}
                       </Text>
                     </View>
@@ -587,7 +587,7 @@ const makeStyles = (c: Palette) =>
     content: { padding: spacing.lg, paddingBottom: 48, gap: spacing.md },
     topRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
     back: { width: 24 },
-    title: { color: c.text, fontSize: font.size.lg, fontWeight: "800" },
+    title: { flex: 1, textAlign: "center", color: c.text, fontSize: font.size.lg, fontWeight: "800" },
     intro: { color: c.textMuted, fontSize: font.size.md, marginTop: spacing.sm },
     secao: { color: c.text, fontSize: font.size.md, fontWeight: "700", marginTop: spacing.sm },
     dataCard: {

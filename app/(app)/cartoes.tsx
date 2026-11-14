@@ -177,24 +177,27 @@ export default function CartoesScreen() {
                       resizeMode="contain"
                     />
 
-                    <Text style={styles.label}>{t("MEMBRO")}</Text>
-                    <Text style={styles.nome} numberOfLines={1}>
+                    <Text allowFontScaling={false} style={styles.label}>{t("MEMBRO")}</Text>
+                    {/* A face tem altura fixa (o virar e o brilho dependem dela):
+                        os textos do cartão não seguem o tamanho da letra, senão
+                        o QR é empurrado pra fora e cortado. */}
+                    <Text allowFontScaling={false} style={styles.nome} numberOfLines={1}>
                       {nome ?? t("Membro")}
                     </Text>
 
                     <View style={styles.row}>
                       <View>
-                        <Text style={styles.label}>{t("IGREJA")}</Text>
-                        <Text style={styles.value}>{"CB" + "Rio"}</Text>
+                        <Text allowFontScaling={false} style={styles.label}>{t("IGREJA")}</Text>
+                        <Text allowFontScaling={false} style={styles.value}>{"CB" + "Rio"}</Text>
                       </View>
                       <View style={{ alignItems: "flex-end" }}>
-                        <Text style={styles.label}>{t("STATUS")}</Text>
-                        <Text style={styles.value}>{t(statusLabel(status))}</Text>
+                        <Text allowFontScaling={false} style={styles.label}>{t("STATUS")}</Text>
+                        <Text allowFontScaling={false} style={styles.value}>{t(statusLabel(status))}</Text>
                       </View>
                     </View>
 
-                    <Text style={[styles.label, { marginTop: spacing.md }]}>{t("ID")}</Text>
-                    <Text style={styles.value}>{cartaoId(membroId)}</Text>
+                    <Text allowFontScaling={false} style={[styles.label, { marginTop: spacing.md }]}>{t("ID")}</Text>
+                    <Text allowFontScaling={false} style={styles.value}>{cartaoId(membroId)}</Text>
 
                     {/* ⚠️⚠️ Três estados diferentes davam a MESMA frase ("QR
                         indisponível") e nenhum dizia o que fazer. O pior é que
@@ -207,19 +210,19 @@ export default function CartoesScreen() {
                         <QRCode value={token!} size={150} backgroundColor="#ffffff" color="#0B1F26" />
                       ) : qr === "sem_cpf" ? (
                         <Pressable onPress={() => router.navigate("/completar-cadastro")} accessibilityRole="button">
-                          <Text style={styles.qrMissing}>
+                          <Text allowFontScaling={false} style={styles.qrMissing}>
                             {t("Seu cartão precisa do CPF no cadastro. Toque para completar.")}
                           </Text>
                         </Pressable>
                       ) : qr === "sem_vinculo" ? (
                         <Pressable onPress={() => router.navigate("/completar-cadastro")} accessibilityRole="button">
-                          <Text style={styles.qrMissing}>
+                          <Text allowFontScaling={false} style={styles.qrMissing}>
                             {t("Complete seu cadastro para ter o cartão de membro.")}
                           </Text>
                         </Pressable>
                       ) : (
                         <Pressable onPress={carregar} accessibilityRole="button">
-                          <Text style={styles.qrMissing}>
+                          <Text allowFontScaling={false} style={styles.qrMissing}>
                             {t("Não foi possível carregar o QR. Toque para tentar de novo.")}
                           </Text>
                         </Pressable>
@@ -230,11 +233,11 @@ export default function CartoesScreen() {
                 backSide={
                   <View style={styles.backFace}>
                     <CbrioHeart size={96} color={brand.sand} />
-                    <Text style={styles.backTitle}>{t("CARTÃO DE MEMBRO")}</Text>
-                    <Text style={styles.backNome} numberOfLines={1}>
+                    <Text allowFontScaling={false} style={styles.backTitle}>{t("CARTÃO DE MEMBRO")}</Text>
+                    <Text allowFontScaling={false} style={styles.backNome} numberOfLines={1}>
                       {nome ?? t("Membro")}
                     </Text>
-                    <Text style={styles.backId}>{cartaoId(membroId)}</Text>
+                    <Text allowFontScaling={false} style={styles.backId}>{cartaoId(membroId)}</Text>
                   </View>
                 }
               />

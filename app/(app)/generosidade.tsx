@@ -285,7 +285,7 @@ function MetodoTab({
       style={[styles.tab, sel && styles.tabSel]}
     >
       <Ionicons name={icon} size={16} color={sel ? "#fff" : "#888"} />
-      <Text style={[styles.tabTxt, sel && styles.tabTxtSel]}>{label}</Text>
+      <Text style={[styles.tabTxt, sel && styles.tabTxtSel]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{label}</Text>
     </Pressable>
   );
 }
@@ -323,9 +323,9 @@ function ConteudoPix({
       <View style={styles.box}>
         <Text style={styles.boxTitulo}>{t("Chave PIX")}</Text>
         <View style={styles.chaveRow}>
-          <View style={{ flex: 1 }}>
+          <View style={{ flexGrow: 1, flexShrink: 1, flexBasis: 150 }}>
             <Text style={styles.chaveTipo}>{PIX_KEY_TIPO}</Text>
-            <Text style={styles.chaveValor} selectable>{PIX_KEY_FORMATADA}</Text>
+            <Text style={styles.chaveValor} selectable numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{PIX_KEY_FORMATADA}</Text>
           </View>
           <Pressable onPress={() => copiar(PIX_KEY, "chave")} style={styles.copiarBtn}>
             <Ionicons name={copiado === "chave" ? "checkmark" : "copy-outline"} size={20} color={colors.primary} />
@@ -545,7 +545,7 @@ const makeStyles = (colors: Palette) =>
       borderRadius: radius.sm,
     },
     tabSel: { backgroundColor: colors.primary },
-    tabTxt: { color: colors.textMuted, fontWeight: "700", fontSize: font.size.sm },
+    tabTxt: { color: colors.textMuted, fontWeight: "700", fontSize: font.size.sm, flexShrink: 1 },
     tabTxtSel: { color: "#fff" },
     box: {
       padding: spacing.md,
@@ -623,7 +623,8 @@ const makeStyles = (colors: Palette) =>
       alignSelf: "stretch",
     },
     btnGrandeTxt: { color: "#fff", fontSize: font.size.md, fontWeight: "800" },
-    chaveRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+    // `flexWrap`: com letra grande o "Copiar" desce em vez de partir a chave ao meio.
+    chaveRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end", gap: spacing.md },
     chaveTipo: { color: colors.textMuted, fontSize: 11, fontWeight: "800", textTransform: "uppercase" },
     chaveValor: { color: colors.text, fontSize: font.size.lg, fontWeight: "800", marginTop: 2 },
     copiarBtn: {

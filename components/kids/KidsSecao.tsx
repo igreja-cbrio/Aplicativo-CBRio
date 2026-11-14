@@ -75,9 +75,9 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
     content: { padding: spacing.lg, paddingBottom: 40, gap: spacing.md },
-    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.sm },
+    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, marginBottom: spacing.sm },
     back: { width: 24 },
-    title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
+    title: { flex: 1, textAlign: "center", color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
     center: { alignItems: "center", paddingVertical: spacing.xl },
     vazio: { color: colors.textMuted, fontSize: font.size.md, textAlign: "center", paddingVertical: spacing.xl },
   });

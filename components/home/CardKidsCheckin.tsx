@@ -89,7 +89,7 @@ export function CardKidsCheckin({ cultos }: { cultos: CultoDoDia[] }) {
         <Ionicons name="happy-outline" size={22} color="#fff" />
       </View>
 
-      <View style={{ flex: 1, gap: 2 }}>
+      <View style={styles.texto}>
         <Text style={styles.titulo}>{t("Check-in do Kids")}</Text>
         <Text style={styles.sub} numberOfLines={1}>
           {pronto ? `${nomes} · ${t("código")} ${dados?.preCheckin?.codigo}` : nomes}
@@ -115,8 +115,10 @@ export function CardKidsCheckin({ cultos }: { cultos: CultoDoDia[] }) {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
+    // Quando o botão não cabe ao lado do texto (letra grande), ele desce.
     card: {
       flexDirection: "row",
+      flexWrap: "wrap",
       alignItems: "center",
       gap: spacing.sm,
       backgroundColor: colors.primary,
@@ -128,6 +130,7 @@ const makeStyles = (colors: Palette) =>
       backgroundColor: "rgba(255,255,255,0.18)",
       alignItems: "center", justifyContent: "center",
     },
+    texto: { flexGrow: 1, flexShrink: 1, flexBasis: 110, gap: 2 },
     titulo: { color: "#fff", fontSize: font.size.lg, fontWeight: "800" },
     sub: { color: "rgba(255,255,255,0.92)", fontSize: font.size.sm },
     botao: {
