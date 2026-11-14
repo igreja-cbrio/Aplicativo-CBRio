@@ -208,7 +208,7 @@ export default function NotificacoesScreen() {
         >
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>{t("Notificações")}</Text>
+        <Text style={styles.title} numberOfLines={1}>{t("Notificações")}</Text>
         {naoLidas > 0 ? (
           <Pressable onPress={marcarTodasLidas} hitSlop={8} accessibilityRole="button" accessibilityLabel={t("Marcar todas como lidas")}>
             <Text style={styles.acao}>{t("Marcar todas")}</Text>
@@ -280,9 +280,9 @@ export default function NotificacoesScreen() {
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
-    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: spacing.lg, paddingBottom: spacing.md },
+    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, padding: spacing.lg, paddingBottom: spacing.md },
     back: { width: 24 },
-    title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
+    title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800", flexShrink: 1, textAlign: "center" },
     acao: { color: colors.primary, fontSize: font.size.sm, fontWeight: "700" },
     mural: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginHorizontal: spacing.lg, marginBottom: spacing.md, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.glassBorder },
     muralIcone: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.glass, alignItems: "center", justifyContent: "center" },

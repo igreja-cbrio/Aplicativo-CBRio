@@ -340,7 +340,7 @@ function CultoCard({
           <View style={[styles.heroiBarra, { backgroundColor: cor }]} />
           <View style={styles.headerCard}>
             <View style={[styles.tag, { backgroundColor: cor }]}>
-              <Text style={styles.tagTxt}>{ehHoje ? t("HOJE") : dia === "Amanhã" ? t("AMANHÃ") : dia.toUpperCase()}</Text>
+              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.tagTxt}>{ehHoje ? t("HOJE") : dia === "Amanhã" ? t("AMANHÃ") : dia.toUpperCase()}</Text>
             </View>
             <Text style={styles.nome} numberOfLines={1}>
               {grupo.nomeBase}
@@ -451,6 +451,7 @@ const makeStyles = (colors: Palette) =>
     headerCard: { gap: 6 },
     tag: {
       alignSelf: "flex-start",
+      maxWidth: "100%",
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: radius.full,

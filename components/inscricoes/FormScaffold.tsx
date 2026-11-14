@@ -121,10 +121,11 @@ const makeStyles = (colors: Palette) =>
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
+      gap: spacing.sm,
       marginTop: spacing.sm,
     },
     back: { width: 24 },
-    title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
+    title: { flex: 1, textAlign: "center", color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
     header: { alignItems: "center", gap: spacing.sm },
     badge: {
       width: 64,

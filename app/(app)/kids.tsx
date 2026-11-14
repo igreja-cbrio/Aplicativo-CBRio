@@ -325,7 +325,7 @@ const makeStyles = (colors: Palette) =>
     codigo: { color: colors.text, fontSize: 34, fontWeight: "800", letterSpacing: 6, fontVariant: ["tabular-nums"] },
     validade: { color: colors.textMuted, fontSize: font.size.sm },
     nomeRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-    nomeTxt: { color: colors.text, fontSize: font.size.md, fontWeight: "600" },
+    nomeTxt: { color: colors.text, fontSize: font.size.md, fontWeight: "600", flexShrink: 1 },
     filhoRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.sm, width: "100%" },
     pressed: { opacity: 0.6 },
     check: { width: 26, height: 26, borderRadius: 8, borderWidth: 2, borderColor: colors.glassBorder, alignItems: "center", justifyContent: "center" },
@@ -339,5 +339,5 @@ const makeStyles = (colors: Palette) =>
     solNome: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
     solStatus: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 2 },
     linkRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: spacing.sm },
-    linkTxt: { color: colors.brandMid, fontSize: font.size.md, fontWeight: "600" },
+    linkTxt: { color: colors.brandMid, fontSize: font.size.md, fontWeight: "600", flexShrink: 1 },
   });

@@ -870,7 +870,7 @@ export default function GrupoMembrosScreen() {
 
               {/* ═══════════ ZONA 2 · APOIO (era 3 × 25/800) ═══════════ */}
               <View style={styles.apoio}>
-                <Text style={styles.apoioTxt} numberOfLines={1}>
+                <Text style={styles.apoioTxt} numberOfLines={2}>
                   {semGente ? (
                     t("Nenhum membro ainda")
                   ) : (
@@ -912,7 +912,7 @@ export default function GrupoMembrosScreen() {
                         accessibilityState={{ selected: sel }}
                       >
                         <View style={styles.abaConteudo}>
-                          <Text style={[styles.abaTxt, sel && styles.abaTxtAtiva]} numberOfLines={1}>{t(op.label)}</Text>
+                          <Text style={[styles.abaTxt, sel && styles.abaTxtAtiva]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{t(op.label)}</Text>
                           {badge > 0 && <Text style={styles.abaBadgeTxt}>{badge}</Text>}
                         </View>
                         {sel && <View style={styles.abaMarca} />}
@@ -1036,7 +1036,14 @@ export default function GrupoMembrosScreen() {
                                 o olho tem que ler NOMES, não bolinhas. */}
                             <View style={styles.avatarSm}><Text style={styles.avatarSmTxt}>{iniciais(m.nome)}</Text></View>
                             <View style={{ flex: 1, minWidth: 0 }}>
-                              <Text style={styles.nome} numberOfLines={1}>{m.nome}</Text>
+                              {/* O selo anda junto do nome e desce de linha quando
+                                  não cabe: fixo à direita, tirava ~100dp do nome. */}
+                              <View style={styles.nomeRow}>
+                                <Text style={[styles.nome, styles.nomeEncolhe]} numberOfLines={1}>{m.nome}</Text>
+                                {ehPrincipal && (
+                                  <View style={styles.papelBadge}><Text style={styles.papelTxt}>{t("Principal")}</Text></View>
+                                )}
+                              </View>
                               {!!detalhe && <Text style={styles.pequeno} numberOfLines={1}>{detalhe}</Text>}
                               {/* Jornada · o pedido do Pr. Nélio (13/08/2026).
                                   Chips DISCRETOS de propósito: o comentário do
@@ -1061,9 +1068,6 @@ export default function GrupoMembrosScreen() {
                                 );
                               })()}
                             </View>
-                            {ehPrincipal && (
-                              <View style={styles.papelBadge}><Text style={styles.papelTxt}>{t("Principal")}</Text></View>
-                            )}
                             {wa ? (
                               <Pressable onPress={() => Linking.openURL(wa)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`${t("WhatsApp")} ${m.nome}`}>
                                 <Ionicons name="logo-whatsapp" size={21} color="#25D366" />
@@ -1144,7 +1148,7 @@ export default function GrupoMembrosScreen() {
                             return (
                               <Pressable
                                 key={`${o.data}_${o.encontro_id || o.data_original}`}
-                                style={[styles.evento, pendente && styles.eventoPendente]}
+                                style={[styles.evento, styles.eventoQuebra, pendente && styles.eventoPendente]}
                                 // ⚠️ Avulso NÃO abre o modal: ele não vem da
                                 // recorrência, então não existe `data_original`
                                 // pra escrever exceção — o POST recusaria.
@@ -1157,7 +1161,7 @@ export default function GrupoMembrosScreen() {
                                     {MESES_CURTOS[Number(mes) - 1] || mes}
                                   </Text>
                                 </View>
-                                <View style={{ flex: 1, gap: 3 }}>
+                                <View style={styles.eventoCorpo}>
                                   {cancelado ? (
                                     <>
                                       {/* ⚠️ Cancelado NÃO é pendência: o líder decidiu
@@ -1295,14 +1299,16 @@ export default function GrupoMembrosScreen() {
                             <Ionicons name={mt.estudo_semana ? "bookmark" : "document-text-outline"} size={18} color={colors.textMuted} />
                           </View>
                           <View style={{ flex: 1, minWidth: 0 }}>
-                            <Text style={styles.nome} numberOfLines={2}>{mt.nome}</Text>
+                            <View style={styles.nomeRow}>
+                              <Text style={[styles.nome, styles.nomeEncolhe]} numberOfLines={2}>{mt.nome}</Text>
+                              {mt.estudo_semana && (
+                                <View style={styles.papelBadge}><Text style={styles.papelTxt}>{t("Da semana")}</Text></View>
+                              )}
+                            </View>
                             {(mt.etiquetas || []).length > 0 && (
                               <Text style={styles.pequeno} numberOfLines={1}>{(mt.etiquetas || []).join(", ")}</Text>
                             )}
                           </View>
-                          {mt.estudo_semana && (
-                            <View style={styles.papelBadge}><Text style={styles.papelTxt}>{t("Da semana")}</Text></View>
-                          )}
                           {mt.url ? <Ionicons name="chevron-forward" size={16} color={colors.textMuted} /> : null}
                         </Pressable>
                       ))}
@@ -1926,8 +1932,10 @@ function makeStyles(c: Palette) {
     },
     heroAtencao: { backgroundColor: c.warning + "22", borderColor: c.warning + "70" },
     heroFeito: { backgroundColor: c.success + "1F", borderColor: c.success + "66" },
-    heroRot: { flexDirection: "row", alignItems: "center", gap: 6 },
-    heroRotTxt: { color: c.brandMid, fontSize: 10.5, fontWeight: "800", textTransform: "uppercase", letterSpacing: 1.1 },
+    // `flex: 1` + `flexShrink` no texto: com letra grande o rótulo quebra em
+    // duas linhas em vez de empurrar o "Alterar data" pra fora do cartão.
+    heroRot: { flex: 1, flexDirection: "row", alignItems: "center", gap: 6 },
+    heroRotTxt: { flexShrink: 1, color: c.brandMid, fontSize: 10.5, fontWeight: "800", textTransform: "uppercase", letterSpacing: 1.1 },
     heroGrande: { color: c.text, fontSize: 27, fontWeight: "800", letterSpacing: -0.7, lineHeight: 31 },
     heroSub: { color: c.textMuted, fontSize: 13.5, marginTop: 3 },
     heroBtn: {
@@ -1964,8 +1972,8 @@ function makeStyles(c: Palette) {
     zona3: { marginTop: 26 },
     abasRow: { flexDirection: "row", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
     abaBtn: { flex: 1, minHeight: 40, justifyContent: "flex-end", alignItems: "center" },
-    abaConteudo: { flexDirection: "row", alignItems: "center", gap: 4, paddingBottom: 9 },
-    abaTxt: { color: c.textMuted, fontSize: 13.5, fontWeight: "600" },
+    abaConteudo: { flexDirection: "row", alignItems: "center", gap: 4, paddingBottom: 9, maxWidth: "100%" },
+    abaTxt: { flexShrink: 1, color: c.textMuted, fontSize: 13.5, fontWeight: "600" },
     abaTxtAtiva: { color: c.text, fontWeight: "700" },
     abaBadgeTxt: { color: c.warning, fontSize: 11, fontWeight: "800" },
     abaMarca: { position: "absolute", bottom: -StyleSheet.hairlineWidth, left: 6, right: 6, height: 2, borderRadius: 2, backgroundColor: c.primary },
@@ -2042,7 +2050,8 @@ function makeStyles(c: Palette) {
     avatar: { height: 44, width: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: c.primary + "22" },
     avatarTxt: { color: c.primary, fontWeight: "800", fontSize: font.size.md },
     membroCard: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-    nomeRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, flexWrap: "wrap" },
+    nomeRow: { flexDirection: "row", alignItems: "center", columnGap: spacing.sm, rowGap: 3, flexWrap: "wrap" },
+    nomeEncolhe: { flexShrink: 1 },
     linhaTxt: { color: c.textMuted, fontSize: font.size.sm },
     acoes: { flexDirection: "row", gap: spacing.sm },
     btn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 44, borderRadius: radius.full },
@@ -2076,7 +2085,11 @@ function makeStyles(c: Palette) {
       borderRadius: radius.full, borderWidth: 1, borderColor: c.primary,
     },
     registrarBtnTxt: { color: c.primary, fontSize: font.size.sm, fontWeight: "700" },
-    gerenciarDica: { flexDirection: "row", alignItems: "center", gap: 2 },
+    // Com letra grande o "Gerenciar ›" desce pra linha de baixo (à direita) em
+    // vez de espremer o texto: o corpo tem piso de 180dp.
+    eventoQuebra: { flexWrap: "wrap", rowGap: 4 },
+    eventoCorpo: { flexGrow: 1, flexShrink: 1, flexBasis: 180, gap: 3 },
+    gerenciarDica: { flexDirection: "row", alignItems: "center", gap: 2, marginLeft: "auto" },
     gerenciarDicaTxt: { color: c.textMuted, fontSize: font.size.sm - 1 },
     // ── Adicionar pessoa (item 6) ─────────────────────────────────────────
     avatarAdd: { backgroundColor: c.primary + "1c", borderWidth: 1, borderColor: c.primary + "55" },
@@ -2114,8 +2127,10 @@ function makeStyles(c: Palette) {
     // rótulo): sem `flex: 1` ele estoura a linha do chip e sai da folha.
     chipTxtQuebra: { flex: 1, lineHeight: 18 },
     sheet: { backgroundColor: c.background, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.md },
-    sheetHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.sm },
-    sheetTitle: { color: c.text, fontSize: font.size.lg, fontWeight: "800" },
+    sheetHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, marginBottom: spacing.sm },
+    // `flexShrink`: título comprido (data por extenso, nome da pessoa) quebra
+    // ou corta em vez de empurrar o X de fechar pra fora da folha.
+    sheetTitle: { flexShrink: 1, color: c.text, fontSize: font.size.lg, fontWeight: "800" },
     sheetLabel: { color: c.textMuted, fontSize: font.size.sm - 1, marginBottom: 4 },
     input: { backgroundColor: c.surfaceAlt, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 10, color: c.text, borderWidth: 1, borderColor: c.border, minHeight: 70, textAlignVertical: "top" },
   });

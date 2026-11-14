@@ -315,9 +315,11 @@ const makeStyles = (colors: Palette) =>
   form: { width: "100%", gap: spacing.md },
   areaBlock: { gap: spacing.xs },
   areaLabel: { color: colors.text, fontSize: font.size.sm, fontWeight: "600" },
-  areaRow: { flexDirection: "row", gap: spacing.sm },
+  areaRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  // Largura pelo texto (não `flex: 1`): com a letra grande, a opção que não
+  // cabe desce pra linha de baixo em vez de quebrar no meio da palavra.
   areaPill: {
-    flex: 1, paddingVertical: 10, paddingHorizontal: 6, borderRadius: radius.md,
+    flexGrow: 1, paddingVertical: 10, paddingHorizontal: 10, borderRadius: radius.md,
     borderWidth: 1, borderColor: colors.glassBorder, backgroundColor: colors.glass,
     alignItems: "center", justifyContent: "center",
   },

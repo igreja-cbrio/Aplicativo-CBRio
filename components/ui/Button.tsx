@@ -50,10 +50,9 @@ export function Button({
         <ActivityIndicator color={variant === "ghost" ? colors.primary : "#fff"} />
       ) : (
         <Text
-          // ⚠️ O botão tem ALTURA FIXA (52): rótulo que quebra em duas linhas
-          // transborda a caixa e some pela borda. Aconteceu quando dois botões
-          // passaram a dividir a largura (18/08).
-          numberOfLines={1}
+          // Até 2 linhas: a caixa é `minHeight` e cresce junto. Com 1 linha só,
+          // rótulo longo com letra grande virava "Registrar presença de…".
+          numberOfLines={2}
           style={[
             styles.label,
             variant === "ghost" && { color: colors.primary },

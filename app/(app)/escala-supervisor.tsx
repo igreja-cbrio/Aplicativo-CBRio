@@ -839,7 +839,7 @@ export default function EscalaSupervisorScreen() {
                 time continua aqui. "Buscar fora do time" volta pra busca geral. */}
             {!!timeDoAdd?.team_id && (
               <View style={styles.poolTopo}>
-                <Text style={[styles.pequeno, { color: colors.textMuted, flex: 1 }]}>
+                <Text style={[styles.pequeno, styles.poolTopoTxt, { color: colors.textMuted }]}>
                   {!noTime
                     ? t("Buscando fora do time")
                     : poolErro
@@ -914,7 +914,9 @@ function makeStyles(c: Palette) {
     // Resumo + barra de times
     leituraBanner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: spacing.md, paddingVertical: 6 },
     secaoAdd: { color: c.textMuted, fontSize: font.size.sm - 1, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.4, paddingTop: 6, paddingBottom: 2 },
-    poolTopo: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
+    // Sem espaço pros dois (tela estreita, letra grande), o link desce pra linha de baixo.
+    poolTopo: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, rowGap: 4, marginTop: 8 },
+    poolTopoTxt: { flexGrow: 1, flexShrink: 1, flexBasis: 180 },
     resumo: { flexDirection: "row", flexWrap: "wrap", gap: 12, paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: 4 },
     resumoTxt: { color: c.textMuted, fontSize: font.size.sm, fontWeight: "600" },
     barraTimes: { paddingVertical: spacing.xs + 2, borderRadius: radius.md },

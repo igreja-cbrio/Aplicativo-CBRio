@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- ⚠️ LETRA GRANDE · varredura de telas espremidas ou vazando em 360dp + regras de layout (2026-11-14)
 - Login compacto e logo única no vídeo (13/11/2026)
 
 - Dock único e volta interativa da Home (2026-11-01)
@@ -555,3 +556,16 @@ O cabeçalho também deixou de ficar fora do Stack: AppScreenFrame usa `screenLa
 Os acessos ficam abaixo do cabeçalho, com alvos de ao menos 60 px. Em atendimento humano, “Equipe CBRio / Escrever neste chat” foca o campo e leva ao fim da conversa, sem novo pedido de transferência. “Outros canais” abre `/fale-conosco` e permanece disponível durante o envio.
 
 Validação: 610 testes + tipos/i18n; tela real renderizada em React Native Web com rede/nativos simulados, verificando rascunho durante envio, sucesso/falha/upload, bloqueio de duplo envio, foco da equipe e navegação de canais, em 320/390 px e temas claro/escuro. Isso não substitui verificação do teclado físico iOS/Android.
+
+## ⚠️ Letra grande · varredura de layout (14/11/2026)
+
+Depois do cartão de escala espremido (#226), o Marcos pediu um check geral. Lendo as ~70 telas e os componentes saíram 18 pontos graves, ~25 médios e ~20 leves, todos do mesmo tipo: em 360dp com a letra grande (o app vai até 1,28x em `lib/fontScale.ts` e a fonte do sistema multiplica por cima) o texto fica espremido ou o conteúdo sai do cartão. Corrigidos numa PR só, 47 arquivos, só layout, sem texto novo. As larguras foram estimadas lendo o código; a conferência em aparelho é do Marcos.
+
+Regras que ficam:
+- `Text` solto numa linha `row` NÃO encolhe (no RN `flexShrink` é 0): ao lado de ícone, botão ou X de fechar ele precisa de `flex: 1` ou `flexShrink: 1`, senão empurra o vizinho pra fora.
+- Texto + dois botões, ou texto + pastilha de rótulo longo, não cabe lado a lado com letra grande: empilhar, ou `flexWrap` com `flexBasis` no bloco do texto (o controle desce pra linha de baixo quando falta largura).
+- Fileira de etiquetas ou botões sem `flexWrap` estoura; botão com rótulo usa `minHeight`, nunca `height`.
+- `flex: 1` em filho de coluna de altura livre encolhe a zero: em bloco empilhado, sem `flex`.
+- Compartilhados que mudaram: `Button` aceita rótulo em 2 linhas; `Dialogo` deixa os botões do tamanho do rótulo e empilha quando não cabem; `Checkbox` quebra rótulo longo; a barra de baixo encolhe o rótulo em vez de quebrar.
+- O cartão de membro (`cartoes.tsx`) tem altura fixa por causa do virar e do brilho: os textos dele não seguem o tamanho da letra (`allowFontScaling={false}`).
+- Ficaram de fora, de propósito: a dica de arrastar do `escala-supervisor.tsx` (duas linhas mexeriam nas zonas de soltar) e o item do catálogo de `conteudos.tsx` (só trunca).

@@ -140,8 +140,12 @@ function Cell({
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     row: { flexDirection: "row", justifyContent: "center", gap: 10 },
+    // 6 células de 46 + espaços dão 326, mais que o cartão em tela de 360:
+    // partem de 46 e encolhem juntas quando falta largura.
     cell: {
-      width: 46,
+      flexBasis: 46,
+      flexShrink: 1,
+      maxWidth: 46,
       height: 56,
       borderRadius: radius.md,
       borderWidth: 1.5,

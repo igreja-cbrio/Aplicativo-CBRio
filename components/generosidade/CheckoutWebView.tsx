@@ -97,7 +97,7 @@ const makeStyles = (colors: Palette) =>
       borderBottomColor: colors.glassBorder,
     },
     fechar: { padding: 4 },
-    titulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800" },
+    titulo: { flex: 1, textAlign: "center", color: colors.text, fontSize: font.size.md, fontWeight: "800" },
     webview: { flex: 1, backgroundColor: colors.background },
     loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   });

@@ -30,7 +30,9 @@ export function QuickLinks() {
   return <DockSurface><ScrollView horizontal scrollEnabled={scroll} showsHorizontalScrollIndicator={false} style={styles.dock} contentContainerStyle={styles.content}>
     {QUICK_LINKS.map((item, i) => <Pressable key={item.href} accessibilityRole="button" accessibilityLabel={labels[i]} accessibilityState={{ selected: pathname === item.href }} onPress={() => irParaBarra(pathname, item.href)} style={({ pressed }) => [styles.item, scroll ? { width: 120, flexBasis: 120, flexGrow: 0, flexShrink: 0 } : { flex: i === 4 ? 1.4 : 1 }, i > 0 && styles.divider, (pressed || pathname === item.href) && styles.selected]}>
       <Ionicons name={item.icon} size={21} color="#29434a" />
-      <Text style={[styles.label, scroll && { fontSize: 12 }]}>{labels[i]}</Text>
+      {/* Uma linha só, encolhendo um pouco: entre 1,05x e 1,2x de letra o modo
+          rolável ainda não ligou e "Devocional" quebrava na última letra. */}
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.label, scroll && { fontSize: 12 }]}>{labels[i]}</Text>
     </Pressable>)}
   </ScrollView></DockSurface>;
 }

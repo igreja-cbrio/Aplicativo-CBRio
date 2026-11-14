@@ -144,14 +144,16 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   },
   titulo: { color: c.text, fontSize: font.size.lg, fontWeight: "800" },
   msg: { color: c.textMuted, fontSize: font.size.md, lineHeight: 21 },
-  botoes: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
+  // A base é o tamanho do rótulo: enquanto os dois cabem, ficam lado a lado;
+  // com letra grande ou rótulo longo, cada um vai para uma linha inteira.
+  botoes: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.sm },
   btn: {
-    flex: 1, minHeight: 48, borderRadius: radius.full,
-    alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.md,
+    flexGrow: 1, flexBasis: "auto", minWidth: 110, maxWidth: "100%", minHeight: 48, borderRadius: radius.full,
+    alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.md, paddingVertical: 6,
   },
   btnGhost: { borderWidth: 1, borderColor: c.glassBorder },
-  btnGhostTxt: { color: c.text, fontSize: font.size.md, fontWeight: "700" },
+  btnGhostTxt: { color: c.text, fontSize: font.size.md, fontWeight: "700", textAlign: "center" },
   btnOk: { backgroundColor: c.primary },
   btnPerigo: { backgroundColor: c.danger },
-  btnOkTxt: { color: "#fff", fontSize: font.size.md, fontWeight: "800" },
+  btnOkTxt: { color: "#fff", fontSize: font.size.md, fontWeight: "800", textAlign: "center" },
 });

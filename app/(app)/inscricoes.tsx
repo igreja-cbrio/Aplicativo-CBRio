@@ -209,8 +209,10 @@ export default function InscricoesScreen() {
               <View style={{ flex: 1, gap: 3 }}>
                 <Text style={styles.rowLabel}>{t(it.label)}</Text>
                 <Text style={styles.rowDesc}>{outraPessoa ? t("Inscrever outra pessoa") : t(it.desc)}</Text>
+                {/* O selo fica embaixo do texto: na mesma linha, com o
+                    compartilhar e a seta, sobravam ~15dp pro título em 360dp. */}
+                <StatusBadge status={st} styles={styles} colors={colors} t={t} />
               </View>
-              <StatusBadge status={st} styles={styles} colors={colors} t={t} />
               <BotaoCompartilhar
                 // ⚠️ Só há convite quando o SERVIDOR mandou a porta (é ele que
                 // tem o link). Sem ela, `null` ⇒ o botão não aparece.
@@ -409,7 +411,7 @@ const makeStyles = (colors: Palette) =>
     icon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.glass, alignItems: "center", justifyContent: "center" },
     rowLabel: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
     rowDesc: { color: colors.textMuted, fontSize: font.size.sm },
-    badge: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: radius.full },
+    badge: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", gap: 5, marginTop: 2, paddingHorizontal: 9, paddingVertical: 4, borderRadius: radius.full },
     badgeDot: { width: 6, height: 6, borderRadius: 3 },
     badgeTxt: { fontSize: 11, fontWeight: "700" },
     secao: { color: colors.textMuted, fontSize: font.size.sm, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.5, marginTop: spacing.md, marginBottom: 2 },
@@ -418,9 +420,9 @@ const makeStyles = (colors: Palette) =>
     eventoCapaVazia: { alignItems: "center", justifyContent: "center" },
     eventoBody: { flex: 1, gap: 5 },
     eventoMeta: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-    metaChip: { flexDirection: "row", alignItems: "center", gap: 3, maxWidth: 160 },
-    metaTxt: { color: colors.textMuted, fontSize: font.size.sm },
-    eventoTags: { flexDirection: "row", gap: 6, marginTop: 1 },
+    metaChip: { flexDirection: "row", alignItems: "center", gap: 3, maxWidth: "100%" },
+    metaTxt: { color: colors.textMuted, fontSize: font.size.sm, flexShrink: 1 },
+    eventoTags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 1 },
     tagPago: { backgroundColor: "rgba(63,166,107,0.16)", borderRadius: radius.full, paddingHorizontal: 9, paddingVertical: 3 },
     tagPagoTxt: { color: "#3FA66B", fontSize: 11, fontWeight: "800" },
     tagGratis: { backgroundColor: colors.glass, borderRadius: radius.full, paddingHorizontal: 9, paddingVertical: 3 },

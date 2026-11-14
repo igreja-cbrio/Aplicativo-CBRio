@@ -237,7 +237,7 @@ const makeStyles = (colors: Palette) =>
     tipos: { gap: 2 },
     tipo: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 10 },
     tipoSel: {},
-    tipoTxt: { color: colors.textMuted, fontSize: font.size.md },
+    tipoTxt: { color: colors.textMuted, fontSize: font.size.md, flexShrink: 1 },
     onlineRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 4 },
     onlineTxt: { color: colors.text, fontSize: font.size.sm },
     input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, color: colors.text, fontSize: font.size.md },

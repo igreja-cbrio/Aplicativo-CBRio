@@ -41,7 +41,7 @@ export function SecaoRecolhivel({ titulo, resumo, destaque, inicialAberta = fals
         accessibilityLabel={resumo ? `${titulo} — ${resumo}` : titulo}
         hitSlop={6}
       >
-        <Text style={styles.titulo} numberOfLines={1}>{titulo}</Text>
+        <Text style={styles.titulo} numberOfLines={2}>{titulo}</Text>
         {!!resumo && (
           <View style={[styles.pill, destaque && styles.pillDestaque]}>
             <Text style={[styles.pillTxt, destaque && styles.pillTxtDestaque]}>{resumo}</Text>

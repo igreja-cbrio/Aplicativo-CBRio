@@ -431,7 +431,7 @@ export function ModalAgendaEncontro({
                           setApagarChamada(null);
                           setConfirmando(false);
                         }}
-                        style={{ flex: 1 }}
+                        style={styles.btnLinha}
                       />
                       <Pressable
                         style={styles.btnPerigo}
@@ -439,7 +439,7 @@ export function ModalAgendaEncontro({
                         onPress={() => enviar("cancelar", true)}
                         accessibilityRole="button"
                       >
-                        <Text numberOfLines={1} style={styles.btnPerigoTxt}>
+                        <Text numberOfLines={2} style={styles.btnPerigoTxt}>
                           {salvando ? t("Salvando...") : t("Apagar e marcar")}
                         </Text>
                       </Pressable>
@@ -460,7 +460,7 @@ export function ModalAgendaEncontro({
                         title={t("Voltar")}
                         variant="ghost"
                         onPress={() => setConfirmando(false)}
-                        style={{ flex: 1 }}
+                        style={styles.btnLinha}
                       />
                       <Pressable
                         style={styles.btnPerigo}
@@ -468,7 +468,7 @@ export function ModalAgendaEncontro({
                         onPress={() => enviar("cancelar")}
                         accessibilityRole="button"
                       >
-                        <Text numberOfLines={1} style={styles.btnPerigoTxt}>
+                        <Text numberOfLines={2} style={styles.btnPerigoTxt}>
                           {salvando
                             ? t("Salvando...")
                             : (noPassado ? t("Não aconteceu") : t("Cancelar encontro"))}
@@ -487,14 +487,13 @@ export function ModalAgendaEncontro({
                   <View style={styles.linhaBotoes}>
                     {podeRemarcar ? (
                       /* ⚠️ "Salvar nova data" NÃO cabe em meia largura com o
-                         padding de 24 de cada lado do Button — vira duas linhas
-                         dentro de uma caixa de altura fixa. Rótulo curto +
+                         padding de 24 de cada lado do Button. Rótulo curto +
                          padding menor resolvem sem encolher fonte. */
                       <Button
                         title={noPassado ? t("Salvar correção") : t("Salvar data")}
                         loading={salvando}
                         onPress={() => enviar("remarcar")}
-                        style={{ flex: 1, paddingHorizontal: spacing.sm }}
+                        style={[styles.btnLinha, { paddingHorizontal: spacing.sm }]}
                       />
                     ) : null}
                     <Pressable
@@ -502,7 +501,7 @@ export function ModalAgendaEncontro({
                       onPress={() => setConfirmando(true)}
                       accessibilityRole="button"
                     >
-                      <Text numberOfLines={1} style={styles.btnPerigoTxt}>
+                      <Text numberOfLines={2} style={styles.btnPerigoTxt}>
                         {noPassado ? t("Não aconteceu") : t("Cancelar encontro")}
                       </Text>
                     </Pressable>
@@ -674,14 +673,21 @@ const criarEstilos = (c: Palette) =>
       gap: spacing.sm,
     },
     confirmaTxt: { fontSize: font.size.sm, color: c.text, marginBottom: spacing.sm, lineHeight: 20 },
-    linhaBotoes: { flexDirection: "row", gap: spacing.sm },
+    // Lado a lado enquanto cada botão tem pelo menos 130 de largura; em tela
+    // estreita os dois se empilham, porque em meia largura "Cancelar encontro"
+    // saía cortado ("Cancelar e…").
+    linhaBotoes: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+    btnLinha: { flexGrow: 1, flexShrink: 1, flexBasis: 130 },
     erro: { fontSize: font.size.sm, color: c.danger, marginTop: spacing.md },
-    // ⚠️ Espelha o `base` do Button da casa (altura 52 · raio full) pra os dois
-    // ficarem do MESMO tamanho lado a lado. Com paddingVertical 14 este saía
+    // ⚠️ Espelha o `base` do Button da casa (altura mínima 52 · raio full) pra os
+    // dois ficarem do MESMO tamanho lado a lado. Com paddingVertical 14 este saía
     // mais baixo que o primário e a linha ficava desalinhada.
     btnPerigo: {
-      flex: 1,
-      height: 52,
+      flexGrow: 1,
+      flexShrink: 1,
+      flexBasis: 130,
+      minHeight: 52,
+      paddingVertical: 6,
       borderWidth: 1,
       borderColor: c.danger,
       borderRadius: radius.full,

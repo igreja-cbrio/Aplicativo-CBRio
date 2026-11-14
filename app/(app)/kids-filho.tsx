@@ -411,7 +411,7 @@ const makeStyles = (colors: Palette) =>
     consentLei: { color: colors.textMuted, fontSize: 11, fontStyle: "italic" },
     checkRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 4 },
     checkTxt: { color: colors.text, fontSize: font.size.sm, flex: 1 },
-    consentBtns: { flexDirection: "row", gap: spacing.sm, justifyContent: "flex-end", marginTop: 2 },
+    consentBtns: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, justifyContent: "flex-end", marginTop: 2 },
     btnGhost: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: radius.full },
     btnGhostTxt: { color: colors.textMuted, fontSize: font.size.md, fontWeight: "700" },
     btnPrim: { backgroundColor: colors.primary, paddingVertical: 10, paddingHorizontal: 20, borderRadius: radius.full },

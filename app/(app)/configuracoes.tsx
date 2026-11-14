@@ -418,7 +418,8 @@ export default function ConfiguracoesScreen() {
                 numberOfLines={3}
               />
               {erroExclusao && <Text style={styles.erro}>{erroExclusao}</Text>}
-              <View style={{ flexDirection: "row", gap: spacing.sm }}>
+              {/* Empilhados: lado a lado os dois botões passavam da largura do cartão. */}
+              <View style={{ gap: spacing.sm }}>
                 <Button
                   title={t("Cancelar")}
                   variant="ghost"

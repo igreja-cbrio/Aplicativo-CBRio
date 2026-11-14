@@ -324,7 +324,7 @@ export default function GrupoVisitaScreen() {
 
       {/* HERÓI: a última visita é o que o supervisor precisa saber ao abrir. */}
       <View style={styles.heroi}>
-        <View style={{ flex: 1 }}>
+        <View style={{ flexGrow: 1, flexShrink: 1, flexBasis: 130 }}>
           <Text style={styles.heroiLabel}>{t("Sua última visita")}</Text>
           <Text style={styles.heroiValor}>
             {visitas === null
@@ -698,9 +698,13 @@ const makeStyles = (colors: Palette) =>
     tituloLinha: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
     titulo: { flex: 1, color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
     sub: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 2 },
+    // `flexWrap`: com letra grande o botão desce pra linha de baixo em vez de
+    // espremer a data (o texto tem piso de 130dp).
     heroi: {
       flexDirection: "row",
+      flexWrap: "wrap",
       alignItems: "center",
+      justifyContent: "flex-end",
       gap: spacing.md,
       margin: spacing.lg,
       marginBottom: spacing.sm,

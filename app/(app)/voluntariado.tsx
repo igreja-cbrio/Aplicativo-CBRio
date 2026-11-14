@@ -427,9 +427,12 @@ export default function VoluntariadoScreen() {
                   // voluntário do Kids · 29/10/2026). Aqui o texto fica em cima,
                   // com a largura inteira, e os botões embaixo.
                   const aguardando = !passou && !confirmado && e.confirmation_status !== "declined";
+                  // A confirmada que ainda dá pra recusar tem o mesmo aperto (o
+                  // botão "Recusar" ao lado do texto) e empilha igual.
+                  const empilhada = aguardando || (!passou && confirmado);
                   return (
-                    <View key={e.id} style={[styles.escala, aguardando && styles.escalaAguardando]}>
-                      <View style={aguardando ? styles.escalaInfoAguardando : styles.escalaInfo}>
+                    <View key={e.id} style={[styles.escala, empilhada && styles.escalaEmpilhada]}>
+                      <View style={empilhada ? styles.escalaInfoEmpilhada : styles.escalaInfo}>
                         <Text style={styles.escalaMin}>{titulo}</Text>
                         {!!detalhes && <Text style={styles.escalaMeta}>{detalhes}</Text>}
                       </View>
@@ -451,10 +454,10 @@ export default function VoluntariadoScreen() {
                       ) : confirmado ? (
                         // ⚠️ "Recusar" era um link cinza sublinhado ao lado do
                         // "Confirmada" e ninguém achava (relato do Matheus ·
-                        // 13/08/2026). Virou botão de verdade, embaixo do
+                        // 13/08/2026). Virou botão de verdade, na linha do
                         // status: quem não pode ir precisa avisar a coordenação,
                         // e avisar tarde custa a vaga do domingo.
-                        <View style={styles.escalaAcoesCol}>
+                        <View style={styles.escalaAcoesConfirmada}>
                           <View style={styles.confirmado}>
                             <Ionicons name="checkmark-circle" size={18} color={colors.success} />
                             <Text style={styles.confirmadoTxt}>{t("Confirmada")}</Text>
@@ -791,10 +794,11 @@ const makeStyles = (colors: Palette) =>
       padding: spacing.lg,
     },
     escalaInfo: { flex: 1, gap: 2 },
-    // Escala aguardando resposta: empilhada (texto em cima, botões embaixo).
+    // Escala com ação (aguardando resposta ou confirmada): empilhada, texto em
+    // cima e botões embaixo.
     // Sem `flex: 1` no texto: numa coluna de altura livre ele encolheria a zero.
-    escalaAguardando: { flexDirection: "column", alignItems: "stretch" },
-    escalaInfoAguardando: { gap: 2 },
+    escalaEmpilhada: { flexDirection: "column", alignItems: "stretch" },
+    escalaInfoEmpilhada: { gap: 2 },
     acaoLarga: { flex: 1, justifyContent: "center", alignItems: "center" },
     escalaMin: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
     escalaMeta: { color: colors.textMuted, fontSize: font.size.sm },
@@ -808,9 +812,9 @@ const makeStyles = (colors: Palette) =>
     confirmado: { flexDirection: "row", alignItems: "center", gap: 4 },
     confirmadoTxt: { color: colors.success, fontSize: font.size.sm, fontWeight: "600" },
     escalaAcoes: { flexDirection: "row", alignItems: "center", gap: 8 },
-    // Escala confirmada: status em cima, botão de recusar embaixo (o link
-    // discreto ao lado do "Confirmada" passava despercebido).
-    escalaAcoesCol: { alignItems: "flex-end", gap: 8 },
+    // Escala confirmada: embaixo do texto, status à esquerda e botão de recusar
+    // à direita (o link discreto ao lado do "Confirmada" passava despercebido).
+    escalaAcoesConfirmada: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 },
     recusarBtn: {
       flexDirection: "row",
       alignItems: "center",

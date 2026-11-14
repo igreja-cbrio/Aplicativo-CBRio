@@ -357,7 +357,7 @@ export function NextGestaoScreen() {
         ) : null}
 
         <View style={styles.sectionHead}>
-          <View style={{ flex: 1 }}>
+          <View style={styles.sectionCopy}>
             <Text style={styles.sectionLabel}>{t("Turma")}</Text>
             <Text style={styles.sectionHint}>{t("A turma do domingo mais próximo já vem selecionada")}</Text>
           </View>
@@ -605,7 +605,7 @@ function Tab({ label, count, active, onPress, styles }: {
 }) {
   return (
     <Pressable onPress={onPress} style={[styles.tab, active && styles.tabActive]} accessibilityRole="tab" accessibilityState={{ selected: active }}>
-      <Text style={[styles.tabTxt, active && styles.tabTxtActive]} numberOfLines={1}>{label}</Text>
+      <Text style={[styles.tabTxt, active && styles.tabTxtActive]} numberOfLines={2}>{label}</Text>
       <View style={[styles.tabCount, active && styles.tabCountActive]}>
         <Text style={[styles.tabCountTxt, active && styles.tabCountTxtActive]}>{count}</Text>
       </View>
@@ -723,7 +723,9 @@ function makeStyles(c: Palette) {
     aviso: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm, backgroundColor: c.warning + "1A", borderColor: c.warning, borderWidth: 1, borderRadius: radius.lg, padding: spacing.md },
     avisoTxt: { flex: 1, color: c.text, fontSize: font.size.sm },
 
-    sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+    // Com letra grande o botão desce para a linha de baixo e a dica usa a largura toda.
+    sectionHead: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+    sectionCopy: { flexGrow: 1, flexShrink: 1, flexBasis: 150 },
     sectionLabel: { color: c.text, fontSize: font.size.md, fontWeight: "800" },
     sectionHint: { color: c.textMuted, fontSize: font.size.sm - 1, marginTop: 2 },
     addMini: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: c.primary, borderRadius: radius.full, paddingHorizontal: 13, paddingVertical: 9 },
@@ -740,9 +742,10 @@ function makeStyles(c: Palette) {
     todayDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: c.primary, marginTop: 3 },
 
     tabs: { flexDirection: "row", gap: spacing.sm },
-    tab: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, paddingVertical: 11, borderRadius: radius.full, borderWidth: 1, borderColor: c.glassBorder, backgroundColor: c.surface },
+    tab: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, paddingVertical: 11, paddingHorizontal: spacing.sm, borderRadius: radius.full, borderWidth: 1, borderColor: c.glassBorder, backgroundColor: c.surface },
     tabActive: { backgroundColor: c.primary, borderColor: c.primary },
-    tabTxt: { color: c.text, fontWeight: "700", fontSize: font.size.sm },
+    // Sem o flexShrink o texto não quebra e o contador sai da pílula.
+    tabTxt: { flexShrink: 1, textAlign: "center", color: c.text, fontWeight: "700", fontSize: font.size.sm },
     tabTxtActive: { color: "#fff" },
     tabCount: { minWidth: 22, paddingHorizontal: 6, paddingVertical: 1, borderRadius: radius.full, backgroundColor: c.surfaceAlt, alignItems: "center" },
     tabCountActive: { backgroundColor: "rgba(255,255,255,0.24)" },

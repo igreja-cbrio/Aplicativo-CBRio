@@ -371,8 +371,9 @@ const makeStyles = (colors: Palette) =>
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
+      gap: spacing.sm,
     },
-    titulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800" },
+    titulo: { flex: 1, color: colors.text, fontSize: font.size.md, fontWeight: "800" },
     navMes: {
       flexDirection: "row",
       alignItems: "center",
@@ -419,9 +420,12 @@ const makeStyles = (colors: Palette) =>
       alignItems: "center",
       justifyContent: "center",
     },
+    // Limitada pela célula: embutido num modal estreito a célula tem ~33 e a
+    // bolha fixa de 38 passava por cima da vizinha.
     diaBolha: {
-      width: 38,
-      height: 38,
+      width: "100%",
+      maxWidth: 38,
+      aspectRatio: 1,
       borderRadius: 19,
       alignItems: "center",
       justifyContent: "center",
