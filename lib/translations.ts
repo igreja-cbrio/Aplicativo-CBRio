@@ -6,6 +6,7 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Falta menos de um dia para esse novo começo.": { en: "Less than a day until this new beginning.", es: "Falta menos de un día para este nuevo comienzo." },
   "MEU BATISMO": {"en": "MY BAPTISM", "es": "MI BAUTISMO"},
   "É hoje. Viva esse momento!": {"en": "Today is the day. Embrace this moment!", "es": "¡Es hoy. Vive este momento!"},
   "Uma nova história começou.": {"en": "A new story has begun.", "es": "Una nueva historia comenzó."},

@@ -37,10 +37,11 @@ export default function InicioScreen() {
   const contagem = batismo?.membroId === membro?.membroId && batismo
     ? contagemBatismo(batismo.inscricao, agora) : null;
   const avisoBatismo: HomeNotice[] = contagem && (contagem.estado === 'agendado' || contagem.estado === 'hoje') ? [{
-    id: "meu-batismo", href: "/batismo", count: contagem.diasCalendario || undefined,
+    id: "meu-batismo", href: "/batismo", count: contagem.dias || undefined,
     title: contagem.estado === 'hoje' ? t("Seu batismo é hoje!") : t("Seu batismo está chegando!"),
     body: contagem.estado === 'hoje' ? t("Vamos celebrar esse dia com você.")
-      : `${contagem.diasCalendario} ${contagem.diasCalendario === 1 ? t("dia para esse novo começo.") : t("dias para esse novo começo.")}`,
+      : contagem.dias === 0 ? t("Falta menos de um dia para esse novo começo.")
+      : `${contagem.dias} ${contagem.dias === 1 ? t("dia para esse novo começo.") : t("dias para esse novo começo.")}`,
   }] : [];
   const notices: HomeNotice[] = [
     ...avisoBatismo,
