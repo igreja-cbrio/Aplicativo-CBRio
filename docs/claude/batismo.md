@@ -121,3 +121,8 @@ horários abertos que tem no formulário de inscrição"*. A tela **já chamava*
 ### Endereço nos convites (16/11/2026)
 - Texto do WhatsApp e PNG dos Stories incluem Av. das Américas, 7907, Open Mall (subsolo), Barra da Tijuca, Rio de Janeiro/RJ, o mesmo endereço da tela Sobre e dos detalhes do culto.
 - O endereço vem de `conviteBatismo.endereco`, em três linhas para legibilidade; nunca usa o endereço residencial do inscrito. A arte redistribui data, horário e rodapé, preservando o formato 1080×1920.
+
+- O convite de texto do WhatsApp inclui “Como chegar” com URL HTTPS de direções
+  do Google Maps, usando o mesmo endereço da igreja como destino. A origem fica
+  a cargo do Maps/dispositivo; o link também acompanha o compartilhamento nativo
+  de texto. A arte dos Stories permanece sem URL.

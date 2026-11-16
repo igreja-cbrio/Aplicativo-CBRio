@@ -3,6 +3,8 @@ import { contagemBatismo, type AgendaBatismo } from './batismoContagem';
 // Mesmo endereço exibido em Sobre e nos detalhes do culto.
 const ENDERECO_IGREJA = 'Av. das Américas, 7907\nOpen Mall (subsolo)\nBarra da Tijuca · Rio de Janeiro/RJ';
 
+const ROTA_IGREJA = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`CBRio, ${ENDERECO_IGREJA.replace(/\n/g, ', ')}`)}`;
+
 type InscricaoConvite = AgendaBatismo & { nome: string | null; sobrenome?: string | null };
 /** Só os dados públicos necessários ao convite; nunca inclui observações ou cadastro. */
 export function conviteBatismo(inscricao: InscricaoConvite, agora: number) {
@@ -12,7 +14,7 @@ export function conviteBatismo(inscricao: InscricaoConvite, agora: number) {
   const [ano, mes, dia] = agenda.data.split('-');
   const data = `${dia}/${mes}/${ano}`;
   const horario = agenda.horario ? `${agenda.horario} · Horário de Brasília` : 'Horário a confirmar';
-  const texto = `Vou me batizar! 💙\n\nQuero você comigo nesse momento tão especial da minha caminhada com Jesus.\n\n${nome ? `${nome}\n` : ''}📅 ${data}\n🕒 ${horario}\n📍 CBRio\n${ENDERECO_IGREJA}\n\nVenha celebrar comigo!`;
+  const texto = `Vou me batizar! 💙\n\nQuero você comigo nesse momento tão especial da minha caminhada com Jesus.\n\n${nome ? `${nome}\n` : ''}📅 ${data}\n🕒 ${horario}\n📍 CBRio\n${ENDERECO_IGREJA}\n\nComo chegar:\n${ROTA_IGREJA}\n\nVenha celebrar comigo!`;
   return { nome, data, horario, endereco: ENDERECO_IGREJA, texto };
 }
 export type ConviteBatismo = NonNullable<ReturnType<typeof conviteBatismo>>;
