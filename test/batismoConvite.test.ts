@@ -19,6 +19,15 @@ describe('convite pessoal de batismo', () => {
     const c = conviteBatismo({ ...inscricao, data_batismo: '2026-11-16', horario_culto: null }, agora)!;
     expect(c.horario).toBe('Horário a confirmar');
   });
+  it('inclui a rota até a igreja num link inteiro, sem dado do inscrito', () => {
+    const texto = conviteBatismo(inscricao, agora)!.texto;
+    expect(texto).toContain('Como chegar:');
+    const url = texto.match(/https:\/\/\S+/)?.[0] ?? '';
+    expect(url).toMatch(/^https:\/\/www\.google\.com\/maps\/dir\/\?api=1&destination=/);
+    expect(url).not.toMatch(/[()\s]/);
+    expect(new URL(url).searchParams.get('destination'))
+      .toBe('CBRio, Av. das Américas, 7907, Open Mall (subsolo), Barra da Tijuca · Rio de Janeiro/RJ');
+  });
   it('não inclui observações ou dados privados', () => {
     const extra = { ...inscricao, observacoes: 'DADO PRIVADO', cpf: '12345678900', email: 'privado@exemplo.com' };
     const texto = conviteBatismo(extra, agora)!.texto;

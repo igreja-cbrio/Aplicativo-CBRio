@@ -3,7 +3,9 @@ import { contagemBatismo, type AgendaBatismo } from './batismoContagem';
 // Mesmo endereço exibido em Sobre e nos detalhes do culto.
 const ENDERECO_IGREJA = 'Av. das Américas, 7907\nOpen Mall (subsolo)\nBarra da Tijuca · Rio de Janeiro/RJ';
 
-const ROTA_IGREJA = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`CBRio, ${ENDERECO_IGREJA.replace(/\n/g, ', ')}`)}`;
+const DESTINO_ROTA = `CBRio, ${ENDERECO_IGREJA.replace(/\n/g, ', ')}`;
+// encodeURIComponent deixa "(" e ")" crus; alguns detectores de link cortam a URL neles.
+const ROTA_IGREJA = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(DESTINO_ROTA).replace(/\(/g, '%28').replace(/\)/g, '%29')}`;
 
 type InscricaoConvite = AgendaBatismo & { nome: string | null; sobrenome?: string | null };
 /** Só os dados públicos necessários ao convite; nunca inclui observações ou cadastro. */

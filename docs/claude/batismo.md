@@ -126,3 +126,6 @@ horários abertos que tem no formulário de inscrição"*. A tela **já chamava*
   do Google Maps, usando o mesmo endereço da igreja como destino. A origem fica
   a cargo do Maps/dispositivo; o link também acompanha o compartilhamento nativo
   de texto. A arte dos Stories permanece sem URL.
+- Os parênteses de "(subsolo)" vão codificados (`%28`/`%29`): `encodeURIComponent`
+  os deixa crus e alguns detectores de link cortam a URL neles. O teste
+  `batismoConvite.test.ts` trava o link inteiro e o destino decodificado.
