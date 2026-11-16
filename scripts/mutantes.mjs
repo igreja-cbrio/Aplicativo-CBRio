@@ -781,6 +781,15 @@ const MUTANTES = [
     para: "  return ord;",
   },
   {
+    // (16/11/2026) Tratar a dúvida como "fora": com servidor antigo (sem
+    // `do_time`) todo mundo do time ganharia o aviso "não é do time" e a
+    // confirmação de escalar mesmo assim.
+    nome: "escalaTimes: do_time ausente vira 'fora do time'",
+    arq: "lib/escalaTimes.ts",
+    de: "  for (const p of lista || []) (p.do_time === false ? fora : doTime).push(p);",
+    para: "  for (const p of lista || []) (p.do_time !== true ? fora : doTime).push(p);",
+  },
+  {
     // Sem a separação, a tela volta a mostrar o time inteiro misturado — e o
     // líder procurando um saxofonista rola 117 nomes da Banda.
     nome: "escalaTimes: a vaga deixa de separar quem tem a função",

@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 import {
   agruparCultosPorTipo, cultoInicial, contaVaga, chaveDoTime, montarTimes,
   resumoDoCulto, destinoDoArraste, xParaCentralizar, SEM_EQUIPE, SEM_FUNCAO, SEM_TIPO,
-  semanaDoCulto, ehDomingo, filtrarPool, dividirPorVaga,
+  semanaDoCulto, ehDomingo, filtrarPool, dividirPorVaga, separarBuscaDoTime,
   type ItemComposicao, type LinhaEscala,
 } from "@/lib/escalaTimes";
 
@@ -273,5 +273,28 @@ describe("dividirPorVaga · quem é da vaga primeiro, resto do time depois", () 
   it("pessoa sem `posicoes` (servidor antigo) cai no resto", () => {
     const r = dividirPorVaga<{ id: string; full_name: string; posicoes?: { id: string; name: string | null }[] }>([{ id: "x", full_name: "X" }], { id: SAX, nome: "Sax" });
     expect(r.resto.length).toBe(1);
+  });
+});
+
+describe("separarBuscaDoTime · quem é do time × quem não é (16/11/2026)", () => {
+  // O print do Matheus: o líder digitava o nome de alguém que não é do Kids e a
+  // lista dizia "Ninguém do time com esse nome." A busca passou a achar todo
+  // mundo; quem decide quem é do time é o servidor (`do_time`).
+  it("separa pelo do_time do servidor e preserva a ordem de cada lado", () => {
+    const r = separarBuscaDoTime([
+      { id: "a", do_time: true }, { id: "x", do_time: false },
+      { id: "b", do_time: true }, { id: "y", do_time: false },
+    ]);
+    expect(r.doTime.map(p => p.id)).toEqual(["a", "b"]);
+    expect(r.fora.map(p => p.id)).toEqual(["x", "y"]);
+  });
+  it("sem do_time (servidor antigo) conta como do time: o aviso nunca cai em quem é do time", () => {
+    const r = separarBuscaDoTime<{ id: string; do_time?: boolean }>([{ id: "a" }, { id: "b" }]);
+    expect(r.fora).toEqual([]);
+    expect(r.doTime.length).toBe(2);
+  });
+  it("lista vazia ou ausente não quebra", () => {
+    expect(separarBuscaDoTime([])).toEqual({ doTime: [], fora: [] });
+    expect(separarBuscaDoTime(undefined as unknown as { do_time?: boolean }[])).toEqual({ doTime: [], fora: [] });
   });
 });

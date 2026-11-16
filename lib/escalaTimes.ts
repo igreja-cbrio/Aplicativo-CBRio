@@ -331,6 +331,20 @@ export function filtrarPool<T extends { full_name: string }>(pool: T[], q: strin
 }
 
 /**
+ * Separa a resposta da busca com `incluir_fora` (16/11/2026) em quem É do time e
+ * quem NÃO é. Quem decide é o SERVIDOR (`do_time`); aqui só se lê o campo.
+ *
+ * ⚠️ Só `do_time === false` é "fora". Campo ausente (servidor antigo, que ignora
+ * `incluir_fora` e devolve só o time) conta como do time: tratar a dúvida como
+ * "fora" poria o aviso "não é do time" em quem é.
+ */
+export function separarBuscaDoTime<T extends { do_time?: boolean }>(lista: T[]): { doTime: T[]; fora: T[] } {
+  const doTime: T[] = []; const fora: T[] = [];
+  for (const p of lista || []) (p.do_time === false ? fora : doTime).push(p);
+  return { doTime, fora };
+}
+
+/**
  * Divide a lista do time em "quem é DESSA vaga" e "resto do time" (pedido do
  * Marcos, 24/09: "estou escalando um saxofonista: primeiro os saxofonistas da
  * igreja, abaixo outras pessoas do time"). A ORDEM de cada metade é a que veio
