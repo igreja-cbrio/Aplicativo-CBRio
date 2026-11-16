@@ -11,7 +11,7 @@ import { DockInsetContext } from "@/components/navigation/DockContent";
 import { useMenu } from "@/contexts/MenuContext";
 import { useTheme } from "@/contexts/ThemeContext";
 
-export type HomeNotice = { id: string; title: string; body?: string; count?: number; href: "/devocional" | "/noticias" };
+export type HomeNotice = { id: string; title: string; body?: string; count?: number; href: "/devocional" | "/noticias" | "/batismo" };
 
 
 /** Foto original fornecida pelo marketing, sem textos incorporados. */
@@ -107,7 +107,7 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
                   <View key={notice.id} style={{ width: cardWidth, paddingHorizontal: 1 }}>
                     <Pressable onPress={() => router.navigate(notice.href)} accessibilityRole="button" style={({ pressed }) => [styles.notice, largeText && styles.noticeLargeText, pressed && styles.pressed]}>
                       <View style={[styles.noticeLeading, largeText && styles.noticeLeadingLarge]}>
-                        {notice.count != null && notice.count > 0 ? <Text style={styles.count} accessibilityLabel={`${notice.count} ${t("dias")}`}>{notice.count}</Text> : <Ionicons name={notice.href === "/devocional" ? "book-outline" : "megaphone-outline"} size={30} color="#fff" />}
+                        {notice.count != null && notice.count > 0 ? <Text style={styles.count} accessibilityLabel={`${notice.count} ${t("dias")}`}>{notice.count}</Text> : <Ionicons name={notice.href === "/devocional" ? "book-outline" : notice.href === "/batismo" ? "water-outline" : "megaphone-outline"} size={30} color="#fff" />}
                       </View>
                       <View style={[styles.noticeCopy, largeText && styles.noticeCopyLarge]}>
                         <Text style={[styles.noticeTitle, !notice.body && styles.noticeMessage]} numberOfLines={!largeText && notice.body ? 1 : undefined}>{notice.title}</Text>

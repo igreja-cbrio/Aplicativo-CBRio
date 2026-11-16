@@ -4,6 +4,7 @@ export type MeuBatismo = {
   id: string;
   status: "pendente" | "realizado" | "cancelado" | string;
   data_batismo: string | null;   // ISO date (YYYY-MM-DD)
+  horario_culto?: string | null;
   nome: string | null;
   sobrenome: string | null;
   tamanho_camisa: string | null;
@@ -22,7 +23,7 @@ export type MeuBatismo = {
 export async function meuBatismo(membroId: string): Promise<MeuBatismo | null> {
   const { data } = await supabase
     .from("batismo_inscricoes")
-    .select("id, status, data_batismo, nome, sobrenome, tamanho_camisa, eh_crianca, observacoes, checkin_em")
+    .select("id, status, data_batismo, horario_culto, nome, sobrenome, tamanho_camisa, eh_crianca, observacoes, checkin_em")
     .eq("membro_id", membroId)
     .is("deleted_at", null)
     .neq("status", "cancelado")

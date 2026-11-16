@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Contagem pessoal na Home e Meu batismo (16/11/2026)
+
 - ⚠️⚠️ BATISMO · a pessoa ESCOLHE a data (25–26/09/2026 · #177 + #179 · par do ERP #3063)
 - ⚠️ Batismo · seletor de HORÁRIO na inscrição (2026-08-13)
 
@@ -89,3 +91,20 @@ horários abertos que tem no formulário de inscrição"*. A tela **já chamava*
   `batismo_inscricoes` — sem a migration `20260813120000` o horário era validado
   e **descartado em silêncio**. Bundle antigo, que não manda o campo, continua
   gravando NULL exatamente como hoje.
+
+## Contagem pessoal na Home e Meu batismo (16/11/2026)
+
+- Home consulta a inscrição do próprio membro (`meuBatismo`) e prioriza um aviso
+  clicável para `/batismo` apenas enquanto agendada/hoje. Resultado guarda o ID
+  do membro para não reutilizar aviso de outra conta durante troca de perfil.
+- `BatismoCountdownCard` mostra dias, horas e minutos até `data_batismo` +
+  `horario_culto`, já existente no banco. Sem horário: só dias; sem data válida:
+  confirmação de recebimento, sem estimativa. Não há alteração no banco.
+- Cálculo puro em `lib/batismoContagem.ts`, BRT explícito, atualizado a cada 30s
+  na tela focada/ativa e ao voltar do background. Sem loop de animação contínuo.
+- Data passada e check-in não equivalem a batismo realizado. A celebração de
+  realização depende de `status=realizado`; check-in continua validado pelo RPC.
+- Conteúdo do inscrito e estilos extraídos para `components/batismo/` para a
+  prévia usar os mesmos componentes, com dados fictícios e sem autenticação.
+- Testes cobrem fuso, virada do dia, data/horário inválidos, sem data/horário,
+  ano bissexto e estados cancelado/realizado. Prévia não cria inscrições reais.
