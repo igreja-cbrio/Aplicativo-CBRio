@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Legendas completas no dock nativo (16/11/2026)
 - ⚠️ LETRA GRANDE · varredura de telas espremidas ou vazando em 360dp + regras de layout (2026-11-14)
 - Login compacto e logo única no vídeo (13/11/2026)
 
@@ -569,3 +570,27 @@ Regras que ficam:
 - Compartilhados que mudaram: `Button` aceita rótulo em 2 linhas; `Dialogo` deixa os botões do tamanho do rótulo e empilha quando não cabem; `Checkbox` quebra rótulo longo; a barra de baixo encolhe o rótulo em vez de quebrar.
 - O cartão de membro (`cartoes.tsx`) tem altura fixa por causa do virar e do brilho: os textos dele não seguem o tamanho da letra (`allowFontScaling={false}`).
 - Ficaram de fora, de propósito: a dica de arrastar do `escala-supervisor.tsx` (duas linhas mexeriam nas zonas de soltar) e o item do catálogo de `conteudos.tsx` (só trunca).
+
+## Legendas completas no dock nativo (16/11/2026)
+
+O relato de nomes cortados foi reproduzido com a mesma UITabBar no simulador
+iOS 26.2: criar os itens com a barra ainda em frame zero e só depois dimensioná-la
+mantém os títulos truncados, mesmo com largura suficiente. O wrapper JS agora
+fornece labels vazios até receber onLayout com dimensões positivas e concluir
+um frame; só então envia os cinco títulos. Rotação, Display Zoom e mudança da
+escala do sistema remontam esse wrapper; troca de rota não remonta o dock.
+Callbacks agendados são cancelados ao desmontar.
+
+BottomBar entrega a largura disponível ao controle nativo, que já aplica o
+próprio recuo. Os 20 pt externos continuam apenas no fallback (Android, binário
+sem módulo, tela menor que 360 pt ou fonte efetiva acima de 1,2x). Nesse modo,
+o usuário pode rolar os atalhos com letra ampliada sem abreviar os nomes.
+Safe area lateral é respeitada, inclusive na horizontal. Não altera Swift,
+material, ícones, espaçamento vertical ou reconhecedores: compatível com OTA
+runtime 1.0.0, sem novo binário de loja.
+
+Validação: reprodução antes/depois com o controle UIKit real e testes de ciclo
+de layout React (frame zero, próximo frame, troca de rota, rotação e desmontagem).
+O teste usa react-test-renderer 19.1.0 apenas como dependência de desenvolvimento;
+não substitui UIKit, cujo visual foi conferido no simulador. Tipos, réguas e
+traduções seguem no portão de publicação.
