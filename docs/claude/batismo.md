@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Endereço nos convites (16/11/2026)
 - Convites pessoais (16/11/2026)
 
 - Contagem pessoal na Home e Meu batismo (16/11/2026)
@@ -116,3 +117,7 @@ horários abertos que tem no formulário de inscrição"*. A tela **já chamava*
 - Arte 1080×1920 gerada localmente com Skia e fontes iBrand/Gotham para Stories, com prévia e compartilhamento PNG. O usuário escolhe Instagram ou salva a imagem e a seleciona no Story; não há promessa de publicação direta nem bridge nativa nova.
 - Convite usa apenas nome, data e horário da inscrição, com fuso Brasília; sem horário definido, informa confirmação pendente. Não inclui observações/cadastro. Não oferece convites para datas inválidas/passadas, cancelados ou realizados.
 - Ambos funcionam com as dependências existentes por OTA. Não cria inscrição, altera dados nem envia mensagem em nome do usuário.
+
+### Endereço nos convites (16/11/2026)
+- Texto do WhatsApp e PNG dos Stories incluem Av. das Américas, 7907, Open Mall (subsolo), Barra da Tijuca, Rio de Janeiro/RJ, o mesmo endereço da tela Sobre e dos detalhes do culto.
+- O endereço vem de `conviteBatismo.endereco`, em três linhas para legibilidade; nunca usa o endereço residencial do inscrito. A arte redistribui data, horário e rodapé, preservando o formato 1080×1920.

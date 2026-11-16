@@ -29,8 +29,8 @@ export async function gerarConviteBatismo(convite: ConviteBatismo): Promise<stri
   paint.setColor(Skia.Color('#8fb5b9'));
   for (let i = 0; i < 4; i++) {
     const path = Skia.Path.Make();
-    path.moveTo(-80, 1600 + i * 65);
-    path.cubicTo(350, 1450 + i * 65, 700, 1860 + i * 65, 1180, 1640 + i * 65);
+    path.moveTo(-80, 1740 + i * 65);
+    path.cubicTo(350, 1670 + i * 65, 700, 1920 + i * 65, 1180, 1790 + i * 65);
     canvas.drawPath(path, paint);
   }
   function texto(value: string, y: number, tamanho: number, familia = 'Texto', maxAltura = 300) {
@@ -50,9 +50,11 @@ export async function gerarConviteBatismo(convite: ConviteBatismo): Promise<stri
   texto('Vou me\nbatizar!', 560, 146, 'Marca', 390);
   texto(convite.nome, 970, 46, 'Marca', 160);
   texto('Quero você comigo nesse\nmomento tão especial.', 1160, 34);
-  texto(convite.data, 1325, 64, 'Marca');
-  texto(convite.horario, 1420, 29);
-  texto('CBRio · Venha celebrar comigo!', 1510, 28);
+  texto(convite.data, 1260, 64, 'Marca');
+  texto(convite.horario, 1350, 29);
+  texto('CBRio', 1420, 38, 'Marca');
+  texto(convite.endereco, 1480, 30, 'Texto', 140);
+  texto('Venha celebrar comigo!', 1650, 28);
   const imagem = surface.makeImageSnapshot();
   const base64 = imagem.encodeToBase64(ImageFormat.PNG, 100);
   const uri = `${FileSystem.cacheDirectory}convite-batismo-${Date.now()}.png`;
