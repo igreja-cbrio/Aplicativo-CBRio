@@ -468,7 +468,7 @@ export default function FaleConoscoChatScreen() {
           <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>{t("Assistente")}</Text>
+          <Text style={styles.title}>{escalado ? t("Equipe CBRio") : t("Pedrinho")}</Text>
           <Pressable onPress={() => { cancelarVoz(); Keyboard.dismiss(); setHistorico(true); }} disabled={enviando || restaurando}
             style={styles.back} accessibilityRole="button" accessibilityLabel={t("Histórico de conversas")}>
             <Ionicons name="time-outline" size={26} color={colors.brandMid} />
@@ -531,8 +531,8 @@ export default function FaleConoscoChatScreen() {
               </Pressable>}
             </View> : <View style={styles.boasVindas}>
               <Text style={styles.saudacao}>{membro?.nome ? t("Olá, {nome}!").replace("{nome}", membro.nome.trim()) : t("Olá!")}</Text>
-              <Text style={styles.saudacao}>{t("Como posso te ajudar?")}</Text>
-              <Text style={styles.vazio}>{t("Assistente automático da CBRio")}</Text>
+              <Text style={styles.apresentacao}>{t("Sou o Pedrinho, assistente virtual da CBRio.")}</Text>
+              <Text style={styles.vazio}>{t("Como posso te ajudar?")}</Text>
             </View>
           }
           renderItem={({ item }) => <Bolha conversa={conversaRef.current || ""} identidade={escopo} ativo={audioAtivo === `${escopo}:${conversaRef.current}:${item.id}`} ativar={() => setAudioAtivo(`${escopo}:${conversaRef.current}:${item.id}`)} m={item} styles={styles} t={t} subindo={enviando && ehLocal(item)} />}
@@ -611,7 +611,7 @@ export default function FaleConoscoChatScreen() {
 
 function Bolha({ m, styles, t, subindo, conversa, identidade, ativo, ativar }: { conversa: string; identidade: string; ativo: boolean; ativar: () => void; m: MensagemChat; styles: ReturnType<typeof makeStyles>; t: (s: string) => string; subindo?: boolean }) {
   const meu = m.autor === "membro";
-  const rotulo = m.autor === "assistente" ? t("Assistente automático") : m.autor === "equipe" ? t("Equipe CBRio") : null;
+  const rotulo = m.autor === "assistente" ? t("Pedrinho") : m.autor === "equipe" ? t("Equipe CBRio") : null;
   return (
     <View style={[styles.linha, meu ? styles.linhaMeu : styles.linhaOutro]}>
       {rotulo ? <Text style={styles.rotulo}>{rotulo}</Text> : null}
@@ -661,6 +661,7 @@ const makeStyles = (colors: Palette) =>
     lista: { padding: spacing.lg, gap: spacing.sm, flexGrow: 1 },
     boasVindas: { paddingTop: 30, gap: 4 },
     saudacao: { fontSize: 29, lineHeight: 38, fontWeight: "700", color: colors.text },
+    apresentacao: { fontSize: 20, lineHeight: 28, color: colors.text, marginTop: 8 },
     apoio: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
     apoioPrincipal: { flex: 1, minHeight: 60, flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 18, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
     apoioRotulos: { flex: 1, gap: 3 },

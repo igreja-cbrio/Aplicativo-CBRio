@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Chat: apresentação do Pedrinho (2026-11-16)
+
 - Chat: áudio privado da equipe (2026-11-13)
 
 - Chat: base compartilhada e continuidade com a equipe (2026-11-13)
@@ -670,3 +672,10 @@ o reconhecimento é feito pelo serviço de fala do sistema e pode usar rede.
 - Ao abrir, renova URL por conversa/mensagem no backend autenticado; só aceita storage privado assinado na origem Supabase configurada. URL expirada/erro oferece nova tentativa, nunca fallback público.
 - Apenas um áudio ativo; pausa imperativa no blur/background e desmontagem. Player isolado por conta/conversa/mensagem, sem regredir cursor de sequência/ciclo.
 - Backend e migration de tipos devem anteceder OTA. Testes locais não comprovam reprodução real em iPhone/Android.
+
+## Chat: apresentação do Pedrinho (2026-11-16)
+
+Conversa nova apresenta “Sou o Pedrinho, assistente virtual da CBRio.”. O nome
+fica acima de cada resposta automática. Histórico e mensagens humanas são
+preservados; quando encaminhado, o cabeçalho indica Equipe CBRio. Não insere
+saudações artificiais no histórico nem muda o fluxo de atendimento.
