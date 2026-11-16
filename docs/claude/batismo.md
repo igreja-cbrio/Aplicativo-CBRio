@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Convites pessoais (16/11/2026)
+
 - Contagem pessoal na Home e Meu batismo (16/11/2026)
 
 - ⚠️⚠️ BATISMO · a pessoa ESCOLHE a data (25–26/09/2026 · #177 + #179 · par do ERP #3063)
@@ -108,3 +110,9 @@ horários abertos que tem no formulário de inscrição"*. A tela **já chamava*
   prévia usar os mesmos componentes, com dados fictícios e sem autenticação.
 - Testes cobrem fuso, virada do dia, data/horário inválidos, sem data/horário,
   ano bissexto e estados cancelado/realizado. Prévia não cria inscrições reais.
+
+### Convites pessoais (16/11/2026)
+- `BatismoConviteCard` permite abrir uma mensagem pessoal no WhatsApp (fallback para compartilhar do sistema), sem enviar automaticamente.
+- Arte 1080×1920 gerada localmente com Skia e fontes iBrand/Gotham para Stories, com prévia e compartilhamento PNG. O usuário escolhe Instagram ou salva a imagem e a seleciona no Story; não há promessa de publicação direta nem bridge nativa nova.
+- Convite usa apenas nome, data e horário da inscrição, com fuso Brasília; sem horário definido, informa confirmação pendente. Não inclui observações/cadastro. Não oferece convites para datas inválidas/passadas, cancelados ou realizados.
+- Ambos funcionam com as dependências existentes por OTA. Não cria inscrição, altera dados nem envia mensagem em nome do usuário.

@@ -6,6 +6,17 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Esse momento fica melhor juntos": {"en": "This moment is better together", "es": "Este momento es mejor juntos"},
+  "Convide amigos e familiares para celebrar seu batismo.": {"en": "Invite friends and family to celebrate your baptism.", "es": "Invita a amigos y familiares a celebrar tu bautismo."},
+  "Convidar pelo WhatsApp": {"en": "Invite via WhatsApp", "es": "Invitar por WhatsApp"},
+  "Criar convite para Stories": {"en": "Create a Stories invitation", "es": "Crear invitación para Stories"},
+  "Seu convite": {"en": "Your invitation", "es": "Tu invitación"},
+  "Compartilhe a arte no Instagram. Se Stories não aparecer entre as opções, salve a imagem e escolha-a ao criar um Story.": {"en": "Share the image on Instagram. If Stories is not listed, save the image and select it when creating a Story.", "es": "Comparte la imagen en Instagram. Si Stories no aparece, guarda la imagen y selecciónala al crear una historia."},
+  "Prévia do convite de batismo": {"en": "Baptism invitation preview", "es": "Vista previa de la invitación al bautismo"},
+  "Compartilhar imagem": {"en": "Share image", "es": "Compartir imagen"},
+  "Não foi possível compartilhar": {"en": "Unable to share", "es": "No se pudo compartir"},
+  "Tente novamente em instantes.": {"en": "Please try again shortly.", "es": "Inténtalo de nuevo en unos instantes."},
+
   "Falta menos de um dia para esse novo começo.": { en: "Less than a day until this new beginning.", es: "Falta menos de un día para este nuevo comienzo." },
   "MEU BATISMO": {"en": "MY BAPTISM", "es": "MI BAUTISMO"},
   "É hoje. Viva esse momento!": {"en": "Today is the day. Embrace this moment!", "es": "¡Es hoy. Vive este momento!"},

@@ -9,6 +9,7 @@ import type { MeuBatismo, FotoBatismo } from '@/lib/batismo';
 import { makeStyles } from './batismoStyles';
 import { BatismoCountdownCard } from './BatismoCountdownCard';
 import { contagemBatismo } from '@/lib/batismoContagem';
+import { BatismoConviteCard } from './BatismoConviteCard';
 import { useRelogioBatismo } from '@/lib/useRelogioBatismo';
 
 export function BatismoConteudo({
@@ -40,6 +41,7 @@ export function BatismoConteudo({
   return (
     <>
       <BatismoCountdownCard batismo={batismo} agora={agora} />
+      <BatismoConviteCard batismo={batismo} agora={agora} />
 
       {/* Check-in (no dia) */}
       {ehHoje && (
