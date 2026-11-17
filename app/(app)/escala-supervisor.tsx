@@ -981,7 +981,7 @@ export default function EscalaSupervisorScreen() {
                   {/* ── Do time ── */}
                   {vagaEmFoco ? (
                     <>
-                      {(secoesAdd.daVaga.length > 0 || !buscaAtiva) && (
+                      {(secoesAdd.daVaga.length > 0 || (!buscaAtiva && !poolErro)) && (
                         <Text style={styles.secaoAdd}>
                           {secoesAdd.daVaga.length
                             ? `${vagaEmFoco.nome} · ${secoesAdd.daVaga.length}`
@@ -1002,8 +1002,10 @@ export default function EscalaSupervisorScreen() {
                       {listaAdd.map(v => renderCandidato(v))}
                     </>
                   )}
-                  {!buscaAtiva && !poolErro && listaAdd.length === 0 && (
-                    <Text style={[styles.muted, { padding: spacing.md, textAlign: "center" }]}>{t("Ninguém do time com esse nome.")}</Text>
+                  {!buscaAtiva && !poolErro && !poolCarregando && listaAdd.length === 0 && (
+                    <Text style={[styles.muted, { padding: spacing.md, textAlign: "center" }]}>
+                      {busca.trim() ? t("Ninguém do time com esse nome.") : t("Ninguém neste time ainda. Busque pelo nome.")}
+                    </Text>
                   )}
 
                   {/* ── Fora do time (16/11/2026) ── */}

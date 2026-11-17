@@ -271,6 +271,7 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Não são do time. Escalar pede confirmação.": { en: "Not on the team. Scheduling asks for confirmation.", es: "No son del equipo. Programar pide confirmación." },
   "Mostrando os primeiros 30. Digite mais letras do nome.": { en: "Showing the first 30. Type more letters of the name.", es: "Mostrando los primeros 30. Escribí más letras del nombre." },
   "Ninguém com esse nome.": { en: "Nobody with that name.", es: "Nadie con ese nombre." },
+  "Ninguém neste time ainda. Busque pelo nome.": { en: "Nobody on this team yet. Search by name.", es: "Nadie en este equipo todavía. Buscá por nombre." },
   "Alterar equipe e função": { en: "Change team and role", es: "Cambiar equipo y función" },
   "Escolha a equipe": { en: "Choose the team", es: "Elegí el equipo" },
   "Filtrar pelo nome…": { en: "Filter by name…", es: "Filtrar por nombre…" },
