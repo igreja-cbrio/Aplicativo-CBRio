@@ -92,7 +92,11 @@ export async function verCertificado(c: CertificadoKids) {
     await Linking.openURL(url);
     return;
   }
-  await WebBrowser.openBrowserAsync(url, { dismissButtonStyle: "close" });
+  // ⚠️ NÃO esperar o navegador FECHAR: no iOS 26 a promessa do
+  // SFSafariViewController pode não voltar depois do "X", e a tela ficava
+  // travada com todos os botões desligados (achado no simulador em 17/11).
+  // A ação termina quando o navegador ABRE; ele cobre a tela enquanto está aberto.
+  WebBrowser.openBrowserAsync(url, { dismissButtonStyle: "close" }).catch(() => {});
 }
 
 export const compartilharCertificado = (c: CertificadoKids) => compartilharPdfPrivado(opcoes(c));

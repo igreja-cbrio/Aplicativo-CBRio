@@ -31,6 +31,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mock.os = "android";
   mock.apiGet.mockResolvedValue({ url: URL_OK, nome: "x.pdf" });
+  mock.open.mockResolvedValue({ type: "cancel" });
   mock.available.mockResolvedValue(true);
   mock.readdir.mockResolvedValue([]);
   mock.mkdir.mockResolvedValue(undefined);
@@ -76,6 +77,10 @@ describe("ver, baixar e compartilhar", () => {
     await verCertificado(cert);
     expect(mock.apiGet).toHaveBeenCalledWith(`/app/kids/certificados/${ID}/pdf?modo=ver`);
     expect(mock.open).toHaveBeenCalledWith(URL_OK, expect.anything());
+  });
+  it("ver não fica preso esperando o navegador fechar (iOS 26 pode não devolver)", async () => {
+    mock.open.mockReturnValue(new Promise(() => {}));
+    await expect(Promise.race([verCertificado(cert).then(() => "ok"), new Promise((r) => setTimeout(() => r("preso"), 200))])).resolves.toBe("ok");
   });
   it("compartilhar baixa no cache com o nome do certificado e abre a folha de PDF", async () => {
     await compartilharCertificado(cert);
