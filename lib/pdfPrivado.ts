@@ -67,7 +67,9 @@ async function baixar(o: Opcoes, url: string) {
     tarefa.pauseAsync().catch(() => {});
   }, 45000);
   try {
-    const r = await tarefa.downloadAsync();
+    // ⚠️ Erro nativo do download (rede, URL vencida) NUNCA chega cru à tela:
+    // vira a mensagem de quem chamou (achado no simulador em 17/11).
+    const r = await tarefa.downloadAsync().catch(() => null);
     if (
       expirou ||
       !r ||
@@ -120,10 +122,14 @@ export async function salvarPdfPrivado(o: Opcoes): Promise<ResultadoSalvar> {
   const url = await o.obterUrl();
   const { dir, uri } = await baixar(o, url);
   try {
-    const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-    const nome = nomeDeArquivoSeguro(o.nomeArquivo).replace(/\.pdf$/i, "");
-    const destino = await SAF.createFileAsync(permissao.directoryUri, nome, "application/pdf");
-    await FileSystem.writeAsStringAsync(destino, base64, { encoding: FileSystem.EncodingType.Base64 });
+    try {
+      const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+      const nome = nomeDeArquivoSeguro(o.nomeArquivo).replace(/\.pdf$/i, "");
+      const destino = await SAF.createFileAsync(permissao.directoryUri, nome, "application/pdf");
+      await FileSystem.writeAsStringAsync(destino, base64, { encoding: FileSystem.EncodingType.Base64 });
+    } catch {
+      throw new Error("Não foi possível salvar o PDF nessa pasta. Tente outra pasta.");
+    }
     return "salvo";
   } finally {
     await FileSystem.deleteAsync(dir, { idempotent: true }).catch(() => {});

@@ -92,7 +92,7 @@ export default function KidsCertificadosScreen() {
         accessibilityState={{ busy: rodando, disabled: Boolean(ocupado) }}
       >
         {rodando ? <ActivityIndicator size="small" color={primario ? "#253D44" : colors.text} /> : <Ionicons name={icone} size={18} color={primario ? "#253D44" : colors.text} />}
-        <Text style={[styles.botaoTexto, primario && { color: "#253D44" }]}>{rotulo}</Text>
+        <Text numberOfLines={1} style={[styles.botaoTexto, primario && { color: "#253D44" }]}>{rotulo}</Text>
       </Pressable>
     );
   };
@@ -144,8 +144,8 @@ export default function KidsCertificadosScreen() {
                       <Text style={styles.cardSub}>{t("Apresentação de Crianças")} · {dataPorExtenso(c.data_apresentacao)}</Text>
                     </View>
                   </View>
+                  <View style={styles.acoes}>{botao(c, "ver", "eye-outline", t("Ver"), true)}</View>
                   <View style={styles.acoes}>
-                    {botao(c, "ver", "eye-outline", t("Ver"), true)}
                     {botao(c, "baixar", "download-outline", t("Baixar"))}
                     {botao(c, "compartilhar", "share-social-outline", t("Compartilhar"))}
                   </View>
@@ -185,7 +185,7 @@ const makeStyles = (colors: Palette, destaque: string) =>
     cardTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "800" },
     cardSub: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 2 },
     acoes: { flexDirection: "row", gap: spacing.sm },
-    botao: { flex: 1, minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: radius.md, borderWidth: 1, borderColor: colors.glassBorder, paddingHorizontal: spacing.sm },
+    botao: { flexGrow: 1, flexBasis: 0, minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: radius.md, borderWidth: 1, borderColor: colors.glassBorder, paddingHorizontal: spacing.sm },
     botaoPrimario: { backgroundColor: destaque, borderColor: destaque },
     botaoTexto: { color: colors.text, fontSize: font.size.sm, fontWeight: "800" },
     avisoOk: { color: colors.textMuted, fontSize: font.size.sm },
