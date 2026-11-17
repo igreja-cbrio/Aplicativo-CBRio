@@ -365,10 +365,14 @@ export default function EscalaSupervisorScreen() {
   // "Sem equipe"): a busca geral de sempre.
   const noTime = !!timeDoAdd?.team_id;
   const buscaAtiva = busca.trim().length >= 2;
+  // Sem a lista do time na mão (falhou ou ainda carregando), a parte "do time"
+  // vem da resposta da busca no servidor.
   const listaAdd = !noTime ? resultados
-    : poolErro ? (buscaAtiva ? buscaTimeServidor : [])
-    : filtrarPool(poolTime ?? [], busca);
-  const listaFora = noTime && buscaAtiva ? buscaFora : [];
+    : (poolErro || poolTime === null) ? (buscaAtiva ? buscaTimeServidor : [])
+    : filtrarPool(poolTime, busca);
+  const idsDoTimeNaTela = new Set(listaAdd.map(p => p.id));
+  // Nunca a mesma pessoa nas duas seções (a chave da linha é o id).
+  const listaFora = noTime && buscaAtiva ? buscaFora.filter(p => !idsDoTimeNaTela.has(p.id)) : [];
   const compacto = buscaFocada && tecladoAberto;
   const funcaoDoAdd = outraFuncao.trim() || addPosicao;
   const nomeDoTimeAdd = timeDoAdd ? rotuloTime(timeDoAdd.nome) : "";
@@ -387,13 +391,23 @@ export default function EscalaSupervisorScreen() {
     return null;
   };
 
+  // ⚠️ Guarda de sequência (16/11): trocar de time (ou fechar e reabrir) antes de a
+  // lista do time anterior voltar gravava a lista ERRADA no time novo — e quem é do
+  // time A aparecia como "do time" no B e entrava sem o aviso de fora do time.
+  const poolSeq = useRef(0);
   async function carregarPoolDoTime(teamId: string | null | undefined) {
-    setPoolTime(null); setPoolErro(false);
+    const seq = ++poolSeq.current;
+    setPoolTime(null); setPoolErro(false); setPoolCarregando(false);
     if (!teamId || !servicoSel) return;
     setPoolCarregando(true);
-    try { setPoolTime(await buscarEscalaPool("", { service_id: servicoSel.id, team_id: teamId })); }
-    catch { setPoolTime([]); setPoolErro(true); }
-    finally { setPoolCarregando(false); }
+    try {
+      const r = await buscarEscalaPool("", { service_id: servicoSel.id, team_id: teamId });
+      if (seq === poolSeq.current) setPoolTime(r);
+    } catch {
+      if (seq === poolSeq.current) { setPoolTime([]); setPoolErro(true); }
+    } finally {
+      if (seq === poolSeq.current) setPoolCarregando(false);
+    }
   }
   // Zera a busca e invalida qualquer resposta ainda em voo.
   function limparBusca() {
@@ -448,8 +462,17 @@ export default function EscalaSupervisorScreen() {
     setAddTime(alvo?.chave ?? "");
     setAddPosicao(posicao?.nome ?? "");
     setOutraFuncao(""); limparBusca();
+    // ⚠️ O blur do campo pode não chegar quando a folha fecha com o teclado aberto
+    // (no Android o Modal desmonta na hora): sem isto a próxima abertura nascia
+    // "compacta" e escondia o "…ou outra função" enquanto a pessoa digitava nele.
+    setBuscaFocada(false);
     setAddOpen(true);
     void carregarPoolDoTime(alvo?.team_id);
+  }
+
+  function fecharAdd() {
+    setAddOpen(false);
+    setBuscaFocada(false);
   }
 
   async function adicionar(vol: PoolVoluntario) {
@@ -885,12 +908,12 @@ export default function EscalaSupervisorScreen() {
           lista é quem cede altura, o fundo da folha não soma o respiro da barra do
           sistema por cima do teclado e, com a busca em foco, equipe e função viram
           uma linha só. */}
-      <Modal visible={addOpen} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setAddOpen(false)}>
+      <Modal visible={addOpen} animationType="slide" transparent statusBarTranslucent onRequestClose={fecharAdd}>
         <TecladoSeguro style={[styles.modalWrap, { paddingTop: insets.top + spacing.sm }]}>
           <View style={[styles.sheet, styles.sheetAdd, { paddingBottom: tecladoAberto ? spacing.md : fundoDaFolha(insets.bottom) }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{t("Adicionar voluntário")}</Text>
-              <Pressable onPress={() => setAddOpen(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}><Ionicons name="close" size={24} color={colors.text} /></Pressable>
+              <Pressable onPress={fecharAdd} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}><Ionicons name="close" size={24} color={colors.text} /></Pressable>
             </View>
 
             {compacto ? (
