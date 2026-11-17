@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- ⚠️⚠️ ADICIONAR VOLUNTÁRIO · a folha subia por baixo da barra de status (iOS) + busca acha quem não é do time, com aviso (2026-11-16)
 - Minhas escalas · escala aguardando resposta fica EMPILHADA (texto em cima, botões embaixo) (2026-11-12)
 - ⚠️⚠️ SERVIR · "Meus times": a pessoa escolhe os cultos de CADA time e sai do time · datas viram botão (2026-11-09 tarde)
 - ⚠️⚠️ SERVIR · "Quando posso servir": cultos × semanas 1–5 (várias) · virou DISPONIBILIDADE (2026-11-09)
@@ -476,3 +477,44 @@ Marcos: os times do Kids só servem no domingo e na quarta (não há Kids no AMI
 ## Minhas escalas · escala aguardando resposta empilhada (12/11/2026)
 
 Relato de um voluntário do Kids (print de 29/10, Samsung com letra grande): no cartão com "Recusar" e "Confirmar" lado a lado do texto, os dois botões tomavam a largura e o nome do culto quebrava letra por letra ("CBK / IDS / - Ma / nhã"). O cartão confirmado não quebrava porque os controles ficam em coluna. Em `voluntariado.tsx`, a escala que ainda espera resposta (`aguardando`) usa `escalaAguardando` (coluna) + `escalaInfoAguardando` (SEM `flex: 1`: numa coluna de altura livre o texto encolheria a zero) e os botões dividem a linha de baixo (`acaoLarga`). Os outros estados seguem em linha. ⚠️ Cartão com dois botões ao lado de texto não cabe com letra grande: empilhar.
+
+## ⚠️⚠️ ADICIONAR VOLUNTÁRIO · a folha subia por baixo da barra de status (iOS) + busca acha quem não é do time, com aviso (2026-11-16)
+
+Print do Matheus no iPhone: em Servir → Montar escala → Adicionar voluntário, com o
+teclado aberto, o "…ou outra função (opcional)" ficava atrás do relógio e da bateria,
+e o topo da folha (título, Equipe, Função) sumia. E a busca do time não achava quem
+não é do time ("Ninguém do time com esse nome.").
+
+### Layout (`escala-supervisor.tsx`)
+- A folha nascia do fundo (`justifyContent: flex-end`) e não tinha teto: com o teclado,
+  o `TecladoSeguro` a empurrava pra cima e o que sobrava passava da tela, por baixo da
+  barra de status (o `<Modal>` é `statusBarTranslucent`). Agora o fundo da folha tem
+  `paddingTop: insets.top + spacing.sm`, a folha tem `flexShrink: 1` e quem cede altura
+  é a lista (`maxHeight: 300`, `minHeight: 96`, `flexShrink: 1`); as linhas de chips
+  ficam com `flexGrow/flexShrink: 0`.
+- Com o teclado aberto, o fundo da folha cai pra `spacing.md`: o `fundoDaFolha` (piso
+  da barra de 3 botões do Android + respiro) somava ~88 pt de vão vazio ACIMA do teclado.
+- Com a busca em foco e o teclado aberto, Equipe/Função/"outra função" viram UMA linha
+  ("Kids · Sala 1 · Alterar"); "Alterar" fecha o teclado e tudo volta.
+- O campo de busca só abre o teclado sozinho na busca geral (sem time). Com o time, a
+  lista já é o conteúdo principal.
+
+### Busca unificada (par do ERP #3784)
+- Digitar filtra o time NA HORA (como antes) e, com 2+ letras, pergunta ao servidor
+  `escala-pool?…&incluir_fora=1`. Quem NÃO é do time vem numa seção "Fora do time",
+  com "Não é do time Kids · serve em Integração" na linha.
+- **Quem decide é o servidor**: `do_time`, `times` e `pode_escalar`.
+  `lib/escalaTimes.separarBuscaDoTime` só lê `do_time` (ausente = do time, pra o aviso
+  nunca cair em quem é do time · 3 testes + 1 mutante).
+- Tocar em alguém de fora NÃO escala: abre a confirmação NA LINHA ("Escalar mesmo
+  assim"). Não é diálogo da casa porque a folha é um `<Modal>` e outro `<Modal>` nasceria
+  atrás no iOS.
+- **Líder de time (decisão do Matheus, opção B, mantendo a regra do Marcos de 30/10):** o
+  servidor manda `pode_escalar: false`; a linha mostra o cadeado e a confirmação vira a
+  explicação ("vincule a pessoa ao time em Pessoas do Servir e escale de novo"). Admin e
+  editor do culto escalam com a confirmação. O interruptor fica no ERP
+  (`LIDER_ESCALA_FORA_DO_TIME`).
+- Saiu o "Buscar fora do time" / "Voltar ao time".
+- Validado no simulador iOS com um harness fora do repo (preview de dev + dados
+  fictícios); em aparelho real com conta de líder, não.
+

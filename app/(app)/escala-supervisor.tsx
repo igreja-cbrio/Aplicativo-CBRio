@@ -28,7 +28,7 @@ import { Text, TextInput } from "@/components/ui/Typography";
 // ============================================================================
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator, Alert, Image, Pressable,
+  ActivityIndicator, Alert, Image, Keyboard, Platform, Pressable,
   RefreshControl, StyleSheet, View, useWindowDimensions,
   type NativeSyntheticEvent, type NativeScrollEvent,
 } from "react-native";
@@ -49,13 +49,17 @@ import {
 } from "@/lib/api";
 import {
   agruparCultosPorTipo, cultoInicial, montarTimes, resumoDoCulto, destinoDoArraste, xParaCentralizar,
-  filtrarPool, dividirPorVaga,
+  filtrarPool, dividirPorVaga, separarBuscaDoTime,
   SEM_EQUIPE, SEM_FUNCAO, SEM_TIPO, type Time, type PosicaoDoTime,
 } from "@/lib/escalaTimes";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { useT } from "@/lib/i18n";
 import { fundoDaFolha } from "@/lib/folha";
 import { useDialogo } from "@/components/ui/Dialogo";
+
+// Teto da busca fora do time no servidor (`LIMITE_BUSCA_POOL` do escala-pool).
+// Só serve pra a tela dizer "mostrando os primeiros 30" — não decide nada.
+const LIMITE_BUSCA_FORA = 30;
 
 function waLink(tel: string | null): string | null {
   if (!tel) return null;
@@ -124,11 +128,23 @@ export default function EscalaSupervisorScreen() {
   const [somenteLeitura, setSomenteLeitura] = useState(false);
   // Lista do TIME no "Adicionar" (24/09): vem do servidor já ordenada pela
   // preferência de semana; a digitação filtra localmente. `null` = sem time
-  // (busca geral, como antes). `foraDoTime` troca pra busca geral.
+  // (busca geral, como antes).
   const [poolTime, setPoolTime] = useState<PoolVoluntario[] | null>(null);
   const [poolCarregando, setPoolCarregando] = useState(false);
   const [poolErro, setPoolErro] = useState(false);
-  const [foraDoTime, setForaDoTime] = useState(false);
+  // Busca UNIFICADA (16/11/2026 · print do Matheus): com o time aberto, o que se
+  // digita filtra o time na hora E pergunta ao servidor (`incluir_fora`) quem
+  // NÃO é do time. Quem é de fora aparece em seção própria, com aviso, e só entra
+  // depois de uma confirmação na própria linha. Sumiu o "Buscar fora do time".
+  const [buscaFora, setBuscaFora] = useState<PoolVoluntario[]>([]);
+  // A parte "do time" da resposta do servidor: só é usada quando a lista do time
+  // não carregou (aí não há filtro local pra mostrar).
+  const [buscaTimeServidor, setBuscaTimeServidor] = useState<PoolVoluntario[]>([]);
+  const [confirmarId, setConfirmarId] = useState<string | null>(null);
+  // Teclado aberto com a busca em foco: a folha COMPACTA (equipe e função viram
+  // uma linha) pra lista caber acima do teclado.
+  const [buscaFocada, setBuscaFocada] = useState(false);
+  const [tecladoAberto, setTecladoAberto] = useState(false);
   const [carregandoEscala, setCarregandoEscala] = useState(false);
   const [refrescando, setRefrescando] = useState(false);
 
@@ -344,10 +360,22 @@ export default function EscalaSupervisorScreen() {
     for (const p of timeDoAdd?.posicoes ?? []) for (const e of p.pessoas) if (e.volunteer_id) set.add(e.volunteer_id);
     return set;
   }, [timeDoAdd]);
-  // No TIME: lista do servidor (ordem = preferência) filtrada pelo que foi digitado.
-  // Fora do time (ou time sem id): a busca geral de sempre.
-  const noTime = !foraDoTime && !!timeDoAdd?.team_id && poolTime !== null;
-  const listaAdd = noTime ? filtrarPool(poolTime ?? [], busca) : resultados;
+  // No TIME: lista do servidor (ordem = preferência) filtrada pelo que foi
+  // digitado, mais quem NÃO é do time (servidor, 2+ letras). Time sem id (ou
+  // "Sem equipe"): a busca geral de sempre.
+  const noTime = !!timeDoAdd?.team_id;
+  const buscaAtiva = busca.trim().length >= 2;
+  // Sem a lista do time na mão (falhou ou ainda carregando), a parte "do time"
+  // vem da resposta da busca no servidor.
+  const listaAdd = !noTime ? resultados
+    : (poolErro || poolTime === null) ? (buscaAtiva ? buscaTimeServidor : [])
+    : filtrarPool(poolTime, busca);
+  const idsDoTimeNaTela = new Set(listaAdd.map(p => p.id));
+  // Nunca a mesma pessoa nas duas seções (a chave da linha é o id).
+  const listaFora = noTime && buscaAtiva ? buscaFora.filter(p => !idsDoTimeNaTela.has(p.id)) : [];
+  const compacto = buscaFocada && tecladoAberto;
+  const funcaoDoAdd = outraFuncao.trim() || addPosicao;
+  const nomeDoTimeAdd = timeDoAdd ? rotuloTime(timeDoAdd.nome) : "";
   // A VAGA em foco (chip de função escolhido, sem texto livre): separa "quem é
   // dessa função" do "resto do time". Pedido do Marcos (24/09): "estou escalando
   // um saxofonista — primeiro os saxofonistas, abaixo outras pessoas do time".
@@ -363,39 +391,69 @@ export default function EscalaSupervisorScreen() {
     return null;
   };
 
+  // ⚠️ Guarda de sequência (16/11): trocar de time (ou fechar e reabrir) antes de a
+  // lista do time anterior voltar gravava a lista ERRADA no time novo — e quem é do
+  // time A aparecia como "do time" no B e entrava sem o aviso de fora do time.
+  const poolSeq = useRef(0);
   async function carregarPoolDoTime(teamId: string | null | undefined) {
-    setPoolTime(null); setPoolErro(false);
+    const seq = ++poolSeq.current;
+    setPoolTime(null); setPoolErro(false); setPoolCarregando(false);
     if (!teamId || !servicoSel) return;
     setPoolCarregando(true);
-    try { setPoolTime(await buscarEscalaPool("", { service_id: servicoSel.id, team_id: teamId })); }
-    catch { setPoolTime([]); setPoolErro(true); }
-    finally { setPoolCarregando(false); }
+    try {
+      const r = await buscarEscalaPool("", { service_id: servicoSel.id, team_id: teamId });
+      if (seq === poolSeq.current) setPoolTime(r);
+    } catch {
+      if (seq === poolSeq.current) { setPoolTime([]); setPoolErro(true); }
+    } finally {
+      if (seq === poolSeq.current) setPoolCarregando(false);
+    }
   }
-  function alternarForaDoTime() {
-    setForaDoTime(v => !v);
-    setBusca(""); setResultados([]); setBuscaErro(false);
+  // Zera a busca e invalida qualquer resposta ainda em voo.
+  function limparBusca() {
+    if (buscaTimer.current) clearTimeout(buscaTimer.current);
+    buscaSeq.current++;
+    setBusca(""); setResultados([]); setBuscaFora([]); setBuscaTimeServidor([]);
+    setBuscaErro(false); setBuscando(false); setConfirmarId(null);
   }
 
   // Busca com debounce (300ms) + guarda de sequência (ignora resposta obsoleta).
+  // No time, o filtro local é imediato; o servidor responde quem é de fora.
   function onBusca(q: string) {
     setBusca(q);
     setBuscaErro(false);
-    if (noTime) { setBuscando(false); return; }   // no time o filtro é local — nada de servidor
+    setConfirmarId(null);
     if (buscaTimer.current) clearTimeout(buscaTimer.current);
-    if (q.trim().length < 2) { setResultados([]); setBuscando(false); return; }
-    setBuscando(true);
     const seq = ++buscaSeq.current;
+    if (q.trim().length < 2) { setResultados([]); setBuscaFora([]); setBuscaTimeServidor([]); setBuscando(false); return; }
+    setBuscando(true);
+    const teamId = noTime ? timeDoAdd?.team_id : null;
+    const serviceId = servicoSel?.id;
     buscaTimer.current = setTimeout(async () => {
       try {
-        const r = await buscarEscalaPool(q.trim());
-        if (seq === buscaSeq.current) { setResultados(r); setBuscaErro(false); }
+        if (teamId && serviceId) {
+          const r = separarBuscaDoTime(await buscarEscalaPool(q.trim(), { service_id: serviceId, team_id: teamId, incluir_fora: true }));
+          if (seq === buscaSeq.current) { setBuscaTimeServidor(r.doTime); setBuscaFora(r.fora); }
+        } else {
+          const r = await buscarEscalaPool(q.trim());
+          if (seq === buscaSeq.current) setResultados(r);
+        }
       } catch {
-        if (seq === buscaSeq.current) { setResultados([]); setBuscaErro(true); }
+        if (seq === buscaSeq.current) { setResultados([]); setBuscaFora([]); setBuscaTimeServidor([]); setBuscaErro(true); }
       } finally {
         if (seq === buscaSeq.current) setBuscando(false);
       }
     }, 300);
   }
+
+  // iOS avisa ANTES da animação (`Will`); o Android só entrega `Did` com confiança.
+  useEffect(() => {
+    const abrir = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const fechar = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const s1 = Keyboard.addListener(abrir as "keyboardDidShow", () => setTecladoAberto(true));
+    const s2 = Keyboard.addListener(fechar as "keyboardDidHide", () => setTecladoAberto(false));
+    return () => { s1.remove(); s2.remove(); };
+  }, []);
 
   /** Abre o "Adicionar" já no time (e na função) de onde a pessoa tocou — a vaga. */
   function abrirAdd(time?: Time, posicao?: PosicaoDoTime) {
@@ -403,10 +461,18 @@ export default function EscalaSupervisorScreen() {
     const alvo = time ?? timeAberto ?? null;
     setAddTime(alvo?.chave ?? "");
     setAddPosicao(posicao?.nome ?? "");
-    setOutraFuncao(""); setBusca(""); setResultados([]); setBuscaErro(false);
-    setForaDoTime(false);
+    setOutraFuncao(""); limparBusca();
+    // ⚠️ O blur do campo pode não chegar quando a folha fecha com o teclado aberto
+    // (no Android o Modal desmonta na hora): sem isto a próxima abertura nascia
+    // "compacta" e escondia o "…ou outra função" enquanto a pessoa digitava nele.
+    setBuscaFocada(false);
     setAddOpen(true);
     void carregarPoolDoTime(alvo?.team_id);
+  }
+
+  function fecharAdd() {
+    setAddOpen(false);
+    setBuscaFocada(false);
   }
 
   async function adicionar(vol: PoolVoluntario) {
@@ -424,7 +490,7 @@ export default function EscalaSupervisorScreen() {
       // devolve `team_id`/`position_id` — a régua resolve pelo NOME.
       setEscala(prev => [...prev, { ...novo, team_id: novo.team_id ?? time?.team_id ?? null }]);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      setBusca(""); setResultados([]);
+      limparBusca();
     } catch (e: any) {
       Alert.alert(t("Erro"), e?.message || t("Erro ao escalar"));
     } finally { setSalvandoId(null); }
@@ -464,23 +530,65 @@ export default function EscalaSupervisorScreen() {
 
   const rotuloVaga = (n: number) => `${n} ${n === 1 ? t("vaga em aberto") : t("vagas em aberto")}`;
 
-  // ── Uma linha do "Adicionar" (usada pelas duas seções e pela busca geral) ──
-  function renderCandidato(v: PoolVoluntario) {
+  // ── Uma linha do "Adicionar" (usada pelas seções do time, pela de fora e pela busca geral) ──
+  // `fora` (16/11/2026): a pessoa NÃO é do time (o servidor disse `do_time: false`).
+  // A linha avisa onde ela serve e o toque não escala: abre a confirmação na
+  // própria linha. Se o servidor disse `pode_escalar: false` (líder de time, regra
+  // do Marcos de 30/10), a confirmação vira a explicação de como fazer.
+  // ⚠️ Confirmação NA LINHA, não diálogo: esta folha é um <Modal>, e o diálogo da
+  // casa (outro <Modal>) nasceria atrás dela no iOS.
+  function renderCandidato(v: PoolVoluntario, opcoes?: { fora?: boolean }) {
+    const fora = !!opcoes?.fora;
     const escalado = v.id ? jaNoTime.has(v.id) : false;
     const pref = rotuloPreferencia(v);
+    const travado = fora && v.pode_escalar === false;
+    const confirmando = fora && confirmarId === v.id;
+    const times = v.times ?? [];
+    const ondeServe = times.length
+      ? `${t("serve em")} ${times.slice(0, 2).join(", ")}${times.length > 2 ? ` +${times.length - 2}` : ""}`
+      : t("não serve em nenhum time");
+    const cor = fora ? colors.warning : colors.primary;
     return (
-      <Pressable key={v.id} style={styles.resultado} disabled={!!salvandoId || escalado} onPress={() => adicionar(v)} accessibilityRole="button" accessibilityLabel={`${t("Adicionar")} ${v.full_name}`}>
-        <View style={[styles.avatar, { backgroundColor: colors.primary + "22" }]}>
-          <Text style={[styles.avatarTxt, { color: colors.primary }]}>{iniciais(v.full_name)}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.pessoaNome} numberOfLines={1}>{v.full_name}</Text>
-          {pref && <Text style={[styles.pequeno, { color: pref.fora ? colors.warning : colors.success }]} numberOfLines={1}>{pref.txt}</Text>}
-        </View>
-        {salvandoId === v.id ? <ActivityIndicator color={colors.primary} />
-          : escalado ? <Text style={[styles.pequeno, { color: colors.textMuted }]}>{t("nesta equipe")}</Text>
-          : <Ionicons name="add-circle" size={24} color={colors.primary} />}
-      </Pressable>
+      <View key={v.id}>
+        <Pressable style={styles.resultado} disabled={!!salvandoId || escalado}
+          onPress={() => (fora ? setConfirmarId(confirmando ? null : v.id) : adicionar(v))}
+          accessibilityRole="button" accessibilityState={fora ? { expanded: confirmando } : undefined}
+          accessibilityLabel={fora ? `${v.full_name}, ${t("Não é do time")} ${nomeDoTimeAdd}, ${ondeServe}` : `${t("Adicionar")} ${v.full_name}`}>
+          <View style={[styles.avatar, { backgroundColor: cor + "22" }]}>
+            <Text style={[styles.avatarTxt, { color: cor }]}>{iniciais(v.full_name)}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.pessoaNome} numberOfLines={1}>{v.full_name}</Text>
+            {fora ? (
+              <Text style={[styles.pequeno, { color: colors.warning }]} numberOfLines={2}>{`${t("Não é do time")} ${nomeDoTimeAdd} · ${ondeServe}`}</Text>
+            ) : pref && <Text style={[styles.pequeno, { color: pref.fora ? colors.warning : colors.success }]} numberOfLines={1}>{pref.txt}</Text>}
+          </View>
+          {salvandoId === v.id ? <ActivityIndicator color={colors.primary} />
+            : escalado ? <Text style={[styles.pequeno, { color: colors.textMuted }]}>{t("nesta equipe")}</Text>
+            : fora ? <Ionicons name={travado ? "lock-closed" : "alert-circle"} size={22} color={colors.warning} />
+            : <Ionicons name="add-circle" size={24} color={colors.primary} />}
+        </Pressable>
+        {confirmando && (
+          <View style={[styles.avisoFora, { borderColor: colors.warning + "88", backgroundColor: colors.warning + "14" }]}>
+            <Text style={[styles.pequeno, { color: colors.text }]}>
+              {travado
+                ? `${v.full_name} ${t("não está no time")} ${nomeDoTimeAdd}. ${t("Só admin ou editor do culto escala quem não é do time. Vincule a pessoa ao time em Pessoas do Servir e escale de novo.")}`
+                : `${v.full_name} ${t("não está no time")} ${nomeDoTimeAdd}. ${t("Escalar mesmo assim?")}`}
+            </Text>
+            <View style={styles.avisoBotoes}>
+              <Pressable onPress={() => setConfirmarId(null)} style={[styles.avisoBtn, { borderColor: colors.border }]} accessibilityRole="button">
+                <Text style={[styles.pequeno, { color: colors.text, fontWeight: "700" }]}>{travado ? t("Entendi") : t("Cancelar")}</Text>
+              </Pressable>
+              {!travado && (
+                <Pressable onPress={() => { setConfirmarId(null); void adicionar(v); }} disabled={!!salvandoId}
+                  style={[styles.avisoBtn, { borderColor: colors.warning, backgroundColor: colors.warning }]} accessibilityRole="button">
+                  <Text style={[styles.pequeno, { color: "#fff", fontWeight: "800" }]}>{t("Escalar mesmo assim")}</Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+        )}
+      </View>
     );
   }
 
@@ -793,98 +901,159 @@ export default function EscalaSupervisorScreen() {
       </Modal>
 
       {/* Modal de adicionar · já vem no TIME (e na FUNÇÃO) da vaga tocada */}
-      <Modal visible={addOpen} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setAddOpen(false)}>
-        <TecladoSeguro style={styles.modalWrap}>
-          <View style={[styles.sheet, { paddingBottom: fundoDaFolha(insets.bottom) }]}>
+      {/* ⚠️ (16/11/2026 · print do Matheus no iPhone) Com o teclado aberto a folha
+          crescia por cima da barra de status: o "…ou outra função" ficava atrás do
+          relógio e o topo sumia. Agora o fundo respeita o `insets.top` (o Modal é
+          `statusBarTranslucent`), a folha encolhe (`flexShrink`) em vez de vazar, a
+          lista é quem cede altura, o fundo da folha não soma o respiro da barra do
+          sistema por cima do teclado e, com a busca em foco, equipe e função viram
+          uma linha só. */}
+      <Modal visible={addOpen} animationType="slide" transparent statusBarTranslucent onRequestClose={fecharAdd}>
+        <TecladoSeguro style={[styles.modalWrap, { paddingTop: insets.top + spacing.sm }]}>
+          <View style={[styles.sheet, styles.sheetAdd, { paddingBottom: tecladoAberto ? spacing.md : fundoDaFolha(insets.bottom) }]}>
             <View style={styles.sheetHead}>
               <Text style={styles.sheetTitle}>{t("Adicionar voluntário")}</Text>
-              <Pressable onPress={() => setAddOpen(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}><Ionicons name="close" size={24} color={colors.text} /></Pressable>
+              <Pressable onPress={fecharAdd} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Fechar")}><Ionicons name="close" size={24} color={colors.text} /></Pressable>
             </View>
 
-            <Text style={styles.sheetLabel}>{t("Equipe")}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
-              {times.filter(tm => !tm.chave.startsWith("n:") || tm.nome === SEM_EQUIPE).map(tm => {
-                const ativo = addTime === tm.chave;
-                return (
-                  <Pressable key={tm.chave} onPress={() => { setAddTime(tm.chave); setAddPosicao(""); setForaDoTime(false); void carregarPoolDoTime(tm.team_id); }} accessibilityRole="button" accessibilityState={{ selected: ativo }}
-                    style={[styles.teamPick, ativo && { borderColor: colors.primary, backgroundColor: colors.primary + "18" }]}>
-                    <Text style={[styles.pequeno, { color: ativo ? colors.primary : colors.text }]}>{rotuloTime(tm.nome)}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+            {compacto ? (
+              <Pressable style={styles.resumoAdd} onPress={() => Keyboard.dismiss()} accessibilityRole="button" accessibilityLabel={t("Alterar equipe e função")}>
+                <Ionicons name="people-outline" size={16} color={colors.textMuted} />
+                <Text style={[styles.pequeno, { color: colors.text, flex: 1 }]} numberOfLines={1}>
+                  {nomeDoTimeAdd || t("Escolha a equipe")}{funcaoDoAdd ? ` · ${funcaoDoAdd}` : ""}
+                </Text>
+                <Text style={[styles.pequeno, { color: colors.primary, fontWeight: "700" }]}>{t("Alterar")}</Text>
+              </Pressable>
+            ) : (
+              <>
+                <Text style={styles.sheetLabel}>{t("Equipe")}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsLinha} contentContainerStyle={{ gap: 8, paddingVertical: 4 }} keyboardShouldPersistTaps="handled">
+                  {times.filter(tm => !tm.chave.startsWith("n:") || tm.nome === SEM_EQUIPE).map(tm => {
+                    const ativo = addTime === tm.chave;
+                    return (
+                      <Pressable key={tm.chave} onPress={() => { setAddTime(tm.chave); setAddPosicao(""); limparBusca(); void carregarPoolDoTime(tm.team_id); }} accessibilityRole="button" accessibilityState={{ selected: ativo }}
+                        style={[styles.teamPick, ativo && { borderColor: colors.primary, backgroundColor: colors.primary + "18" }]}>
+                        <Text style={[styles.pequeno, { color: ativo ? colors.primary : colors.text }]}>{rotuloTime(tm.nome)}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
 
-            <Text style={[styles.sheetLabel, { marginTop: 6 }]}>{t("Função")}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
-              {(timeDoAdd?.posicoes ?? []).filter(p => p.nome).map(p => {
-                const ativo = !outraFuncao.trim() && addPosicao === p.nome;
-                return (
-                  <Pressable key={p.chave} onPress={() => { setAddPosicao(ativo ? "" : (p.nome || "")); setOutraFuncao(""); }} accessibilityRole="button" accessibilityState={{ selected: ativo }}
-                    style={[styles.teamPick, ativo && { borderColor: colors.primary, backgroundColor: colors.primary + "18" }, p.faltam > 0 && !ativo && { borderColor: colors.danger + "88" }]}>
-                    <Text style={[styles.pequeno, { color: ativo ? colors.primary : colors.text }]}>
-                      {p.nome}{p.faltam > 0 ? ` · ${t("faltam")} ${p.faltam}` : ""}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-              {(timeDoAdd?.posicoes ?? []).filter(p => p.nome).length === 0 && (
-                <Text style={styles.muted}>{t("Sem funções definidas nesta equipe.")}</Text>
-              )}
-            </ScrollView>
-            <TextInput style={[styles.input, { marginTop: 6 }]} placeholder={t("…ou outra função (opcional)")} placeholderTextColor={colors.textMuted}
-              value={outraFuncao} onChangeText={setOutraFuncao} />
+                <Text style={[styles.sheetLabel, { marginTop: 6 }]}>{t("Função")}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsLinha} contentContainerStyle={{ gap: 8, paddingVertical: 4 }} keyboardShouldPersistTaps="handled">
+                  {(timeDoAdd?.posicoes ?? []).filter(p => p.nome).map(p => {
+                    const ativo = !outraFuncao.trim() && addPosicao === p.nome;
+                    return (
+                      <Pressable key={p.chave} onPress={() => { setAddPosicao(ativo ? "" : (p.nome || "")); setOutraFuncao(""); }} accessibilityRole="button" accessibilityState={{ selected: ativo }}
+                        style={[styles.teamPick, ativo && { borderColor: colors.primary, backgroundColor: colors.primary + "18" }, p.faltam > 0 && !ativo && { borderColor: colors.danger + "88" }]}>
+                        <Text style={[styles.pequeno, { color: ativo ? colors.primary : colors.text }]}>
+                          {p.nome}{p.faltam > 0 ? ` · ${t("faltam")} ${p.faltam}` : ""}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                  {(timeDoAdd?.posicoes ?? []).filter(p => p.nome).length === 0 && (
+                    <Text style={styles.muted}>{t("Sem funções definidas nesta equipe.")}</Text>
+                  )}
+                </ScrollView>
+                <TextInput style={[styles.input, { marginTop: 6 }]} placeholder={t("…ou outra função (opcional)")} placeholderTextColor={colors.textMuted}
+                  value={outraFuncao} onChangeText={setOutraFuncao} />
 
-            {/* Lista do TIME (24/09): o servidor manda quem prefere a semana deste
-                culto primeiro. Preferência ORDENA, nunca filtra — todo mundo do
-                time continua aqui. "Buscar fora do time" volta pra busca geral. */}
-            {!!timeDoAdd?.team_id && (
-              <View style={styles.poolTopo}>
-                <Text style={[styles.pequeno, styles.poolTopoTxt, { color: colors.textMuted }]}>
-                  {!noTime
-                    ? t("Buscando fora do time")
-                    : poolErro
+                {/* Lista do TIME (24/09): o servidor manda quem pode neste culto
+                    primeiro. Preferência ORDENA, nunca filtra. */}
+                {noTime && !buscaAtiva && (
+                  <Text style={[styles.pequeno, styles.poolTopoTxt, { color: colors.textMuted, marginTop: 8 }]}>
+                    {poolErro
                       ? t("Não deu pra carregar o time. Busque pelo nome.")
                       : t("Pessoas do time · quem marcou que pode neste culto vem primeiro")}
-                </Text>
-                <Pressable onPress={alternarForaDoTime} hitSlop={8} accessibilityRole="button">
-                  <Text style={[styles.pequeno, { color: colors.primary, fontWeight: "700" }]}>{noTime ? t("Buscar fora do time") : t("Voltar ao time")}</Text>
-                </Pressable>
-              </View>
+                  </Text>
+                )}
+              </>
             )}
-            <View style={styles.searchBox}>
+
+            <View style={[styles.searchBox, compacto && { marginTop: spacing.sm }]}>
               <Ionicons name="search" size={18} color={colors.textMuted} />
-              <TextInput style={styles.searchInput} placeholder={noTime ? t("Filtrar pelo nome…") : t("Buscar voluntário pelo nome…")} placeholderTextColor={colors.textMuted}
-                value={busca} onChangeText={onBusca} autoFocus autoCorrect={false} />
+              <TextInput style={styles.searchInput} placeholder={noTime ? t("Buscar pelo nome, no time ou fora dele…") : t("Buscar voluntário pelo nome…")} placeholderTextColor={colors.textMuted}
+                value={busca} onChangeText={onBusca} autoFocus={!noTime} autoCorrect={false}
+                onFocus={() => setBuscaFocada(true)} onBlur={() => setBuscaFocada(false)} />
               {buscando && <ActivityIndicator color={colors.primary} />}
+              {!!busca && !buscando && (
+                <Pressable onPress={limparBusca} hitSlop={10} accessibilityRole="button" accessibilityLabel={t("Limpar busca")}>
+                  <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                </Pressable>
+              )}
             </View>
 
             <ScrollView
               automaticallyAdjustKeyboardInsets
-              style={{ maxHeight: 300 }} keyboardShouldPersistTaps="handled">
-              {noTime && poolCarregando ? (
+              style={styles.listaAdd} keyboardShouldPersistTaps="handled">
+              {noTime && poolCarregando && !buscaAtiva ? (
                 <View style={{ padding: spacing.md, alignItems: "center" }}><ActivityIndicator color={colors.primary} /></View>
-              ) : !noTime && busca.trim().length < 2 ? (
+              ) : !noTime && !buscaAtiva ? (
                 <Text style={[styles.muted, { padding: spacing.md, textAlign: "center" }]}>{t("Digite ao menos 2 letras do nome.")}</Text>
-              ) : buscaErro ? (
+              ) : !noTime && buscaErro ? (
                 <Pressable style={{ padding: spacing.md, alignItems: "center" }} onPress={() => onBusca(busca)}>
                   <Text style={[styles.muted, { textAlign: "center" }]}>{t("Falha ao buscar. Toque pra tentar de novo.")}</Text>
                 </Pressable>
-              ) : (!buscando && listaAdd.length === 0) ? (
-                <Text style={[styles.muted, { padding: spacing.md, textAlign: "center" }]}>{noTime ? t("Ninguém do time com esse nome.") : t("Nenhum voluntário encontrado.")}</Text>
-              ) : vagaEmFoco ? (
+              ) : !noTime ? (
+                (!buscando && listaAdd.length === 0)
+                  ? <Text style={[styles.muted, { padding: spacing.md, textAlign: "center" }]}>{t("Nenhum voluntário encontrado.")}</Text>
+                  : <>{listaAdd.map(v => renderCandidato(v))}</>
+              ) : (
                 <>
-                  <Text style={styles.secaoAdd}>
-                    {secoesAdd.daVaga.length
-                      ? `${vagaEmFoco.nome} · ${secoesAdd.daVaga.length}`
-                      : `${vagaEmFoco.nome} · ${t("ninguém do time tem essa função ainda")}`}
-                  </Text>
-                  {secoesAdd.daVaga.map(renderCandidato)}
-                  {secoesAdd.resto.length > 0 && (
-                    <Text style={[styles.secaoAdd, { marginTop: spacing.sm }]}>{t("Outras pessoas do time")} · {secoesAdd.resto.length}</Text>
+                  {/* ── Do time ── */}
+                  {vagaEmFoco ? (
+                    <>
+                      {(secoesAdd.daVaga.length > 0 || (!buscaAtiva && !poolErro)) && (
+                        <Text style={styles.secaoAdd}>
+                          {secoesAdd.daVaga.length
+                            ? `${vagaEmFoco.nome} · ${secoesAdd.daVaga.length}`
+                            : `${vagaEmFoco.nome} · ${t("ninguém do time tem essa função ainda")}`}
+                        </Text>
+                      )}
+                      {secoesAdd.daVaga.map(v => renderCandidato(v))}
+                      {secoesAdd.resto.length > 0 && (
+                        <Text style={[styles.secaoAdd, { marginTop: spacing.sm }]}>{t("Outras pessoas do time")} · {secoesAdd.resto.length}</Text>
+                      )}
+                      {secoesAdd.resto.map(v => renderCandidato(v))}
+                    </>
+                  ) : (
+                    <>
+                      {buscaAtiva && listaAdd.length > 0 && (
+                        <Text style={styles.secaoAdd}>{t("Pessoas do time")} · {listaAdd.length}</Text>
+                      )}
+                      {listaAdd.map(v => renderCandidato(v))}
+                    </>
                   )}
-                  {secoesAdd.resto.map(renderCandidato)}
+                  {!buscaAtiva && !poolErro && !poolCarregando && listaAdd.length === 0 && (
+                    <Text style={[styles.muted, { padding: spacing.md, textAlign: "center" }]}>
+                      {busca.trim() ? t("Ninguém do time com esse nome.") : t("Ninguém neste time ainda. Busque pelo nome.")}
+                    </Text>
+                  )}
+
+                  {/* ── Fora do time (16/11/2026) ── */}
+                  {buscaAtiva && (buscaErro ? (
+                    <Pressable style={{ padding: spacing.md, alignItems: "center" }} onPress={() => onBusca(busca)}>
+                      <Text style={[styles.muted, { textAlign: "center" }]}>{t("Falha ao buscar. Toque pra tentar de novo.")}</Text>
+                    </Pressable>
+                  ) : listaFora.length > 0 ? (
+                    <>
+                      <Text style={[styles.secaoAdd, { marginTop: spacing.sm, color: colors.warning }]}>{t("Fora do time")} · {listaFora.length}</Text>
+                      <Text style={[styles.pequeno, { color: colors.textMuted, marginBottom: 2 }]}>
+                        {listaFora.some(v => v.pode_escalar === false)
+                          ? t("Não são do time. Para escalar, vincule a pessoa ao time em Pessoas do Servir.")
+                          : t("Não são do time. Escalar pede confirmação.")}
+                      </Text>
+                      {listaFora.map(v => renderCandidato(v, { fora: true }))}
+                      {listaFora.length >= LIMITE_BUSCA_FORA && (
+                        <Text style={[styles.pequeno, { color: colors.textMuted, paddingVertical: 6, textAlign: "center" }]}>{t("Mostrando os primeiros 30. Digite mais letras do nome.")}</Text>
+                      )}
+                    </>
+                  ) : !buscando && listaAdd.length === 0 ? (
+                    <Text style={[styles.muted, { padding: spacing.md, textAlign: "center" }]}>{t("Ninguém com esse nome.")}</Text>
+                  ) : null)}
                 </>
-              ) : listaAdd.map(renderCandidato)}
+              )}
             </ScrollView>
           </View>
         </TecladoSeguro>
@@ -914,9 +1083,7 @@ function makeStyles(c: Palette) {
     // Resumo + barra de times
     leituraBanner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: spacing.md, paddingVertical: 6 },
     secaoAdd: { color: c.textMuted, fontSize: font.size.sm - 1, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.4, paddingTop: 6, paddingBottom: 2 },
-    // Sem espaço pros dois (tela estreita, letra grande), o link desce pra linha de baixo.
-    poolTopo: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, rowGap: 4, marginTop: 8 },
-    poolTopoTxt: { flexGrow: 1, flexShrink: 1, flexBasis: 180 },
+    poolTopoTxt: { flexShrink: 1 },
     resumo: { flexDirection: "row", flexWrap: "wrap", gap: 12, paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: 4 },
     resumoTxt: { color: c.textMuted, fontSize: font.size.sm, fontWeight: "600" },
     barraTimes: { paddingVertical: spacing.xs + 2, borderRadius: radius.md },
@@ -950,6 +1117,15 @@ function makeStyles(c: Palette) {
     fabTxt: { color: "#fff", fontWeight: "700", fontSize: font.size.sm },
     modalWrap: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" },
     sheet: { backgroundColor: c.background, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.md },
+    // A folha do Adicionar ENCOLHE quando falta altura (teclado aberto): quem cede
+    // é a lista (`listaAdd`), nunca o cabeçalho, que ficava atrás da barra de status.
+    sheetAdd: { flexShrink: 1 },
+    chipsLinha: { flexGrow: 0, flexShrink: 0 },
+    listaAdd: { maxHeight: 300, minHeight: 96, flexShrink: 1, flexGrow: 0 },
+    resumoAdd: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 10, borderRadius: radius.md, borderWidth: 1, borderColor: c.border, backgroundColor: c.surfaceAlt },
+    avisoFora: { borderWidth: 1, borderRadius: radius.md, padding: spacing.sm, marginBottom: 6, gap: 8 },
+    avisoBotoes: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: 8 },
+    avisoBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.full, borderWidth: 1 },
     sheetHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.sm },
     sheetTitle: { color: c.text, fontSize: font.size.lg, fontWeight: "800" },
     sheetLabel: { color: c.textMuted, fontSize: font.size.sm - 1, marginBottom: 2 },

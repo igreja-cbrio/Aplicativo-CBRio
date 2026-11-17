@@ -261,6 +261,14 @@ export type PoolVoluntario = {
   do_time?: boolean;
   /** As funções desta pessoa NESTE time (uma por vínculo). Só vem com `team_id`. */
   posicoes?: { id: string; name: string | null }[];
+  /**
+   * Só em quem NÃO é do time (`incluir_fora`, 16/11/2026): o servidor diz se
+   * quem está buscando pode escalar a pessoa mesmo assim. Admin e editor do
+   * culto, sim; líder de time, não (regra do Marcos de 30/10, mantida).
+   */
+  pode_escalar?: boolean;
+  /** Times ativos em que a pessoa de fora serve (contexto do aviso). */
+  times?: string[];
 };
 
 export function getSupervisorInfo() {
@@ -303,12 +311,15 @@ export function desfazerCheckin(id: string) {
  * (24/09): as PESSOAS DO TIME, já ordenadas pelo servidor — quem prefere a
  * semana deste culto primeiro, depois quem não declarou, depois os outros.
  * A preferência ORDENA, nunca filtra.
+ * Com `incluir_fora` (16/11/2026, precisa de `team_id` e 2+ letras): vêm também
+ * as pessoas que NÃO são do time, depois das do time, com `do_time: false`.
  */
-export function buscarEscalaPool(q: string, opts?: { service_id?: string; team_id?: string }) {
+export function buscarEscalaPool(q: string, opts?: { service_id?: string; team_id?: string; incluir_fora?: boolean }) {
   const qs = new URLSearchParams();
   if (q) qs.set("q", q);
   if (opts?.service_id) qs.set("service_id", opts.service_id);
   if (opts?.team_id) qs.set("team_id", opts.team_id);
+  if (opts?.incluir_fora) qs.set("incluir_fora", "1");
   return apiGet<PoolVoluntario[]>(`/app/voluntariado/escala-pool?${qs.toString()}`);
 }
 export function adicionarNaEscala(body: { service_id: string; volunteer_id: string; team_name?: string; position_name?: string }) {
