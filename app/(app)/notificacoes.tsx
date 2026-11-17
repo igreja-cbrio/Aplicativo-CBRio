@@ -1,4 +1,5 @@
 import { destinoAvisoKids } from "@/lib/kidsAvisoDestino";
+import { destinoCertificadoKids } from "@/lib/kidsCertificadoDestino";
 import { destinoNotificacaoChat } from "@/lib/assistenteChat";
 import { ScrollView, SectionList } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
@@ -24,6 +25,7 @@ import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
   kids_mural: "megaphone",
+  kids_certificado_apresentacao: "ribbon",
   carta_transferencia_pronta: "document-text",
   escala: "hand-left",
   sos: "alert-circle",
@@ -43,6 +45,7 @@ const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
 // tipo técnico -> categoria amigável (pros filtros)
 const CATEGORIA: Record<string, string> = {
   kids_mural: "Kids",
+  kids_certificado_apresentacao: "Kids",
   carta_transferencia_pronta: "Cuidados",
   escala: "Voluntariado",
   sos: "Cuidados",
@@ -127,6 +130,8 @@ export default function NotificacoesScreen() {
         router.navigate(destinoNotificacaoChat(data)); return;
       case "kids_mural":
         router.navigate(destinoAvisoKids(data)); return;
+      case "kids_certificado_apresentacao":
+        router.navigate(destinoCertificadoKids(data)); return;
       case "carta_transferencia_pronta":
         router.navigate("/carta-transferencia"); return;
       case "escala":

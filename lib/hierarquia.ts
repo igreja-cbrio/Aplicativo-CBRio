@@ -46,7 +46,7 @@ import { router, type Href } from "expo-router";
  *   ├── /menu              barra
  *   │   ├── /perfil → /cartoes
  *   │   ├── /familia → /kids-area (KIDS, menu) → /kids → /kids-filho → /kids-aviso, /kids-solicitar-vinculo
- *   │   │                        └→ /kids-mural  /kids-eventos  /kids-horarios  /kids-salas
+ *   │   │                        └→ /kids-mural  /kids-eventos  /kids-horarios  /kids-salas  /kids-certificados
  *   │   ├── /jornada
  *   │   ├── /generosidade → /comprovante-doacoes
  *   │   ├── /inscricoes → /batismo → /inscricao-batismo
@@ -114,6 +114,8 @@ const PAI: Record<string, string> = {
   // KIDS = menu; cada item é uma tela própria e o check-in (/kids) também desce dele.
   "/kids-area": "/familia",
   "/kids-mural": "/kids-area",
+  // Certificado da Apresentação de Crianças (17/11/2026) · alvo do push.
+  "/kids-certificados": "/kids-area",
   "/kids-eventos": "/kids-mural",
   "/kids-horarios": "/kids-area",
   "/kids-salas": "/kids-area",

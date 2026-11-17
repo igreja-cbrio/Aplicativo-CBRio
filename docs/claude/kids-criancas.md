@@ -7,6 +7,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 ## Índice de seções
 
 - Kids: mural, calendário e cor por responsável (2026-11-13)
+- ⚠️⚠️ Certificado da Apresentação de Crianças · `/kids-certificados` (2026-11-17) — no FIM
 
 - ⚠️ HOME · card do Kids nos dias de culto (29/08/2026)
 - ⚠️⚠️ KIDS NO APP · ARQUIVADO PELO MARCOS — e 3 achados que ficam (11/08/2026)
@@ -326,3 +327,42 @@ mutantes morreu com `ÂNCORA PERDIDA` por isso.
 - `KidsThemeProvider` salva amarelo/azul/verde/lilás/rosa por UID no AsyncStorage deste aparelho; default amarelo, sem herdar preferência de outra conta. Não é escolha da criança nem sincronização entre aparelhos.
 - Horários continuam vindo do ERP. Regra de quarta (3–12 completos) é verificada no backend antes de gerar/cancelar códigos, nunca recalculada como autoridade no app.
 - Segmentação/foto/agendamento de avisos do pedido de 11/11 não fazem parte desta alteração.
+
+---
+
+## ⚠️⚠️ Certificado da Apresentação de Crianças · `/kids-certificados` (2026-11-17)
+
+Pedido do Matheus: a equipe libera o certificado na aba Apresentação de crianças
+do ERP; o responsável acha no Kids do app, com **ver, baixar e compartilhar**, e
+o push abre a tela. Backend, régua e números: `docs/claude/kids.md` do ERP
+(seção de 17/11).
+
+- **Tela**: `app/(app)/kids-certificados.tsx` (pai `/kids-area`, item
+  "Certificados" no menu do Kids). Lista de `GET /app/kids/certificados`; com
+  `?id=` (vindo do push) o certificado aparece primeiro, em destaque; id que não
+  está mais na lista mostra "não está mais disponível", nunca tela vazia calada.
+  Erro de carga é erro, nunca "nenhum certificado".
+- **Quem vê** é decidido no ERP a cada pedido: só `autorizado_buscar = true` +
+  ficha confirmada. O app só chama e obedece.
+- **Ver**: `expo-web-browser` com a URL assinada (`modo=ver`, sem download). iOS
+  mostra o PDF no Safari embutido; no Android a aba do Chrome mostra ou baixa,
+  conforme a versão (WebView do Android não renderiza PDF).
+- **Baixar**: Android grava na pasta que a pessoa escolhe
+  (`StorageAccessFramework` do `expo-file-system/legacy`, já no binário); iOS não
+  deixa app gravar fora da caixa, então abre a folha do sistema ("Salvar em
+  Arquivos").
+- **Compartilhar**: baixa para o CACHE e abre a folha (WhatsApp, e-mail…). O
+  Instagram não aceita PDF; imagem ficou fora (decisão do conselho, 17/11).
+- **`lib/pdfPrivado.ts`** é o baixar/compartilhar extraído de `lib/cartaPdf.ts`
+  (a carta agora o usa). A limpeza do cache só apaga as pastas do próprio
+  prefixo (`carta-…`, `certificado-…`).
+- **URL**: `lib/kidsCertificados.ts` recusa qualquer URL que não seja https do
+  projeto em `/storage/v1/object/sign/kids-certificados/`.
+- **Push**: tipo `kids_certificado_apresentacao` nos DOIS mapas (`lib/notifTap.ts`
+  e `app/(app)/notificacoes.tsx`, ícone `ribbon`, chip Kids) via
+  `lib/kidsCertificadoDestino.ts` (puro, valida UUID). Guarda em
+  `test/reguas.test.ts`.
+- **Só OTA**: nenhum módulo nativo novo (file-system, sharing e web-browser
+  estão nos binários iOS 48 e Android vc 12).
+- Testes: `test/kidsCertificados.test.ts`, `test/kidsCertificadoNotifTap.test.ts`.
+

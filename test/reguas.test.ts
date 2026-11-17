@@ -193,7 +193,7 @@ describe("hierarquia · a árvore do `cd ..`", () => {
       "/grupos", "/grupo-detalhe", "/grupo-membros", "/grupo-visita", "/grupo-inscricoes", "/grupo-editar",
       "/escala-supervisor", "/anotacoes", "/perfil", "/cartoes", "/familia", "/kids-area", "/kids",
       "/kids-mural", "/kids-eventos", "/kids-horarios", "/kids-salas",
-      "/kids-filho", "/kids-aviso", "/kids-solicitar-vinculo", "/jornada", "/generosidade",
+      "/kids-filho", "/kids-aviso", "/kids-solicitar-vinculo", "/kids-certificados", "/jornada", "/generosidade",
       "/comprovante-doacoes", "/inscricoes", "/batismo", "/inscricao-batismo", "/next",
       "/next-turma", "/evento", "/videos", "/configuracoes", "/trocar-senha",
       "/fale-conosco", "/sobre", "/notificacoes", "/mural", "/modo-culto", "/culto-detalhe",
@@ -1983,6 +1983,21 @@ describe("semComentarios", () => {
 // arquivo deste repo por caminho absoluto e no CI (ubuntu) devolvia vazio, então
 // passava sem asserção nenhuma — guarda que não guarda. Aqui roda de verdade.
 // ════════════════════════════════════════════════════════════════════════════
+// Certificado de apresentação (17/11/2026): o ERP manda `kids_certificado_apresentacao`.
+describe("aviso do certificado do Kids · os DOIS mapas entendem o tipo", () => {
+  const TIPO = "kids_certificado_apresentacao";
+  const ler = (rel: string) => {
+    try { return readFileSync(join(process.cwd(), rel), "utf8"); } catch { return ""; }
+  };
+  it("⚠️⚠️ MUTATION GUARD · push e lista roteiam o tipo, com ícone e chip Kids", () => {
+    expect(semComentarios(ler("lib/notifTap.ts")), "notifTap não roteia o tipo").toContain(`"${TIPO}"`);
+    const lista = semComentarios(ler("app/(app)/notificacoes.tsx"));
+    expect(lista, "a lista não trata o tipo").toContain(`"${TIPO}"`);
+    expect(lista, "sem ícone").toContain(`${TIPO}: "ribbon"`);
+    expect(lista, "sem categoria Kids").toContain(`${TIPO}: "Kids"`);
+  });
+});
+
 describe("aviso de grupo · o app tem que rotear o tipo que o ERP manda", () => {
   const TIPO = "grupo_pedido";
   const ler = (rel: string) => {

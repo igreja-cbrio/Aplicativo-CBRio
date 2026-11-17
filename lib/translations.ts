@@ -2188,4 +2188,17 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Use uma imagem JPG, PNG ou WebP.": { en: "Use a JPG, PNG or WebP image.", es: "Usa una imagen JPG, PNG o WebP." },
   "Não enviou": { en: "Not sent", es: "No se envió" },
   "Toque para reenviar ou escolha outra foto": { en: "Tap to resend or choose another photo", es: "Toca para reenviar o elige otra foto" },
+
+  // KIDS › Certificados de Apresentação de Crianças (17/11/2026)
+  "Certificados": { en: "Certificates", es: "Certificados" },
+  "Certificado da apresentação de crianças.": { en: "Child dedication certificate.", es: "Certificado de la presentación de niños." },
+  "PDF salvo na pasta que você escolheu.": { en: "PDF saved to the folder you chose.", es: "PDF guardado en la carpeta que elegiste." },
+  "Não foi possível abrir o certificado. Tente novamente.": { en: "Unable to open the certificate. Please try again.", es: "No se pudo abrir el certificado. Inténtalo de nuevo." },
+  "Confirme seu cadastro no app para ver os certificados das suas crianças.": { en: "Confirm your profile in the app to see your children's certificates.", es: "Confirma tu registro en la app para ver los certificados de tus niños." },
+  "Este certificado não está mais disponível no app. Fale com a equipe do Kids.": { en: "This certificate is no longer available in the app. Please contact the Kids team.", es: "Este certificado ya no está disponible en la app. Habla con el equipo de Kids." },
+  "Quando a equipe do Kids liberar o certificado da apresentação da sua criança, ele aparece aqui.": { en: "When the Kids team releases your child's dedication certificate, it will appear here.", es: "Cuando el equipo de Kids libere el certificado de la presentación de tu niño, aparecerá aquí." },
+  "O certificado aparece para o responsável autorizado no Kids. Se a sua criança não está em Minhas crianças, peça o vínculo por lá.": { en: "The certificate is shown to the guardian authorized in Kids. If your child is not under My children, request the link there.", es: "El certificado aparece para el responsable autorizado en Kids. Si tu niño no está en Mis niños, solicita el vínculo allí." },
+  "Apresentação de Crianças": { en: "Child Dedication", es: "Presentación de Niños" },
+  "Baixar": { en: "Download", es: "Descargar" },
+  "Não foi possível atualizar agora. Puxe para tentar de novo.": { en: "Unable to refresh right now. Pull to try again.", es: "No se pudo actualizar ahora. Desliza para intentarlo de nuevo." },
 };
