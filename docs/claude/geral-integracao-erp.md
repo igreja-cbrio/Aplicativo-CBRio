@@ -7,6 +7,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 ## Índice de seções
 
 - Chat: apresentação do Pedrinho (2026-11-16)
+- Chat: o Pedrinho abre a tela interna (`abrir_tela`) em vez do link do site (2026-11-18)
 
 - Chat: áudio privado da equipe (2026-11-13)
 
@@ -679,3 +680,26 @@ Conversa nova apresenta “Sou o Pedrinho, assistente virtual da CBRio.”. O no
 fica acima de cada resposta automática. Histórico e mensagens humanas são
 preservados; quando encaminhado, o cabeçalho indica Equipe CBRio. Não insere
 saudações artificiais no histórico nem muda o fluxo de atendimento.
+
+## Chat: o Pedrinho abre a tela interna (`abrir_tela`) em vez do link do site (2026-11-18)
+
+Pedido do Matheus (17/11): no chat do app, formulário de inscrição abre a tela
+**do app**; o link externo fica só no WhatsApp. O lado ERP está em
+`docs/claude/comunicacao-whatsapp.md` e `app-membros-staff.md` do ERP (18/11).
+
+- `lib/assistenteAcao.ts`: novo tipo `abrir_tela` com destino de lista FECHADA
+  (`DESTINOS_TELA`: `/next`, `/inscricao-batismo`, `/grupos`, `/voluntariado`,
+  `/apresentacao-crianca`, `/perfil`, `/evento`). Único parâmetro aceito: `slug` em
+  `/evento` (`^[A-Za-z0-9_-]{1,80}$`); qualquer outra chave descarta a ação; evento
+  sem slug não vira botão. `destinoDaAcao` monta o destino do `router.navigate`.
+  `abrir_formulario` (3 destinos) continua aceito.
+- O chat manda `X-Pedrinho-Capacidades: abrir_tela` (`CABECALHO_CAPACIDADES`) no POST
+  `/app/assistente` e nos GET de mensagens. **Sem esse cabeçalho o ERP só emite o
+  legado** — bundle antigo nunca recebe tipo que não sabe desenhar.
+- ⚠️ Espelho com o ERP: `DESTINOS_TELA` = os `app` de `FORMULARIOS` em
+  `backend/utils/pedrinhoDestinos.js`. Teste aqui confere que cada tela existe em
+  `app/(app)`. Mudou uma lista, muda a outra na mesma leva.
+- Chega aos aparelhos **só por OTA** (decisão do Matheus · `npm run ota` de worktree
+  limpa em `origin/main`). Até lá, grupos/voluntariado/apresentação/evento saem só
+  com o caminho escrito no texto.
+
