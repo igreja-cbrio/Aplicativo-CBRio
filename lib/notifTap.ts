@@ -1,4 +1,5 @@
 import { destinoAvisoKids } from "@/lib/kidsAvisoDestino";
+import { destinoCertificadoKids } from "@/lib/kidsCertificadoDestino";
 import { destinoNotificacaoChat } from "@/lib/assistenteChat";
 import { router } from "expo-router";
 import * as Notifications from "expo-notifications";
@@ -73,6 +74,9 @@ export function attachNotifTapListener(): () => void {
         router.navigate(destinoNotificacaoChat(data)); return;
       case "kids_mural":
         router.navigate(destinoAvisoKids(data)); return;
+      // Certificado da apresentação liberado pela equipe (17/11/2026).
+      case "kids_certificado_apresentacao":
+        router.navigate(destinoCertificadoKids(data)); return;
       case "carta_transferencia_pronta":
         router.navigate("/carta-transferencia");
         return;

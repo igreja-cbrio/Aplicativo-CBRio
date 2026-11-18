@@ -27,6 +27,7 @@ export default function KidsAreaScreen() {
   const itens: Item[] = [
     { rota: "/kids", icone: "happy-outline", titulo: t("Minhas crianças"), sub: t("Check-in, fichas e avisos dos seus filhos."), destaque: true },
     { rota: "/kids-mural", icone: "megaphone-outline", titulo: t("Mural de avisos"), sub: t("Avisos e calendário de eventos do Kids.") },
+    { rota: "/kids-certificados", icone: "ribbon-outline", titulo: t("Certificados"), sub: t("Certificado da apresentação de crianças.") },
     { rota: "/kids-horarios", icone: "time-outline", titulo: t("Horários de funcionamento"), sub: t("Quando o Kids está aberto.") },
     { rota: "/kids-salas", icone: "grid-outline", titulo: t("Divisão das salas"), sub: t("Qual sala é de cada idade.") },
   ];
