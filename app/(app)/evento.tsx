@@ -50,7 +50,7 @@ import { useMembro } from "@/lib/useMembro";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { trackEvento } from "@/lib/telemetria";
-import { eventoCorresponde } from "@/lib/eventoDestino";
+import { eventoCorresponde, retornoDoEvento } from "@/lib/eventoDestino";
 import { abrirInscricaoEvento, inscreverOutraPessoa } from "@/lib/eventos";
 import BotaoCompartilhar from "@/components/inscricoes/BotaoCompartilhar";
 import { mensagemEvento } from "@/lib/compartilharInscricao";
@@ -451,9 +451,9 @@ export default function EventoScreen() {
               title={t("Completar meu cadastro")}
               onPress={() => {
                 trackEvento("evento_completar_cadastro", { entity_id: ev?.id || minha?.evento.id });
-                router.push(
-                  `/completar-cadastro?retorno=${encodeURIComponent(`/evento?id=${id}`)}`,
-                );
+                // O id do evento CARREGADO: a rota pode ter vindo só com o slug.
+                const retorno = retornoDoEvento({ id: ev?.id || minha?.evento.id || id, slug });
+                router.push(`/completar-cadastro?retorno=${encodeURIComponent(retorno)}`);
               }}
             />
           </GlassCard>

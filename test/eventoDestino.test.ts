@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { destinoNotificacaoEvento, eventoCorresponde, urlFormularioEvento, urlPublicaCbrio } from "../lib/eventoDestino";
+import { destinoNotificacaoEvento, eventoCorresponde, retornoDoEvento, urlFormularioEvento, urlPublicaCbrio } from "../lib/eventoDestino";
 
 describe("inscrição dentro do app", () => {
   it("abre push novo pelo ID e legado pelo slug na tela do evento", () => {
@@ -29,5 +29,22 @@ describe("inscrição dentro do app", () => {
   ])("bloqueia origem ou esquema impróprio: %s", (url) => {
     expect(urlPublicaCbrio(url)).toBeNull();
     expect(urlFormularioEvento(url)).toBeNull();
+  });
+  it("retorno do cadastro leva de volta ao MESMO evento, mesmo aberto só pelo slug", () => {
+    expect(retornoDoEvento({ id: "id-1", slug: "ami-camp" })).toBe("/evento?id=id-1");
+    // aberto pelo botão do Pedrinho ou por push legado: a rota não tem id
+    expect(retornoDoEvento({ id: undefined, slug: "ami-camp-2027" })).toBe("/evento?slug=ami-camp-2027");
+    expect(retornoDoEvento({ id: "", slug: "ami-camp" })).toBe("/evento?slug=ami-camp");
+    // nunca "/evento?id=undefined" nem slug fora do formato
+    expect(retornoDoEvento({})).toBe("/inscricoes");
+    expect(retornoDoEvento({ slug: "../admin" })).toBe("/inscricoes");
+    for (const alvo of [{ id: "a" }, { slug: "b" }, {}]) {
+      const r = retornoDoEvento(alvo);
+      expect(r).not.toContain("undefined");
+      expect(r.startsWith("/") && !r.startsWith("//")).toBe(true);
+      // o evento reaberto pelo retorno é o mesmo
+      const q = new URLSearchParams(r.split("?")[1] || "");
+      if (r.startsWith("/evento")) expect(eventoCorresponde({ id: "a", slug: "b" }, q.get("id") || undefined, q.get("slug") || undefined)).toBe(true);
+    }
   });
 });

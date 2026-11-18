@@ -38,3 +38,15 @@ export function destinoInscricaoOutraPessoa(url?: string | null) {
   }
   return segura ? { pathname: "/inscricao-formulario" as const, params: { url: segura, para: "outra-pessoa" } } : null;
 }
+
+/**
+ * Para onde "Completar meu cadastro" devolve a pessoa: o evento que ela estava
+ * vendo. A tela pode ter sido aberta só pelo SLUG (push legado e o botão do
+ * Pedrinho no chat); montar o retorno com o `id` da rota dava `/evento?id=undefined`
+ * e a pessoa voltava do cadastro para "Evento não encontrado" (18/11/2026).
+ */
+export function retornoDoEvento(alvo: { id?: string | null; slug?: string | null }): string {
+  if (typeof alvo.id === "string" && alvo.id.trim()) return `/evento?id=${alvo.id}`;
+  if (typeof alvo.slug === "string" && /^[a-zA-Z0-9_-]+$/.test(alvo.slug)) return `/evento?slug=${alvo.slug}`;
+  return "/inscricoes";
+}
