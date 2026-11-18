@@ -93,8 +93,8 @@ async function erroDaResposta(resp: Response): Promise<ErroApi> {
   return err;
 }
 
-export async function apiGet<T>(path: string, opts?: { auth?: boolean; expectedUserId?: string }): Promise<T> {
-  const headers: Record<string, string> = { Accept: "application/json" };
+export async function apiGet<T>(path: string, opts?: { auth?: boolean; expectedUserId?: string; headers?: Record<string, string> }): Promise<T> {
+  const headers: Record<string, string> = { Accept: "application/json", ...opts?.headers };
   if (opts?.auth !== false) Object.assign(headers, await authHeaders(opts?.expectedUserId));
   const resp = await fetch(`${BASE}${path}`, { headers });
   if (!resp.ok) {
@@ -109,11 +109,12 @@ export async function apiGet<T>(path: string, opts?: { auth?: boolean; expectedU
 export async function apiPost<T>(
   path: string,
   body: unknown,
-  opts?: { auth?: boolean; expectedUserId?: string }
+  opts?: { auth?: boolean; expectedUserId?: string; headers?: Record<string, string> }
 ): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
+    ...opts?.headers,
   };
   if (opts?.auth !== false) Object.assign(headers, await authHeaders(opts?.expectedUserId));
   const resp = await fetch(`${BASE}${path}`, {

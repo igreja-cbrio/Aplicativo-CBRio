@@ -11,7 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMembro } from "@/contexts/MembroContext";
 import { HistoricoAssistente, type ConversaAssistente } from "@/components/HistoricoAssistente";
 import { ConfirmacaoAssistente } from "@/components/chat/AcaoAssistente";
-import { lerAcaoAssistente, podeConfirmarAcao, type AcaoAssistente } from "@/lib/assistenteAcao";
+import { CABECALHO_CAPACIDADES, destinoDaAcao, lerAcaoAssistente, podeConfirmarAcao, type AcaoAssistente } from "@/lib/assistenteAcao";
 import { useDitadoAssistente } from "@/hooks/useDitadoAssistente";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { useColors } from "@/contexts/ThemeContext";
@@ -149,7 +149,7 @@ export default function FaleConoscoChatScreen() {
     try {
       const apos = maiorSequencia(msgsRef.current);
       const q = apos !== null ? `?apos=${apos}` : "";
-      const r = await apiGet<RespostaLista>(`/app/assistente/${encodeURIComponent(id)}/mensagens${q}`, { expectedUserId: usuario });
+      const r = await apiGet<RespostaLista>(`/app/assistente/${encodeURIComponent(id)}/mensagens${q}`, { expectedUserId: usuario, headers: CABECALHO_CAPACIDADES });
       if (!vigente()) return;
       aplicar(Array.isArray(r?.mensagens) ? r.mensagens : []);
       if (apos === null) setTemAnteriores(r.tem_anteriores === true);
@@ -182,7 +182,7 @@ export default function FaleConoscoChatScreen() {
     setCarregandoAnteriores(true); setErro(null);
     acompanharFim.current = false;
     try {
-      const r = await apiGet<RespostaLista>(`/app/assistente/${encodeURIComponent(id)}/mensagens?antes=${antes}`, { expectedUserId: usuario });
+      const r = await apiGet<RespostaLista>(`/app/assistente/${encodeURIComponent(id)}/mensagens?antes=${antes}`, { expectedUserId: usuario, headers: CABECALHO_CAPACIDADES });
       if (!vigente()) return;
       aplicar(Array.isArray(r.mensagens) ? r.mensagens : []);
       setTemAnteriores(r.tem_anteriores === true);
@@ -337,7 +337,7 @@ export default function FaleConoscoChatScreen() {
       const r = await apiPost<RespostaEnvio>("/app/assistente", {
         texto: limpo,
         ...(conversaRef.current ? { conversa_id: conversaRef.current } : {}),
-      }, { expectedUserId: usuario });
+      }, { expectedUserId: usuario, headers: CABECALHO_CAPACIDADES });
       if (!vigente()) return;
       if (idConversaValido(r.conversa_id)) conversaRef.current = r.conversa_id;
       if (r.acao !== undefined) aplicarAcao(r.acao);
@@ -429,7 +429,7 @@ export default function FaleConoscoChatScreen() {
     const proposta = acaoRef.current;
     const id = conversaRef.current;
     const usuario = usuarioRef.current;
-    if (!proposta || proposta.tipo === 'abrir_formulario' || !id || !usuario || enviandoRef.current || restaurandoRef.current || escaladoRef.current) return;
+    if (!proposta || proposta.tipo === 'abrir_formulario' || proposta.tipo === 'abrir_tela' || !id || !usuario || enviandoRef.current || restaurandoRef.current || escaladoRef.current) return;
     if (confirmar && !podeConfirmarAcao(proposta, true, campos, Date.now())) return;
     const revisao = ciclo.atual(); const origem = escopoRef.current;
     const vigente = () => ciclo.vigente(revisao) && escopoRef.current === origem && conversaRef.current === id;
@@ -537,10 +537,10 @@ export default function FaleConoscoChatScreen() {
           }
           renderItem={({ item }) => <Bolha conversa={conversaRef.current || ""} identidade={escopo} ativo={audioAtivo === `${escopo}:${conversaRef.current}:${item.id}`} ativar={() => setAudioAtivo(`${escopo}:${conversaRef.current}:${item.id}`)} m={item} styles={styles} t={t} subindo={enviando && ehLocal(item)} />}
           ListFooterComponent={<View style={{ gap: 12 }}>
-            {acao && !escalado ? acao.tipo === 'abrir_formulario' ? <View style={styles.aviso}>
+            {acao && !escalado ? acao.tipo === 'abrir_formulario' || acao.tipo === 'abrir_tela' ? <View style={styles.aviso}>
               {acao.resumo ? <Text style={styles.avisoTxt}>{acao.resumo}</Text> : null}
               <Pressable accessibilityRole="button" disabled={bloqueado} style={styles.outros}
-                onPress={() => { if (acao.tipo === 'abrir_formulario') router.navigate(acao.destino); }}>
+                onPress={() => { if (acao.tipo === 'abrir_formulario' || acao.tipo === 'abrir_tela') router.navigate(destinoDaAcao(acao)); }}>
                 <Text style={styles.link}>{acao.titulo || t('Completar inscrição')}</Text>
               </Pressable>
             </View> : <ConfirmacaoAssistente key={acao.id} acao={acao} bloqueado={bloqueado || voz.ativo} confirmar={confirmarAcao} /> : null}
