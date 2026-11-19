@@ -7,8 +7,11 @@
 // POST { data: "YYYY-MM-DD" }
 
 import { makeAdmin, notificar } from "../_shared/notify.ts";
+import { rejeitarSeNaoAutorizado } from "../_shared/segredo.ts";
 
 Deno.serve(async (req) => {
+  const neg = rejeitarSeNaoAutorizado(req);
+  if (neg) return neg;
   try {
     const { data } = await req.json().catch(() => ({ data: null }));
     if (!data || !/^\d{4}-\d{2}-\d{2}$/.test(data)) {

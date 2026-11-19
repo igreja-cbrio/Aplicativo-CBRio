@@ -4,8 +4,11 @@
 // Audiência: usuários do app com push token; se segmento != 'todos', filtra
 // pelos membros com frequenta_area = segmento.
 import { notificar, makeAdmin } from "../_shared/notify.ts";
+import { rejeitarSeNaoAutorizado } from "../_shared/segredo.ts";
 
 Deno.serve(async (req) => {
+  const neg = rejeitarSeNaoAutorizado(req);
+  if (neg) return neg;
   try {
     const { comunicado_id } = await req.json();
     if (!comunicado_id) return new Response("sem comunicado_id", { status: 200 });

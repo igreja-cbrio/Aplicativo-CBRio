@@ -5,6 +5,7 @@
 // POST { inscricao_id, status: "em_andamento" | "concluido" }
 
 import { makeAdmin, notificar } from "../_shared/notify.ts";
+import { rejeitarSeNaoAutorizado } from "../_shared/segredo.ts";
 
 const MENSAGENS: Record<string, { titulo: string; body: string }> = {
   em_andamento: {
@@ -18,6 +19,8 @@ const MENSAGENS: Record<string, { titulo: string; body: string }> = {
 };
 
 Deno.serve(async (req) => {
+  const neg = rejeitarSeNaoAutorizado(req);
+  if (neg) return neg;
   try {
     const { inscricao_id, status } = await req.json().catch(() => ({}));
     const msg = MENSAGENS[status];

@@ -4,8 +4,11 @@
 // Webhook: Database -> Webhooks -> tabela mem_grupo_pedidos, evento INSERT,
 //          tipo Supabase Edge Functions -> notify-grupo-pedido.
 import { notificar, makeAdmin } from "../_shared/notify.ts";
+import { rejeitarSeNaoAutorizado } from "../_shared/segredo.ts";
 
 Deno.serve(async (req) => {
+  const neg = rejeitarSeNaoAutorizado(req);
+  if (neg) return neg;
   try {
     const payload = await req.json();
     const ped = payload.record ?? payload;

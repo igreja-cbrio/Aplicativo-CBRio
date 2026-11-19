@@ -3,8 +3,11 @@
 // Resolve volunteer_id -> vol_profiles -> auth_user_id, e dispara
 // push + grava em app_notificacoes via helper compartilhado.
 import { notificar, makeAdmin } from "../_shared/notify.ts";
+import { rejeitarSeNaoAutorizado } from "../_shared/segredo.ts";
 
 Deno.serve(async (req) => {
+  const neg = rejeitarSeNaoAutorizado(req);
+  if (neg) return neg;
   try {
     const payload = await req.json();
     const row = payload.record ?? payload;

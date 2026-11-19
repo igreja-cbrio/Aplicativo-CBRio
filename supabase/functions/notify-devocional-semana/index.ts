@@ -14,8 +14,11 @@
 // que agrupa por projeto, faz chunk de 100, LÊ a resposta e grava ticket.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { notificar } from "../_shared/notify.ts";
+import { rejeitarSeNaoAutorizado } from "../_shared/segredo.ts";
 
 Deno.serve(async (req) => {
+  const neg = rejeitarSeNaoAutorizado(req);
+  if (neg) return neg;
   try {
     const body = await req.json().catch(() => ({}));
     const titulo = body?.titulo || "Devocional da semana 📖";
