@@ -5,6 +5,7 @@
 //
 // Mensagem é específica por tipo (voluntariado, batismo, grupos, next…).
 import { notificar } from "../_shared/notify.ts";
+import { rejeitarSeNaoAutorizado } from "../_shared/segredo.ts";
 
 const TIPOS: Record<string, { titulo: string; body: string }> = {
   voluntariado: {
@@ -34,6 +35,8 @@ const TIPOS: Record<string, { titulo: string; body: string }> = {
 };
 
 Deno.serve(async (req) => {
+  const neg = rejeitarSeNaoAutorizado(req);
+  if (neg) return neg;
   try {
     const payload = await req.json();
     const row = payload.record ?? payload;

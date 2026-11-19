@@ -3,8 +3,11 @@
 // Deploy: supabase functions deploy notify-kids-vinculo --no-verify-jwt
 // Trigger: ver supabase/webhooks_app.sql (kids_vinculo_solicitacoes AFTER UPDATE).
 import { notificar } from "../_shared/notify.ts";
+import { rejeitarSeNaoAutorizado } from "../_shared/segredo.ts";
 
 Deno.serve(async (req) => {
+  const neg = rejeitarSeNaoAutorizado(req);
+  if (neg) return neg;
   try {
     const payload = await req.json();
     const s = payload.record ?? payload;

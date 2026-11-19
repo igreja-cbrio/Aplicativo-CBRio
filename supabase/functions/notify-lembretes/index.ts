@@ -11,6 +11,7 @@
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { makeAdmin, notificar } from "../_shared/notify.ts";
+import { rejeitarSeNaoAutorizado } from "../_shared/segredo.ts";
 
 const TZ = "America/Sao_Paulo";
 
@@ -276,6 +277,8 @@ async function lembreteAniversario(sb: SupabaseClient, hoje: string, minutosAgor
 }
 
 Deno.serve(async (_req) => {
+  const neg = rejeitarSeNaoAutorizado(_req);
+  if (neg) return neg;
   try {
     const sb = makeAdmin();
     const { data: hoje, minutos } = agoraBRT();
