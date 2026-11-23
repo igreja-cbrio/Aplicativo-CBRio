@@ -1,6 +1,6 @@
 import { ScrollView } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
@@ -16,9 +16,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
+import { useAuth } from "@/contexts/AuthContext";
 import { apiGet } from "@/lib/api";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { destinoComunicado } from "@/lib/comunicadoLink";
+import { destinoComunicado, inscricaoDoComunicado } from "@/lib/comunicadoLink";
 import { useDialogo } from "@/components/ui/Dialogo";
 import { trackEvento } from "@/lib/telemetria";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -46,7 +47,11 @@ function quando(iso: string | null): string {
 
 export default function MuralScreen() {
   const pathname = usePathname();
-  const { comunicado_id } = useLocalSearchParams<{ comunicado_id?: string }>();
+  const { comunicado_id, abrir_inscricao } = useLocalSearchParams<{ comunicado_id?: string; abrir_inscricao?: string }>();
+  const { session } = useAuth();
+  const uid = session?.user?.id;
+  const cargaAtual = useRef(0);
+  const aberturaTratada = useRef<string | null>(null);
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
@@ -62,27 +67,52 @@ export default function MuralScreen() {
   const [carregando, setCarregando] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [falhou, setFalhou] = useState(false);
+  const [carregadoPara, setCarregadoPara] = useState<string | null>(null);
+  const contexto = `${uid ?? ""}|${comunicado_id ?? ""}`;
 
   const carregar = useCallback(async () => {
+    const carga = ++cargaAtual.current;
     try {
-      const r = await apiGet<{ comunicados: Comunicado[] }>(`/app/comunicados${comunicado_id ? `?comunicado_id=${encodeURIComponent(comunicado_id)}` : ""}`);
+      const r = await apiGet<{ comunicados: Comunicado[] }>(`/app/comunicados${comunicado_id ? `?comunicado_id=${encodeURIComponent(comunicado_id)}` : ""}`, { expectedUserId: uid });
+      if (carga !== cargaAtual.current) return;
+      setCarregadoPara(contexto);
       setItens(r.comunicados || []);
       setFalhou(false);
     } catch {
       // mantém o que tem — mas se não tem NADA, a tela precisa dizer que foi
       // erro (antes mostrava "Nenhum aviso" e o usuário acreditava).
-      setFalhou(true);
+      if (carga === cargaAtual.current) setFalhou(true);
     } finally {
-      setCarregando(false);
-      setRefreshing(false);
+      if (carga === cargaAtual.current) {
+        setCarregando(false);
+        setRefreshing(false);
+      }
     }
-  }, [comunicado_id]);
+  }, [comunicado_id, uid, contexto]);
 
   useFocusEffect(
     useCallback(() => {
-      carregar();
+      setItens([]);
+      setCarregando(true);
+      aberturaTratada.current = null;
+      void carregar();
+      return () => { cargaAtual.current++; };
     }, [carregar])
   );
+
+  useEffect(() => {
+    if (carregadoPara !== contexto || abrir_inscricao !== "1" || !comunicado_id || carregando || falhou || aberturaTratada.current === comunicado_id) return;
+    const destino = inscricaoDoComunicado(comunicado_id, itens);
+    if (!destino) return;
+    aberturaTratada.current = comunicado_id;
+    // Consome a intenção antes de sair; voltar ao mural não deve abrir de novo.
+    router.setParams({ abrir_inscricao: undefined });
+    trackEvento("comunicado_aberto", { entity_id: comunicado_id });
+    if (destino.tipo === "app") router.replace(destino.url as never);
+    else void Linking.openURL(destino.url).catch(() => {
+      void dlg.avisar(t("Não foi possível abrir o link"), t("Tente novamente em instantes."));
+    });
+  }, [abrir_inscricao, comunicado_id, carregando, falhou, itens, dlg, t, carregadoPara, contexto]);
 
   return (
     <SafeAreaView style={styles.safe} edges={["left", "right"]}>
