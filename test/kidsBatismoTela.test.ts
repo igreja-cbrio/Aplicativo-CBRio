@@ -23,7 +23,8 @@ beforeEach(()=>{(globalThis as any).IS_REACT_ACT_ENVIRONMENT=true;vi.clearAllMoc
 afterEach(async()=>{if(tree)await act(async()=>tree!.unmount());tree=undefined;});
 async function montar(){await act(async()=>{tree=create(React.createElement(Tela));await flush();});}
 async function selecionar(){await act(async()=>{tree!.root.findByType('FilhosInscricao' as any).props.escolher('kids:1');await flush();});}
-it('seleciona filho, não pede dados conhecidos e envia só após escolha e consentimento',async()=>{
+it.each([false,true])('seleciona filho e distingue inscrição nova de duplicada (%s)',async(duplicado)=>{
+ m.post.mockResolvedValue(duplicado?{ok:true,duplicado:true,mensagem:'A inscrição anterior foi mantida.'}:{ok:true});
  await montar();expect(tree!.root.findByType('FormScaffold' as any).props.submitDisabled).toBe(true);
  await selecionar();expect(tree!.root.findAllByProps({label:'CPF da criança'})).toHaveLength(0);
  expect(tree!.root.findAllByProps({label:'Nome completo da criança'})).toHaveLength(0);
@@ -31,7 +32,8 @@ it('seleciona filho, não pede dados conhecidos e envia só após escolha e cons
  await act(async()=>{radio('09:30').props.onPress();radio('P').props.onPress();tree!.root.findByProps({label:'Termos'}).props.onChange(true);});
  await act(async()=>{await tree!.root.findByType('FormScaffold' as any).props.onSubmit();});
  expect(m.post).toHaveBeenCalledWith('/app/kids/inscricoes/batismo',expect.objectContaining({filho:'kids:1',nome_completo:filho.nome,cpf:filho.batismo.cpf,telefone:'21999998888',data_nascimento:filho.data_nascimento,data_batismo:'2026-12-27',horario_culto:'09:30',aceita_termos:true,consent_imagem:false}));
- expect(tree!.root.findByType('FormScaffold' as any).props.enviado).toBe(true);
+ expect(tree!.root.findByType('FormScaffold' as any).props.enviado).toBe(!duplicado);
+ if(duplicado) expect(tree!.root.findByType('FormScaffold' as any).props.error).toBe('A inscrição anterior foi mantida.');
 });
 it('troca de conta limpa filho e aceite antes de qualquer nova inscrição',async()=>{
  await montar();await selecionar();await act(async()=>{tree!.root.findByProps({label:'Termos'}).props.onChange(true);});
