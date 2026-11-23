@@ -1,8 +1,11 @@
+import { registerForPush } from "@/lib/push";
+import { pushAutorizado } from "@/lib/permissaoPush";
 import { ScrollView } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  AppState,
   Linking,
   Platform,
   Pressable,
@@ -146,10 +149,15 @@ export default function ConfiguracoesScreen() {
   const [erroExclusao, setErroExclusao] = useState<string | null>(null);
 
   // Lê permissão de push na hora que abre.
-  useState(() => {
-    Notifications.getPermissionsAsync().then((p) => setNotifAtivas(p.status === "granted"));
-    return undefined;
-  });
+  useEffect(() => {
+    let cancelado = false;
+    const atualizar = () => Notifications.getPermissionsAsync().then(p => {
+      if (!cancelado) setNotifAtivas(pushAutorizado(p));
+    }).catch(() => {});
+    void atualizar();
+    const sub = AppState.addEventListener("change", state => { if (state === "active") void atualizar(); });
+    return () => { cancelado = true; sub.remove(); };
+  }, []);
 
   async function alternarNotificacoes(valor: boolean) {
     if (!valor) {
@@ -162,9 +170,16 @@ export default function ConfiguracoesScreen() {
       if (abrir) Linking.openSettings();
       return;
     }
-    const req = await Notifications.requestPermissionsAsync();
-    setNotifAtivas(req.status === "granted");
-    if (req.status !== "granted") {
+    const p = await Notifications.getPermissionsAsync();
+    if (!pushAutorizado(p) && p.canAskAgain === false) {
+      const abrir = await dlg.confirmar({ titulo: t("Permissão necessária"), mensagem: t("Você precisa autorizar as notificações nas Configurações do sistema."), acao: t("Abrir Configurações") });
+      if (abrir) await Linking.openSettings();
+      return;
+    }
+    if (user?.id) await registerForPush(user.id, { solicitarPermissao: true });
+    const req = await Notifications.getPermissionsAsync();
+    setNotifAtivas(pushAutorizado(req));
+    if (!pushAutorizado(req)) {
       Alert.alert(
         t("Permissão necessária"),
         t("Você precisa autorizar as notificações nas Configurações do sistema.")

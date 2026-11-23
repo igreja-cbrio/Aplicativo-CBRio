@@ -15,6 +15,7 @@ import { ErrorBoundary } from "@/components/app/ErrorBoundary";
 import { Onboarding } from "@/components/onboarding/Onboarding";
 import { biometriaAtiva } from "@/lib/biometria";
 import { onboardingVisto, marcarOnboardingVisto } from "@/lib/onboarding";
+import { ConviteNotificacoes } from "@/components/notificacoes/ConviteNotificacoes";
 import { registerForPush } from "@/lib/push";
 import { initTelemetria, trackTela } from "@/lib/telemetria";
 import { attachNotifTapListener } from "@/lib/notifTap";
@@ -63,6 +64,7 @@ function RootNavigator() {
   const [desbloqueado, setDesbloqueado] = useState(false);
   // Onboarding: mostra 1x pra quem nunca viu (após logar). null = decidindo.
   const [mostrarOnboarding, setMostrarOnboarding] = useState<boolean | null>(null);
+  const [onboardingResolvidoPara, setOnboardingResolvidoPara] = useState<string | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -79,8 +81,16 @@ function RootNavigator() {
       setMostrarOnboarding(false);
       return;
     }
-    onboardingVisto().then((visto) => setMostrarOnboarding(!visto));
-  }, [loading, authed]);
+    let cancelado = false;
+    const identidade = session?.user?.id ?? null;
+    setOnboardingResolvidoPara(null);
+    onboardingVisto().then((visto) => {
+      if (cancelado) return;
+      setMostrarOnboarding(!visto);
+      setOnboardingResolvidoPara(identidade);
+    });
+    return () => { cancelado = true; };
+  }, [loading, authed, session?.user?.id]);
 
   useEffect(() => {
     if (loading) return;
@@ -156,6 +166,7 @@ function RootNavigator() {
 
   return (
     <>
+      {!!uid && !preview && !recoveryScreen && mostrarOnboarding === false && onboardingResolvidoPara === uid && <ConviteNotificacoes key={uid} userId={uid} />}
       <StatusBar style={mode === "light" ? "dark" : "light"} />
       <Stack
         screenOptions={{

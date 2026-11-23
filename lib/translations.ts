@@ -6,6 +6,13 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Agora não": {"en": "Not now", "es": "Ahora no"},
+  "Ativar notificações": {"en": "Enable notifications", "es": "Activar notificaciones"},
+  "Não foi possível abrir o link": {"en": "Unable to open the link", "es": "No se pudo abrir el enlace"},
+  "Ver inscrição": {"en": "View registration", "es": "Ver inscripción"},
+  "Ative as notificações para receber avisos e convites da igreja. Você pode mudar essa escolha nas Configurações.": {"en": "Enable notifications to receive church announcements and invitations. You can change this choice in Settings.", "es": "Activa las notificaciones para recibir avisos e invitaciones de la iglesia. Puedes cambiar esta opción en Configuración."},
+  "As notificações estão desativadas neste celular. Abra as Configurações para receber avisos e convites da igreja.": {"en": "Notifications are disabled on this phone. Open Settings to receive church announcements and invitations.", "es": "Las notificaciones están desactivadas en este teléfono. Abre Configuración para recibir avisos e invitaciones de la iglesia."},
+  "Receber avisos da CBRio?": {"en": "Receive CBRio notifications?", "es": "¿Recibir avisos de CBRio?"},
   "Esse momento fica melhor juntos": {"en": "This moment is better together", "es": "Este momento es mejor juntos"},
   "Convide amigos e familiares para celebrar seu batismo.": {"en": "Invite friends and family to celebrate your baptism.", "es": "Invita a amigos y familiares a celebrar tu bautismo."},
   "Convidar pelo WhatsApp": {"en": "Invite via WhatsApp", "es": "Invitar por WhatsApp"},

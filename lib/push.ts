@@ -1,3 +1,4 @@
+import { pushAutorizado } from "./permissaoPush";
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
@@ -27,7 +28,7 @@ import { motivoDaFalhaPush, mensagemDoErro } from "./motivoPush";
  *   como `simulador`, não como defeito).
  * - Requer um `projectId` do EAS (app.json extra.eas.projectId, via `eas init`).
  */
-export async function registerForPush(userId: string): Promise<string | null> {
+async function registrar(userId: string, { solicitarPermissao = false } = {}): Promise<string | null> {
   // ⚠️ O canal fica FORA do try principal: ele é independente do token, e antes
   // uma falha aqui abortava até o PEDIDO DE PERMISSÃO. O som de push no Android
   // é definido por canal, não pelo payload — então ele precisa existir mesmo
@@ -46,17 +47,15 @@ export async function registerForPush(userId: string): Promise<string | null> {
   }
 
   try {
-    const { status: existing } = await Notifications.getPermissionsAsync();
-    let status = existing;
-    if (existing !== "granted") {
-      const req = await Notifications.requestPermissionsAsync();
-      status = req.status;
+    let permissao = await Notifications.getPermissionsAsync();
+    if (!pushAutorizado(permissao) && solicitarPermissao && permissao.canAskAgain !== false) {
+      permissao = await Notifications.requestPermissionsAsync();
     }
-    if (status !== "granted") {
+    if (!pushAutorizado(permissao)) {
       // ⚠️ Isto era um `return null` MUDO. Sem ele, "ninguém tem token" e
       // "ninguém autorizou" ficavam indistinguíveis no painel — e são
       // conclusões opostas: uma é conserto de código, a outra é conversa.
-      trackEvento("push_sem_token", { reason: "permissao", permission: String(status) });
+      trackEvento("push_sem_token", { reason: "permissao", permission: String(permissao.status) });
       return null;
     }
 
@@ -154,4 +153,14 @@ export async function unregisterPush(): Promise<void> {
   } catch (e) {
     console.log("[push] falha ao desregistrar:", e);
   }
+}
+
+// Evita registros concorrentes causados pelo inactive/active do próprio pedido.
+const registros = new Map<string, Promise<string | null>>();
+export function registerForPush(userId: string, opcoes: { solicitarPermissao?: boolean } = {}): Promise<string | null> {
+  const atual = registros.get(userId);
+  if (atual) return opcoes.solicitarPermissao ? atual.then(() => registerForPush(userId, opcoes)) : atual;
+  const tarefa = registrar(userId, opcoes).finally(() => { registros.delete(userId); });
+  registros.set(userId, tarefa);
+  return tarefa;
 }

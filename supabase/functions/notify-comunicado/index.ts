@@ -16,10 +16,13 @@ Deno.serve(async (req) => {
     const sb = makeAdmin();
     const { data: c } = await sb
       .from("comunicados")
-      .select("id, titulo, corpo, segmento, status")
+      .select("*")
       .eq("id", comunicado_id)
+      .is("deleted_at", null)
       .maybeSingle();
     if (!c || c.status !== "publicado") return new Response("não publicado", { status: 200 });
+
+    if (c.publico != null || c.envio_resultado != null) return new Response("Publicação gerenciada pelo ERP", { status: 409 });
 
     // Quem tem push token (instalou + autorizou)
     const { data: tokens } = await sb.from("app_push_tokens").select("user_id");

@@ -128,9 +128,11 @@ export function attachNotifTapListener(): () => void {
       case "kids_chamar_responsavel":
         router.navigate("/kids");
         return;
-      case "comunicado":
-        router.navigate("/mural");
+      case "comunicado": {
+        const id = (data as { comunicado_id?: string }).comunicado_id;
+        router.navigate(id ? { pathname: "/mural", params: { comunicado_id: id } } : "/mural");
         return;
+      }
       // ⚠️ Nome começa com `inscricao_` de PROPÓSITO: no binário que ainda não
       // recebeu este OTA, o `default` manda pra aba Inscrições (onde o cartão do
       // evento leva ao comprovante) em vez de o toque não fazer nada.
