@@ -618,7 +618,7 @@ function Bolha({ m, styles, t, subindo, conversa, identidade, ativo, ativar }: {
       {rotulo ? <Text style={styles.rotulo}>{rotulo}</Text> : null}
       <View style={[styles.bolha, meu ? styles.bolhaMeu : styles.bolhaOutro, subindo && !!m.anexo_url && { opacity: 0.6 }]}>
         {m.anexo_mime && !m.anexo_mime.startsWith("image/") ? (
-          ehLocal(m) ? <Text style={styles.subindo}>{t("Enviando áudio…")}</Text> : <AnexoChatEquipe key={`${identidade}:${conversa}:${m.id}`} conversa={conversa} mensagem={m.id} mime={m.anexo_mime} ativo={ativo} ativar={ativar} />
+          ehLocal(m) ? <Text style={styles.subindo}>{t("Enviando áudio…")}</Text> : <AnexoChatEquipe key={`${identidade}:${conversa}:${m.id}`} conversa={conversa} mensagem={m.id} mime={m.anexo_mime} meu={meu} ativo={ativo} ativar={ativar} />
         ) : m.anexo_url ? (
           <Image
             source={{ uri: m.anexo_url }}
@@ -643,6 +643,9 @@ function Bolha({ m, styles, t, subindo, conversa, identidade, ativo, ativar }: {
               p.texto
             ),
           )}
+        </Text> : null}
+        {m.anexo_mime?.startsWith("audio/") && !ehLocal(m) && Number.isFinite(Date.parse(m.created_at)) ? <Text style={{ color: meu ? "#ffffff" : styles.txtOutro.color, opacity: 0.65, fontSize: 11, textAlign: "right", marginTop: 2 }}>
+          {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </Text> : null}
         {subindo && !!m.anexo_url ? <Text style={styles.subindo}>{t("Enviando…")}</Text> : null}
       </View>
