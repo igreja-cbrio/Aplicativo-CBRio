@@ -84,7 +84,7 @@ export default function InscricaoFormulario() {
       </View> : null}
       <TecladoSeguro style={{ flex: 1 }}>
         {pagina ? <WebView
-          key={`${pagina}:${outraPessoa}`}
+          key={`${pagina}:${para}`}
           ref={web}
           incognito={outraPessoa}
           source={{ uri: pagina }}
