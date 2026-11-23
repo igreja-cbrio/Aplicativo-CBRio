@@ -30,6 +30,7 @@ type Props = {
   submitLabel: string;
   onSubmit: () => void;
   submitting?: boolean;
+  submitDisabled?: boolean;
   enviado: boolean;
   enviadoTexto?: string;
   /** Elemento extra mostrado na tela de sucesso (ex.: botão de entrar no grupo). */
@@ -47,6 +48,7 @@ export function FormScaffold({
   submitLabel,
   onSubmit,
   submitting,
+  submitDisabled,
   enviado,
   enviadoTexto,
   successExtra,
@@ -101,7 +103,7 @@ export function FormScaffold({
               <View style={styles.form}>
                 {children}
                 {error && <Text style={styles.error}>{error}</Text>}
-                <Button title={submitLabel} onPress={onSubmit} loading={submitting} />
+                <Button title={submitLabel} onPress={onSubmit} loading={submitting} disabled={submitDisabled} />
               </View>
             </>
           )}

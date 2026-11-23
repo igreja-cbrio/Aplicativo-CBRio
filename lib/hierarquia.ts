@@ -114,6 +114,7 @@ const PAI: Record<string, string> = {
   "/familia": "/menu",
   // KIDS = menu; cada item é uma tela própria e o check-in (/kids) também desce dele.
   "/kids-area": "/familia",
+  "/kids-batismo": "/kids-area",
   "/kids-mural": "/kids-area",
   // Certificado da Apresentação de Crianças (17/11/2026) · alvo do push.
   "/kids-certificados": "/kids-area",

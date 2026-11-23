@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Batismo nativo e seleção dos filhos (2026-11-23)
+
 - Inscrições de apresentação e batismo no Kids (2026-11-23)
 - Kids: mural, calendário e cor por responsável (2026-11-13)
 - ⚠️⚠️ Certificado da Apresentação de Crianças · `/kids-certificados` (2026-11-17) — no FIM
@@ -373,3 +375,18 @@ o push abre a tela. Backend, régua e números: `docs/claude/kids.md` do ERP
 - Os acessos levam `origem=kids`; a apresentação preserva o descarte de rascunho e retorna ao Kids. Outros acessos continuam voltando a Inscrições. A WebView mantém o histórico interno; Fechar retorna ao Kids.
 - Batismo usa URL fixa `/inscricao-batismo`, sem token pessoal e sem dados/ID do titular. `para=crianca` abre sessão anônima e orienta nome, CPF e nascimento da criança, com telefone/e-mail do responsável. Não muda o formulário adulto, os critérios de inscrição, aceites ou a classificação etária do servidor. Não gera inscrição real em testes.
 
+
+
+## Batismo nativo e seleção dos filhos (2026-11-23)
+
+Pedido do Matheus: a porta Kids deve usar os dados da criança, selecionar filhos
+já cadastrados e seguir o layout interno. `/kids-batismo` substitui o WebView
+mencionado na seção anterior. Usa FormScaffold, campos e diálogo nativos.
+
+Apresentação e batismo consultam `/app/kids/inscricoes/filhos`, com vínculo parental
+explícito, e revalidam a escolha no envio. Estado é limpo ao trocar de conta e de
+criança; dados não ficam em cache persistente. Campos conhecidos são reaproveitados;
+CPF é sempre da criança, contato é do responsável. Apresentação segue sem CPF.
+Datas, horários, capacidade e textos de consentimento vêm do contrato do servidor.
+Consentimentos nunca são marcados automaticamente. Publicar backend antes da OTA.
+Sem dependência nativa nova; foto segue opcional no contrato nativo existente.
