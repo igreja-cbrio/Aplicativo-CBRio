@@ -518,3 +518,24 @@ não é do time ("Ninguém do time com esse nome.").
 - Validado no simulador iOS com um harness fora do repo (preview de dev + dados
   fictícios); em aparelho real com conta de líder, não.
 
+
+## Convites nominais para supervisão (23/11/2026)
+
+ERP cria convite por membro/área, com validade de sete dias e compartilha no
+WhatsApp pessoal do líder. Não é disparo Meta. Servir mostra ConvitesSupervisor
+antes do card Montar escala, inclusive para quem ainda não supervisiona nada.
+Aceite explícito usa a identidade confirmada e a permissão vigente do emissor,
+validadas no ERP; o cliente não determina papel nem área.
+
+Link usa rota existente `cbrio://voluntariado?convite=<token>`, compatível com o
+scheme publicado. RootNavigator captura intenção antes do login, persiste por
+sete dias e retoma Servir; CadastroGate passa retorno fechado ao cadastro e o
+reset por inatividade preserva Servir/convite. Convite não aceita automaticamente.
+A lista nominal em Servir recupera o convite após instalação, mesmo sem token.
+Ver todos os meus convites limpa filtro e intenção; aceito/cancelado/expirado limpa
+intenção salva. Falha da API aparece com nova tentativa, não como ausência.
+
+A página HTTPS do ERP oferece abertura e lojas. Universal Links/App Links não
+estão configurados nos binários atuais: abertura automática pode exigir toque ou
+confirmação no navegador. Nenhuma nova dependência nativa ou runtimeVersion.
+ERP depende da migration `20261123190652_vol_supervisores_convites.sql`.
