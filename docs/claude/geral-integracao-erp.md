@@ -730,4 +730,8 @@ esta conta, fora de recuperação/login; resposta nativa fica pendente até ent�
 Cleanup invalida leituras assíncronas sem apagar o toque. Dedup persistido continua.
 Testes: abertura fria/ativa, replay, desmontagem, conta trocada, link externo,
 falha de rede, acesso negado/ID ausente e mural aberto normalmente. Sem envio real.
-Sons opcionais foram preparados fora do app para escolha; nenhum asset foi substituído.
+Sons opcionais foram preparados fora do app para escolha. Matheus escolheu Gota suave;
+o WAV e o CAF da notificação passam a 0,65 s, PCM mono 44,1 kHz/16 bits, pico -11,4 dBFS.
+Nome cbrio_chime preservado para compatibilidade com todos os remetentes e o canal
+Android existente. A troca do recurso nativo só chega com novo binário instalado; OTA
+não troca o som do sistema. Sem mudança de runtime ou dependência.
