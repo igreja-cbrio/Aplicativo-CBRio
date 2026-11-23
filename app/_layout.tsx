@@ -62,6 +62,7 @@ function RootNavigator() {
   // sessão salva e o usuário ativou a opção. null = ainda decidindo.
   const [precisaBiometria, setPrecisaBiometria] = useState<boolean | null>(null);
   const [desbloqueado, setDesbloqueado] = useState(false);
+  const [biometriaResolvidaPara, setBiometriaResolvidaPara] = useState<string | null>(null);
   // Onboarding: mostra 1x pra quem nunca viu (após logar). null = decidindo.
   const [mostrarOnboarding, setMostrarOnboarding] = useState<boolean | null>(null);
   const [onboardingResolvidoPara, setOnboardingResolvidoPara] = useState<string | null>(null);
@@ -72,8 +73,16 @@ function RootNavigator() {
       setPrecisaBiometria(false);
       return;
     }
-    biometriaAtiva().then((ativa) => setPrecisaBiometria(ativa));
-  }, [loading, session, preview]);
+    let cancelado = false;
+    const identidade = session.user.id;
+    setBiometriaResolvidaPara(null);
+    biometriaAtiva().then((ativa) => {
+      if (cancelado) return;
+      setPrecisaBiometria(ativa);
+      setBiometriaResolvidaPara(identidade);
+    });
+    return () => { cancelado = true; };
+  }, [loading, session?.user?.id, preview]);
 
   useEffect(() => {
     if (loading) return;
@@ -166,7 +175,7 @@ function RootNavigator() {
 
   return (
     <>
-      {!!uid && !preview && !recoveryScreen && mostrarOnboarding === false && onboardingResolvidoPara === uid && <ConviteNotificacoes key={uid} userId={uid} />}
+      {!!uid && !preview && !recoveryScreen && mostrarOnboarding === false && onboardingResolvidoPara === uid && biometriaResolvidaPara === uid && <ConviteNotificacoes key={uid} userId={uid} />}
       <StatusBar style={mode === "light" ? "dark" : "light"} />
       <Stack
         screenOptions={{
