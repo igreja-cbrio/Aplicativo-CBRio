@@ -3,6 +3,7 @@ import { Text } from "@/components/ui/Typography";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   Image,
   Pressable,
   RefreshControl,
@@ -10,13 +11,15 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, router, useFocusEffect, usePathname } from "expo-router";
+import { Stack, router, useFocusEffect, usePathname, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { apiGet } from "@/lib/api";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { destinoComunicado } from "@/lib/comunicadoLink";
+import { useDialogo } from "@/components/ui/Dialogo";
 import { trackEvento } from "@/lib/telemetria";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
@@ -27,6 +30,7 @@ type Comunicado = {
   foto_url: string | null;
   segmento: string;
   publicado_em: string | null;
+  link_inscricao?: string | null;
 };
 
 function quando(iso: string | null): string {
@@ -42,9 +46,18 @@ function quando(iso: string | null): string {
 
 export default function MuralScreen() {
   const pathname = usePathname();
+  const { comunicado_id } = useLocalSearchParams<{ comunicado_id?: string }>();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
+  const dlg = useDialogo();
+  async function abrirInscricao(c: Comunicado) {
+    const destino = destinoComunicado(c.link_inscricao);
+    if (!destino) return;
+    trackEvento("comunicado_aberto", { entity_id: c.id });
+    if (destino.tipo === "app") router.push(destino.url as never);
+    else { try { await Linking.openURL(destino.url); } catch { void dlg.avisar(t("Não foi possível abrir o link"), t("Tente novamente em instantes.")); } }
+  }
   const [itens, setItens] = useState<Comunicado[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -52,7 +65,7 @@ export default function MuralScreen() {
 
   const carregar = useCallback(async () => {
     try {
-      const r = await apiGet<{ comunicados: Comunicado[] }>("/app/comunicados");
+      const r = await apiGet<{ comunicados: Comunicado[] }>(`/app/comunicados${comunicado_id ? `?comunicado_id=${encodeURIComponent(comunicado_id)}` : ""}`);
       setItens(r.comunicados || []);
       setFalhou(false);
     } catch {
@@ -63,7 +76,7 @@ export default function MuralScreen() {
       setCarregando(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [comunicado_id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -97,21 +110,22 @@ export default function MuralScreen() {
           </View>
         ) : (
           itens.map((c) => (
-            <Pressable
+            <View
               key={c.id}
               style={styles.card}
-              onPress={() => trackEvento("comunicado_aberto", { entity_id: c.id })}
             >
               {c.foto_url ? <Image source={{ uri: c.foto_url }} style={styles.foto} resizeMode="cover" /> : null}
               <View style={styles.cardBody}>
                 <Text style={styles.data}>{quando(c.publicado_em)}</Text>
                 <Text style={styles.cardTitulo}>{c.titulo}</Text>
                 <Text style={styles.cardCorpo}>{c.corpo}</Text>
+                {destinoComunicado(c.link_inscricao) && <Pressable accessibilityRole="button" onPress={() => void abrirInscricao(c)} style={{ minHeight: 48, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primary, borderRadius: radius.md, marginTop: spacing.sm }}><Text style={{ color: '#fff', fontWeight: '700' }}>{t("Ver inscrição")}</Text></Pressable>}
               </View>
-            </Pressable>
+            </View>
           ))
         )}
       </ScrollView>
+      <dlg.Dialogo />
     </SafeAreaView>
   );
 }

@@ -703,3 +703,13 @@ Pedido do Matheus (17/11): no chat do app, formulário de inscrição abre a tel
   limpa em `origin/main`). Até lá, grupos/voluntariado/apresentação/evento saem só
   com o caminho escrito no texto.
 
+
+
+## Comunicados e convite de notificações · 23/11/2026
+
+Mural recebe público filtrado pelo ERP e link_inscricao opcional; botão Ver inscrição
+aceita rotas permitidas ou HTTPS sem credenciais. Push abre o comunicado no topo do mural.
+ConviteNotificacoes aparece uma vez por conta/instalação, após decisão de onboarding
+resolvida para a conta atual e biometria. Autorizados só renovam token; recusas definitivas
+oferecem Configurações. registerForPush é silencioso por padrão e deduplica chamadas.
+Nenhuma dependência nativa/runtime mudou. Testes de filtros/permissões não disparam push.
