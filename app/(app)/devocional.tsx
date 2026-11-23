@@ -22,6 +22,8 @@ export default function DevocionalHome() {
         <Tile destaque icon="library-outline" titulo={t("Planos de leitura")} legenda={t("Escolha sua jornada e veja os sugeridos")} onPress={() => router.navigate("/devocional-planos")} styles={styles} colors={colors} />
       </View>
       <View style={styles.divider}><View style={styles.dividerLine} /><Ionicons name="sparkles-outline" size={15} color={colors.primary} /><View style={styles.dividerLine} /></View>
+      <View style={styles.grid}><Tile icon="happy-outline" titulo={t("Devocionais Kids")} legenda={t("Uma semana, uma conversa em família.")} onPress={() => router.navigate("/devocional-kids")} styles={styles} colors={colors} largo /></View>
+      <View style={styles.divider}><View style={styles.dividerLine} /></View>
       <Text style={styles.sectionLabel}>{t("MEUS REGISTROS")}</Text>
       <View style={styles.grid}>
         <Tile icon="bookmark-outline" titulo={t("Minhas anotações")} legenda={t("Notas e marcações nos versículos")} onPress={() => router.navigate("/devocional-registros")} styles={styles} colors={colors} />

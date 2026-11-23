@@ -60,6 +60,7 @@ import { router, type Href } from "expo-router";
  *   └── /culto-detalhe     (próximos cultos, na Home)
  */
 const PAI: Record<string, string> = {
+  "/devocional-kids": "/devocional",
   "/carta-transferencia": "/cuidados",
   "/noticias": "/",
   "/agenda": "/",

@@ -1,3 +1,4 @@
+import { destinoDevocionalKids } from "@/lib/kidsDevocionalDestino";
 import { destinoAvisoKids } from "@/lib/kidsAvisoDestino";
 import { destinoCertificadoKids } from "@/lib/kidsCertificadoDestino";
 import { destinoNotificacaoChat } from "@/lib/assistenteChat";
@@ -24,6 +25,7 @@ import { destinoNotificacaoEvento } from "@/lib/eventoDestino";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
+  kids_devocional: "book",
   kids_mural: "megaphone",
   kids_certificado_apresentacao: "ribbon",
   carta_transferencia_pronta: "document-text",
@@ -44,6 +46,7 @@ const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
 
 // tipo técnico -> categoria amigável (pros filtros)
 const CATEGORIA: Record<string, string> = {
+  kids_devocional: "Devocionais Kids",
   kids_mural: "Kids",
   kids_certificado_apresentacao: "Kids",
   carta_transferencia_pronta: "Cuidados",
@@ -128,6 +131,8 @@ export default function NotificacoesScreen() {
     switch (n.tipo) {
       case "chat_assistente":
         router.navigate(destinoNotificacaoChat(data)); return;
+      case "kids_devocional":
+        router.navigate(destinoDevocionalKids(data)); return;
       case "kids_mural":
         router.navigate(destinoAvisoKids(data)); return;
       case "kids_certificado_apresentacao":
