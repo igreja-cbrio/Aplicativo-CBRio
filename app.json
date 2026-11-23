@@ -2,7 +2,7 @@
   "expo": {
     "name": "CBRio",
     "slug": "aplicativo-cbrio",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "scheme": "cbrio",
     "userInterfaceStyle": "automatic",
@@ -85,6 +85,12 @@
         {
           "microphonePermission": "O CBRio usa o microfone para transformar sua fala em texto. Você revisa antes de enviar.",
           "speechRecognitionPermission": "O CBRio usa o reconhecimento de fala para preencher sua mensagem com a sua voz."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "O CBRio usa o microfone para gravar mensagens de áudio que você escolhe enviar no chat."
         }
       ]
     ],

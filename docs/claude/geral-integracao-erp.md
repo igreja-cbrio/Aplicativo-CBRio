@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Chat: gravação e envio de áudio (2026-11-23)
+
 - Chat: apresentação do Pedrinho (2026-11-16)
 - Chat: o Pedrinho abre a tela interna (`abrir_tela`) em vez do link do site (2026-11-18)
 
@@ -703,3 +705,6 @@ Pedido do Matheus (17/11): no chat do app, formulário de inscrição abre a tel
   limpa em `origin/main`). Até lá, grupos/voluntariado/apresentação/evento saem só
   com o caminho escrito no texto.
 
+
+## Chat: gravação e envio de áudio (2026-11-23)
+Microfone deixa de usar ditado: grava M4A/AAC mono 24 kHz/64 kbps até 120s, permite parar, ouvir, descartar e enviar. Novo expo-audio 1.1.1 exige binário 1.0.4. Runtime permanece 1.0.0; entrypoint só é carregado após requireOptionalNativeModule, e binários antigos pedem atualização sem crash. Permissão inactive do iOS não cancela; background/saída cancelam. Mutex cobre limpeza do modo de áudio; arquivo em upload é mantido até o pedido terminar. API /app/assistente/audio tem identidade esperada/UUID estável, áudio privado e mesmo controle de conversa/respostas. Não há legenda de áudio nem transcrição no compositor. Reprodução de mensagens remotas usa player privado já existente. Inscrições continuam exigindo cartão e termos. OTA não entrega o gravador nativo aos binários antigos.

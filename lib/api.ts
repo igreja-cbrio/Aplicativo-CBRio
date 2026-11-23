@@ -783,7 +783,7 @@ export async function enviarFotoPerfil(
 export function enviarAnexoAssistente(
   arquivo: { uri: string; name: string; type: string },
   opts: { texto?: string; conversa_id?: string; client_id: string; expectedUserId?: string },
-): Promise<{ conversa_id: string; resposta: string | null; escalado: boolean }> {
+): Promise<{ conversa_id: string; resposta: string | null; escalado: boolean; acao?: unknown; persistido?: boolean; limitado?: boolean }> {
   return apiUpload("/app/assistente/anexo", "foto", arquivo, {
     ...(opts.texto ? { texto: opts.texto } : {}),
     ...(opts.conversa_id ? { conversa_id: opts.conversa_id } : {}),
@@ -1720,4 +1720,11 @@ export function completarCadastroApp(dados: {
   sexo: "masculino" | "feminino";
 }): Promise<{ ok: boolean; criado?: boolean }> {
   return apiPost("/app/identidade/completar", dados);
+}
+
+/** Mensagem de voz, preservada como áudio na conversa. */
+export function enviarAudioAssistente(arquivo: { uri: string; name: string; type: string }, opts: { texto?: string; conversa_id?: string; client_id: string; expectedUserId?: string }) {
+  return apiUpload<{ conversa_id: string; resposta: string | null; escalado: boolean; acao?: unknown; persistido?: boolean; limitado?: boolean }>("/app/assistente/audio", "audio", arquivo, {
+    ...(opts.conversa_id ? { conversa_id: opts.conversa_id } : {}), client_id: opts.client_id,
+  }, { expectedUserId: opts.expectedUserId });
 }
