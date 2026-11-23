@@ -228,3 +228,7 @@ contendo "semana" e sem `slug` (frágil; o certo é dar slug ao plano semanal);
 `cartoes.tsx`/`sobre.tsx` escrevem `{"CB"+"Rio"}`/`{"NSM"+": "}` só pra não
 contar no portão de i18n; a leitura da Bíblia tem cores fixas de "papel"
 (`#FBFAF7`) — não segue o tema escuro de propósito.
+
+## Kids semanal (2026-11-23)
+
+Devocional → Devocionais Kids lista edições por domingo, com título e série. Dados em `/app/kids/devocionais`; PDF privado assinado por ação, sem cache entre contas. Notificação `kids_devocional` abre a semana indicada, inclusive fora da primeira página. Pai da tela é Devocional. Publicação e destinatários são definidos no ERP (Kids → Aplicativo).

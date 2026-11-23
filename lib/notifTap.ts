@@ -1,3 +1,4 @@
+import { destinoDevocionalKids } from "@/lib/kidsDevocionalDestino";
 import { destinoAvisoKids } from "@/lib/kidsAvisoDestino";
 import { destinoCertificadoKids } from "@/lib/kidsCertificadoDestino";
 import { destinoNotificacaoChat } from "@/lib/assistenteChat";
@@ -72,6 +73,8 @@ export function attachNotifTapListener(): () => void {
     switch (tipo) {
       case "chat_assistente":
         router.navigate(destinoNotificacaoChat(data)); return;
+      case "kids_devocional":
+        router.navigate(destinoDevocionalKids(data)); return;
       case "kids_mural":
         router.navigate(destinoAvisoKids(data)); return;
       // Certificado da apresentação liberado pela equipe (17/11/2026).

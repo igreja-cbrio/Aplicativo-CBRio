@@ -6,6 +6,16 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Devocionais Kids": {"en": "Kids devotionals", "es": "Devocionales Kids"},
+  "Uma semana, uma conversa em família.": {"en": "One week, one family conversation.", "es": "Una semana, una conversación en familia."},
+  "Leia, converse e viva o desafio da semana com as crianças.": {"en": "Read, talk and live this week’s challenge with the children.", "es": "Lee, conversa y vive el desafío de la semana con los niños."},
+  "Não foi possível carregar os devocionais Kids.": {"en": "Could not load Kids devotionals.", "es": "No se pudieron cargar los devocionales Kids."},
+  "Os devocionais Kids aparecerão aqui quando forem publicados.": {"en": "Kids devotionals will appear here when published.", "es": "Los devocionales Kids aparecerán aquí cuando se publiquen."},
+  "Ler devocional": {"en": "Read devotional", "es": "Leer devocional"},
+  "Baixar PDF": {"en": "Download PDF", "es": "Descargar PDF"},
+  "Semanas anteriores": {"en": "Previous weeks", "es": "Semanas anteriores"},
+  "Não foi possível abrir o PDF. Tente novamente.": {"en": "Could not open the PDF. Try again.", "es": "No se pudo abrir el PDF. Inténtalo de nuevo."},
+
   "A gravação foi interrompida. Grave novamente.": { en: "Recording was interrupted. Record again.", es: "La grabación se interrumpió. Graba de nuevo." },
   "Toque para reenviar ou descarte o áudio": { en: "Tap to resend or discard the audio", es: "Toca para reenviar o descarta el audio" },
   "Pausar áudio": {"en": "Pause audio", "es": "Pausar audio"},
