@@ -11,7 +11,7 @@
 // ============================================================================
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { estadoVoluntariado, volEncerrado } from "@/lib/volStatus";
-import { rotaPai, ehRaiz, subirUmNivel, paramsDoPai } from "@/lib/hierarquia";
+import { rotaPai, ehRaiz, subirUmNivel, paramsDoPai, registrarRotaAtual } from "@/lib/hierarquia";
 import { acaoDaBarra, ehRotaDeBarra, irParaBarra, ROTAS_BARRA } from "@/lib/nav";
 import { hojeBRT, diaBRT } from "@/lib/dataBRT";
 import { diaDoInstanteBRT, ehDiaDoCulto, cultosDeHoje } from "@/lib/janelaCheckin";
@@ -143,6 +143,7 @@ describe("volStatus · os 7 status do ERP", () => {
 describe("hierarquia · a árvore do `cd ..`", () => {
   afterEach(() => {
     navegacoes.length = 0;
+    registrarRotaAtual("/");
   });
 
   it("tela de barra volta pra Home em UM passo", () => {
@@ -159,6 +160,18 @@ describe("hierarquia · a árvore do `cd ..`", () => {
     expect(rotaPai("/evento")).toBe("/inscricoes");
     expect(rotaPai("/next-turma")).toBe("/next");
     expect(rotaPai("/next-espera")).toBe("/next");
+  });
+
+  it("inscrições abertas pelo Kids voltam ao Kids sem alterar os outros acessos", () => {
+    registrarRotaAtual("/apresentacao-crianca", { origem: "kids" });
+    subirUmNivel();
+    registrarRotaAtual("/inscricao-formulario", { origem: "kids", para: "crianca" });
+    subirUmNivel();
+    registrarRotaAtual("/apresentacao-crianca");
+    subirUmNivel();
+    expect(navegacoes).toEqual(["/kids-area", "/kids-area", "/inscricoes"]);
+    expect(rotaPai("/apresentacao-crianca", { origem: "outro" })).toBe("/inscricoes");
+    expect(rotaPai("/inscricao-batismo", { origem: "kids" })).toBe("/batismo");
   });
 
   it("query string não muda o pai (deep link com ?id= tem que subir igual)", () => {

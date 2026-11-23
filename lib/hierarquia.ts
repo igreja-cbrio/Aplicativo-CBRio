@@ -161,10 +161,11 @@ const PAI: Record<string, string> = {
 };
 
 /** O pai da rota na árvore acima (Home quando não há mapa). */
-export function rotaPai(rota: string): string {
+export function rotaPai(rota: string, params: Record<string, unknown> = {}): string {
   if (!rota || rota === "/") return "/";
   // Ignora query string: /grupo-detalhe?id=… continua sendo /grupo-detalhe.
   const limpa = rota.split("?")[0];
+  if (params.origem === "kids" && ["/apresentacao-crianca", "/inscricao-formulario"].includes(limpa)) return "/kids-area";
   return PAI[limpa] ?? "/";
 }
 
@@ -234,7 +235,7 @@ function tatil() {
 export function subirUmNivel(rota?: string) {
   tatil();
   const origem = rota ?? rotaAtual;
-  const pai = rotaPai(origem);
+  const pai = rotaPai(origem, paramsAtuais);
   const params = paramsDoPai(origem, paramsAtuais);
   router.navigate((Object.keys(params).length ? { pathname: pai, params } : pai) as Href);
 }
