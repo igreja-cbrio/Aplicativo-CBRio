@@ -14,7 +14,10 @@ import { Text } from "@/components/ui/Typography";
 // rota no ERP e devolvia 200 só pelo catch-all do SPA. `apresentacao_bebes` tinha
 // 0 linhas — ninguém nunca conseguiu se inscrever.
 // ============================================================================
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from '@/contexts/AuthContext';
+import { FilhosInscricao, useFilhosInscricao } from '@/components/kids/FilhosInscricao';
+import { detalheFilhoInscricao, nascimentoBR, type FilhoDetalhe } from '@/lib/kidsFilhosInscricao';
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { Stack, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -86,10 +89,19 @@ function dataBonita(iso: string): string {
 }
 
 export default function ApresentacaoCriancaScreen() {
+  const { user } = useAuth();
+  return <ApresentacaoCriancaForm key={user?.id || 'sem-conta'} />;
+}
+function ApresentacaoCriancaForm() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
   const dlg = useDialogo();
+  const filhos = useFilhosInscricao();
+  const [filhoSelecionado, setFilhoSelecionado] = useState<FilhoDetalhe | null>(null);
+  const [escolhendo, setEscolhendo] = useState(false);
+  const escolhaAtual = useRef(0);
+  useEffect(() => () => { escolhaAtual.current++; }, []);
 
   const [dados, setDados] = useState<Resp | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -131,6 +143,21 @@ export default function ApresentacaoCriancaScreen() {
   const podeEnviar = !!quem && podeEnviarPedido(quem, crianca, resp, outro);
   const aviso = quem ? avisoDoVinculo(quem, dados?.familia?.nome ?? null) : null;
 
+  async function escolherFilho(chave: string) {
+    const v = ++escolhaAtual.current; setEscolhendo(true); setErro(null);
+    try {
+      const f = await detalheFilhoInscricao(chave);
+      if (v !== escolhaAtual.current) return;
+      setFilhoSelecionado(f); setQuem('propria');
+      setCrianca({ nome: f.nome, nascimento: nascimentoBR(f.data_nascimento), sexo: f.sexo });
+      setSaude({ ...VAZIO_SAUDE, ...f.saude }); setOutro(VAZIO_OUTRO); setAbriuOutro(false); setObs('');
+    } catch (e) { if (v === escolhaAtual.current) setErro(e instanceof Error ? e.message : t('Não foi possível consultar seus filhos.')); }
+    finally { if (v === escolhaAtual.current) setEscolhendo(false); }
+  }
+  function escolherManual(q: QuemApresenta) {
+    escolhaAtual.current++; setFilhoSelecionado(null); setCrianca(VAZIA); setSaude(VAZIO_SAUDE); setErro(null); setQuem(q);
+  }
+
   async function voltar() {
     const campos = [crianca.nome, crianca.nascimento, resp.nome, resp.telefone, outro.nome, outro.cpf, obs];
     const acao = acaoAoFechar({ campos, salvando: enviando });
@@ -163,6 +190,7 @@ export default function ApresentacaoCriancaScreen() {
       }>(
         "/app/apresentacao-crianca",
         {
+          ...(filhoSelecionado ? { filho: filhoSelecionado.chave } : {}),
           propria: quem === "propria",
           crianca: {
             nome: crianca.nome.trim(),
@@ -226,7 +254,7 @@ export default function ApresentacaoCriancaScreen() {
               <Text style={styles.okTxt}>
                 {t("A cerimônia é no culto de domingo, dia")} {dataBonita(pronto.data)}.
               </Text>
-              {pronto.propria && (
+              {pronto.propria && !filhoSelecionado && (
                 <Text style={styles.okTxt}>
                   {pronto.familia
                     ? `${t("A criança entrou na sua família")} (${pronto.familia}) — ${t("veja em Minha família")}.`
@@ -300,14 +328,16 @@ export default function ApresentacaoCriancaScreen() {
               )}
 
               <Text style={styles.intro}>{t("Quem você quer apresentar?")}</Text>
+              <FilhosInscricao consulta={filhos} escolher={escolherFilho} ocupado={escolhendo} />
+              {erro ? <Text style={{ color: colors.textMuted }} accessibilityRole="alert">{erro}</Text> : null}
 
               {dados?.pode_indicar_vinculo ? (
-                <Pressable style={styles.opcao} onPress={() => setQuem("propria")} accessibilityRole="button">
+                <Pressable style={styles.opcao} disabled={escolhendo} onPress={() => escolherManual("propria")} accessibilityRole="button">
                   <View style={styles.opcaoIcone}>
                     <Ionicons name="happy" size={20} color={colors.primary} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.opcaoTitulo}>{t("É meu filho ou minha filha")}</Text>
+                    <Text style={styles.opcaoTitulo}>{t("Inscrever uma criança ainda não cadastrada")}</Text>
                     <Text style={styles.opcaoAjuda}>
                       {t("Já temos seus dados — você só preenche os da criança.")}
                     </Text>
@@ -325,7 +355,7 @@ export default function ApresentacaoCriancaScreen() {
                 </View>
               )}
 
-              <Pressable style={styles.opcao} onPress={() => setQuem("outra")} accessibilityRole="button">
+              <Pressable style={styles.opcao} disabled={escolhendo} onPress={() => escolherManual("outra")} accessibilityRole="button">
                 <View style={styles.opcaoIcone}>
                   <Ionicons name="people" size={20} color={colors.primary} />
                 </View>
@@ -340,7 +370,7 @@ export default function ApresentacaoCriancaScreen() {
             </>
           ) : (
             <>
-              {!!aviso && (
+              {!!aviso && !filhoSelecionado && (
                 <View style={styles.avisoCard}>
                   <Ionicons name="people-circle" size={18} color={colors.primary} />
                   <View style={{ flex: 1 }}>
@@ -355,14 +385,17 @@ export default function ApresentacaoCriancaScreen() {
               )}
 
               <Text style={styles.secao}>{t("Dados da criança")}</Text>
+              {filhoSelecionado ? <Text style={styles.intro}>{t('Os dados já cadastrados foram preenchidos. Complete apenas os campos que faltam.')}</Text> : null}
               <Input
                 label={t("Nome completo da criança")}
+                editable={!filhoSelecionado?.nome}
                 value={crianca.nome}
                 onChangeText={(v) => setCrianca((c) => ({ ...c, nome: v }))}
                 autoCapitalize="words"
               />
               <Input
                 label={t("Data de nascimento")}
+                editable={!filhoSelecionado?.data_nascimento}
                 value={crianca.nascimento}
                 onChangeText={(v) => setCrianca((c) => ({ ...c, nascimento: maskDateBR(v) }))}
                 keyboardType="number-pad"
@@ -372,6 +405,7 @@ export default function ApresentacaoCriancaScreen() {
                 {(["F", "M"] as const).map((sx) => (
                   <Pressable
                     key={sx}
+                    disabled={!!filhoSelecionado?.sexo}
                     onPress={() => setCrianca((c) => ({ ...c, sexo: c.sexo === sx ? null : sx }))}
                     style={[styles.sexoBtn, crianca.sexo === sx && styles.sexoBtnOn]}
                     accessibilityRole="button"
@@ -410,6 +444,7 @@ export default function ApresentacaoCriancaScreen() {
                       {([true, false] as const).map((op) => (
                         <Pressable
                           key={String(op)}
+                          disabled={filhoSelecionado?.saude[p.campo] !== null && filhoSelecionado?.saude[p.campo] !== undefined}
                           onPress={() =>
                             setSaude((sd) => ({
                               ...sd,
@@ -432,6 +467,7 @@ export default function ApresentacaoCriancaScreen() {
                     {valor === true && (
                       <Input
                         label={t(p.placeholder)}
+                        editable={!filhoSelecionado?.saude[p.detalhe]}
                         value={String(saude[p.detalhe] ?? "")}
                         onChangeText={(v) => setSaude((sd) => ({ ...sd, [p.detalhe]: v }))}
                         autoCapitalize="sentences"
@@ -480,7 +516,7 @@ export default function ApresentacaoCriancaScreen() {
                 </>
               )}
 
-              {quem === "propria" && (
+              {quem === "propria" && !filhoSelecionado && (
                 <>
                   {!abriuOutro ? (
                     <Pressable

@@ -28,7 +28,7 @@ export default function KidsAreaScreen() {
     { rota: "/kids", icone: "happy-outline", titulo: t("Minhas crianças"), sub: t("Check-in, fichas e avisos dos seus filhos."), destaque: true },
     { rota: "/kids-mural", icone: "megaphone-outline", titulo: t("Mural de avisos"), sub: t("Avisos e calendário de eventos do Kids.") },
     { rota: { pathname: "/apresentacao-crianca", params: { origem: "kids" } }, icone: "heart-outline", titulo: t("Apresentação de crianças"), sub: t("Inscreva uma criança para a apresentação na igreja.") },
-    { rota: { pathname: "/inscricao-formulario", params: { url: "https://www.cbrio.org/inscricao-batismo", para: "crianca", origem: "kids" } }, icone: "water-outline", titulo: t("Batismo de crianças"), sub: t("Inscreva uma criança para o batismo.") },
+    { rota: "/kids-batismo", icone: "water-outline", titulo: t("Batismo de crianças"), sub: t("Inscreva uma criança para o batismo.") },
     { rota: "/kids-certificados", icone: "ribbon-outline", titulo: t("Certificados"), sub: t("Certificado da apresentação de crianças.") },
     { rota: "/kids-horarios", icone: "time-outline", titulo: t("Horários de funcionamento"), sub: t("Quando o Kids está aberto.") },
     { rota: "/kids-salas", icone: "grid-outline", titulo: t("Divisão das salas"), sub: t("Qual sala é de cada idade.") },
