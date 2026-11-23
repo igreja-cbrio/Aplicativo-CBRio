@@ -708,3 +708,12 @@ Pedido do Matheus (17/11): no chat do app, formulário de inscrição abre a tel
 
 ## Chat: gravação e envio de áudio (2026-11-23)
 Microfone deixa de usar ditado: grava M4A/AAC mono 24 kHz/64 kbps até 120s, permite parar, ouvir, descartar e enviar. Novo expo-audio 1.1.1 exige binário 1.0.4. Runtime permanece 1.0.0; entrypoint só é carregado após requireOptionalNativeModule, e binários antigos pedem atualização sem crash. Permissão inactive do iOS não cancela; background/saída cancelam. Mutex cobre limpeza do modo de áudio; arquivo em upload é mantido até o pedido terminar. API /app/assistente/audio tem identidade esperada/UUID estável, áudio privado e mesmo controle de conversa/respostas. Não há legenda de áudio nem transcrição no compositor. Reprodução de mensagens remotas usa player privado já existente. Inscrições continuam exigindo cartão e termos. OTA não entrega o gravador nativo aos binários antigos.
+
+## Comunicados e convite de notificações · 23/11/2026
+
+Mural recebe público filtrado pelo ERP e link_inscricao opcional; botão Ver inscrição
+aceita rotas permitidas ou HTTPS sem credenciais. Push abre o comunicado no topo do mural.
+ConviteNotificacoes aparece uma vez por conta/instalação, após decisão de onboarding
+resolvida para a conta atual e biometria. Autorizados só renovam token; recusas definitivas
+oferecem Configurações. registerForPush é silencioso por padrão e deduplica chamadas.
+Nenhuma dependência nativa/runtime mudou. Testes de filtros/permissões não disparam push.

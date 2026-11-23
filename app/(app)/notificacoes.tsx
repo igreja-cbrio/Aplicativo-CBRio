@@ -149,8 +149,10 @@ export default function NotificacoesScreen() {
         router.navigate("/batismo"); return;
       case "devocional":
         router.navigate("/devocional"); return;
-      case "comunicado":
-        router.navigate("/mural"); return;
+      case "comunicado": {
+        const id = (data as { comunicado_id?: string }).comunicado_id;
+        router.navigate(id ? { pathname: "/mural", params: { comunicado_id: id } } : "/mural"); return;
+      }
       case "culto": {
         const cultoId = (data as { culto_id?: string }).culto_id;
         if (cultoId) router.navigate({ pathname: "/culto-detalhe", params: { id: cultoId } });
