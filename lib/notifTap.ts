@@ -1,3 +1,4 @@
+import { destinoNotificacaoComunicado } from "@/lib/comunicadoLink";
 import { destinoDevocionalKids } from "@/lib/kidsDevocionalDestino";
 import { destinoAvisoKids } from "@/lib/kidsAvisoDestino";
 import { destinoCertificadoKids } from "@/lib/kidsCertificadoDestino";
@@ -19,6 +20,8 @@ export function attachNotifTapListener(): () => void {
   // Dedup DENTRO desta abertura (o Android entrega o mesmo evento mais de uma
   // vez quando a Activity é recriada).
   const processadas = new Set<string>();
+  let ativo = true;
+  let recebeuToqueAoVivo = false;
 
   /**
    * ⚠️⚠️ DEDUP QUE ATRAVESSA ABERTURAS — é isto que resolve o "toda vez que
@@ -62,13 +65,13 @@ export function attachNotifTapListener(): () => void {
   }
 
   function go(resp: Notifications.NotificationResponse | null) {
-    if (!resp) return;
+    if (!ativo || !resp) return;
     const { memo } = chavesDaResposta(resp);
     if (processadas.has(memo)) return;
-    marcarProcessada(resp);
 
     const data = resp.notification.request.content.data;
     if (!data || typeof data !== "object") return;
+    marcarProcessada(resp);
     const tipo = (data as { tipo?: string }).tipo;
     switch (tipo) {
       case "chat_assistente":
@@ -132,8 +135,7 @@ export function attachNotifTapListener(): () => void {
         router.navigate("/kids");
         return;
       case "comunicado": {
-        const id = (data as { comunicado_id?: string }).comunicado_id;
-        router.navigate(id ? { pathname: "/mural", params: { comunicado_id: id } } : "/mural");
+        router.navigate(destinoNotificacaoComunicado(data));
         return;
       }
       // ⚠️ Nome começa com `inscricao_` de PROPÓSITO: no binário que ainda não
@@ -170,6 +172,7 @@ export function attachNotifTapListener(): () => void {
 
   // Tap em foreground/background -> abriu o app a partir da notif.
   const subResp = Notifications.addNotificationResponseReceivedListener((resp) => {
+    recebeuToqueAoVivo = true;
     go(resp);
   });
 
@@ -177,13 +180,15 @@ export function attachNotifTapListener(): () => void {
   // resposta (clear, que vale só nesta sessão) e SÓ roteia se não for a mesma
   // resposta que já tratamos numa abertura anterior.
   Notifications.getLastNotificationResponseAsync().then(async (resp) => {
-    if (!resp) return;
+    if (!ativo || !resp) return;
+    const replay = await ehReplayDeOutraAbertura(resp);
+    if (!ativo || recebeuToqueAoVivo) return;
+    if (!replay) go(resp);
     Notifications.clearLastNotificationResponseAsync().catch(() => {});
-    if (await ehReplayDeOutraAbertura(resp)) return;
-    go(resp);
-  });
+  }).catch(() => {});
 
   return () => {
+    ativo = false;
     subResp.remove();
   };
 }

@@ -132,11 +132,17 @@ function RootNavigator() {
     return () => sub.remove();
   }, [uid]);
 
-  // Listener de tap em notificações -> roteia pra tela certa.
+  // Só consome o toque quando a navegação existe e os portões terminaram.
+  // Antes disso, a resposta nativa fica pendente para a abertura após login/desbloqueio.
+  const podeAbrirNotificacao = !!uid && !loading && !preview && !recoveryScreen
+    && segments[0] !== "(auth)" && mostrarOnboarding === false
+    && onboardingResolvidoPara === uid && biometriaResolvidaPara === uid
+    && precisaBiometria !== null && (!precisaBiometria || desbloqueado);
   useEffect(() => {
+    if (!podeAbrirNotificacao) return;
     const detach = attachNotifTapListener();
     return detach;
-  }, []);
+  }, [podeAbrirNotificacao, uid]);
 
   if (loading || (session && !preview && precisaBiometria === null && !recoveryScreen)) {
     return <SplashPulse />;

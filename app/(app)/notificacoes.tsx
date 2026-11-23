@@ -1,3 +1,4 @@
+import { destinoNotificacaoComunicado } from "@/lib/comunicadoLink";
 import { destinoDevocionalKids } from "@/lib/kidsDevocionalDestino";
 import { destinoAvisoKids } from "@/lib/kidsAvisoDestino";
 import { destinoCertificadoKids } from "@/lib/kidsCertificadoDestino";
@@ -155,8 +156,7 @@ export default function NotificacoesScreen() {
       case "devocional":
         router.navigate("/devocional"); return;
       case "comunicado": {
-        const id = (data as { comunicado_id?: string }).comunicado_id;
-        router.navigate(id ? { pathname: "/mural", params: { comunicado_id: id } } : "/mural"); return;
+        router.navigate(destinoNotificacaoComunicado(data)); return;
       }
       case "culto": {
         const cultoId = (data as { culto_id?: string }).culto_id;

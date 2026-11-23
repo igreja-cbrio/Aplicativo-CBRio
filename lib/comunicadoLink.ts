@@ -9,3 +9,15 @@ export function destinoComunicado(valor: unknown): { tipo: 'app' | 'web'; url: s
   } catch { /* link inválido não abre */ }
   return null;
 }
+
+/** Ambos os sinos passam pela leitura autorizada, inclusive testes antigos só com ID. */
+export function destinoNotificacaoComunicado(data: Record<string, unknown>) {
+  const id = typeof data.comunicado_id === 'string' ? data.comunicado_id : '';
+  return id
+    ? { pathname: '/mural' as const, params: { comunicado_id: id, abrir_inscricao: '1' } }
+    : '/mural' as const;
+}
+
+export function inscricaoDoComunicado(id: string | undefined, itens: { id: string; link_inscricao?: string | null }[]) {
+  return destinoComunicado(itens.find((item) => item.id === id)?.link_inscricao);
+}

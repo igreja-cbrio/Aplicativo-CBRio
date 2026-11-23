@@ -712,8 +712,22 @@ Microfone deixa de usar ditado: grava M4A/AAC mono 24 kHz/64 kbps até 120s, per
 ## Comunicados e convite de notificações · 23/11/2026
 
 Mural recebe público filtrado pelo ERP e link_inscricao opcional; botão Ver inscrição
-aceita rotas permitidas ou HTTPS sem credenciais. Push abre o comunicado no topo do mural.
+aceita rotas permitidas ou HTTPS sem credenciais. Push e sino resolvem o comunicado autorizado pelo ID e abrem diretamente sua inscrição;
+sem link válido, mantêm o comunicado no mural. Testes privados antigos também funcionam.
 ConviteNotificacoes aparece uma vez por conta/instalação, após decisão de onboarding
 resolvida para a conta atual e biometria. Autorizados só renovam token; recusas definitivas
 oferecem Configurações. registerForPush é silencioso por padrão e deduplica chamadas.
 Nenhuma dependência nativa/runtime mudou. Testes de filtros/permissões não disparam push.
+
+### Toque direto na inscrição · 23/11/2026
+
+`destinoNotificacaoComunicado` é comum ao push e ao sino. A intenção
+`abrir_inscricao=1` passa pelo GET autenticado já existente, seleciona somente o ID
+exato (inclusive `teste:`) e consome a intenção antes de abrir rota permitida/HTTPS.
+Consulta cancelada, conta trocada ou erro não redireciona; erro permite tentar novamente.
+Listener externo só monta depois de sessão, onboarding e biometria resolvidos para
+esta conta, fora de recuperação/login; resposta nativa fica pendente até então.
+Cleanup invalida leituras assíncronas sem apagar o toque. Dedup persistido continua.
+Testes: abertura fria/ativa, replay, desmontagem, conta trocada, link externo,
+falha de rede, acesso negado/ID ausente e mural aberto normalmente. Sem envio real.
+Sons opcionais foram preparados fora do app para escolha; nenhum asset foi substituído.

@@ -1,0 +1,35 @@
+import React from 'react';
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { beforeEach, afterEach, expect, it, vi } from 'vitest';
+const h = vi.hoisted(() => ({ params: { comunicado_id: 'teste:1', abrir_inscricao: '1' } as Record<string, string>, uid: 'pessoal', get: vi.fn(), replace: vi.fn(), setParams: vi.fn(), open: vi.fn(), avisar: vi.fn() }));
+vi.mock('react-native', () => ({ ActivityIndicator: 'Loading', Image: 'Image', Pressable: 'Button', RefreshControl: 'Refresh', View: 'View', Linking: { openURL: h.open }, StyleSheet: { create: (s: any) => s } }));
+vi.mock('../components/navigation/DockContent', () => ({ ScrollView: 'Scroll' }));
+vi.mock('../components/ui/Typography', () => ({ Text: 'Text' }));
+vi.mock('react-native-safe-area-context', () => ({ SafeAreaView: 'Safe' }));
+vi.mock('@expo/vector-icons', () => ({ Ionicons: 'Icon' }));
+vi.mock('expo-router', async () => { const React = await import('react'); return { Stack: { Screen: () => null }, router: { replace: h.replace, setParams: h.setParams }, usePathname: () => '/mural', useLocalSearchParams: () => h.params, useFocusEffect: (fn: any) => React.useEffect(fn, [fn]) }; });
+vi.mock('../contexts/ThemeContext', () => ({ useColors: () => ({}) }));
+vi.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ session: { user: { id: h.uid } } }) }));
+vi.mock('../lib/i18n', () => ({ useT: () => (s: string) => s }));
+vi.mock('../lib/api', () => ({ apiGet: h.get }));
+vi.mock('../lib/hierarquia', () => ({ subirUmNivel: vi.fn() }));
+vi.mock('../lib/telemetria', () => ({ trackEvento: vi.fn() }));
+vi.mock('../components/ui/ErrorState', () => ({ ErrorState: 'ErrorState' }));
+vi.mock('../components/ui/Dialogo', () => ({ useDialogo: () => ({ avisar: h.avisar, Dialogo: () => null }) }));
+import Mural from '../app/(app)/mural';
+let tree: ReactTestRenderer;
+const aviso = (id = 'teste:1', link = '/inscricao-batismo') => ({ id, link_inscricao: link, titulo: 'Batismo', corpo: 'Convite', publicado_em: null });
+async function montar() { await act(async () => { tree = create(React.createElement(Mural)); }); }
+beforeEach(() => { vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.stubGlobal('React', React); vi.resetAllMocks(); h.uid = 'pessoal'; h.params = { comunicado_id: 'teste:1', abrir_inscricao: '1' }; h.open.mockResolvedValue(undefined); h.get.mockResolvedValue({ comunicados: [aviso()] }); });
+afterEach(async () => { if (tree) await act(async () => tree.unmount()); vi.unstubAllGlobals(); });
+it('abre diretamente batismo após ler o teste da conta autenticada', async () => {
+ await montar(); expect(h.get).toHaveBeenCalledWith('/app/comunicados?comunicado_id=teste%3A1', { expectedUserId: 'pessoal' }); expect(h.replace).toHaveBeenCalledExactlyOnceWith('/inscricao-batismo'); expect(h.setParams).toHaveBeenCalledWith({ abrir_inscricao: undefined });
+});
+it('abrir o mural normalmente não dispara inscrição', async () => { h.params = {}; await montar(); expect(h.replace).not.toHaveBeenCalled(); });
+it('não usa inscrição de outro aviso quando o solicitado não é acessível', async () => { h.get.mockResolvedValue({ comunicados: [aviso('outro')] }); await montar(); expect(h.replace).not.toHaveBeenCalled(); });
+it('abre HTTPS e mantém o aviso disponível se o navegador falhar', async () => { h.get.mockResolvedValue({ comunicados: [aviso('teste:1', 'https://www.cbrio.org/batismo')] }); h.open.mockRejectedValue(new Error('offline')); await montar(); expect(h.open).toHaveBeenCalledOnce(); expect(h.avisar).toHaveBeenCalledOnce(); expect(h.replace).not.toHaveBeenCalled(); });
+it('falha de rede permite nova tentativa sem redirecionar incorretamente', async () => { h.get.mockRejectedValueOnce(new Error('offline')); await montar(); expect(h.replace).not.toHaveBeenCalled(); h.get.mockResolvedValue({ comunicados: [aviso()] }); await act(async () => tree.root.findByType('ErrorState' as any).props.onRetry()); expect(h.replace).toHaveBeenCalledWith('/inscricao-batismo'); });
+it('resposta atrasada após sair da tela não abre inscrição', async () => { let resolve!: (v: any) => void; h.get.mockReturnValue(new Promise(r => { resolve = r; })); await montar(); await act(async () => tree.unmount()); await act(async () => resolve({ comunicados: [aviso()] })); expect(h.replace).not.toHaveBeenCalled(); });
+it('troca de conta descarta a consulta anterior', async () => { let resolve!: (v: any) => void; h.get.mockReturnValueOnce(new Promise(r => { resolve = r; })).mockResolvedValue({ comunicados: [] }); await montar(); h.uid = 'outra'; await act(async () => tree.update(React.createElement(Mural))); await act(async () => resolve({ comunicados: [aviso()] })); expect(h.replace).not.toHaveBeenCalled(); });
+it('link inválido não abre navegador nem outra rota', async () => { h.get.mockResolvedValue({ comunicados: [aviso('teste:1', 'javascript:alert(1)')] }); await montar(); expect(h.replace).not.toHaveBeenCalled(); expect(h.open).not.toHaveBeenCalled(); });
+it('outro comunicado aberto na mesma tela resolve somente a nova inscrição', async () => { h.params = { comunicado_id: 'primeiro' }; h.get.mockResolvedValue({ comunicados: [aviso('primeiro', '/next')] }); await montar(); h.params = { comunicado_id: 'teste:1', abrir_inscricao: '1' }; h.get.mockResolvedValue({ comunicados: [aviso()] }); await act(async () => tree.update(React.createElement(Mural))); expect(h.replace).toHaveBeenCalledExactlyOnceWith('/inscricao-batismo'); });
