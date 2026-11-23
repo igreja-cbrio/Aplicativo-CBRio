@@ -12,13 +12,13 @@ import { useMembro } from "@/contexts/MembroContext";
 import { HistoricoAssistente, type ConversaAssistente } from "@/components/HistoricoAssistente";
 import { ConfirmacaoAssistente } from "@/components/chat/AcaoAssistente";
 import { CABECALHO_CAPACIDADES, destinoDaAcao, lerAcaoAssistente, podeConfirmarAcao, type AcaoAssistente } from "@/lib/assistenteAcao";
-import { useDitadoAssistente } from "@/hooks/useDitadoAssistente";
+import { GravadorMensagem, PreviaAudio, apagarAudio, reterAudio } from "@/components/chat/GravadorMensagem";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { useColors } from "@/contexts/ThemeContext";
-import { useT, useLang } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { linkify } from "@/lib/linkify";
 import { subirUmNivel } from "@/lib/hierarquia";
-import { apiGet, apiPost, enviarAnexoAssistente } from "@/lib/api";
+import { apiGet, apiPost, enviarAnexoAssistente, enviarAudioAssistente } from "@/lib/api";
 import { escolherImagem, type ArquivoImagem } from "@/lib/escolherImagem";
 import {
   FRASE_PEDIR_HUMANO,
@@ -58,7 +58,6 @@ export default function FaleConoscoChatScreen() {
   const t = useT();
   const { user } = useAuth();
   const { membro } = useMembro();
-  const { lang } = useLang();
   const [audioAtivo, setAudioAtivo] = useState<string | null>(null);
   useFocusEffect(useCallback(() => () => setAudioAtivo(null), []));
   useEffect(() => {
@@ -102,17 +101,19 @@ export default function FaleConoscoChatScreen() {
   const [falhouErro, setFalhouErro] = useState<string | null>(null);
 
   // client_id da foto pendente: o MESMO no retry (o servidor casa a otimista por ele)
-  const voz = useDitadoAssistente(setTexto, (codigo) => {
-    const mensagens: Record<string, string> = {
-      atualizar: t("Atualize o app na loja para usar o ditado por voz."),
-      permissao: t("Permita o microfone e o reconhecimento de fala nos ajustes do celular."),
-      indisponivel: t("O reconhecimento de fala não está disponível neste aparelho."),
-      falha: t("Não foi possível transcrever. Tente novamente ou digite sua mensagem."),
-      silencio: t("Não consegui ouvir. Toque no microfone para tentar novamente."),
-    };
-    setErro(mensagens[codigo]);
-  });
-  const cancelarVoz = voz.cancelar;
+  const [vozAtiva, setVozAtiva] = useState(false);
+  const [gravadorKey, setGravadorKey] = useState(0);
+  const cancelarVoz = useCallback(() => { setGravadorKey(n => n + 1); setVozAtiva(false); }, []);
+  useEffect(() => {
+    if (!anexo?.type.startsWith('audio/')) return;
+    return () => apagarAudio(anexo.uri);
+  }, [anexo]);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'background') { cancelarVoz(); if (!enviando) setAnexo(a => a?.type.startsWith('audio/') ? null : a); }
+    });
+    return () => sub.remove();
+  }, [cancelarVoz, enviando]);
   const clientIdFoto = useRef<string | null>(null);
   const msgsRef = useRef<MensagemChat[]>([]);
   const conversaRef = useRef<string | null>(null);
@@ -388,11 +389,12 @@ export default function FaleConoscoChatScreen() {
     const client_id = clientIdFoto.current;
     const marca = maiorCriadoEm(msgsRef.current) ?? "1970-01-01T00:00:00Z";
     seq.current += 1;
-    const local = mensagemLocal(seq.current, "membro", limpo, marca, { client_id, anexo_url: arquivo.uri });
+    const local = mensagemLocal(seq.current, "membro", limpo, marca, { client_id, anexo_url: arquivo.uri, anexo_mime: arquivo.type });
     msgsRef.current = [...msgsRef.current, local];
     setMsgs(msgsRef.current);
+    const liberarAudio = arquivo.type.startsWith("audio/") ? reterAudio(arquivo.uri) : () => {};
     try {
-      const r = await enviarAnexoAssistente(arquivo, {
+      const r = await (arquivo.type.startsWith("audio/") ? enviarAudioAssistente : enviarAnexoAssistente)(arquivo, {
         texto: limpo || undefined,
         conversa_id: conversaRef.current || undefined,
         client_id,
@@ -402,6 +404,8 @@ export default function FaleConoscoChatScreen() {
       if (idConversaValido(r.conversa_id)) conversaRef.current = r.conversa_id;
       if (r.escalado) { escaladoRef.current = true; setEscalado(true); }
       if (r.escalado) aplicarAcao(null);
+      if (r.acao !== undefined) aplicarAcao(r.acao);
+      if (r.persistido === false || r.limitado) throw new Error(r.resposta || t("Não foi possível enviar. Tente de novo."));
       msgsRef.current = limparMensagensTransitorias(msgsRef.current);
       setMsgs(msgsRef.current);
       guardar(!!r.escalado || escaladoRef.current);
@@ -418,6 +422,7 @@ export default function FaleConoscoChatScreen() {
       setFalhouFoto(true);
       setFalhouErro(e?.message || null);
     } finally {
+      liberarAudio();
       if (!vigente()) return;
       enviandoRef.current = false;
       setEnviando(false);
@@ -485,7 +490,7 @@ export default function FaleConoscoChatScreen() {
                 campoMensagem.current?.focus();
               } else enviar(FRASE_PEDIR_HUMANO);
             }}
-            disabled={(escalado ? campoBloqueado : bloqueado) || voz.ativo} accessibilityRole="button"
+            disabled={(escalado ? campoBloqueado : bloqueado) || vozAtiva} accessibilityRole="button"
             accessibilityLabel={escalado ? t("Escrever para a Equipe CBRio") : t("Falar com uma pessoa")}>
             <Ionicons name="chatbubbles-outline" size={22} color={colors.brandMid} />
             <View style={styles.apoioRotulos}>
@@ -543,7 +548,7 @@ export default function FaleConoscoChatScreen() {
                 onPress={() => { if (acao.tipo === 'abrir_formulario' || acao.tipo === 'abrir_tela') router.navigate(destinoDaAcao(acao)); }}>
                 <Text style={styles.link}>{acao.titulo || t('Completar inscrição')}</Text>
               </Pressable>
-            </View> : <ConfirmacaoAssistente key={acao.id} acao={acao} bloqueado={bloqueado || voz.ativo} confirmar={confirmarAcao} /> : null}
+            </View> : <ConfirmacaoAssistente key={acao.id} acao={acao} bloqueado={bloqueado || vozAtiva} confirmar={confirmarAcao} /> : null}
             {digitando ? <Text style={styles.digitando} accessibilityLiveRegion="polite">{t("Digitando…")}</Text> : null}
           </View>}
         />
@@ -554,53 +559,49 @@ export default function FaleConoscoChatScreen() {
           </Text>
         ) : null}
         {falhouFoto && anexo ? (
-          <Pressable disabled={bloqueado || voz.ativo} onPress={() => enviarComFoto(anexo, texto)} accessibilityRole="button" hitSlop={6}>
-            <Text style={styles.erro} accessibilityRole="alert">{falhouErro ? `${t("Não enviou")}: ${falhouErro}. ${t("Toque para reenviar ou escolha outra foto")}` : t("Não enviou. Toque para reenviar")}</Text>
+          <Pressable disabled={bloqueado || vozAtiva} onPress={() => enviarComFoto(anexo, texto)} accessibilityRole="button" hitSlop={6}>
+            <Text style={styles.erro} accessibilityRole="alert">{falhouErro ? `${t("Não enviou")}: ${falhouErro}. ${(anexo.type.startsWith("audio/") ? t("Toque para reenviar ou descarte o áudio") : t("Toque para reenviar ou escolha outra foto"))}` : t("Não enviou. Toque para reenviar")}</Text>
           </Pressable>
         ) : erro ? <Text style={styles.erro} accessibilityRole="alert">{erro}</Text> : null}
 
         {anexo ? (
           <View style={styles.previa}>
-            <Image source={{ uri: anexo.uri }} style={styles.miniatura} resizeMode="cover" accessibilityIgnoresInvertColors />
+            {anexo.type.startsWith('audio/') ? <PreviaAudio uri={anexo.uri} busy={enviando} /> : <Image source={{ uri: anexo.uri }} style={styles.miniatura} resizeMode="cover" accessibilityIgnoresInvertColors />}
             <Pressable
               style={styles.removerAnexo}
               onPress={() => { setAnexo(null); setFalhouFoto(false); clientIdFoto.current = null; }}
               disabled={enviando || restaurando}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel={t("Remover foto")}
+              accessibilityLabel={anexo.type.startsWith("audio/") ? t("Descartar áudio") : t("Remover foto")}
             >
               <Ionicons name="close" size={14} color="#fff" />
             </Pressable>
           </View>
         ) : null}
 
-        {voz.ativo ? <View style={styles.voz} accessibilityLiveRegion="polite">
-          <ActivityIndicator size="small" color={colors.brandMid} />
-          <Text style={styles.vozTexto}>{voz.estado === "permissao" ? t("Aguardando permissão…") : voz.estado === "finalizando" ? t("Concluindo transcrição…") : t("Ouvindo… Toque em parar para revisar.")}</Text>
-          <Pressable onPress={() => voz.cancelar(true)} accessibilityRole="button" style={styles.clipe} accessibilityLabel={t("Cancelar ditado")}><Ionicons name="close" size={22} color={colors.text} /></Pressable>
-        </View> : null}
         <View style={styles.compor}>
-          <Pressable style={styles.clipe} onPress={() => anexar("galeria")} disabled={bloqueado || voz.ativo}
+          <Pressable style={styles.clipe} onPress={() => anexar("galeria")} disabled={bloqueado || vozAtiva}
             accessibilityRole="button" accessibilityLabel={t("Escolher da galeria")}>
             <Ionicons name="add" size={28} color={colors.text} />
           </Pressable>
           <TextInput ref={campoMensagem} style={styles.input} value={texto} onChangeText={setTexto}
-            editable={!campoBloqueado && !voz.ativo} placeholder={t("Pergunte algo")}
+            editable={!campoBloqueado && !vozAtiva && !anexo?.type.startsWith("audio/")} placeholder={t("Pergunte algo")}
             placeholderTextColor={colors.textMuted} multiline maxLength={1000} accessibilityLabel={t("Sua mensagem")} />
-          <Pressable style={styles.clipe} onPress={() => anexar("camera")} disabled={bloqueado || voz.ativo}
+          <Pressable style={styles.clipe} onPress={() => anexar("camera")} disabled={bloqueado || vozAtiva}
             accessibilityRole="button" accessibilityLabel={t("Tirar foto")}>
             <Ionicons name="camera-outline" size={25} color={colors.text} />
           </Pressable>
-          <Pressable style={[styles.enviar, enviando && { opacity: 0.4 }]} disabled={bloqueado || voz.estado === "permissao" || voz.estado === "finalizando"}
+          {texto.trim() || anexo ? <Pressable style={[styles.enviar, enviando && { opacity: 0.4 }]} disabled={bloqueado || vozAtiva}
             onPress={() => {
-              if (voz.ativo) { voz.parar(); return; }
               if (anexo) { enviarComFoto(anexo, texto); return; }
-              if (texto.trim()) { const c = texto; campoMensagem.current?.focus(); setTexto(""); enviar(c); return; }
-              setErro(null); Keyboard.dismiss(); voz.iniciar(texto, lang === "en" ? "en-US" : lang === "es" ? "es-ES" : lang);
-            }} accessibilityRole="button" accessibilityLabel={voz.ativo ? t("Parar ditado") : texto.trim() || anexo ? t("Enviar") : t("Ditar mensagem")}>
-            {enviando ? <ActivityIndicator color="#fff" /> : <Ionicons name={voz.ativo ? "stop" : texto.trim() || anexo ? "arrow-up" : "mic-outline"} size={25} color="#fff" />}
-          </Pressable>
+              const c = texto; campoMensagem.current?.focus(); setTexto(""); enviar(c);
+            }} accessibilityRole="button" accessibilityLabel={t("Enviar")}>
+            {enviando ? <ActivityIndicator color="#fff" /> : <Ionicons name="arrow-up" size={25} color="#fff" />}
+          </Pressable> : <GravadorMensagem key={`${escopo}:${gravadorKey}`} disabled={bloqueado}
+            iniciar={() => { setErro(null); setAudioAtivo(null); Keyboard.dismiss(); }} ativo={setVozAtiva}
+            pronto={arquivo => { clientIdFoto.current = null; setAnexo(arquivo); setFalhouFoto(false); }} erro={setErro} />}
+
         </View>
         <HistoricoAssistente aberto={historico} identidade={chave} fechar={() => setHistorico(false)} selecionar={selecionarConversa}
           nova={novaConversa} />
@@ -617,7 +618,7 @@ function Bolha({ m, styles, t, subindo, conversa, identidade, ativo, ativar }: {
       {rotulo ? <Text style={styles.rotulo}>{rotulo}</Text> : null}
       <View style={[styles.bolha, meu ? styles.bolhaMeu : styles.bolhaOutro, subindo && !!m.anexo_url && { opacity: 0.6 }]}>
         {m.anexo_mime && !m.anexo_mime.startsWith("image/") ? (
-          <AnexoChatEquipe key={`${identidade}:${conversa}:${m.id}`} conversa={conversa} mensagem={m.id} mime={m.anexo_mime} ativo={ativo} ativar={ativar} />
+          ehLocal(m) ? <Text style={styles.subindo}>{t("Enviando áudio…")}</Text> : <AnexoChatEquipe key={`${identidade}:${conversa}:${m.id}`} conversa={conversa} mensagem={m.id} mime={m.anexo_mime} meu={meu} ativo={ativo} ativar={ativar} />
         ) : m.anexo_url ? (
           <Image
             source={{ uri: m.anexo_url }}
@@ -642,6 +643,9 @@ function Bolha({ m, styles, t, subindo, conversa, identidade, ativo, ativar }: {
               p.texto
             ),
           )}
+        </Text> : null}
+        {m.anexo_mime?.startsWith("audio/") && !ehLocal(m) && Number.isFinite(Date.parse(m.created_at)) ? <Text style={{ color: meu ? "#ffffff" : styles.txtOutro.color, opacity: 0.65, fontSize: 11, textAlign: "right", marginTop: 2 }}>
+          {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </Text> : null}
         {subindo && !!m.anexo_url ? <Text style={styles.subindo}>{t("Enviando…")}</Text> : null}
       </View>

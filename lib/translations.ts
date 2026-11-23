@@ -6,6 +6,23 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "A gravação foi interrompida. Grave novamente.": { en: "Recording was interrupted. Record again.", es: "La grabación se interrumpió. Graba de nuevo." },
+  "Toque para reenviar ou descarte o áudio": { en: "Tap to resend or discard the audio", es: "Toca para reenviar o descarta el audio" },
+  "Pausar áudio": {"en": "Pause audio", "es": "Pausar audio"},
+  "Não foi possível ouvir. Toque para tentar novamente.": {"en": "Could not play audio. Tap to try again.", "es": "No se pudo reproducir. Toca para reintentar."},
+  "Aguarde a gravação anterior terminar.": {"en": "Wait for the previous recording to finish.", "es": "Espera a que termine la grabación anterior."},
+  "Enviando áudio…": {"en": "Sending audio…", "es": "Enviando audio…"},
+  "Descartar áudio": {"en": "Discard audio", "es": "Descartar audio"},
+  "Parar gravação": {"en": "Stop recording", "es": "Detener grabación"},
+  "Cancelar gravação": {"en": "Cancel recording", "es": "Cancelar grabación"},
+  "Preparando áudio…": {"en": "Preparing audio…", "es": "Preparando audio…"},
+  "Gravando áudio": {"en": "Recording audio", "es": "Grabando audio"},
+  "Permita o acesso ao microfone nos ajustes do celular.": {"en": "Allow microphone access in your phone settings.", "es": "Permite el acceso al micrófono en los ajustes del teléfono."},
+  "Não foi possível gravar o áudio.": {"en": "Could not record audio.", "es": "No se pudo grabar el audio."},
+  "Áudio muito grande. Grave uma mensagem mais curta.": {"en": "Audio is too large. Record a shorter message.", "es": "El audio es demasiado grande. Graba un mensaje más corto."},
+  "Grave por pelo menos um segundo.": {"en": "Record for at least one second.", "es": "Graba al menos un segundo."},
+  "Atualize o app na loja para gravar mensagens de áudio.": {"en": "Update the app in the store to record voice messages.", "es": "Actualiza la app en la tienda para grabar mensajes de audio."},
+  "Gravar áudio": {"en": "Record audio", "es": "Grabar audio"},
   "Agora não": {"en": "Not now", "es": "Ahora no"},
   "Ativar notificações": {"en": "Enable notifications", "es": "Activar notificaciones"},
   "Não foi possível abrir o link": {"en": "Unable to open the link", "es": "No se pudo abrir el enlace"},

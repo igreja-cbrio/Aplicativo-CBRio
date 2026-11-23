@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const auth = vi.hoisted(() => ({ getSession: vi.fn(), refreshSession: vi.fn() }));
 vi.mock('@/lib/supabase', () => ({ supabase: { auth } }));
-import { apiGet, apiPost, enviarAnexoAssistente } from '@/lib/api';
+import { apiGet, apiPost, enviarAnexoAssistente, enviarAudioAssistente } from '@/lib/api';
 
 const sessao = (id: string, expires_at = Math.floor(Date.now() / 1000) + 3600) => ({
   user: { id }, access_token: `token-ficticio-${id}`, expires_at,
@@ -15,13 +15,14 @@ describe('requisições do chat vinculadas à pessoa que iniciou', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it.each(['get', 'post', 'foto'])('bloqueia %s se a sessão diferida muda de A para B', async (metodo) => {
+  it.each(['get', 'post', 'foto', 'audio'])('bloqueia %s se a sessão diferida muda de A para B', async (metodo) => {
     let concluir!: (valor: unknown) => void;
     auth.getSession.mockReturnValue(new Promise(resolve => { concluir = resolve; }));
     const pedido = metodo === 'get'
       ? apiGet('/app/assistente/conversa/mensagens', { expectedUserId: 'A' })
       : metodo === 'post'
         ? apiPost('/app/assistente', { texto: 'Mensagem da pessoa A' }, { expectedUserId: 'A' })
+        : metodo === 'audio' ? enviarAudioAssistente({ uri: 'file:///voz.m4a', name: 'voz.m4a', type: 'audio/mp4' }, { client_id: 'audio-a', expectedUserId: 'A' })
         : enviarAnexoAssistente({ uri: 'file:///foto-a.jpg', name: 'foto.jpg', type: 'image/jpeg' }, { client_id: 'foto-a', expectedUserId: 'A' });
     const rejeicao = expect(pedido).rejects.toThrow('Sua sessão mudou');
     concluir({ data: { session: sessao('B') } });
@@ -51,4 +52,16 @@ describe('requisições do chat vinculadas à pessoa que iniciou', () => {
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/app/assistente/anexo'), expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer token-ficticio-A' }) }));
   });
 
+});
+
+it('envia gravação real como multipart no canal do app, sem identidade no corpo', async () => {
+  const campos: [string, unknown][] = [];
+  vi.stubGlobal('FormData', class { append(k: string, v: unknown) { campos.push([k,v]); } });
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ok:true,json:async()=>({persistido:true})}));
+  auth.getSession.mockResolvedValue({data:{session:sessao('A')}});
+  const audio={uri:'file:///voz.m4a',name:'voz.m4a',type:'audio/mp4'};
+  await enviarAudioAssistente(audio,{client_id:'mesmo-id-no-retry',conversa_id:'conversa-a',expectedUserId:'A'});
+  expect(campos).toEqual([['conversa_id','conversa-a'],['client_id','mesmo-id-no-retry'],['audio',audio]]);
+  expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/app/assistente/audio'),expect.anything());
+  vi.unstubAllGlobals();
 });

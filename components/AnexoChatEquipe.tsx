@@ -9,7 +9,7 @@ import { useT } from "@/lib/i18n";
 import { apiGet } from "@/lib/api";
 import { htmlAudioChat, urlAnexoChat } from "@/lib/chatAudio";
 
-export function AnexoChatEquipe({ conversa, mensagem, mime, ativo, ativar }: { conversa: string; mensagem: string; mime: string; ativo: boolean; ativar: () => void }) {
+export function AnexoChatEquipe({ conversa, mensagem, mime, ativo, ativar, meu = false }: { conversa: string; mensagem: string; mime: string; ativo: boolean; ativar: () => void; meu?: boolean }) {
   const player = useRef<WebView>(null);
   const parar = useCallback(() => { player.current?.injectJavaScript("document.querySelector('audio')?.pause(); true;"); }, []);
   useFocusEffect(useCallback(() => parar, [parar]));
@@ -22,6 +22,7 @@ export function AnexoChatEquipe({ conversa, mensagem, mime, ativo, ativar }: { c
   const [falhou, setFalhou] = useState(false);
   const colors = useColors();
   const t = useT();
+  const tinta = meu ? "#ffffff" : colors.text;
   const audio = mime.startsWith("audio/");
   useEffect(() => {
     let cancelado = false;
@@ -35,14 +36,15 @@ export function AnexoChatEquipe({ conversa, mensagem, mime, ativo, ativar }: { c
     }).catch(() => { if (!cancelado) setFalhou(true); });
     return () => { cancelado = true; };
   }, [ativo, conversa, mensagem, mime, audio, tentativa]);
-  const html = url && audio ? htmlAudioChat(url, process.env.EXPO_PUBLIC_SUPABASE_URL) : null;
+  const html = url && audio ? htmlAudioChat(url, process.env.EXPO_PUBLIC_SUPABASE_URL, meu) : null;
   return <View style={{ width: 240, maxWidth: "100%", gap: 8 }}>
     {!ativo || falhou || (!audio && url) ? <Pressable accessibilityRole="button" onPress={() => { if (ativo) setTentativa(n => n + 1); else ativar(); }} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 12 }}>
-      <Ionicons name={audio ? "play-circle-outline" : "document-outline"} size={28} color={colors.text} />
-      <Text style={{ color: colors.text, flex: 1 }}>{falhou ? t("Tentar novamente") : audio ? t("Ouvir áudio") : t("Abrir documento")}</Text>
+      <Ionicons name={audio ? "play" : "document-outline"} size={28} color={tinta} />
+      <Text style={{ color: tinta, flex: 1 }}>{falhou ? t("Tentar novamente") : audio ? t("Ouvir áudio") : t("Abrir documento")}</Text>
+      {audio && !falhou && <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: tinta, opacity: 0.3 }} />}
     </Pressable> : !url ? <ActivityIndicator accessibilityLabel={t("Carregando")} color={colors.brandMid} style={{ padding: 14 }} /> : null}
     {ativo && html && !falhou && <WebView ref={player} source={{ html }} originWhitelist={["*"]}
-      style={{ height: 56, backgroundColor: "transparent" }} containerStyle={{ height: 56, flex: 0 }}
+      style={{ height: 64, backgroundColor: "transparent" }} containerStyle={{ height: 64, flex: 0 }}
       allowsInlineMediaPlayback mediaPlaybackRequiresUserAction scrollEnabled={false} bounces={false}
       allowFileAccess={false} allowFileAccessFromFileURLs={false} allowUniversalAccessFromFileURLs={false}
       mixedContentMode="never" sharedCookiesEnabled={false} thirdPartyCookiesEnabled={false} incognito
@@ -51,6 +53,6 @@ export function AnexoChatEquipe({ conversa, mensagem, mime, ativo, ativar }: { c
       onShouldStartLoadWithRequest={r => r.url === "about:blank"}
       onMessage={e => { if (e.nativeEvent.data === "audio-error") setFalhou(true); }}
       onError={() => setFalhou(true)} onHttpError={() => setFalhou(true)} />}
-    {falhou && <Text accessibilityLiveRegion="polite" style={{ color: colors.textMuted }}>{t("Não foi possível abrir o anexo. Tente novamente.")}</Text>}
+    {falhou && <Text accessibilityLiveRegion="polite" style={{ color: tinta }}>{t("Não foi possível abrir o anexo. Tente novamente.")}</Text>}
   </View>;
 }
