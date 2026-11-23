@@ -3,7 +3,7 @@ import { ActivityIndicator, AppState, Pressable, View } from 'react-native';
 import { temAudioNativo, carregarAudio } from '@/lib/audioNativo';
 import { useFocusEffect } from 'expo-router';
 import { File } from 'expo-file-system';
-import { Ionicons } from '@expo/vector-icons';
+import Svg, { Path, Rect } from 'react-native-svg';
 import { Text } from '@/components/ui/Typography';
 import { useColors } from '@/contexts/ThemeContext';
 import { useT } from '@/lib/i18n';
@@ -14,6 +14,14 @@ const disponivel = temAudioNativo;
 const emEnvio = new Map<string, number>(), apagarDepois = new Set<string>();
 export function reterAudio(uri: string) { emEnvio.set(uri, (emEnvio.get(uri) || 0) + 1); return () => { const n = (emEnvio.get(uri) || 1) - 1; if (n) emEnvio.set(uri, n); else { emEnvio.delete(uri); if (apagarDepois.delete(uri)) apagarAudio(uri); } }; }
 export function apagarAudio(uri: string) { if (emEnvio.has(uri)) { apagarDepois.add(uri); return; } try { const f = new File(uri); if (f.exists) f.delete(); } catch { /* Arquivo temporário já removido. */ } }
+function IconeMicrofone({ parar = false }: { parar?: boolean }) {
+  return <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+    {parar ? <Rect x={6} y={6} width={12} height={12} rx={2} fill="#fff" /> : <>
+      <Rect x={9} y={2.5} width={6} height={12} rx={3} stroke="#fff" strokeWidth={1.7} />
+      <Path d="M5.5 10.5v1.5a6.5 6.5 0 0 0 13 0v-1.5M12 18.5v3M8.5 21.5h7" stroke="#fff" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" />
+    </>}
+  </Svg>;
+}
 type Props = { disabled: boolean; iniciar: () => void; ativo: (v: boolean) => void; pronto: (a: ArquivoImagem) => void; erro: (s: string) => void };
 export function GravadorMensagem(p: Props) {
   const c = useColors(), t = useT();
@@ -21,7 +29,7 @@ export function GravadorMensagem(p: Props) {
   return <Pressable disabled={p.disabled} accessibilityRole="button" accessibilityLabel={t('Gravar áudio')}
     onPress={() => p.erro(t('Atualize o app na loja para gravar mensagens de áudio.'))}
     style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: c.brandMid, alignItems: 'center', justifyContent: 'center' }}>
-    <Ionicons name="mic-outline" size={25} color="#fff" />
+    <IconeMicrofone />
   </Pressable>;
 }
 function GravadorNativo(p: Props) {
@@ -51,6 +59,7 @@ function GravadorNativo(p: Props) {
       if (!alive.current || s.cancelada || props.current.disabled) return;
       if (!uri || Date.now() - s.inicio < 600) throw new Error(t('Grave por pelo menos um segundo.'));
       if (new File(uri).size > 1024 * 1024) throw new Error(t('Áudio muito grande. Grave uma mensagem mais curta.'));
+      props.current.ativo(false); // A prévia desmonta o gravador; limpar estado ANTES do callback.
       props.current.pronto({ uri, name: `audio-${Date.now()}.m4a`, type: 'audio/mp4' }); entregue = true;
     } catch (e) { if (alive.current && !s.cancelada) props.current.erro(e instanceof Error ? e.message : t('Não foi possível gravar o áudio.')); }
     finally {
@@ -103,7 +112,7 @@ function GravadorNativo(p: Props) {
     <Pressable disabled={p.disabled || ocupado} accessibilityRole="button" accessibilityLabel={fase === 'gravando' ? t('Parar gravação') : t('Gravar áudio')}
       onPress={() => void (fase === 'gravando' ? terminar(true) : iniciar())}
       style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: c.brandMid, alignItems: 'center', justifyContent: 'center' }}>
-      {ocupado ? <ActivityIndicator color="#fff" /> : <Ionicons name={fase === 'gravando' ? 'stop' : 'mic-outline'} size={25} color="#fff" />}
+      {ocupado ? <ActivityIndicator color="#fff" /> : <IconeMicrofone parar={fase === 'gravando'} />}
     </Pressable>
   </View>;
 }

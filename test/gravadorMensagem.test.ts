@@ -7,7 +7,7 @@ vi.mock('react-native',()=>({View:'View',Pressable:'Pressable',ActivityIndicator
 vi.mock('@/components/ui/Typography',()=>({Text:'Text'}));
 vi.mock('@/contexts/ThemeContext',()=>({useColors:()=>({brandMid:'blue',text:'black',surface:'white'})}));
 vi.mock('@/lib/i18n',()=>({useT:()=>((s:string)=>s)}));
-vi.mock('@expo/vector-icons',()=>({Ionicons:'Icon'}));
+vi.mock('react-native-svg',()=>({default:'Svg',Path:'Path',Rect:'Rect'}));
 vi.mock('expo-file-system',()=>({File:class {exists=true;size=500;delete(){m.deleted();}}}));
 vi.mock('@/lib/audioNativo',()=>({temAudioNativo:true,carregarAudio:()=>({RecordingPresets:{HIGH_QUALITY:{}},useAudioRecorder:(_o:any,cb:any)=>{m.callback=cb;return {uri:'file:///voz.m4a',stop:m.stop,prepareToRecordAsync:m.prepare,record:m.record};},useAudioRecorderState:()=>({durationMillis:0}),requestRecordingPermissionsAsync:m.permission,setAudioModeAsync:m.mode,useAudioPlayer:()=>m.player,useAudioPlayerStatus:()=>({isLoaded:true,playing:false,duration:3})})}));
 import { GravadorMensagem, PreviaAudio, reterAudio, apagarAudio } from '../components/chat/GravadorMensagem';
@@ -28,3 +28,5 @@ it('prévia não começa a tocar após desmontagem durante preparo',async()=>{le
 it('cancelar enquanto a parada aguarda impede entregar a gravação',async()=>{let concluir:any;m.stop.mockReturnValue(new Promise(r=>concluir=r));const p=await montar();await tocar('Gravar áudio');vi.mocked(Date.now).mockReturnValue(3000);await tocar('Parar gravação');await act(async()=>{tree!.root.findAllByType('Pressable' as any).find(x=>x.findAllByType('Text' as any).some(t=>t.children.includes('Cancelar gravação')))!.props.onPress();concluir();await flush();});expect(p.pronto).not.toHaveBeenCalled();});
 
 it('prévia pausa e invalida reprodução ao perder foco sem desmontar',async()=>{let concluir:any;m.mode.mockReturnValue(new Promise(r=>concluir=r));await act(async()=>{tree=create(React.createElement(PreviaAudio,{uri:'file:///voz.m4a',busy:false}));});const blur=m.focus();await act(async()=>{tree!.root.findByType('Pressable' as any).props.onPress();await flush();});await act(async()=>{blur();concluir();await flush();});expect(m.player.pause).toHaveBeenCalled();expect(m.player.play).not.toHaveBeenCalled();});
+
+it('limpa estado de gravação antes de entregar prévia que desmonta o componente',async()=>{const p=await montar();await tocar('Gravar áudio');vi.mocked(Date.now).mockReturnValue(3000);p.pronto.mockImplementation(()=>{expect(p.ativo).toHaveBeenLastCalledWith(false);});await tocar('Parar gravação');expect(p.pronto).toHaveBeenCalledTimes(1);});
