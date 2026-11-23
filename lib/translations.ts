@@ -6,6 +6,10 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Batismo de crianças": { en: "Children’s baptism", es: "Bautismo de niños" },
+  "Inscreva uma criança para a apresentação na igreja.": { en: "Register a child for dedication at church.", es: "Inscribe a un niño para la presentación en la iglesia." },
+  "Inscreva uma criança para o batismo.": { en: "Register a child for baptism.", es: "Inscribe a un niño para el bautismo." },
+  "Preencha nome, CPF e nascimento da criança. Para contato, informe o telefone e o e-mail do responsável.": { en: "Enter the child’s name, CPF and date of birth. For contact, enter the guardian’s phone number and email.", es: "Introduce el nombre, CPF y fecha de nacimiento del niño. Para el contacto, informa el teléfono y correo del responsable." },
   "Devocionais Kids": {"en": "Kids devotionals", "es": "Devocionales Kids"},
   "Uma semana, uma conversa em família.": {"en": "One week, one family conversation.", "es": "Una semana, una conversación en familia."},
   "Leia, converse e viva o desafio da semana com as crianças.": {"en": "Read, talk and live this week’s challenge with the children.", "es": "Lee, conversa y vive el desafío de la semana con los niños."},

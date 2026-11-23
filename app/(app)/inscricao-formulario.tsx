@@ -16,8 +16,9 @@ import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 /** Formulário canônico com seus uploads e aceites, sem sair da navegação do app.
  * Não injeta sessão, preenche aceites ou infere confirmação de pagamento. */
 export default function InscricaoFormulario() {
-  const { url, para } = useLocalSearchParams<{ url?: string; para?: string }>();
-  const outraPessoa = para === "outra-pessoa";
+  const { url, para, origem } = useLocalSearchParams<{ url?: string; para?: string; origem?: string }>();
+  const crianca = para === "crianca";
+  const outraPessoa = para === "outra-pessoa" || crianca;
   const inicial = typeof url === "string" ? urlPublicaCbrio(url) : null;
   const pagina = inicial;
   const [erro, setErro] = useState(false);
@@ -30,9 +31,10 @@ export default function InscricaoFormulario() {
   const dlg = useDialogo();
 
   const fechar = useCallback(() => {
+    if (origem === "kids") { router.navigate("/kids-area"); return; }
     if (router.canGoBack()) router.back();
     else router.replace("/inscricoes");
-  }, []);
+  }, [origem]);
   const voltar = useCallback(() => {
     if (podeVoltar.current) web.current?.goBack();
     else fechar();
@@ -69,14 +71,16 @@ export default function InscricaoFormulario() {
         <Pressable onPress={voltar} style={styles.action} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>{t("Inscrições")}</Text>
+        <Text style={{ flex: 1, color: colors.text, fontSize: 18, fontWeight: "700", textAlign: "center" }}>{crianca ? t("Batismo de crianças") : t("Inscrições")}</Text>
         <Pressable onPress={fechar} style={styles.action} accessibilityRole="button" accessibilityLabel={t("Fechar")}>
           <Ionicons name="close" size={24} color={colors.text} />
         </Pressable>
       </View>
       {outraPessoa ? <View style={[styles.aviso, { backgroundColor: colors.surface }]}>
-        <Text style={{ color: colors.text, fontWeight: "700" }}>{t("Inscrever outra pessoa")}</Text>
-        <Text style={{ color: colors.textMuted }}>{t("Nome, CPF e nascimento devem ser de quem vai participar. Preencha seus dados somente nos campos de responsável, quando solicitados.")}</Text>
+        <Text style={{ color: colors.text, fontWeight: "700" }}>{crianca ? t("Dados da criança") : t("Inscrever outra pessoa")}</Text>
+        <Text style={{ color: colors.textMuted }}>{crianca
+          ? t("Preencha nome, CPF e nascimento da criança. Para contato, informe o telefone e o e-mail do responsável.")
+          : t("Nome, CPF e nascimento devem ser de quem vai participar. Preencha seus dados somente nos campos de responsável, quando solicitados.")}</Text>
       </View> : null}
       <TecladoSeguro style={{ flex: 1 }}>
         {pagina ? <WebView

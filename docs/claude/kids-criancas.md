@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Inscrições de apresentação e batismo no Kids (2026-11-23)
 - Kids: mural, calendário e cor por responsável (2026-11-13)
 - ⚠️⚠️ Certificado da Apresentação de Crianças · `/kids-certificados` (2026-11-17) — no FIM
 
@@ -365,4 +366,10 @@ o push abre a tela. Backend, régua e números: `docs/claude/kids.md` do ERP
 - **Só OTA**: nenhum módulo nativo novo (file-system, sharing e web-browser
   estão nos binários iOS 48 e Android vc 12).
 - Testes: `test/kidsCertificados.test.ts`, `test/kidsCertificadoNotifTap.test.ts`.
+
+## Inscrições de apresentação e batismo no Kids (2026-11-23)
+
+- O menu `/kids-area` oferece Apresentação de crianças (formulário nativo existente) e Batismo de crianças (formulário público canônico dentro da WebView do app).
+- Os acessos levam `origem=kids`; a apresentação preserva o descarte de rascunho e retorna ao Kids. Outros acessos continuam voltando a Inscrições. A WebView mantém o histórico interno; Fechar retorna ao Kids.
+- Batismo usa URL fixa `/inscricao-batismo`, sem token pessoal e sem dados/ID do titular. `para=crianca` abre sessão anônima e orienta nome, CPF e nascimento da criança, com telefone/e-mail do responsável. Não muda o formulário adulto, os critérios de inscrição, aceites ou a classificação etária do servidor. Não gera inscrição real em testes.
 
