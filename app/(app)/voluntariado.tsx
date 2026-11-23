@@ -1,3 +1,4 @@
+import { ConvitesSupervisor } from '@/components/voluntariado/ConvitesSupervisor';
 import { Modal, ScrollView } from "@/components/navigation/DockContent";
 import { ValorHeader } from "@/components/ui/ValorHeader";
 import { Text } from "@/components/ui/Typography";
@@ -322,6 +323,7 @@ export default function VoluntariadoScreen() {
             </View>
           </View>
 
+          <ConvitesSupervisor />
           {ehSupervisor && (
             <Pressable style={styles.supervisorCard} onPress={() => router.push("/escala-supervisor" as any)}>
               <Ionicons name="calendar" size={22} color={colors.brandPale} />

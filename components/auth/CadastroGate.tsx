@@ -1,3 +1,5 @@
+import { lerConviteSupervisor } from '@/lib/supervisorConvitePendente';
+import { destinoSupervisor } from '@/lib/supervisorConvite';
 // ============================================================================
 // Portão de CADASTRO · manda pra /completar-cadastro quem entrou sem cadastro
 // de gente (Marcos · 04/08/2026).
@@ -32,6 +34,10 @@ export function CadastroGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const abrirCadastro = async () => {
+    const retorno = destinoSupervisor(await lerConviteSupervisor());
+    router.replace(retorno ? { pathname: "/completar-cadastro", params: { retorno } } : "/completar-cadastro");
+  };
   const [checado, setChecado] = useState(false);
   const [incompleto, setIncompleto] = useState(false);
   const redirecionou = useRef(false);
@@ -59,7 +65,7 @@ export function CadastroGate({ children }: { children: React.ReactNode }) {
         setIncompleto(!s.completo);
         if (!s.completo && !redirecionou.current) {
           redirecionou.current = true;
-          router.replace("/completar-cadastro");
+          void abrirCadastro();
         }
       })
       .catch(() => {
@@ -97,9 +103,9 @@ export function CadastroGate({ children }: { children: React.ReactNode }) {
       .then((s) => {
         if (!vivo) return;
         if (s.completo) { setIncompleto(false); return; }  // acabou de completar
-        router.replace("/completar-cadastro");
+        void abrirCadastro();
       })
-      .catch(() => { if (vivo) router.replace("/completar-cadastro"); });
+      .catch(() => { if (vivo) void abrirCadastro(); });
     return () => { vivo = false; };
   }, [incompleto, pathname, router]);
 

@@ -1,6 +1,8 @@
+import { guardarConviteSupervisor, lerConviteSupervisor } from '@/lib/supervisorConvitePendente';
+import { tokenSupervisor, destinoSupervisor, conviteDaUrl } from '@/lib/supervisorConvite';
 import { useEffect, useState } from "react";
-import { AppState } from "react-native";
-import { Stack, useRouter, useSegments, usePathname } from "expo-router";
+import { AppState, Linking } from "react-native";
+import { Stack, useRouter, useSegments, usePathname, useGlobalSearchParams } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -51,7 +53,24 @@ function RootNavigator() {
   const segments = useSegments();
   const router = useRouter();
   const pathname = usePathname();
+  const params = useGlobalSearchParams();
+  const conviteSupervisor = pathname === "/voluntariado" ? tokenSupervisor(params.convite) : null;
   const authed = !!session || preview;
+  const [conviteLinkPronto, setConviteLinkPronto] = useState(false);
+  useEffect(() => {
+    let vivo = true;
+    let recebeuLink = false;
+    const guardarUrl = async (url: string | null) => {
+      const token = url ? conviteDaUrl(url) : null;
+      if (token) await guardarConviteSupervisor(token).catch(() => {});
+    };
+    const listener = Linking.addEventListener("url", ({ url }) => {
+      recebeuLink = true;
+      void guardarUrl(url);
+    });
+    void Linking.getInitialURL().then(url => recebeuLink ? undefined : guardarUrl(url)).catch(() => {}).finally(() => { if (vivo) setConviteLinkPronto(true); });
+    return () => { vivo = false; listener.remove(); };
+  }, []);
   const recoveryScreen = pathname === "/redefinir-senha" || pathname === "/recuperar-senha";
 
   // Telemetria: inicializa 1x (handler de erros + flush) e registra cada tela.
@@ -104,17 +123,26 @@ function RootNavigator() {
   useEffect(() => {
     if (loading) return;
 
+    if (!conviteLinkPronto) return;
     const inAuthGroup = segments[0] === "(auth)";
     // Recuperação é pública, inclusive com outra conta conectada. A sessão
     // do link fica isolada; o guard não deve expulsar a pessoa desse fluxo.
     const inRedefinirSenha = segments.includes("redefinir-senha" as never) || segments.includes("recuperar-senha" as never);
 
-    if (!authed && !inAuthGroup) {
-      router.replace("/(auth)/login");
-    } else if (authed && inAuthGroup && !inRedefinirSenha) {
-      router.replace("/");
+    let vivo = true;
+    async function navegar() {
+      if (conviteSupervisor) await guardarConviteSupervisor(conviteSupervisor).catch(() => {});
+      if (!vivo) return;
+      if (!authed && !inAuthGroup) {
+        router.replace("/(auth)/login");
+      } else if (authed && inAuthGroup && !inRedefinirSenha) {
+        const destino = destinoSupervisor(await lerConviteSupervisor());
+        if (vivo) router.replace((destino || "/") as any);
+      }
     }
-  }, [authed, loading, segments]);
+    void navegar();
+    return () => { vivo = false; };
+  }, [authed, loading, segments, conviteSupervisor, router, conviteLinkPronto]);
 
   // Registra o dispositivo para push quando há sessão real.
   //

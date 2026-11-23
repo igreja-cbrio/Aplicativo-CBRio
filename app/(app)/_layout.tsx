@@ -1,3 +1,4 @@
+import { temConviteSupervisor } from '@/lib/supervisorConvitePendente';
 import { useIsFocused } from "@react-navigation/native";
 import { DockInsetContext } from "@/components/navigation/DockContent";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -112,7 +113,7 @@ export default function AppLayout() {
       const rota = rotaRef.current;
       // Já está na Home, ou está no meio do cadastro (resetar apagaria o que a
       // pessoa digitou) → não mexe.
-      if (rota === "/evento" || rota === "/inscricao-formulario" || rota === "/" || rota.startsWith("/completar-cadastro") || rota === "/recuperar-senha" || rota === "/redefinir-senha") return;
+      if (temConviteSupervisor() || rota === "/voluntariado" || rota === "/evento" || rota === "/inscricao-formulario" || rota === "/" || rota.startsWith("/completar-cadastro") || rota === "/recuperar-senha" || rota === "/redefinir-senha") return;
       try {
         router.dismissAll();
       } catch {
