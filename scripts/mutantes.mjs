@@ -1133,8 +1133,8 @@ const MUTANTES = [
   {
     nome: "resultado guardado: puxar para atualizar volta a encolher a lista para a 1ª página",
     arq: "app/(app)/batismo-fotos.tsx",
-    de: "    await recarregarAlbum(pagRef.current.fotos.length);",
-    para: "    await recarregarAlbum();",
+    de: '"não encontramos você").\n    await recarregarAlbum(pagRef.current.fotos.length);',
+    para: '"não encontramos você").\n    await recarregarAlbum();',
   },
 ];
 

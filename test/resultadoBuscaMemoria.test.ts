@@ -213,6 +213,6 @@ describe("travas de texto", () => {
     // A tela mostra a cópia guardada (a conferência acima é por identidade).
     expect(tela).toContain("setResultadoBusca(copia ? copia.resultado : r);");
     // Puxar para atualizar nunca encolhe a lista.
-    expect(tela).toContain("await recarregarAlbum(pagRef.current.fotos.length);");
+    expect(tela).toMatch(/const aoPuxar = useCallback\(async \(\) => \{\s*setPuxando\(true\);\s*await carregarAlbuns\(\);[^]*?await recarregarAlbum\(pagRef\.current\.fotos\.length\);\s*if \(ativa\.current\) setPuxando\(false\);/);
   });
 });
