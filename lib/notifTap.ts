@@ -14,6 +14,19 @@ import { trackEvento } from "./telemetria";
 const CHAVE_ULTIMA = "cbrio:notif_tap_ultima";
 
 /**
+ * ⚠️ Quando o toque numa push acabou de navegar (24/11/2026). Com o app em
+ * segundo plano há mais de 3 min, o toque navegava para o aviso e, meio
+ * segundo depois, o `active` disparava o "voltar depois de um tempo fora =
+ * Home" (app/(app)/_layout.tsx) e desfazia a navegação. Medido na telemetria
+ * de 23 e 24/11: comunicado e fotos do batismo, a resposta do push chega ANTES
+ * do `active`. O reset consulta isto e não mexe logo depois de um toque.
+ */
+let ultimoToqueEm = 0;
+export function toqueDeNotificacaoRecente(ms = 10_000, agora = Date.now()): boolean {
+  return ultimoToqueEm > 0 && agora - ultimoToqueEm < ms;
+}
+
+/**
  * Roteia o tap em uma push (foreground ou background) pra tela certa,
  * baseado em data.tipo. Use uma vez no _layout raiz.
  */
@@ -73,6 +86,7 @@ export function attachNotifTapListener(): () => void {
     const data = resp.notification.request.content.data;
     if (!data || typeof data !== "object") return;
     marcarProcessada(resp);
+    ultimoToqueEm = Date.now();
     const tipo = (data as { tipo?: string }).tipo;
     switch (tipo) {
       case "chat_assistente":

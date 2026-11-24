@@ -68,7 +68,7 @@ export default function Biblia() {
       setLivro(livroAlvo); setVersiculos(versos); setCapitulo(numero); setSelecionados([]);
       scrollRef.current?.scrollTo({ y: 0, animated: false });
       if (membro?.membroId) await registrarLeituraBiblia(membro.membroId, livroAlvo.nome + " " + numero);
-    } catch (e) { Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível carregar este capítulo.")); }
+    } catch { Alert.alert(t("Erro"), t("Não foi possível carregar este capítulo. Confira a internet e tente de novo, ou escolha outra versão.")); }
     finally { setCarregando(false); }
   }
   async function trocarVersao(nova: VersaoBiblica) {
@@ -140,7 +140,7 @@ export default function Biblia() {
     <Modal visible={versoesAbertas} transparent animationType="fade" onRequestClose={() => setVersoesAbertas(false)}>
       <Pressable style={styles.modalBackdrop} onPress={() => setVersoesAbertas(false)}><Pressable style={styles.versionSheet} onPress={() => undefined}>
         <View style={styles.sheetHandle} /><Text style={styles.sheetTitle}>{t("Versão da Bíblia")}</Text>
-        {VERSOES_BIBLIA.map(v => <Pressable key={v.id} onPress={() => trocarVersao(v)} style={styles.versionOption}><View style={styles.versionBadge}><Text style={styles.versionBadgeText}>{v.sigla}</Text></View><View style={styles.versionInfo}><Text style={styles.versionName}>{v.nome}</Text><Text style={styles.versionLanguage}>{v.idioma} · {t("domínio público")}</Text></View>{versao.id === v.id && <Ionicons name="checkmark-circle" size={23} color={colors.primary} />}</Pressable>)}
+        {VERSOES_BIBLIA.map(v => <Pressable key={v.id} onPress={() => trocarVersao(v)} style={styles.versionOption}><View style={styles.versionBadge}><Text style={styles.versionBadgeText}>{v.sigla}</Text></View><View style={styles.versionInfo}><Text style={styles.versionName}>{v.nome}</Text><Text style={styles.versionLanguage}>{v.idioma} · {v.licenca === "domínio público" ? t("domínio público") : v.licenca}</Text></View>{versao.id === v.id && <Ionicons name="checkmark-circle" size={23} color={colors.primary} />}</Pressable>)}
       </Pressable></Pressable>
     </Modal>
   </SafeAreaView>;

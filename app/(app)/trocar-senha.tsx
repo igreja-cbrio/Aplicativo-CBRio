@@ -15,6 +15,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { mensagemErroAuth } from "@/lib/erroAuth";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -64,7 +65,7 @@ export default function TrocarSenha() {
       Alert.alert(t("Senha alterada ✅"), t("Pronto! Sua senha foi atualizada."));
       subirUmNivel();
     } catch (e) {
-      Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível trocar a senha."));
+      Alert.alert(t("Erro"), t(mensagemErroAuth(e, "Não foi possível trocar a senha.")));
     }
     setSalvando(false);
   }

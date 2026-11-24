@@ -1151,6 +1151,31 @@ const MUTANTES = [
     de: '"photosPermission": "O CBRio usa as fotos que você escolher para o seu perfil, o cadastro das crianças no Kids, a capa do grupo e as mensagens do chat.",\n          "savePhotosPermission"',
     para: '"photosPermission": "O CBRio usa suas fotos para definir o avatar do seu perfil.",\n          "savePhotosPermission"',
   },
+  // ── Véspera do lançamento do app (24/11/2026) ──────────────────────────
+  {
+    nome: "auth: senha fraca do Supabase volta a aparecer em inglês",
+    arq: "lib/erroAuth.ts",
+    de: '  if (code === "weak_password" || nome === "AuthWeakPasswordError" || /weak|easy to guess|pwned/i.test(msg)) return "senha_fraca";\n',
+    para: "",
+  },
+  {
+    nome: "push: toque com o app em segundo plano volta a ser desfeito pela Home",
+    arq: "app/(app)/_layout.tsx",
+    de: "|| !focusRef.current || toqueDeNotificacaoRecente()) return;",
+    para: "|| !focusRef.current) return;",
+  },
+  {
+    nome: "bíblia: português volta para o bible-api (404)",
+    arq: "lib/bibliaLivre.ts",
+    de: '  if (v.fonte === "getbible") {',
+    para: '  if (v.fonte === "nunca") {',
+  },
+  {
+    nome: "portão: fechar a tela de criar conta baixa a bandeira do login empilhado",
+    arq: "lib/cadastroAberto.ts",
+    de: "  if (abertas > 0) return;\n",
+    para: "",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

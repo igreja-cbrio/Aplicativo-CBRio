@@ -34,10 +34,19 @@ function avisar() {
   for (const fn of Array.from(ouvintes)) fn();
 }
 
+/**
+ * ⚠️ CONTADOR, não sim/não (24/11/2026): login, criar conta e completar
+ * cadastro levantam a bandeira, e uma pode estar empilhada sobre a outra (login →
+ * criar conta → voltar). Fechar uma não pode baixar a de quem continua aberta.
+ */
+let abertas = 0;
+
 export function abrirFichaCadastro() {
   if (timer) clearTimeout(timer);
+  abertas += 1;
   aberto = true;
   timer = setTimeout(() => {
+    abertas = 0;
     aberto = false;
     timer = null;
     avisar();
@@ -46,6 +55,8 @@ export function abrirFichaCadastro() {
 }
 
 export function fecharFichaCadastro() {
+  abertas = Math.max(0, abertas - 1);
+  if (abertas > 0) return;
   if (timer) {
     clearTimeout(timer);
     timer = null;
