@@ -14,8 +14,9 @@
 //
 // ⚠️⚠️ O link de download do SharePoint é portador por 10 minutos: NUNCA vai para
 // log, telemetria ou mensagem de erro. Por isso as mensagens daqui são fixas.
-import { apiGet, type ErroApi } from "./api";
+import { apiGet, apiPost, type ErroApi } from "./api";
 import { ehUuid } from "./batismoFotosDestino";
+import { corpoDoConsentimento } from "./buscaFacial";
 
 /** Base da API (a mesma de `lib/api.ts`; `www.` direto, sem o 307 do apex). */
 export const BASE_API = "https://www.cbrio.org/api";
@@ -37,7 +38,12 @@ export type AlbumBatismo = {
   total: number | null;
   publicado_em: string | null;
 };
-export type RespostaAlbuns = { conta: "ok" | "sem_cadastro"; albuns: AlbumBatismo[] };
+/**
+ * Se ESTA conta pode usar "Encontrar minhas fotos" (decisão do servidor).
+ * `null` = resposta antiga, sem o campo: o botão não aparece.
+ */
+export type BuscaFacialConta = "liberada" | "menor" | "indisponivel";
+export type RespostaAlbuns = { conta: "ok" | "sem_cadastro"; albuns: AlbumBatismo[]; busca_facial: BuscaFacialConta | null };
 
 export type FotoAlbum = {
   id: string;
@@ -47,6 +53,11 @@ export type FotoAlbum = {
   /** URL absoluta e já validada; `null` quando o caminho veio fora do padrão. */
   miniatura: string | null;
   grande: string | null;
+  /**
+   * Miniatura de 640 px inteira para a busca por selfie (`busca_url`), já
+   * validada. `null` em resposta antiga: a foto não entra na busca.
+   */
+  busca: string | null;
 };
 export type PaginaAlbum = {
   album: { id: string; data_batismo: string; total: number | null };
@@ -113,7 +124,9 @@ export function normalizarAlbuns(bruto: unknown): RespostaAlbuns {
     });
   }
   albuns.sort((a, b) => (a.data_batismo < b.data_batismo ? 1 : a.data_batismo > b.data_batismo ? -1 : 0));
-  return { conta, albuns };
+  const bf = (r as { busca_facial?: unknown }).busca_facial;
+  const busca_facial = bf === "liberada" || bf === "menor" || bf === "indisponivel" ? bf : null;
+  return { conta, albuns, busca_facial };
 }
 
 /** Resposta de uma página do álbum → fotos com URL absoluta validada. */
@@ -131,6 +144,7 @@ export function normalizarPagina(bruto: unknown): PaginaAlbum {
       tamanho: numeroOuNull(x.tamanho),
       miniatura: urlDaMiniatura(x.miniatura_url),
       grande: urlDaMiniatura(x.grande_url),
+      busca: urlDaMiniatura(x.busca_url),
     });
   }
   return {
@@ -296,4 +310,19 @@ export async function linkDeDownload(albumId: string, fotoId: string): Promise<L
     tamanho: numeroOuNull(r.tamanho),
     validadeS: numeroOuNull(r.validade_s) ?? 600,
   };
+}
+
+/**
+ * Registra o ACEITE da busca por selfie (só o aceite: nada biométrico sai do
+ * aparelho). A busca só começa se o servidor confirmar com `{ ok: true }`;
+ * qualquer outra resposta é erro (403 `menor`, 429 `limite`, 404, 409…), e a
+ * tela traduz com `erroDoConsentimento` (lib/buscaFacial.ts).
+ */
+export async function registrarConsentimentoBusca(albumId: string, lang: string): Promise<void> {
+  if (!ehUuid(albumId)) throw erroLocal(404, "sem_acesso");
+  const r = (await apiPost<unknown>(`/app/batismo/fotos/${albumId}/busca-facial/consentimento`, corpoDoConsentimento(lang))) as Record<
+    string,
+    unknown
+  > | null;
+  if (!r || r.ok !== true) throw new Error("O aceite não foi registrado.");
 }

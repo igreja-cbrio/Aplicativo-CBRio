@@ -1001,6 +1001,42 @@ const MUTANTES = [
     de: "        if (!ehCancelada(e)) falhou.push({ item, erro: mensagemDeErro(e) });",
     para: "        falhou.push({ item, erro: mensagemDeErro(e) });",
   },
+  // ── Busca por selfie no álbum do batismo (24/11/2026) ───────────────────
+  {
+    // Medido na página: duas pessoas DIFERENTES deram 0,515 e 0,596. O limiar
+    // é estrito: no `<=` a foto na fronteira vira "sua" com certeza.
+    nome: "busca facial: limiar forte inclusivo (d = 0,45 vira foto sua)",
+    arq: "lib/buscaFacial.ts",
+    de: '  if (d < LIMIAR_FORTE) return "forte";',
+    para: '  if (d <= LIMIAR_FORTE) return "forte";',
+  },
+  {
+    nome: "busca facial: sequência vazar para 3 posições depois de uma foto sua",
+    arq: "lib/buscaFacial.ts",
+    de: "  for (let j = Math.max(0, i - VIZINHANCA_SEQUENCIA); j <= Math.min(faixas.length - 1, i + VIZINHANCA_SEQUENCIA); j += 1) {",
+    para: "  for (let j = Math.max(0, i - VIZINHANCA_SEQUENCIA); j <= Math.min(faixas.length - 1, i + VIZINHANCA_SEQUENCIA + 1); j += 1) {",
+  },
+  {
+    // A página é dado não confiável: id que o app não mandou não pode virar resultado.
+    nome: "busca facial: aceitar mensagem com id fora do lote enviado",
+    arq: "lib/buscaFacial.ts",
+    de: '  const idDoLote = typeof m.id === "string" && idsValidos.has(m.id) ? m.id : null;',
+    para: '  const idDoLote = typeof m.id === "string" ? m.id : null;',
+  },
+  {
+    // 404 (foto que saiu do álbum) é definitivo: "Tentar de novo" nela não adianta.
+    nome: "busca facial: falha definitiva (404) entrar no Tentar de novo",
+    arq: "lib/buscaFacial.ts",
+    de: "    if (status !== undefined && !STATUS_RETENTAVEL.has(status)) continue;\n",
+    para: "",
+  },
+  {
+    // A busca só começa com o aceite REGISTRADO: 2xx sem `{ ok: true }` não conta.
+    nome: "busca facial: começar sem o servidor confirmar o aceite",
+    arq: "lib/batismoFotos.ts",
+    de: '  if (!r || r.ok !== true) throw new Error("O aceite não foi registrado.");',
+    para: '  if (!r) throw new Error("O aceite não foi registrado.");',
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

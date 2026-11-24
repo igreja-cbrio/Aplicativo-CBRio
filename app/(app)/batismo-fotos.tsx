@@ -13,6 +13,11 @@
 // ⚠️ Salvar: `lib/salvarFotos.ts` escolhe galeria / pasta / folha conforme o
 // binário. O retorno do "Baixar" dentro do visualizador aparece NELE (diálogo
 // irmão nasce atrás de <Modal> no iPhone); na grade, pelo diálogo da casa.
+// ⚠️ "Encontrar minhas fotos" (busca por selfie, `components/batismo/BuscaFacial.tsx`):
+// o fluxo é um modal desta tela, sem rota nova. A galeria recebe só ids e
+// contagens e mostra o modo "Resultado da busca" (duas seções, com a mesma
+// seleção e o mesmo download em lote). O resultado vive só na memória desta
+// tela: sai do modo, troca de álbum ou sai da tela ⇒ descartado.
 import { FlatList, ScrollView, DockInsetContext } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 import { ValorHeader } from "@/components/ui/ValorHeader";
@@ -20,6 +25,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useDialogo } from "@/components/ui/Dialogo";
 import { MiniaturaFoto, VisualizadorFotos, type AvisoVisualizador } from "@/components/batismo/FotosAlbum";
+import { BuscaFacial } from "@/components/batismo/BuscaFacial";
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, RefreshControl, StyleSheet, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -47,6 +53,7 @@ import {
   type RespostaAlbuns,
 } from "@/lib/batismoFotos";
 import { mensagemDoResumo, type ProgressoFila } from "@/lib/filaFotos";
+import { buscaDisponivel, type ResultadoBusca } from "@/lib/buscaFacial";
 import {
   estrategiaDoAparelho,
   novoCancelamentoSalvar,
@@ -74,6 +81,11 @@ type EstadoAlbum = {
 
 const ALBUM_VAZIO: EstadoAlbum = { fotos: [], cursor: null, carregou: false, carregando: false, erro: null, carregadaEm: null };
 
+/** Linhas do modo "Resultado da busca": título de seção ou uma fileira de até 3 fotos. */
+type LinhaResultado =
+  | { tipo: "secao"; chave: string; secao: "suas" | "talvez"; fotos: FotoAlbum[] }
+  | { tipo: "linha"; chave: string; fotos: FotoAlbum[]; inicio: number };
+
 function Separador() {
   return <View style={{ height: VAO }} />;
 }
@@ -97,6 +109,9 @@ export default function BatismoFotosScreen() {
   const [indiceVisto, setIndiceVisto] = useState<number | null>(null);
   const [progresso, setProgresso] = useState<ProgressoFila | null>(null);
   const [avisoFoto, setAvisoFoto] = useState<AvisoVisualizador | null>(null);
+  const [buscaAberta, setBuscaAberta] = useState(false);
+  /** Só ids e contagens: nenhuma distância nem selfie chega aqui. */
+  const [resultadoBusca, setResultadoBusca] = useState<ResultadoBusca | null>(null);
 
   const ativa = useRef(true);
   const geracao = useRef(0);
@@ -179,8 +194,63 @@ export default function BatismoFotosScreen() {
     setSelecionando(false);
     setSelecionadas(new Set());
     setIndiceVisto(null);
+    setBuscaAberta(false);
+    setResultadoBusca(null);
     if (albumId) recarregarAlbum();
   }, [albumId, recarregarAlbum]);
+
+  // Saiu da tela (outra rota por cima, outra aba): o resultado da busca não fica guardado.
+  useFocusEffect(
+    useCallback(
+      () => () => {
+        setBuscaAberta(false);
+        setResultadoBusca(null);
+      },
+      [],
+    ),
+  );
+
+  /**
+   * Todas as páginas do álbum, do zero (tokens novos para a busca, que pode
+   * durar minutos). Também vira a lista da grade: o resultado e o download em
+   * lote precisam de todas as fotos. Lança em erro (o fluxo mostra).
+   */
+  const carregarTodasParaBusca = useCallback(async (): Promise<FotoAlbum[]> => {
+    const id = albumRef.current;
+    if (!id) throw Object.assign(new Error("Álbum não encontrado."), { status: 404 });
+    // Geração nova: uma "carregar mais" em voo não sobrescreve a lista completa.
+    geracao.current += 1;
+    const g = geracao.current;
+    const r = await percorrerPaginas((c) => paginaDoAlbum(id, c), { fotos: [], cursor: null });
+    if (ativa.current && g === geracao.current) {
+      setPag({ fotos: r.fotos, cursor: r.cursor, carregou: true, carregando: false, erro: null, carregadaEm: r.carregadaEm });
+      setSelecionadas((s) => new Set([...s].filter((x) => r.fotos.some((f) => f.id === x))));
+    }
+    return r.fotos;
+  }, []);
+
+  const abrirBusca = () => {
+    if (salvandoRef.current) return;
+    setIndiceVisto(null);
+    setSelecionando(false);
+    setSelecionadas(new Set());
+    setBuscaAberta(true);
+  };
+
+  const aoResultadoBusca = useCallback((r: ResultadoBusca) => {
+    setBuscaAberta(false);
+    setSelecionando(false);
+    setSelecionadas(new Set());
+    setIndiceVisto(null);
+    setResultadoBusca(r);
+  }, []);
+
+  const sairDoResultado = () => {
+    setResultadoBusca(null);
+    setSelecionando(false);
+    setSelecionadas(new Set());
+    setIndiceVisto(null);
+  };
 
   /** Tokens das miniaturas venceram (ou podem ter vencido): renova sem perder a posição. */
   const renovarLista = useCallback(async () => {
@@ -222,6 +292,13 @@ export default function BatismoFotosScreen() {
     },
     [renovarLista],
   );
+
+  /** No resultado, atualizar renova os tokens SEM encolher a lista (as fotos do resultado continuam lá). */
+  const aoPuxarNoResultado = useCallback(async () => {
+    setPuxando(true);
+    await renovarLista();
+    if (ativa.current) setPuxando(false);
+  }, [renovarLista]);
 
   const aoPuxar = useCallback(async () => {
     setPuxando(true);
@@ -420,10 +497,66 @@ export default function BatismoFotosScreen() {
     if (deNovo && ativa.current) await baixar(resumo.falhou.map((f) => f.item), "grade");
   }
 
+  // ── Resultado da busca ───────────────────────────────────────────────────
+  const porId = useMemo(() => new Map(pag.fotos.map((f) => [f.id, f] as const)), [pag.fotos]);
+  const fotosSuas = useMemo(
+    () => (resultadoBusca ? resultadoBusca.suas.flatMap((id) => porId.get(id) ?? []) : []),
+    [resultadoBusca, porId],
+  );
+  const fotosTalvez = useMemo(
+    () => (resultadoBusca ? resultadoBusca.talvez.flatMap((id) => porId.get(id) ?? []) : []),
+    [resultadoBusca, porId],
+  );
+  const fotosResultado = useMemo(() => (resultadoBusca ? [...fotosSuas, ...fotosTalvez] : null), [resultadoBusca, fotosSuas, fotosTalvez]);
+  const fotosResultadoRef = useRef<FotoAlbum[] | null>(null);
+  fotosResultadoRef.current = fotosResultado;
+  const pelaSequencia = useMemo(() => {
+    if (!resultadoBusca) return 0;
+    const visiveis = new Set(fotosTalvez.map((f) => f.id));
+    return resultadoBusca.pelaSequencia.filter((id) => visiveis.has(id)).length;
+  }, [resultadoBusca, fotosTalvez]);
+
+  const linhasResultado = useMemo(() => {
+    const linhas: LinhaResultado[] = [];
+    let inicio = 0;
+    for (const [secao, fotos] of [
+      ["suas", fotosSuas],
+      ["talvez", fotosTalvez],
+    ] as const) {
+      if (fotos.length === 0) continue;
+      linhas.push({ tipo: "secao", chave: `secao-${secao}`, secao, fotos });
+      for (let i = 0; i < fotos.length; i += COLUNAS) {
+        linhas.push({ tipo: "linha", chave: `${secao}-${i}`, fotos: fotos.slice(i, i + COLUNAS), inicio: inicio + i });
+      }
+      inicio += fotos.length;
+    }
+    return linhas;
+  }, [fotosSuas, fotosTalvez]);
+
+  /** "Selecionar todas" de uma seção: marca as da seção (ou desmarca, se já estavam todas). */
+  const alternarSecao = (fotos: readonly FotoAlbum[]) => {
+    if (salvandoRef.current) return;
+    const todas = fotos.length > 0 && fotos.every((f) => selecionadas.has(f.id));
+    setSelecionando(true);
+    setSelecionadas((s) => {
+      const n = new Set(s);
+      for (const f of fotos) {
+        if (todas) n.delete(f.id);
+        else n.add(f.id);
+      }
+      return n;
+    });
+  };
+
   // ── Visualizador ─────────────────────────────────────────────────────────
   const irPara = useCallback(
     async (i: number) => {
       setAvisoFoto(null);
+      const doResultado = fotosResultadoRef.current;
+      if (doResultado) {
+        if (i >= 0 && i < doResultado.length) setIndiceVisto(i);
+        return;
+      }
       if (i < pagRef.current.fotos.length) {
         setIndiceVisto(Math.max(0, i));
         return;
@@ -439,6 +572,7 @@ export default function BatismoFotosScreen() {
   const albuns = tela.tipo === "pronto" ? tela.resp.albuns : [];
   const album = albuns.find((a) => a.id === albumId) ?? null;
   const salvando = progresso !== null;
+  const podeBuscar = tela.tipo === "pronto" && buscaDisponivel(tela.resp.busca_facial, album, pag.fotos);
   const selecionadasLista = useMemo(() => pag.fotos.filter((f) => selecionadas.has(f.id)), [pag.fotos, selecionadas]);
   const tamanhoSel = tamanhoSomado(selecionadasLista);
 
@@ -487,12 +621,61 @@ export default function BatismoFotosScreen() {
         </View>
       )}
 
-      {!!album && album.situacao === "liberado" && pag.fotos.length > 0 && (
+      {!!album && album.situacao === "liberado" && pag.fotos.length > 0 && resultadoBusca && (
+        <View style={styles.resultadoTopo}>
+          <Text style={styles.resultadoTitulo}>{t("Resultado da busca")}</Text>
+          <Text style={styles.sub}>
+            {t("Batismo de")} {rotuloDaData(album.data_batismo)}
+          </Text>
+          {resultadoBusca.interrompida ? (
+            <Text style={styles.resultadoLinha}>
+              {t("Você parou a busca:")} {resultadoBusca.verificadas} {t("de")} {resultadoBusca.total} {t("fotos verificadas.")}
+            </Text>
+          ) : resultadoBusca.naoVerificadas > 0 ? (
+            <Text style={styles.resultadoLinha}>
+              {resultadoBusca.naoVerificadas}{" "}
+              {resultadoBusca.naoVerificadas === 1 ? t("foto não pôde ser verificada.") : t("fotos não puderam ser verificadas.")}
+            </Text>
+          ) : null}
+          {fotosSuas.length === 0 && fotosTalvez.length === 0 ? (
+            <Text style={styles.resultadoVazio}>
+              {t("Não encontramos você nas fotos. A busca erra em fotos molhadas, de perfil ou com o rosto coberto: vale olhar o álbum.")}
+            </Text>
+          ) : fotosSuas.length === 0 ? (
+            <Text style={styles.resultadoVazio}>{t("Não achamos fotos suas com certeza. Veja abaixo as que podem ser você.")}</Text>
+          ) : null}
+          <View style={styles.ferramentas}>
+            <Pressable onPress={sairDoResultado} disabled={salvando} hitSlop={6} accessibilityRole="button" style={styles.ferramenta}>
+              <Ionicons name="images-outline" size={16} color={colors.brandMid} />
+              <Text style={styles.ferramentaTxt}>{t("Ver o álbum todo")}</Text>
+            </Pressable>
+            {selecionando && (
+              <Pressable onPress={sairDaSelecao} disabled={salvando} hitSlop={6} accessibilityRole="button" style={styles.ferramenta}>
+                <Text style={styles.ferramentaTxt}>{t("Cancelar")}</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      )}
+
+      {!!album && album.situacao === "liberado" && pag.fotos.length > 0 && !resultadoBusca && (
         <>
           <Text style={styles.sub}>
             {t("Batismo de")} {rotuloDaData(album.data_batismo)}
             {album.total ? ` · ${album.total} ${album.total === 1 ? t("foto") : t("fotos")}` : ""}
           </Text>
+          {podeBuscar && !selecionando && (
+            <Pressable
+              onPress={abrirBusca}
+              disabled={salvando}
+              style={({ pressed }) => [styles.botaoBusca, (pressed || salvando) && { opacity: 0.75 }]}
+              accessibilityRole="button"
+              accessibilityHint={t("Tire uma selfie e veja as fotos em que você aparece.")}
+            >
+              <Ionicons name="scan-outline" size={20} color="#fff" />
+              <Text style={styles.botaoBuscaTxt}>{t("Encontrar minhas fotos")}</Text>
+            </Pressable>
+          )}
           <View style={styles.ferramentas}>
             {selecionando ? (
               <>
@@ -601,9 +784,62 @@ export default function BatismoFotosScreen() {
         <Text style={styles.vazioTxt}>{t("Este álbum ainda não tem fotos.")}</Text>
       </View>,
     );
+  } else if (resultadoBusca) {
+    corpo = (
+      <FlatList
+        key="resultado"
+        data={linhasResultado}
+        keyExtractor={(l) => l.chave}
+        renderItem={({ item }) => {
+          if (item.tipo === "secao") {
+            const todas = item.fotos.every((f) => selecionadas.has(f.id));
+            return (
+              <View style={styles.secao}>
+                <View style={styles.secaoLinha}>
+                  <Text style={styles.secaoTitulo}>
+                    {item.secao === "suas" ? t("Fotos suas") : t("Pode ser você · pouca certeza")} ({item.fotos.length})
+                  </Text>
+                  <Pressable onPress={() => alternarSecao(item.fotos)} disabled={salvando} hitSlop={6} accessibilityRole="button">
+                    <Text style={styles.ferramentaTxt}>{todas && selecionando ? t("Desmarcar todas") : t("Selecionar todas")}</Text>
+                  </Pressable>
+                </View>
+                {item.secao === "talvez" && pelaSequencia > 0 && (
+                  <Text style={styles.dica}>{t("Algumas foram tiradas logo antes ou depois de uma foto sua.")}</Text>
+                )}
+              </View>
+            );
+          }
+          return (
+            <View style={styles.fileira}>
+              {item.fotos.map((f, k) => (
+                <MiniaturaFoto
+                  key={f.id}
+                  foto={f}
+                  indice={item.inicio + k}
+                  lado={lado}
+                  selecionando={selecionando}
+                  selecionada={selecionadas.has(f.id)}
+                  onToque={aoTocarFoto}
+                  onToqueLongo={aoSegurarFoto}
+                  onErro={aoFalharImagem}
+                />
+              ))}
+            </View>
+          );
+        }}
+        extraData={[selecionadas, selecionando, salvando]}
+        ListHeaderComponent={cabecalho}
+        initialNumToRender={12}
+        maxToRenderPerBatch={10}
+        windowSize={7}
+        contentContainerStyle={[styles.conteudo, { paddingBottom: dockInset + (selecionando || salvando ? 120 : 24) }]}
+        refreshControl={<RefreshControl refreshing={puxando} onRefresh={aoPuxarNoResultado} tintColor={colors.brandMid} />}
+      />
+    );
   } else {
     corpo = (
       <FlatList
+        key="grade"
         data={pag.fotos}
         keyExtractor={(f) => f.id}
         numColumns={COLUNAS}
@@ -687,9 +923,9 @@ export default function BatismoFotosScreen() {
       ) : null}
 
       <VisualizadorFotos
-        fotos={pag.fotos}
+        fotos={fotosResultado ?? pag.fotos}
         indice={indiceVisto}
-        temMais={!!pag.cursor}
+        temMais={fotosResultado ? false : !!pag.cursor}
         salvando={salvando}
         aviso={avisoFoto}
         onFechar={() => {
@@ -701,6 +937,15 @@ export default function BatismoFotosScreen() {
         onAbrirAjustes={() => Linking.openSettings().catch(() => {})}
         onErroImagem={aoFalharImagem}
       />
+      {buscaAberta && !!albumId && (
+        <BuscaFacial
+          albumId={albumId}
+          totalEstimado={album?.total ?? pag.fotos.length}
+          carregarTodas={carregarTodasParaBusca}
+          onFechar={() => setBuscaAberta(false)}
+          onResultado={aoResultadoBusca}
+        />
+      )}
       <dlg.Dialogo />
     </SafeAreaView>
   );
@@ -768,6 +1013,25 @@ const makeStyles = (colors: Palette) =>
     barraBotaoTxt: { color: "#fff", fontWeight: "800", fontSize: font.size.sm },
     barraBotaoFantasma: { paddingHorizontal: 14, minHeight: 44, justifyContent: "center" },
     barraBotaoFantasmaTxt: { color: colors.danger, fontWeight: "800", fontSize: font.size.sm },
+    botaoBusca: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      minHeight: 48,
+      borderRadius: radius.full,
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.lg,
+    },
+    botaoBuscaTxt: { color: "#fff", fontWeight: "800", fontSize: font.size.md },
+    resultadoTopo: { gap: 6 },
+    resultadoTitulo: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
+    resultadoLinha: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 19 },
+    resultadoVazio: { color: colors.text, fontSize: font.size.md, lineHeight: 22, marginTop: spacing.sm },
+    secao: { gap: 4, paddingTop: spacing.md, paddingBottom: spacing.sm },
+    secaoLinha: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+    secaoTitulo: { flex: 1, color: colors.text, fontSize: font.size.md, fontWeight: "800" },
+    fileira: { flexDirection: "row", gap: VAO, marginBottom: VAO },
     trilho: { height: 6, borderRadius: 3, backgroundColor: colors.surfaceAlt, marginTop: 8, overflow: "hidden" },
     trilhoCheio: { height: 6, borderRadius: 3, backgroundColor: colors.primary },
   });
