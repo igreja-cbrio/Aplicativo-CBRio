@@ -2388,6 +2388,18 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Fotos suas": { en: "Your photos", es: "Tus fotos" },
   "Pode ser você · pouca certeza": { en: "Might be you · low certainty", es: "Podrías ser tú · poca certeza" },
   "Algumas foram tiradas logo antes ou depois de uma foto sua.": { en: "Some were taken right before or after a photo of you.", es: "Algunas se tomaron justo antes o después de una foto tuya." },
+  // Resultado que fica ao sair e voltar (24/11/2026 · lib/resultadoBuscaMemoria.ts)
+  "Busca feita em": { en: "Search done on", es: "Búsqueda hecha el" },
+  "foto do resultado não está mais no álbum.": { en: "photo from the results is no longer in the album.", es: "foto del resultado ya no está en el álbum." },
+  "fotos do resultado não estão mais no álbum.": { en: "photos from the results are no longer in the album.", es: "fotos del resultado ya no están en el álbum." },
+  "foto nova no álbum depois da sua busca não foi verificada.": { en: "new photo added to the album after your search wasn't checked.", es: "foto nueva en el álbum después de tu búsqueda no se verificó." },
+  "fotos novas no álbum depois da sua busca não foram verificadas.": { en: "new photos added to the album after your search weren't checked.", es: "fotos nuevas en el álbum después de tu búsqueda no se verificaron." },
+  "A selfie já foi apagada. Este resultado fica só neste celular, por até 24 horas: some ao fechar o app, ao sair da conta ou ao apagar.": { en: "The selfie has already been erased. These results stay only on this phone, for up to 24 hours: they disappear when you close the app, sign out or delete them.", es: "La selfie ya se borró. Este resultado queda solo en este celular, por hasta 24 horas: desaparece al cerrar la app, al salir de la cuenta o al borrarlo." },
+  "Nova busca": { en: "New search", es: "Nueva búsqueda" },
+  "Apagar resultado": { en: "Delete results", es: "Borrar resultado" },
+  "Ver o resultado da sua busca": { en: "See your search results", es: "Ver el resultado de tu búsqueda" },
+  "Carregando o resultado da sua busca…": { en: "Loading your search results…", es: "Cargando el resultado de tu búsqueda…" },
+  "Não foi possível carregar o resultado da sua busca.": { en: "Couldn't load your search results.", es: "No se pudo cargar el resultado de tu búsqueda." },
   // Erros da busca (`mensagemDoErro` em lib/buscaFacial.ts; sem_acesso e conflito já estão acima)
   "Não foi possível preparar a busca agora. Verifique sua internet e tente de novo.": { en: "Couldn't prepare the search right now. Check your internet and try again.", es: "No se pudo preparar la búsqueda ahora. Revisa tu internet e inténtalo de nuevo." },
   "Este celular não consegue rodar a busca. Você ainda pode ver e baixar todas as fotos do álbum.": { en: "This phone can't run the search. You can still view and download all the album photos.", es: "Este celular no puede ejecutar la búsqueda. Aún puedes ver y descargar todas las fotos del álbum." },
