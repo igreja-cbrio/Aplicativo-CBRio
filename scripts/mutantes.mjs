@@ -1066,6 +1066,20 @@ const MUTANTES = [
     de: "  limparSobrasDaCamera({ idadeMinimaMs: 0 }).catch(() => {});",
     para: "  limparSobrasDaCamera().catch(() => {});",
   },
+  {
+    // 24/11/2026: enviar o áudio desmonta a prévia, e o expo-audio já liberou o
+    // player; `pause()` lança e a tela cai em "Algo deu errado" (iOS 1.0.5).
+    nome: "chat áudio: limpeza do foco pausar sem proteção (derruba a tela ao enviar)",
+    arq: "components/chat/GravadorMensagem.tsx",
+    de: "return () => { focada.current = false; revisao.current++; pausarSemQuebrar(player); }; }, [player]));",
+    para: "return () => { focada.current = false; revisao.current++; player.pause(); }; }, [player]));",
+  },
+  {
+    nome: "chat áudio: pausa da prévia volta a lançar quando o player já foi liberado",
+    arq: "components/chat/GravadorMensagem.tsx",
+    de: "  try { player.pause(); } catch { /* player já liberado pelo expo-audio */ }",
+    para: "  player.pause();",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a
