@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { apiGet } from "@/lib/api";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { destinoComunicado, inscricaoDoComunicado } from "@/lib/comunicadoLink";
+import { KidsAvisoVideo } from "@/components/kids/KidsAvisoVideo";
 import { useDialogo } from "@/components/ui/Dialogo";
 import { trackEvento } from "@/lib/telemetria";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -29,6 +30,7 @@ type Comunicado = {
   titulo: string;
   corpo: string;
   foto_url: string | null;
+  video_url?: string | null;
   segmento: string;
   publicado_em: string | null;
   link_inscricao?: string | null;
@@ -145,6 +147,7 @@ export default function MuralScreen() {
               style={styles.card}
             >
               {c.foto_url ? <Image source={{ uri: c.foto_url }} style={styles.foto} resizeMode="cover" /> : null}
+              {c.video_url ? <KidsAvisoVideo uri={c.video_url} titulo={c.titulo} /> : null}
               <View style={styles.cardBody}>
                 <Text style={styles.data}>{quando(c.publicado_em)}</Text>
                 <Text style={styles.cardTitulo}>{c.titulo}</Text>
