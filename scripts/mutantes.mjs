@@ -1001,6 +1001,71 @@ const MUTANTES = [
     de: "        if (!ehCancelada(e)) falhou.push({ item, erro: mensagemDeErro(e) });",
     para: "        falhou.push({ item, erro: mensagemDeErro(e) });",
   },
+  // ── Busca por selfie no álbum do batismo (24/11/2026) ───────────────────
+  {
+    // Medido na página: duas pessoas DIFERENTES deram 0,515 e 0,596. O limiar
+    // é estrito: no `<=` a foto na fronteira vira "sua" com certeza.
+    nome: "busca facial: limiar forte inclusivo (d = 0,45 vira foto sua)",
+    arq: "lib/buscaFacial.ts",
+    de: '  if (d < LIMIAR_FORTE) return "forte";',
+    para: '  if (d <= LIMIAR_FORTE) return "forte";',
+  },
+  {
+    nome: "busca facial: sequência vazar para 3 posições depois de uma foto sua",
+    arq: "lib/buscaFacial.ts",
+    de: "  for (let j = Math.max(0, i - VIZINHANCA_SEQUENCIA); j <= Math.min(faixas.length - 1, i + VIZINHANCA_SEQUENCIA); j += 1) {",
+    para: "  for (let j = Math.max(0, i - VIZINHANCA_SEQUENCIA); j <= Math.min(faixas.length - 1, i + VIZINHANCA_SEQUENCIA + 1); j += 1) {",
+  },
+  {
+    // A página é dado não confiável: id que o app não mandou não pode virar resultado.
+    nome: "busca facial: aceitar mensagem com id fora do lote enviado",
+    arq: "lib/buscaFacial.ts",
+    de: '  const idDoLote = typeof m.id === "string" && idsValidos.has(m.id) ? m.id : null;',
+    para: '  const idDoLote = typeof m.id === "string" ? m.id : null;',
+  },
+  {
+    // 404 (foto que saiu do álbum) é definitivo: "Tentar de novo" nela não adianta.
+    nome: "busca facial: falha definitiva (404) entrar no Tentar de novo",
+    arq: "lib/buscaFacial.ts",
+    de: "    if (status !== undefined && !STATUS_RETENTAVEL.has(status)) continue;\n",
+    para: "",
+  },
+  {
+    // A busca só começa com o aceite REGISTRADO: 2xx sem `{ ok: true }` não conta.
+    nome: "busca facial: começar sem o servidor confirmar o aceite",
+    arq: "lib/batismoFotos.ts",
+    de: '  if (!r || r.ok !== true) throw new Error("O aceite não foi registrado.");',
+    para: '  if (!r) throw new Error("O aceite não foi registrado.");',
+  },
+  {
+    // react-native-webview 13 no Android entrega só a ORIGEM no onMessage:
+    // exigir o caminho descarta toda mensagem e a busca nunca começa.
+    nome: "busca facial: onMessage exigir o caminho da página (Android nunca busca)",
+    arq: "lib/buscaFacial.ts",
+    de: '  if (url === ORIGEM_BUSCA_FACIAL || url === `${ORIGEM_BUSCA_FACIAL}/`) return true;\n',
+    para: "",
+  },
+  {
+    // A miniatura responde 502 "Tente de novo" em falha passageira do SharePoint.
+    nome: "busca facial: 502 da miniatura virar falha definitiva",
+    arq: "lib/buscaFacial.ts",
+    de: "new Set([0, 410, 429, 500, 502, 503, 504])",
+    para: "new Set([0, 410, 429, 500, 503, 504])",
+  },
+  {
+    // O Android mata o app com a câmera aberta: a selfie crua fica no cache e
+    // só a limpeza na abertura do app a alcança (o texto do aceite promete apagar).
+    nome: "busca facial: abertura do app deixar de limpar a selfie que sobrou",
+    arq: "app/_layout.tsx",
+    de: "  useEffect(() => { limparSobrasNaAbertura(); }, []);\n",
+    para: "",
+  },
+  {
+    nome: "busca facial: limpeza da abertura do app esperar 30 min (a sobra recente fica)",
+    arq: "lib/limparSobrasCamera.ts",
+    de: "  limparSobrasDaCamera({ idadeMinimaMs: 0 }).catch(() => {});",
+    para: "  limparSobrasDaCamera().catch(() => {});",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

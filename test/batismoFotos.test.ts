@@ -4,8 +4,8 @@
 // fotos". Sem rede: `apiGet` é falso.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mock = vi.hoisted(() => ({ apiGet: vi.fn() }));
-vi.mock("../lib/api", () => ({ apiGet: mock.apiGet }));
+const mock = vi.hoisted(() => ({ apiGet: vi.fn(), apiPost: vi.fn() }));
+vi.mock("../lib/api", () => ({ apiGet: mock.apiGet, apiPost: mock.apiPost }));
 
 import { destinoNotificacaoBatismo } from "../lib/batismoFotosDestino";
 import {
@@ -42,6 +42,7 @@ const foto = (n: number, tamanho: number | null = 1000): FotoAlbum => ({
   tamanho,
   miniatura: null,
   grande: null,
+  busca: null,
 });
 
 beforeEach(() => {
@@ -148,8 +149,8 @@ describe("normalização das respostas", () => {
   });
 
   it("conta desconhecida ou resposta vazia vira sem_cadastro, sem álbum", () => {
-    expect(normalizarAlbuns(null)).toEqual({ conta: "sem_cadastro", albuns: [] });
-    expect(normalizarAlbuns({ conta: "sem_cadastro" })).toEqual({ conta: "sem_cadastro", albuns: [] });
+    expect(normalizarAlbuns(null)).toEqual({ conta: "sem_cadastro", albuns: [], busca_facial: null });
+    expect(normalizarAlbuns({ conta: "sem_cadastro" })).toEqual({ conta: "sem_cadastro", albuns: [], busca_facial: null });
   });
 
   it("página: URL absoluta validada; caminho fora do padrão vira null (a foto continua na grade)", () => {
@@ -162,7 +163,7 @@ describe("normalização das respostas", () => {
       proximo_cursor: "3.abc",
     });
     expect(p.fotos).toEqual([
-      { id: FOTO, nome: "IMG_1.jpg", tamanho: 1234, miniatura: `${BASE_API}/app/batismo/fotos/miniatura/${TOKEN}`, grande: null },
+      { id: FOTO, nome: "IMG_1.jpg", tamanho: 1234, miniatura: `${BASE_API}/app/batismo/fotos/miniatura/${TOKEN}`, grande: null, busca: null },
     ]);
     expect(p.proximoCursor).toBe("3.abc");
     expect(normalizarPagina({ fotos: [] }).proximoCursor).toBeNull();

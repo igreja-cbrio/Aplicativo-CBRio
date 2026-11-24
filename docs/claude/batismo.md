@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- ⚠️⚠️ "Encontrar minhas fotos" · busca por selfie no álbum (24/11/2026)
 - ⚠️⚠️ Álbum do batismo · galeria privada e download (24/11/2026 · par do ERP #3884)
 - Endereço nos convites (16/11/2026)
 - Convites pessoais (16/11/2026)
@@ -166,3 +167,54 @@ decidia a data no cliente. Agora quem decide é o ERP (`batismo_album_acessos`):
 - Testes: `test/batismoFotos.test.ts`, `test/batismoFotosNotifTap.test.ts`,
   `test/salvarFotos.test.ts`, `test/filaFotos.test.ts` + 9 mutantes em `scripts/mutantes.mjs`.
 
+## ⚠️⚠️ "Encontrar minhas fotos" · busca por selfie no álbum (24/11/2026)
+
+Decisão do Matheus (ciente do risco LGPD): quem tem álbum tira uma selfie e o app separa as
+fotos em que a pessoa parece estar. **O reconhecimento roda 100% no celular**, numa WebView
+com a página `https://www.cbrio.org/app-busca-facial/index.html?v=1` (face-api, servida pelo
+ERP). A selfie e as distâncias **nunca** saem do aparelho nem vão para disco, log, telemetria
+ou servidor; o servidor só registra o ACEITE.
+
+- **Peças**: régua pura `lib/buscaFacial.ts` (teste `test/buscaFacial.test.ts`), fluxo
+  `components/batismo/BuscaFacial.tsx` (modal da `/batismo-fotos`, **sem rota nova**), modo
+  "Resultado da busca" na própria galeria, `lib/telaAcordada.ts` (nativo `ExpoKeepAwake`
+  direto, que vem com o pacote `expo`; **sem dependência nova**: tudo sai por OTA).
+- **Contrato com o ERP**: `GET /app/batismo/fotos` traz `busca_facial: liberada|menor|indisponivel`
+  (ausente = resposta antiga = sem botão); cada foto de `/itens` traz `busca_url` (miniatura de
+  640 px, mesmo prefixo validado por `urlDaMiniatura`). Aceite:
+  `POST /app/batismo/fotos/:albumId/busca-facial/consentimento` com
+  `{ versao: "2026-11-24", declarou_maioridade: true, idioma: pt|en|es }`; só `{ ok: true }`
+  começa. 403 `menor`, 429 `limite`, 404, 409 e 401 viram mensagem honesta
+  (`erroDoConsentimento`). O aceite é postado **uma vez por abertura do fluxo** (outra selfie
+  depois de "sem rosto" não gasta o limite diário de novo).
+- **Aceite**: texto da versão 2026-11-24 em constantes (`TEXTOS_CONSENTIMENTO`, traduzido; o
+  teste cobra porque o portão de i18n não enxerga `t(CONSTANTE)`) + **duas** caixas
+  obrigatórias ("Concordo em usar meu rosto nesta busca." · "Tenho 18 anos ou mais.") + aviso
+  de dados (~0,08 MB por foto).
+- **Selfie**: só câmera frontal (`quality 0.5`, `base64`, `exif:false`), nunca galeria. O JPEG
+  que o picker grava no cache é apagado (`deleteAsync`) logo depois de ler o base64. A selfie
+  fica só num `ref` enquanto a busca existe.
+- **WebView** só monta depois do aceite e da selfie, 1×1 e quase transparente DENTRO do layout
+  (fora da tela o iOS pode pausar o JS); `originWhitelist` `https://www.cbrio.org` +
+  `onShouldStartLoadWithRequest` só para `/app-busca-facial`. `iniciar` só depois do `pronto`.
+- **Mensagens da página = dado não confiável** (`lerMensagem`): lista fechada de `t`, id tem que
+  estar no lote enviado, `d` número finito ≥ 0 ou null, `msg` livre descartado, código de erro
+  desconhecido vira `interno`. Mensagem de outra URL é ignorada.
+- **Limiares medidos** (face-api 1.7.15: mesma pessoa 0,152; pessoas diferentes 0,515 e 0,596):
+  `d < 0,45` = "Fotos suas"; `0,45 ≤ d < 0,55` = "Pode ser você · pouca certeza"; foto sem match a
+  até 2 posições de uma foto sua também entra em pouca certeza (rajada), com a linha "Algumas
+  foram tiradas logo antes ou depois de uma foto sua."
+- **O RN é o dono da lista e dos resultados**: WebView que morre
+  (`onContentProcessDidTerminate`/`onRenderProcessGone`, até 3 vezes sem progresso) ou app no
+  segundo plano ⇒ a WebView é recriada e recebe `iniciar` só com as fotos sem resposta.
+- **Falhas por foto**: `falha_foto` com 503/429/410/0 conta como não verificada e vale "Tentar de
+  novo" só nelas (410 = pede as páginas de novo antes, para ter `busca_url` novas); 404 não.
+- **Resultado**: a galeria recebe só ids e contagens (`ResultadoBusca`), mostra duas seções com
+  "Selecionar todas" usando a seleção e o download em lote que já existiam, e "Ver o álbum
+  todo" sai do modo. Trocar de álbum, sair da tela (blur) ou sair do modo descarta o resultado.
+  X/voltar durante a busca entrega o que achou até ali (cada busca conta no limite do dia).
+- **Não verificado sem aparelho**: WebGL dentro da WebView 1×1 nos dois sistemas, o tempo real
+  de 946 fotos, a câmera frontal dentro do `<Modal>`, se o binário publicado tem o nativo
+  `ExpoKeepAwake` (sem ele, a tela pode apagar e a busca retoma na volta).
+- Mutantes: limiar inclusivo, sequência vazando, id fora do lote, 404 retentável, aceite sem
+  `ok: true` (em `scripts/mutantes.mjs`).

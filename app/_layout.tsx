@@ -20,6 +20,7 @@ import { onboardingVisto, marcarOnboardingVisto } from "@/lib/onboarding";
 import { ConviteNotificacoes } from "@/components/notificacoes/ConviteNotificacoes";
 import { registerForPush } from "@/lib/push";
 import { initTelemetria, trackTela } from "@/lib/telemetria";
+import { limparSobrasNaAbertura } from "@/lib/limparSobrasCamera";
 import { attachNotifTapListener } from "@/lib/notifTap";
 import { loadFontScale } from "@/lib/applyFontScale";
 import { useFontsCbrio } from "@/lib/fonts";
@@ -75,6 +76,9 @@ function RootNavigator() {
 
   // Telemetria: inicializa 1x (handler de erros + flush) e registra cada tela.
   useEffect(() => { initTelemetria(); }, []);
+  // Selfie da busca por rosto que ficou no cache porque o Android matou o app
+  // com a câmera aberta (o texto do aceite promete apagar). Ver o arquivo.
+  useEffect(() => { limparSobrasNaAbertura(); }, []);
   useEffect(() => { if (pathname) trackTela(pathname); }, [pathname]);
 
   // Desbloqueio por biometria: trava UMA vez por abertura do app quando há
