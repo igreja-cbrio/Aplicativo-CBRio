@@ -2007,9 +2007,11 @@ describe("aviso do certificado do Kids · os DOIS mapas entendem o tipo", () => 
     try { return readFileSync(join(process.cwd(), rel), "utf8"); } catch { return ""; }
   };
   it("⚠️⚠️ MUTATION GUARD · push e lista roteiam o tipo, com ícone e chip Kids", () => {
-    expect(semComentarios(ler("lib/notifTap.ts")), "notifTap não roteia o tipo").toContain(`"${TIPO}"`);
+    expect(semComentarios(ler("lib/destinoNotificacao.ts")), "o mapa único não roteia o tipo").toContain(`"${TIPO}"`);
+    for (const arq of ["lib/notifTap.ts", "app/(app)/notificacoes.tsx"]) {
+      expect(semComentarios(ler(arq)), `${arq} não usa o mapa único de rotas`).toContain("destinoParaNotificacao(");
+    }
     const lista = semComentarios(ler("app/(app)/notificacoes.tsx"));
-    expect(lista, "a lista não trata o tipo").toContain(`"${TIPO}"`);
     expect(lista, "sem ícone").toContain(`${TIPO}: "ribbon"`);
     expect(lista, "sem categoria Kids").toContain(`${TIPO}: "Kids"`);
   });
@@ -2021,12 +2023,14 @@ describe("aviso de grupo · o app tem que rotear o tipo que o ERP manda", () => 
     try { return readFileSync(join(process.cwd(), rel), "utf8"); } catch { return ""; }
   };
 
-  it("⚠️⚠️ MUTATION GUARD · os DOIS mapas entendem o tipo (eles divergem)", () => {
-    // notifTap = toque na PUSH · notificacoes.tsx = toque na LISTA. São mapas
-    // diferentes e já divergiram antes; um aviso que chega e não abre tela é o
-    // mesmo que não avisar.
-    expect(semComentarios(ler("lib/notifTap.ts")), "notifTap não roteia o tipo").toContain(`"${TIPO}"`);
-    expect(semComentarios(ler("app/(app)/notificacoes.tsx")), "a lista não trata o tipo").toContain(`"${TIPO}"`);
+  it("⚠️⚠️ MUTATION GUARD · o mapa é UM SÓ e os dois toques passam por ele", () => {
+    // notifTap = toque na PUSH · notificacoes.tsx = toque na LISTA. Os dois
+    // mapas separados divergiram (11/08 e 24/11); um aviso que chega e não
+    // abre tela é o mesmo que não avisar. Desde 24/11 o mapa é único.
+    expect(semComentarios(ler("lib/destinoNotificacao.ts")), "o mapa único não roteia o tipo").toContain(`"${TIPO}"`);
+    for (const arq of ["lib/notifTap.ts", "app/(app)/notificacoes.tsx"]) {
+      expect(semComentarios(ler(arq)), `${arq} não usa o mapa único de rotas`).toContain("destinoParaNotificacao(");
+    }
   });
 
   it("o aviso aparece com ícone e cai no chip certo — senão vira 'Outros'", () => {

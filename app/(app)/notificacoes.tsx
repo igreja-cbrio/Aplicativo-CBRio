@@ -1,9 +1,4 @@
-import { destinoNotificacaoComunicado } from "@/lib/comunicadoLink";
-import { destinoDevocionalKids } from "@/lib/kidsDevocionalDestino";
-import { destinoAvisoKids } from "@/lib/kidsAvisoDestino";
-import { destinoCertificadoKids } from "@/lib/kidsCertificadoDestino";
-import { destinoNotificacaoBatismo } from "@/lib/batismoFotosDestino";
-import { destinoNotificacaoChat } from "@/lib/assistenteChat";
+import { destinoParaNotificacao } from "@/lib/destinoNotificacao";
 import { ScrollView, SectionList } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 import { useMemo, useState } from "react";
@@ -23,7 +18,6 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { irPara } from "@/lib/nav";
-import { destinoNotificacaoEvento } from "@/lib/eventoDestino";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -44,6 +38,7 @@ const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
   inscricao_evento: "calendar",
   inscricao_evento_checkin: "qr-code",
   comunicado: "megaphone",
+  bug_corrigido: "build",
 };
 
 // tipo técnico -> categoria amigável (pros filtros)
@@ -65,6 +60,7 @@ const CATEGORIA: Record<string, string> = {
   inscricao_evento: "Inscrições",
   inscricao_evento_checkin: "Inscrições",
   comunicado: "Avisos",
+  bug_corrigido: "Avisos",
 };
 
 function iconePorTipo(tipo: string): keyof typeof Ionicons.glyphMap {
@@ -129,53 +125,10 @@ export default function NotificacoesScreen() {
 
   function abrir(n: AppNotificacao) {
     if (!n.lida_em) marcarLida(n.id);
-    const data = n.data ?? {};
-    switch (n.tipo) {
-      case "chat_assistente":
-        router.navigate(destinoNotificacaoChat(data)); return;
-      case "kids_devocional":
-        router.navigate(destinoDevocionalKids(data)); return;
-      case "kids_mural":
-        router.navigate(destinoAvisoKids(data)); return;
-      case "kids_certificado_apresentacao":
-        router.navigate(destinoCertificadoKids(data)); return;
-      case "carta_transferencia_pronta":
-        router.navigate("/carta-transferencia"); return;
-      case "escala":
-        irPara("/voluntariado"); return;
-      case "sos":
-      case "cuidado":
-        irPara("/cuidados"); return;
-      case "grupo_pedido":
-        router.navigate("/grupo-inscricoes"); return;
-      // ⚠️ Os DOIS mapas ensinados na mesma leva: tipo que só um conhece cai em
-      // "Outros" e o toque não leva a lugar nenhum (lição de 11/08).
-      case "grupo_saida":
-        router.navigate("/meu-grupo"); return;
-      // Mesmo destino do toque na push (lib/notifTap.ts): álbum → galeria.
-      case "batismo":
-        router.navigate(destinoNotificacaoBatismo(data)); return;
-      case "devocional":
-        router.navigate("/devocional"); return;
-      case "comunicado": {
-        router.navigate(destinoNotificacaoComunicado(data)); return;
-      }
-      case "culto": {
-        const cultoId = (data as { culto_id?: string }).culto_id;
-        if (cultoId) router.navigate({ pathname: "/culto-detalhe", params: { id: cultoId } });
-        return;
-      }
-      case "inscricao_evento_checkin": {
-        const eventoId = (n.data as { evento_id?: string })?.evento_id;
-        if (eventoId) router.navigate({ pathname: "/evento", params: { id: eventoId } });
-        else router.navigate("/inscricoes");
-        return;
-      }
-      case "inscricao_evento": {
-        router.navigate(destinoNotificacaoEvento(data));
-        return;
-      }
-    }
+    // O mapa de rotas é UM SÓ (lib/destinoNotificacao.ts), o mesmo da push:
+    // tipo sem tela de destino fica só marcado como lido, sem navegar.
+    const destino = destinoParaNotificacao(n.tipo, n.data ?? {});
+    if (destino) irPara(destino);
   }
 
   function renderItem({ item }: { item: AppNotificacao }) {

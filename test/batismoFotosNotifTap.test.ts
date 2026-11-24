@@ -36,14 +36,17 @@ it("aviso do álbum abre a galeria daquele álbum; lembrete sem id continua em /
   stop();
 });
 
-// A LISTA de notificações (`notificacoes.tsx`) é o outro mapa de toque e já
-// divergiu do da push antes: os dois precisam usar o MESMO destino.
+// O mapa de rotas é UM SÓ (lib/destinoNotificacao.ts) desde 24/11/2026: push e
+// lista chamam o mesmo resolvedor. O guard agora trava as DUAS pontas: os dois
+// pontos de toque usam o resolvedor, e o resolvedor roteia `batismo` pelo
+// destino do álbum.
 
-it("⚠️ MUTATION GUARD · push e lista usam o mesmo destino para `batismo`", () => {
+it("⚠️ MUTATION GUARD · push e lista usam o resolvedor único, que conhece `batismo`", () => {
   const ler = (rel: string) => semComentarios(readFileSync(join(process.cwd(), rel), "utf8"));
   for (const arq of ["lib/notifTap.ts", "app/(app)/notificacoes.tsx"]) {
-    const src = ler(arq);
-    const caso = src.slice(src.indexOf('case "batismo":'), src.indexOf('case "batismo":') + 120);
-    expect(caso, `${arq} não roteia "batismo" pelo destino do álbum`).toContain("destinoNotificacaoBatismo(data)");
+    expect(ler(arq), `${arq} não usa o mapa único de rotas`).toContain("destinoParaNotificacao(");
   }
+  const mapa = ler("lib/destinoNotificacao.ts");
+  const caso = mapa.slice(mapa.indexOf('case "batismo":'), mapa.indexOf('case "batismo":') + 120);
+  expect(caso, 'o mapa único não roteia "batismo" pelo destino do álbum').toContain("destinoNotificacaoBatismo(data)");
 });

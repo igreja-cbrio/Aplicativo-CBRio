@@ -1,13 +1,7 @@
-import { destinoNotificacaoComunicado } from "@/lib/comunicadoLink";
-import { destinoDevocionalKids } from "@/lib/kidsDevocionalDestino";
-import { destinoAvisoKids } from "@/lib/kidsAvisoDestino";
-import { destinoCertificadoKids } from "@/lib/kidsCertificadoDestino";
-import { destinoNotificacaoBatismo } from "@/lib/batismoFotosDestino";
-import { destinoNotificacaoChat } from "@/lib/assistenteChat";
+import { destinoParaNotificacao, TIPOS_SEM_DESTINO } from "@/lib/destinoNotificacao";
 import { router } from "expo-router";
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { destinoNotificacaoEvento } from "./eventoDestino";
 import { trackEvento } from "./telemetria";
 
 /** Última resposta de push que ESTA instalação já tratou (sobrevive a reinício). */
@@ -74,103 +68,20 @@ export function attachNotifTapListener(): () => void {
     if (!data || typeof data !== "object") return;
     marcarProcessada(resp);
     const tipo = (data as { tipo?: string }).tipo;
-    switch (tipo) {
-      case "chat_assistente":
-        router.navigate(destinoNotificacaoChat(data)); return;
-      case "kids_devocional":
-        router.navigate(destinoDevocionalKids(data)); return;
-      case "kids_mural":
-        router.navigate(destinoAvisoKids(data)); return;
-      // Certificado da apresentação liberado pela equipe (17/11/2026).
-      case "kids_certificado_apresentacao":
-        router.navigate(destinoCertificadoKids(data)); return;
-      case "carta_transferencia_pronta":
-        router.navigate("/carta-transferencia");
-        return;
-      case "escala":
-        router.navigate("/voluntariado");
-        return;
-      case "sos": {
-        const id = (data as { inscricao_id?: string }).inscricao_id;
-        router.navigate(id ? { pathname: "/cuidados", params: { sos: id } } : "/cuidados");
-        return;
-      }
-      case "grupo_pedido":
-        // Pedido de entrada no grupo → tela do líder aprovar/recusar.
-        router.navigate("/grupo-inscricoes");
-        return;
-      // ⚠️ Tipos criados em 07/08 com a tela do supervisor. Sem `case`, eles
-      // caíam no default e o toque NÃO NAVEGAVA — o aviso chegava e não levava
-      // a lugar nenhum. Destino é a lista de grupos (quem recebe é a
-      // coordenação, que gerencia vários; mandar pro grupo exigiria o papel
-      // dela naquele grupo, que a push não carrega).
-      case "grupo_encontro_registrado":
-      case "grupo_visita_registrada":
-      // Saída de participante (18/08): o líder cai na lista de grupos dele.
-      case "grupo_saida":
-        router.navigate("/meu-grupo");
-        return;
-      // Álbum publicado (24/11/2026) chega com `destino: 'fotos'` + `album_id` e
-      // abre a galeria; os lembretes antigos (sem album_id) seguem em /batismo.
-      case "batismo":
-        router.navigate(destinoNotificacaoBatismo(data));
-        return;
-      case "culto": {
-        const cultoId = (data as { culto_id?: string }).culto_id;
-        if (cultoId) router.navigate({ pathname: "/culto-detalhe", params: { id: cultoId } });
-        else router.navigate("/");
-        return;
-      }
-      case "next":
-        router.navigate("/next");
-        return;
-      case "devocional":
-        router.navigate("/devocional");
-        return;
-      case "cuidado":
-        router.navigate("/cuidados");
-        return;
-      case "kids_vinculo":
-        router.navigate("/kids");
-        return;
-      // Kids chamando o responsável no culto: leva à área Kids (sem dado clínico).
-      case "kids_chamar_responsavel":
-        router.navigate("/kids");
-        return;
-      case "comunicado": {
-        router.navigate(destinoNotificacaoComunicado(data));
-        return;
-      }
-      // ⚠️ Nome começa com `inscricao_` de PROPÓSITO: no binário que ainda não
-      // recebeu este OTA, o `default` manda pra aba Inscrições (onde o cartão do
-      // evento leva ao comprovante) em vez de o toque não fazer nada.
-      case "inscricao_evento_checkin": {
-        const eventoId = (data as { evento_id?: string }).evento_id;
-        if (eventoId) router.navigate({ pathname: "/evento", params: { id: eventoId } });
-        else router.navigate("/inscricoes");
-        return;
-      }
-      case "inscricao_evento": {
-        router.navigate(destinoNotificacaoEvento(data));
-        return;
-      }
-      default:
-        // ⚠️ A Edge Function de confirmação manda `inscricao_<tipo>`
-        // (inscricao_grupos, inscricao_batismo, inscricao_retiro…) — nenhum
-        // deles casava nos `case` acima e TODOS caíam no default.
-        if (typeof tipo === "string" && tipo.startsWith("inscricao_")) {
-          router.navigate("/inscricoes");
-          return;
-        }
-        // ⚠️ Antes o default era `router.navigate("/notificacoes")`, e era ele
-        // que sequestrava a abertura do app: qualquer push sem destino (o
-        // `aniversario`, os `inscricao_*`) jogava a pessoa na lista em vez da
-        // Home. Push sem destino agora NÃO navega — o aviso já está no sino,
-        // com contador. O evento abaixo existe pra a gente descobrir qual tipo
-        // apareceu sem mapa (em vez de o app "adivinhar" uma tela).
-        trackEvento("notif_tap_sem_destino", { notification_type: tipo ?? "(sem tipo)" });
-        return;
+    const destino = destinoParaNotificacao(tipo, data as Record<string, unknown>);
+    if (destino) {
+      router.navigate(destino);
+      return;
     }
+    // ⚠️ Push sem destino NÃO navega (antes o default mandava pra
+    // "/notificacoes" e sequestrava a abertura do app). O aviso já está no
+    // sino, com contador. O evento abaixo existe pra a gente descobrir qual
+    // tipo apareceu sem mapa (em vez de o app "adivinhar" uma tela). Tipos em
+    // TIPOS_SEM_DESTINO são conhecidos e sem tela de propósito: não são falha.
+    if (!tipo || !TIPOS_SEM_DESTINO.has(tipo)) {
+      trackEvento("notif_tap_sem_destino", { notification_type: tipo ?? "(sem tipo)" });
+    }
+    return;
   }
 
   // Tap em foreground/background -> abriu o app a partir da notif.
