@@ -205,10 +205,14 @@ describe("travas de texto", () => {
     // Depois da carga completa, uma geração nova descarta carga parcial que começou durante ela.
     expect(tela).toMatch(/setSelecionadas\(\(s\) => new Set\(\[\.\.\.s\]\.filter\(\(x\) => r\.fotos\.some\(\(f\) => f\.id === x\)\)\)\);\s*geracao\.current \+= 1;\s*\}\s*return r\.fotos;/);
     // Restauro que falha não deixa a galeria presa no "carregando".
-    expect(tela).toContain("setPag((p) => ({ ...p, carregou: true, carregando: false, erro }));");
+    expect(tela).toContain("if (!inicial.carregou || inicial.fotos.length === 0) setPag((p) => ({ ...p, carregou: true, carregando: false, erro }));");
     // Cada lista de álbuns poda o que deixou de valer.
     expect(tela).toContain("podarResultados(uidRef.current, resp);");
     // Voltar o foco confere se o resultado na tela ainda vale.
-    expect(tela).toMatch(/if \(resultadoRef\.current && !lerResultado\(uidRef\.current, albumRef\.current\)\) \{/);
+    expect(tela).toContain("if (resultadoRef.current && lerResultado(uidRef.current, albumRef.current)?.resultado !== resultadoRef.current) {");
+    // A tela mostra a cópia guardada (a conferência acima é por identidade).
+    expect(tela).toContain("setResultadoBusca(copia ? copia.resultado : r);");
+    // Puxar para atualizar nunca encolhe a lista.
+    expect(tela).toContain("await recarregarAlbum(pagRef.current.fotos.length);");
   });
 });

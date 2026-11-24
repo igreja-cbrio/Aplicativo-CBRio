@@ -1121,7 +1121,7 @@ const MUTANTES = [
   {
     nome: "resultado guardado: restauro que falha deixa a galeria presa no carregando",
     arq: "app/(app)/batismo-fotos.tsx",
-    de: "        setPag((p) => ({ ...p, carregou: true, carregando: false, erro }));\n",
+    de: "        if (!inicial.carregou || inicial.fotos.length === 0) setPag((p) => ({ ...p, carregou: true, carregando: false, erro }));\n",
     para: "",
   },
   {
@@ -1129,6 +1129,12 @@ const MUTANTES = [
     arq: "lib/resultadoBuscaMemoria.ts",
     de: '    if (resp.busca_facial !== "liberada" || !liberados.has(g.albumId)) guardados.delete(k);',
     para: '    if (resp.busca_facial !== "liberada") guardados.delete(k);',
+  },
+  {
+    nome: "resultado guardado: puxar para atualizar volta a encolher a lista para a 1ª página",
+    arq: "app/(app)/batismo-fotos.tsx",
+    de: "    await recarregarAlbum(pagRef.current.fotos.length);",
+    para: "    await recarregarAlbum();",
   },
 ];
 

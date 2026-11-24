@@ -241,7 +241,9 @@ export default function BatismoFotosScreen() {
   // em outra instância da tela): senão sai, e o restauro decide de novo.
   useFocusEffect(
     useCallback(() => {
-      if (resultadoRef.current && !lerResultado(uidRef.current, albumRef.current)) {
+      // O que está na tela tem de ser o MESMO guardado: vencido, apagado ou
+      // substituído em outra instância da tela ⇒ sai, e o restauro decide de novo.
+      if (resultadoRef.current && lerResultado(uidRef.current, albumRef.current)?.resultado !== resultadoRef.current) {
         setResultadoBusca(null);
         setMetaResultado(null);
         setSelecionando(false);
@@ -289,7 +291,9 @@ export default function BatismoFotosScreen() {
   const aoResultadoBusca = useCallback((r: ResultadoBusca) => {
     const em = Date.now();
     // Só substitui o guardado se a busca verificou alguma foto (ver o módulo).
-    guardarResultado(uidRef.current, albumRef.current, r, pagRef.current.fotos.map((f) => f.id), em);
+    // A tela mostra a CÓPIA guardada: ao voltar o foco, ela confere que ainda é a mesma.
+    const guardou = guardarResultado(uidRef.current, albumRef.current, r, pagRef.current.fotos.map((f) => f.id), em);
+    const copia = guardou ? lerResultado(uidRef.current, albumRef.current, em) : null;
     setBuscaAberta(false);
     setSelecionando(false);
     setSelecionadas(new Set());
@@ -297,7 +301,7 @@ export default function BatismoFotosScreen() {
     setVistaAlbum(false);
     setRestauro("parado");
     setMetaResultado({ em, sairam: 0, novas: 0 });
-    setResultadoBusca(r);
+    setResultadoBusca(copia ? copia.resultado : r);
   }, []);
 
   /** "Ver o álbum todo": só troca de vista. O resultado continua guardado. */
@@ -359,7 +363,11 @@ export default function BatismoFotosScreen() {
         // galeria ficava presa no "carregando". O erro real aparece (sem acesso,
         // conflito, falha) em vez de um "Tentar de novo" genérico.
         const erro = classificarErroFotos(e);
-        setPag((p) => ({ ...p, carregou: true, carregando: false, erro }));
+        // Só quando a carga inicial foi descartada (lista vazia): numa lista já
+        // completa ("Ver o resultado" a partir do álbum) o erro viraria um
+        // rodapé "carregar mais" morto.
+        const inicial = pagRef.current;
+        if (!inicial.carregou || inicial.fotos.length === 0) setPag((p) => ({ ...p, carregou: true, carregando: false, erro }));
         if (erro.tipo === "sem_acesso" || erro.tipo === "conflito") {
           apagarResultado(uid, albumId);
           setVistaAlbum(true);
@@ -422,7 +430,9 @@ export default function BatismoFotosScreen() {
   const aoPuxar = useCallback(async () => {
     setPuxando(true);
     await carregarAlbuns();
-    await recarregarAlbum();
+    // Recarrega a MESMA quantidade já carregada: atualizar nunca encolhe a lista
+    // (com um resultado restaurado em cima, encolher viraria "não encontramos você").
+    await recarregarAlbum(pagRef.current.fotos.length);
     if (ativa.current) setPuxando(false);
   }, [carregarAlbuns, recarregarAlbum]);
 
