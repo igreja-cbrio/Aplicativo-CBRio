@@ -7,7 +7,7 @@ describe("valores da jornada", () => {
     expect(VALORES.map((v) => v.nome)).toEqual(["Seguir a Jesus", "Conectar", "Investir tempo com Deus", "Servir", "Generosidade"]);
   });
   const casos: [string, string][] = [
-    ["/batismo", "Seguir a Jesus"], ["/modo-culto", "Seguir a Jesus"], ["/culto-detalhe", "Seguir a Jesus"],
+    ["/batismo", "Seguir a Jesus"], ["/batismo-fotos", "Seguir a Jesus"], ["/modo-culto", "Seguir a Jesus"], ["/culto-detalhe", "Seguir a Jesus"],
     ["/grupos", "Conectar"], ["/meu-grupo", "Conectar"], ["/grupo-detalhe", "Conectar"],
     ["/devocional", "Investir tempo com Deus"], ["/voluntariado", "Servir"], ["/generosidade", "Generosidade"],
   ];

@@ -78,24 +78,5 @@ export async function desmarcarBatismoAnterior(): Promise<void> {
   if (error) throw error;
 }
 
-export type FotoBatismo = {
-  nome: string;
-  url: string;
-};
-
-/**
- * Lista as fotos do dia do batismo (path no storage: batismos/YYYY-MM-DD/...).
- * Marketing sobe via dashboard. URLs públicas (bucket é público pra leitura).
- */
-export async function listarFotosBatismo(dataIso: string): Promise<FotoBatismo[]> {
-  const folder = dataIso;
-  const { data } = await supabase.storage
-    .from("batismos")
-    .list(folder, { limit: 200, sortBy: { column: "name", order: "asc" } });
-  return (data ?? [])
-    .filter((f) => f.name && !f.name.endsWith("/"))
-    .map((f) => ({
-      nome: f.name,
-      url: supabase.storage.from("batismos").getPublicUrl(`${folder}/${f.name}`).data.publicUrl,
-    }));
-}
+// ⚠️ A galeria antiga (`listarFotosBatismo`, bucket público `batismos/AAAA-MM-DD`)
+// saiu em 24/11/2026: as fotos agora são o álbum privado de `lib/batismoFotos.ts`.

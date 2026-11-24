@@ -1,8 +1,6 @@
-import { Dimensions, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { BRAND_FONT } from "@/lib/fonts";
-const SCREEN_W = Dimensions.get("window").width;
-const THUMB = Math.floor((SCREEN_W - spacing.lg * 2 - spacing.md * 2 - 12) / 3);
 
 export const makeStyles = (colors: Palette) =>
   StyleSheet.create({
@@ -39,44 +37,6 @@ export const makeStyles = (colors: Palette) =>
     vazioIcon: { color: colors.textMuted },
     vazioTitle: { color: colors.text, fontSize: font.size.lg, fontWeight: "800", textAlign: "center" },
     vazioTxt: { color: colors.textMuted, fontSize: font.size.md, textAlign: "center", lineHeight: 22 },
-    thumb: {
-      width: THUMB,
-      height: THUMB,
-      borderRadius: radius.sm,
-      overflow: "hidden",
-      backgroundColor: colors.surfaceAlt,
-    },
-    thumbImg: { width: "100%", height: "100%" },
-    modalBg: {
-      flex: 1,
-      backgroundColor: "rgba(0,0,0,0.92)",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    fotoFull: { width: "100%", height: "80%" },
-    modalClose: {
-      position: "absolute",
-      top: 60,
-      right: 24,
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: "rgba(255,255,255,0.18)",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    modalSave: {
-      position: "absolute",
-      bottom: 50,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      paddingHorizontal: 18,
-      paddingVertical: 12,
-      borderRadius: 999,
-      backgroundColor: colors.primary,
-    },
-    modalSaveTxt: { color: "#fff", fontWeight: "800", fontSize: font.size.sm },
     linkAcao: {
       flexDirection: "row",
       alignItems: "center",
