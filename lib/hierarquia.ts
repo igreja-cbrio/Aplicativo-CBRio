@@ -169,6 +169,9 @@ export function rotaPai(rota: string, params: Record<string, unknown> = {}): str
   // Ignora query string: /grupo-detalhe?id=… continua sendo /grupo-detalhe.
   const limpa = rota.split("?")[0];
   if (params.origem === "kids" && ["/apresentacao-crianca", "/inscricao-formulario"].includes(limpa)) return "/kids-area";
+  // Atalho "Minhas fotos do batismo" no Meu perfil (24/11/2026): quem entrou pelo
+  // perfil volta para o perfil, não para o Meu batismo.
+  if (params.origem === "perfil" && limpa === "/batismo-fotos") return "/perfil";
   return PAI[limpa] ?? "/";
 }
 

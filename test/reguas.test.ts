@@ -155,6 +155,10 @@ describe("hierarquia · a árvore do `cd ..`", () => {
   it("tela de profundidade volta pro PAI, não pra Home", () => {
     expect(rotaPai("/trocar-senha")).toBe("/configuracoes");
     expect(rotaPai("/cartoes")).toBe("/perfil");
+    // Fotos do batismo: pelo atalho do Meu perfil volta ao perfil; pelo resto, ao Meu batismo.
+    expect(rotaPai("/batismo-fotos", { origem: "perfil", album: "x" })).toBe("/perfil");
+    expect(rotaPai("/batismo-fotos", { album: "x" })).toBe("/batismo");
+    expect(rotaPai("/batismo-fotos", { origem: "kids" })).toBe("/batismo");
     expect(rotaPai("/kids-filho")).toBe("/kids");
     expect(rotaPai("/kids-aviso")).toBe("/kids-filho");
     expect(rotaPai("/evento")).toBe("/inscricoes");
