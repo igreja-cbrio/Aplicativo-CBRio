@@ -1080,6 +1080,62 @@ const MUTANTES = [
     de: "  try { player.pause(); } catch { /* player já liberado pelo expo-audio */ }",
     para: "  player.pause();",
   },
+  // ── Resultado da busca por selfie que fica ao sair e voltar (24/11/2026) ──
+  {
+    nome: "resultado guardado: interruptor da busca (ou menor) não apaga o guardado",
+    arq: "lib/resultadoBuscaMemoria.ts",
+    de: '  if (resp.busca_facial !== "liberada") return "apagar";\n',
+    para: "",
+  },
+  {
+    nome: "resultado guardado: nunca vence (sem as 24 h)",
+    arq: "lib/resultadoBuscaMemoria.ts",
+    de: "  const vencido = agora - g.em > VALIDADE_RESULTADO_MS || agora < g.em - 60_000;",
+    para: "  const vencido = false;",
+  },
+  {
+    nome: "resultado guardado: busca sem foto verificada apaga o resultado bom",
+    arq: "lib/resultadoBuscaMemoria.ts",
+    de: "  if (!uid || !albumId || !r || numero(r.verificadas) <= 0) return false;",
+    para: "  if (!uid || !albumId || !r) return false;",
+  },
+  {
+    nome: "resultado guardado: trocar de conta não apaga (a conta B vê o da A)",
+    arq: "contexts/AuthContext.tsx",
+    de: "      if (uid !== uidDaSessao.current) {\n        apagarTodosResultados();",
+    para: "      if (uid !== uidDaSessao.current) {\n        void 0;",
+  },
+  {
+    nome: "resultado guardado: sair da tela volta a apagar o resultado",
+    arq: "app/(app)/batismo-fotos.tsx",
+    de: "      return () => {\n        setBuscaAberta(false);\n      };",
+    para: "      return () => {\n        setBuscaAberta(false);\n        setResultadoBusca(null);\n      };",
+  },
+  {
+    // Revisão de 24/11: puxar para atualizar durante o restauro trocava a lista inteira por 60 fotos.
+    nome: "resultado guardado: carga completa sem geração nova (lista parcial sobrescreve)",
+    arq: "app/(app)/batismo-fotos.tsx",
+    de: "      geracao.current += 1;\n    }\n    return r.fotos;",
+    para: "    }\n    return r.fotos;",
+  },
+  {
+    nome: "resultado guardado: restauro que falha deixa a galeria presa no carregando",
+    arq: "app/(app)/batismo-fotos.tsx",
+    de: "        if (!inicial.carregou || inicial.fotos.length === 0) setPag((p) => ({ ...p, carregou: true, carregando: false, erro }));\n",
+    para: "",
+  },
+  {
+    nome: "resultado guardado: lista de álbuns não poda o que deixou de valer",
+    arq: "lib/resultadoBuscaMemoria.ts",
+    de: '    if (resp.busca_facial !== "liberada" || !liberados.has(g.albumId)) guardados.delete(k);',
+    para: '    if (resp.busca_facial !== "liberada") guardados.delete(k);',
+  },
+  {
+    nome: "resultado guardado: puxar para atualizar volta a encolher a lista para a 1ª página",
+    arq: "app/(app)/batismo-fotos.tsx",
+    de: '"não encontramos você").\n    await recarregarAlbum(pagRef.current.fotos.length);',
+    para: '"não encontramos você").\n    await recarregarAlbum();',
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

@@ -16,8 +16,13 @@
 // ⚠️ "Encontrar minhas fotos" (busca por selfie, `components/batismo/BuscaFacial.tsx`):
 // o fluxo é um modal desta tela, sem rota nova. A galeria recebe só ids e
 // contagens e mostra o modo "Resultado da busca" (duas seções, com a mesma
-// seleção e o mesmo download em lote). O resultado vive só na memória desta
-// tela: sai do modo, troca de álbum ou sai da tela ⇒ descartado.
+// seleção e o mesmo download em lote).
+// ⚠️ O resultado FICA ao sair e voltar (pedido do Matheus, 24/11/2026): mora na
+// MEMÓRIA do app (`lib/resultadoBuscaMemoria.ts`, conta + álbum, até 24 h), nunca
+// em disco nem no servidor. "Ver o álbum todo" só troca de vista; apagar é o
+// botão "Apagar resultado", sair da conta, ou o álbum/busca deixar de valer. Ao
+// voltar, o álbum INTEIRO é carregado antes de mostrar o resultado (senão as
+// fotos depois da 1ª página pareceriam "não encontradas").
 import { FlatList, ScrollView, DockInsetContext } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 import { ValorHeader } from "@/components/ui/ValorHeader";
@@ -54,6 +59,16 @@ import {
 } from "@/lib/batismoFotos";
 import { mensagemDoResumo, type ProgressoFila } from "@/lib/filaFotos";
 import { buscaDisponivel, type ResultadoBusca } from "@/lib/buscaFacial";
+import {
+  apagarResultado,
+  guardarResultado,
+  lerResultado,
+  mudancasDoAlbum,
+  oQueFazerComGuardado,
+  podarResultados,
+  quandoFoiABusca,
+} from "@/lib/resultadoBuscaMemoria";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   estrategiaDoAparelho,
   novoCancelamentoSalvar,
@@ -112,6 +127,17 @@ export default function BatismoFotosScreen() {
   const [buscaAberta, setBuscaAberta] = useState(false);
   /** Só ids e contagens: nenhuma distância nem selfie chega aqui. */
   const [resultadoBusca, setResultadoBusca] = useState<ResultadoBusca | null>(null);
+  /** Quando a busca foi feita e o que mudou no álbum desde então. */
+  const [metaResultado, setMetaResultado] = useState<{ em: number; sairam: number; novas: number } | null>(null);
+  /** A pessoa pediu "Ver o álbum todo": o resultado guardado não volta sozinho. */
+  const [vistaAlbum, setVistaAlbum] = useState(false);
+  const [restauro, setRestauro] = useState<"parado" | "carregando" | "erro">("parado");
+  const { user } = useAuth();
+  const uid = user?.id ?? null;
+  const uidRef = useRef(uid);
+  uidRef.current = uid;
+  const resultadoRef = useRef(resultadoBusca);
+  resultadoRef.current = resultadoBusca;
 
   const ativa = useRef(true);
   const geracao = useRef(0);
@@ -137,6 +163,8 @@ export default function BatismoFotosScreen() {
     try {
       const resp = await listarAlbuns();
       if (!ativa.current) return;
+      // Busca desligada, menor ou álbum que saiu: o resultado guardado vai junto.
+      podarResultados(uidRef.current, resp);
       setTela({ tipo: "pronto", resp });
       setAlbumId((atual) => (atual && resp.albuns.some((a) => a.id === atual) ? atual : albumInicial(resp.albuns, albumParam)?.id ?? null));
     } catch {
@@ -196,18 +224,37 @@ export default function BatismoFotosScreen() {
     setIndiceVisto(null);
     setBuscaAberta(false);
     setResultadoBusca(null);
+    setMetaResultado(null);
+    setVistaAlbum(false);
+    setRestauro("parado");
     if (albumId) recarregarAlbum();
   }, [albumId, recarregarAlbum]);
 
-  // Saiu da tela (outra rota por cima, outra aba): o resultado da busca não fica guardado.
+  // A conta pode chegar depois da lista de álbuns: poda de novo com ela.
+  useEffect(() => {
+    if (tela.tipo === "pronto") podarResultados(uid, tela.resp);
+  }, [tela, uid]);
+
+  // Saiu da tela (outra rota por cima, outra aba): fecha a busca em andamento.
+  // O RESULTADO já entregue fica (memória do app), e volta ao abrir de novo.
+  // Ao voltar o foco, o resultado na tela tem de continuar valendo (24 h, apagado
+  // em outra instância da tela): senão sai, e o restauro decide de novo.
   useFocusEffect(
-    useCallback(
-      () => () => {
-        setBuscaAberta(false);
+    useCallback(() => {
+      // O que está na tela tem de ser o MESMO guardado: vencido, apagado ou
+      // substituído em outra instância da tela ⇒ sai, e o restauro decide de novo.
+      if (resultadoRef.current && lerResultado(uidRef.current, albumRef.current)?.resultado !== resultadoRef.current) {
         setResultadoBusca(null);
-      },
-      [],
-    ),
+        setMetaResultado(null);
+        setSelecionando(false);
+        setSelecionadas(new Set());
+        setIndiceVisto(null);
+        setRestauro("parado");
+      }
+      return () => {
+        setBuscaAberta(false);
+      };
+    }, []),
   );
 
   /**
@@ -225,6 +272,10 @@ export default function BatismoFotosScreen() {
     if (ativa.current && g === geracao.current) {
       setPag({ fotos: r.fotos, cursor: r.cursor, carregou: true, carregando: false, erro: null, carregadaEm: r.carregadaEm });
       setSelecionadas((s) => new Set([...s].filter((x) => r.fotos.some((f) => f.id === x))));
+      // Puxar para atualizar ou "carregar mais" que começou durante a varredura
+      // não pode trocar a lista INTEIRA por uma parcial depois (o resultado
+      // restaurado diria "não encontramos você"): nova geração os descarta.
+      geracao.current += 1;
     }
     return r.fotos;
   }, []);
@@ -238,19 +289,95 @@ export default function BatismoFotosScreen() {
   };
 
   const aoResultadoBusca = useCallback((r: ResultadoBusca) => {
+    const em = Date.now();
+    // Só substitui o guardado se a busca verificou alguma foto (ver o módulo).
+    // A tela mostra a CÓPIA guardada: ao voltar o foco, ela confere que ainda é a mesma.
+    const guardou = guardarResultado(uidRef.current, albumRef.current, r, pagRef.current.fotos.map((f) => f.id), em);
+    const copia = guardou ? lerResultado(uidRef.current, albumRef.current, em) : null;
     setBuscaAberta(false);
     setSelecionando(false);
     setSelecionadas(new Set());
     setIndiceVisto(null);
-    setResultadoBusca(r);
+    setVistaAlbum(false);
+    setRestauro("parado");
+    setMetaResultado({ em, sairam: 0, novas: 0 });
+    setResultadoBusca(copia ? copia.resultado : r);
   }, []);
 
+  /** "Ver o álbum todo": só troca de vista. O resultado continua guardado. */
   const sairDoResultado = () => {
     setResultadoBusca(null);
+    setMetaResultado(null);
+    setVistaAlbum(true);
     setSelecionando(false);
     setSelecionadas(new Set());
     setIndiceVisto(null);
   };
+
+  const verResultadoGuardado = () => {
+    if (salvandoRef.current) return;
+    setSelecionando(false);
+    setSelecionadas(new Set());
+    setIndiceVisto(null);
+    setRestauro("parado");
+    setVistaAlbum(false);
+  };
+
+  const apagarResultadoDaTela = () => {
+    if (salvandoRef.current) return;
+    apagarResultado(uidRef.current, albumRef.current);
+    setResultadoBusca(null);
+    setMetaResultado(null);
+    setVistaAlbum(true);
+    setSelecionando(false);
+    setSelecionadas(new Set());
+    setIndiceVisto(null);
+  };
+
+  // Voltou à tela (ou ao álbum) com um resultado guardado: carrega o álbum
+  // INTEIRO e só então mostra o resultado. Álbum que deixou de valer, conta em
+  // conflito, busca desligada ou menor ⇒ o guardado é apagado.
+  useEffect(() => {
+    if (tela.tipo !== "pronto" || !albumId || !uid || vistaAlbum || resultadoBusca || buscaAberta || restauro !== "parado") return;
+    const guardado = lerResultado(uid, albumId);
+    const decisao = oQueFazerComGuardado(guardado, tela.resp, albumId);
+    if (decisao === "apagar") {
+      apagarResultado(uid, albumId);
+      return;
+    }
+    if (decisao !== "restaurar" || !guardado) return;
+    setRestauro("carregando");
+    carregarTodasParaBusca().then(
+      (fotos) => {
+        if (!ativa.current || albumRef.current !== guardado.albumId) return;
+        setSelecionando(false);
+        setSelecionadas(new Set());
+        setIndiceVisto(null);
+        setMetaResultado({ em: guardado.em, ...mudancasDoAlbum(guardado, fotos.map((f) => f.id)) });
+        setResultadoBusca(guardado.resultado);
+        setRestauro("parado");
+      },
+      (e) => {
+        if (!ativa.current || albumRef.current !== guardado.albumId) return;
+        // A carga inicial do álbum foi descartada (geração nova): sem isto a
+        // galeria ficava presa no "carregando". O erro real aparece (sem acesso,
+        // conflito, falha) em vez de um "Tentar de novo" genérico.
+        const erro = classificarErroFotos(e);
+        // Só quando a carga inicial foi descartada (lista vazia): numa lista já
+        // completa ("Ver o resultado" a partir do álbum) o erro viraria um
+        // rodapé "carregar mais" morto.
+        const inicial = pagRef.current;
+        if (!inicial.carregou || inicial.fotos.length === 0) setPag((p) => ({ ...p, carregou: true, carregando: false, erro }));
+        if (erro.tipo === "sem_acesso" || erro.tipo === "conflito") {
+          apagarResultado(uid, albumId);
+          setVistaAlbum(true);
+          setRestauro("parado");
+          return;
+        }
+        setRestauro("erro");
+      },
+    );
+  }, [tela, albumId, uid, vistaAlbum, resultadoBusca, buscaAberta, restauro, carregarTodasParaBusca]);
 
   /** Tokens das miniaturas venceram (ou podem ter vencido): renova sem perder a posição. */
   const renovarLista = useCallback(async () => {
@@ -303,7 +430,9 @@ export default function BatismoFotosScreen() {
   const aoPuxar = useCallback(async () => {
     setPuxando(true);
     await carregarAlbuns();
-    await recarregarAlbum();
+    // Recarrega a MESMA quantidade já carregada: atualizar nunca encolhe a lista
+    // (com um resultado restaurado em cima, encolher viraria "não encontramos você").
+    await recarregarAlbum(pagRef.current.fotos.length);
     if (ativa.current) setPuxando(false);
   }, [carregarAlbuns, recarregarAlbum]);
 
@@ -573,6 +702,8 @@ export default function BatismoFotosScreen() {
   const album = albuns.find((a) => a.id === albumId) ?? null;
   const salvando = progresso !== null;
   const podeBuscar = tela.tipo === "pronto" && buscaDisponivel(tela.resp.busca_facial, album, pag.fotos);
+  // O botão "Ver o resultado da sua busca" só aparece se o restauro de fato restauraria.
+  const temGuardado = tela.tipo === "pronto" && oQueFazerComGuardado(lerResultado(uid, albumId), tela.resp, albumId) === "restaurar";
   const selecionadasLista = useMemo(() => pag.fotos.filter((f) => selecionadas.has(f.id)), [pag.fotos, selecionadas]);
   const tamanhoSel = tamanhoSomado(selecionadasLista);
 
@@ -645,11 +776,45 @@ export default function BatismoFotosScreen() {
           ) : fotosSuas.length === 0 ? (
             <Text style={styles.resultadoVazio}>{t("Não achamos fotos suas com certeza. Veja abaixo as que podem ser você.")}</Text>
           ) : null}
+          {metaResultado && (
+            <Text style={styles.resultadoLinha}>
+              {t("Busca feita em")} {quandoFoiABusca(metaResultado.em).dia} {t("às")} {quandoFoiABusca(metaResultado.em).hora}
+            </Text>
+          )}
+          {!!metaResultado && metaResultado.sairam > 0 && (
+            <Text style={styles.resultadoLinha}>
+              {metaResultado.sairam}{" "}
+              {metaResultado.sairam === 1 ? t("foto do resultado não está mais no álbum.") : t("fotos do resultado não estão mais no álbum.")}
+            </Text>
+          )}
+          {!!metaResultado && metaResultado.novas > 0 && (
+            <Text style={styles.resultadoLinha}>
+              {metaResultado.novas}{" "}
+              {metaResultado.novas === 1
+                ? t("foto nova no álbum depois da sua busca não foi verificada.")
+                : t("fotos novas no álbum depois da sua busca não foram verificadas.")}
+            </Text>
+          )}
+          <Text style={styles.dica}>
+            {t("A selfie já foi apagada. Este resultado fica só neste celular, por até 24 horas: some ao fechar o app, ao sair da conta ou ao apagar.")}
+          </Text>
           <View style={styles.ferramentas}>
             <Pressable onPress={sairDoResultado} disabled={salvando} hitSlop={6} accessibilityRole="button" style={styles.ferramenta}>
               <Ionicons name="images-outline" size={16} color={colors.brandMid} />
               <Text style={styles.ferramentaTxt}>{t("Ver o álbum todo")}</Text>
             </Pressable>
+            {!selecionando && podeBuscar && (
+              <Pressable onPress={abrirBusca} disabled={salvando} hitSlop={6} accessibilityRole="button" style={styles.ferramenta}>
+                <Ionicons name="scan-outline" size={16} color={colors.brandMid} />
+                <Text style={styles.ferramentaTxt}>{t("Nova busca")}</Text>
+              </Pressable>
+            )}
+            {!selecionando && (
+              <Pressable onPress={apagarResultadoDaTela} disabled={salvando} hitSlop={6} accessibilityRole="button" style={styles.ferramenta}>
+                <Ionicons name="trash-outline" size={16} color={colors.brandMid} />
+                <Text style={styles.ferramentaTxt}>{t("Apagar resultado")}</Text>
+              </Pressable>
+            )}
             {selecionando && (
               <Pressable onPress={sairDaSelecao} disabled={salvando} hitSlop={6} accessibilityRole="button" style={styles.ferramenta}>
                 <Text style={styles.ferramentaTxt}>{t("Cancelar")}</Text>
@@ -659,13 +824,42 @@ export default function BatismoFotosScreen() {
         </View>
       )}
 
+      {!!album && album.situacao === "liberado" && !resultadoBusca && restauro !== "parado" && (
+        <View style={styles.ferramentas} accessibilityLiveRegion="polite">
+          {restauro === "carregando" ? (
+            <>
+              <ActivityIndicator size="small" color={colors.brandMid} />
+              <Text style={styles.dica}>{t("Carregando o resultado da sua busca…")}</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.dica}>{t("Não foi possível carregar o resultado da sua busca.")}</Text>
+              <Pressable onPress={() => setRestauro("parado")} hitSlop={6} accessibilityRole="button" style={styles.ferramenta}>
+                <Text style={styles.ferramentaTxt}>{t("Tentar de novo")}</Text>
+              </Pressable>
+            </>
+          )}
+        </View>
+      )}
+
       {!!album && album.situacao === "liberado" && pag.fotos.length > 0 && !resultadoBusca && (
         <>
           <Text style={styles.sub}>
             {t("Batismo de")} {rotuloDaData(album.data_batismo)}
             {album.total ? ` · ${album.total} ${album.total === 1 ? t("foto") : t("fotos")}` : ""}
           </Text>
-          {podeBuscar && !selecionando && (
+          {vistaAlbum && !selecionando && temGuardado && (
+            <Pressable
+              onPress={verResultadoGuardado}
+              disabled={salvando}
+              style={({ pressed }) => [styles.botaoBusca, (pressed || salvando) && { opacity: 0.75 }]}
+              accessibilityRole="button"
+            >
+              <Ionicons name="person-circle-outline" size={20} color="#fff" />
+              <Text style={styles.botaoBuscaTxt}>{t("Ver o resultado da sua busca")}</Text>
+            </Pressable>
+          )}
+          {podeBuscar && !selecionando && !(vistaAlbum && temGuardado) && (
             <Pressable
               onPress={abrirBusca}
               disabled={salvando}
