@@ -938,6 +938,69 @@ const MUTANTES = [
     de: "      {datas.length > 1 && (",
     para: "      {datas.length > 0 && (",
   },
+  // ── Álbum de fotos do batismo (24/11/2026) ──────────────────────────────
+  {
+    // O id do álbum vem do PUSH: sem a checagem de UUID, qualquer texto vira
+    // parâmetro de rota.
+    nome: "fotos do batismo: aviso aceitar album_id que não é UUID",
+    arq: "lib/batismoFotosDestino.ts",
+    de: '  if (data.destino === "fotos" && ehUuid(album)) {',
+    para: '  if (data.destino === "fotos" && typeof album === "string" && album) {',
+  },
+  {
+    nome: "fotos do batismo: o toque na push voltar a ir sempre para /batismo",
+    arq: "lib/notifTap.ts",
+    de: "        router.navigate(destinoNotificacaoBatismo(data));",
+    para: '        router.navigate("/batismo");',
+  },
+  {
+    // "Simplificar" para qualquer caminho relativo monta URL para onde o
+    // servidor não mandou.
+    nome: "fotos do batismo: miniatura aceitar qualquer caminho relativo",
+    arq: "lib/batismoFotos.ts",
+    de: "  if (!caminho.startsWith(PREFIXO_MINIATURA)) return null;\n  const token = caminho.slice(PREFIXO_MINIATURA.length);\n  if (!/^[A-Za-z0-9._~-]+$/.test(token) || /^\\.+$/.test(token)) return null;\n",
+    para: '  if (!caminho.startsWith("/")) return null;\n',
+  },
+  {
+    nome: "fotos do batismo: miniatura sem validar o token (../ passa)",
+    arq: "lib/batismoFotos.ts",
+    de: "  if (!/^[A-Za-z0-9._~-]+$/.test(token) || /^\\.+$/.test(token)) return null;\n",
+    para: "",
+  },
+  {
+    nome: "fotos do batismo: link do original aceitar qualquer host https",
+    arq: "lib/batismoFotos.ts",
+    de: '  return host.endsWith(".sharepoint.com") && host.length > ".sharepoint.com".length;',
+    para: "  return host.length > 0;",
+  },
+  {
+    nome: "salvar fotos: 401/403/410 não pedir link novo",
+    arq: "lib/salvarFotos.ts",
+    de: '      if (r.tipo === "status" && STATUS_RENOVA_LINK.has(r.status) && tentativa === 0) {',
+    para: "      if (false) {",
+  },
+  {
+    // A permissão de LER a galeria inteira é a que a loja questiona e a pessoa
+    // recusa; para salvar basta a de adicionar.
+    nome: "salvar fotos: pedir permissão de LEITURA da galeria",
+    arq: "lib/salvarFotos.ts",
+    de: '    const p = await galeria.requestPermissionsAsync(true, ["photo"]);',
+    para: '    const p = await galeria.requestPermissionsAsync(false, ["photo"]);',
+  },
+  {
+    // O binário do iPhone publicado não tem o módulo: lote pela folha seria uma
+    // folha por foto, e "Salvar imagem" derruba o app.
+    nome: "salvar fotos: iPhone sem o módulo começar lote pela folha",
+    arq: "lib/salvarFotos.ts",
+    de: '  return p.quantidade <= 1 ? "folha" : "atualizar_app";',
+    para: '  return "folha";',
+  },
+  {
+    nome: "fila de fotos: foto interrompida pelo Cancelar contar como falha",
+    arq: "lib/filaFotos.ts",
+    de: "        if (!ehCancelada(e)) falhou.push({ item, erro: mensagemDeErro(e) });",
+    para: "        falhou.push({ item, erro: mensagemDeErro(e) });",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

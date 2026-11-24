@@ -92,6 +92,15 @@
         {
           "microphonePermission": "O CBRio usa o microfone para gravar mensagens de áudio que você escolhe enviar no chat."
         }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "O CBRio usa suas fotos para definir o avatar do seu perfil.",
+          "savePhotosPermission": "O CBRio salva as fotos do seu batismo na sua galeria.",
+          "isAccessMediaLocationEnabled": false,
+          "granularPermissions": []
+        }
       ]
     ],
     "experiments": {

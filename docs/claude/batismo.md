@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- ⚠️⚠️ Álbum do batismo · galeria privada e download (24/11/2026 · par do ERP #3884)
 - Endereço nos convites (16/11/2026)
 - Convites pessoais (16/11/2026)
 
@@ -129,3 +130,39 @@ horários abertos que tem no formulário de inscrição"*. A tela **já chamava*
 - Os parênteses de "(subsolo)" vão codificados (`%28`/`%29`): `encodeURIComponent`
   os deixa crus e alguns detectores de link cortam a URL neles. O teste
   `batismoConvite.test.ts` trava o link inteiro e o destino decodificado.
+
+## ⚠️⚠️ Álbum do batismo · galeria privada e download (24/11/2026 · par do ERP #3884)
+
+A galeria antiga lia o bucket público `batismos` (vazio, limite 200, URL pública) e
+decidia a data no cliente. Agora quem decide é o ERP (`batismo_album_acessos`): a tela
+`/batismo-fotos` só mostra o que `GET /app/batismo/fotos` devolve para a conta da sessão.
+
+- **Rotas**: `/batismo-fotos?album=<uuid>` (pai `/batismo`). `/batismo` mostra o cartão
+  "Fotos do batismo" (`FotosBatismoCard`) e quem tem papel de gestão ganha o link "Minhas
+  fotos do batismo" no topo da gestão (antes o gestor nunca via o próprio álbum).
+- **Miniatura**: caminho relativo `/app/batismo/fotos/miniatura/<token>` vindo do ERP; o
+  app só aceita esse prefixo (`urlDaMiniatura`). Token vence em 2–3 h: imagem com erro em
+  lista velha recarrega a lista.
+- **Original**: link curto do SharePoint pedido **foto a foto, na hora** (`linkDeDownload`),
+  só `https` em `*.sharepoint.com`; 401/403/410 renova UMA vez; nunca em log.
+- **Salvar** (`lib/salvarFotos.ts` + `lib/filaFotos.ts`, réguas puras com teste):
+  1. binário com `ExpoMediaLibrary` (só a PRÓXIMA release de loja): galeria, permissão só
+     de adicionar, 2 por vez;
+  2. Android sem o módulo (vc 12): pasta escolhida pelo SAF, 1 por vez;
+  3. iPhone sem o módulo (build 48): uma foto por vez pela folha do sistema **sem "Salvar
+     imagem"** (`excludedActivityTypes: SaveToCameraRoll`) — o binário não tem
+     `NSPhotoLibraryAddUsageDescription` e esse item pode derrubar o app; várias de uma vez
+     pedem atualizar o app na loja.
+  - O `require('expo-media-library')` vive DENTRO da guarda `requireOptionalNativeModule`.
+    ⚠️ `expo-media-library ~18.2.1` + plugin no `app.json` (`granularPermissions: []`,
+    sem localização) são **mudança nativa pendente**: a catraca do `npm run ota` já estava
+    bloqueada pelo `expo-audio`; continua exigindo `CBRIO_OTA_EMBUTIDO_VELHO=1` até a loja.
+  - ⏳ Antes da próxima release Android: o manifesto da biblioteca declara
+    `READ_MEDIA_VISUAL_USER_SELECTED`; conferir a política da Play (opção:
+    `android.blockedPermissions`, sem quebrar o seletor de avatar).
+- **Toque no aviso**: `tipo: 'batismo'` + `destino: 'fotos'` + `album_id` UUID →
+  `/batismo-fotos` (`lib/batismoFotosDestino.ts`, nos DOIS switches: `notifTap` e
+  `notificacoes`). Sem `album_id` (lembretes de véspera/dia) continua `/batismo`.
+- Testes: `test/batismoFotos.test.ts`, `test/batismoFotosNotifTap.test.ts`,
+  `test/salvarFotos.test.ts`, `test/filaFotos.test.ts` + 9 mutantes em `scripts/mutantes.mjs`.
+

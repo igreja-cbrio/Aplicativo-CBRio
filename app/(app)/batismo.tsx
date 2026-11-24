@@ -9,17 +9,13 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  Image,
-  Linking,
   Pressable,
-  Share,
   View,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as FileSystem from "expo-file-system/legacy";
 import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
@@ -28,14 +24,14 @@ import { useMembro } from "@/lib/useMembro";
 import {
   meuBatismo,
   fazerCheckin,
-  listarFotosBatismo,
   getBatismoAnterior,
   marcarBatismoAnterior,
   desmarcarBatismoAnterior,
   type MeuBatismo,
   type BatismoAnterior,
-  type FotoBatismo,
 } from "@/lib/batismo";
+import { listarAlbuns } from "@/lib/batismoFotos";
+import { FotosBatismoCard, LinkMinhasFotos, type EstadoFotosBatismo } from "@/components/batismo/FotosBatismoCard";
 import { Input } from "@/components/ui/Input";
 import { spacing } from "@/constants/theme";
 import ConfettiCannon from "react-native-confetti-cannon";
@@ -55,9 +51,8 @@ export default function BatismoScreen() {
   const [batismo, setBatismo] = useState<MeuBatismo | null>(null);
   const [podeGerenciar, setPodeGerenciar] = useState<boolean | null>(null);
   const [carregando, setCarregando] = useState(true);
-  const [fotos, setFotos] = useState<FotoBatismo[]>([]);
-  const [fotosLoading, setFotosLoading] = useState(false);
-  const [fotoAberta, setFotoAberta] = useState<FotoBatismo | null>(null);
+  // Álbum do batismo (24/11/2026): quem decide se existe e qual é o servidor.
+  const [fotosEstado, setFotosEstado] = useState<EstadoFotosBatismo>({ tipo: "carregando" });
   const [checkinFazendo, setCheckinFazendo] = useState(false);
   const [confettiKey, setConfettiKey] = useState(0);
   const [batismoAnt, setBatismoAnt] = useState<BatismoAnterior | null>(null);
@@ -65,7 +60,18 @@ export default function BatismoScreen() {
   const [igrejaTxt, setIgrejaTxt] = useState("");
   const [salvandoIgreja, setSalvandoIgreja] = useState(false);
 
+  const carregarFotos = useCallback(async () => {
+    try {
+      const resp = await listarAlbuns();
+      setFotosEstado({ tipo: "ok", resp });
+    } catch {
+      // ⚠️ Erro não vira "sem álbum": o cartão diz que não deu para verificar.
+      setFotosEstado({ tipo: "erro" });
+    }
+  }, []);
+
   const carregar = useCallback(async () => {
+    carregarFotos();
     const papel = await getBatismoPapel().catch(() => ({ pode_gerenciar: false }));
     setPodeGerenciar(!!papel.pode_gerenciar);
     if (papel.pode_gerenciar) {
@@ -80,17 +86,11 @@ export default function BatismoScreen() {
     const b = await meuBatismo(membro.membroId);
     setBatismo(b);
     setCarregando(false);
-    if (b?.data_batismo) {
-      setFotosLoading(true);
-      const fs = await listarFotosBatismo(b.data_batismo);
-      setFotos(fs);
-      setFotosLoading(false);
-    }
     // Status "já sou batizado" do membro
     const ant = await getBatismoAnterior(membro.membroId);
     setBatismoAnt(ant);
     setIgrejaTxt(ant.igreja_batismo_anterior ?? "");
-  }, [membro?.membroId]);
+  }, [membro?.membroId, carregarFotos]);
 
   // ⚠️ RECARREGA AO FOCAR (05/08/2026): o web e o app leem o MESMO banco, mas
   // só refletia o que o web mudou se a tela fosse remontada. Aprovar um pedido,
@@ -133,20 +133,12 @@ export default function BatismoScreen() {
           <View style={{ width: 24 }} />
         </View>
         <ValorHeader rotulo={t('Gestão da equipe')} style={{ paddingHorizontal: spacing.lg }} />
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <LinkMinhasFotos estado={fotosEstado} colors={colors} styles={styles} />
+        </View>
         <BatismoGestaoScreen />
       </SafeAreaView>
     );
-  }
-
-  async function baixarFoto(f: FotoBatismo) {
-    try {
-      const destino = (FileSystem.documentDirectory ?? "") + f.nome;
-      const { uri } = await FileSystem.downloadAsync(f.url, destino);
-      await Share.share({ url: uri, message: t("Minha foto do batismo na CBRio 💙") });
-    } catch {
-      // Fallback: abre a URL no browser pra salvar.
-      Linking.openURL(f.url).catch(() => {});
-    }
   }
 
   return (
@@ -240,43 +232,19 @@ export default function BatismoScreen() {
         ) : (
           <BatismoConteudo
             batismo={batismo}
-            fotos={fotos}
-            fotosLoading={fotosLoading}
+            fotosEstado={fotosEstado}
             checkinFazendo={checkinFazendo}
             onCheckin={onCheckin}
-            onAbrirFoto={setFotoAberta}
             colors={colors}
             styles={styles}
           />
         )}
+        {/* Sem inscrição com data aqui, mas o servidor achou álbum desta conta
+            (ex.: batismo registrado por outro caminho): o cartão aparece igual. */}
+        {!loadingMembro && !carregando && podeGerenciar === false && !!membro?.membroId && !batismo?.data_batismo && (
+          <FotosBatismoCard estado={fotosEstado} mostrarSemAlbum={false} colors={colors} styles={styles} />
+        )}
       </ScrollView>
-
-      {/* Modal de foto em tela cheia */}
-      <Modal
-        visible={!!fotoAberta}
-        animationType="fade"
-        onRequestClose={() => setFotoAberta(null)}
-        transparent
-      >
-        <View style={styles.modalBg}>
-          <Pressable style={styles.modalClose} onPress={() => setFotoAberta(null)} hitSlop={10}>
-            <Ionicons name="close" size={28} color="#fff" />
-          </Pressable>
-          {fotoAberta && (
-            <Image source={{ uri: fotoAberta.url }} style={styles.fotoFull} resizeMode="contain" />
-          )}
-          {fotoAberta && (
-            <Pressable
-              style={styles.modalSave}
-              onPress={() => baixarFoto(fotoAberta)}
-              hitSlop={6}
-            >
-              <Ionicons name="download-outline" size={20} color="#fff" />
-              <Text style={styles.modalSaveTxt}>{t("Salvar / Compartilhar")}</Text>
-            </Pressable>
-          )}
-        </View>
-      </Modal>
 
       {/* Sheet nativa (pageSheet) — iOS 26 com swipe-to-dismiss */}
       <Modal

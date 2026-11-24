@@ -49,7 +49,7 @@ import { router, type Href } from "expo-router";
  *   │   │                        └→ /kids-mural  /kids-eventos  /kids-horarios  /kids-salas  /kids-certificados
  *   │   ├── /jornada
  *   │   ├── /generosidade → /comprovante-doacoes
- *   │   ├── /inscricoes → /batismo → /inscricao-batismo
+ *   │   ├── /inscricoes → /batismo → /inscricao-batismo, /batismo-fotos
  *   │   │              └→ /evento (detalhe + inscrição no app)
  *   │   │              └→ /next (membro OU gestão, decidido pelo servidor)
  *   │   ├── /videos
@@ -135,6 +135,8 @@ const PAI: Record<string, string> = {
   "/inscricao-formulario": "/inscricoes",
   "/batismo": "/inscricoes",
   "/inscricao-batismo": "/batismo",
+  // Álbum de fotos do batismo (24/11/2026) · alvo do push `batismo` com album_id.
+  "/batismo-fotos": "/batismo",
   "/next": "/inscricoes",
   // ⚠️ As duas viraram REDIRECT pra `/next` em 03/09 (a gestão é uma tela só).
   // O mapa FICA: link antigo e bundle intermediário ainda passam por elas, e

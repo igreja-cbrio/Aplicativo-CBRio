@@ -207,7 +207,7 @@ describe("hierarquia · a árvore do `cd ..`", () => {
       "/escala-supervisor", "/anotacoes", "/perfil", "/cartoes", "/familia", "/kids-area", "/kids",
       "/kids-mural", "/kids-eventos", "/kids-horarios", "/kids-salas",
       "/kids-filho", "/kids-aviso", "/kids-solicitar-vinculo", "/kids-certificados", "/jornada", "/generosidade",
-      "/comprovante-doacoes", "/inscricoes", "/batismo", "/inscricao-batismo", "/next",
+      "/comprovante-doacoes", "/inscricoes", "/batismo", "/batismo-fotos", "/inscricao-batismo", "/next",
       "/next-turma", "/evento", "/videos", "/configuracoes", "/trocar-senha",
       "/fale-conosco", "/sobre", "/notificacoes", "/mural", "/modo-culto", "/culto-detalhe",
     ];

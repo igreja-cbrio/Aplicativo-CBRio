@@ -2,6 +2,7 @@ import { destinoNotificacaoComunicado } from "@/lib/comunicadoLink";
 import { destinoDevocionalKids } from "@/lib/kidsDevocionalDestino";
 import { destinoAvisoKids } from "@/lib/kidsAvisoDestino";
 import { destinoCertificadoKids } from "@/lib/kidsCertificadoDestino";
+import { destinoNotificacaoBatismo } from "@/lib/batismoFotosDestino";
 import { destinoNotificacaoChat } from "@/lib/assistenteChat";
 import { ScrollView, SectionList } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
@@ -151,8 +152,9 @@ export default function NotificacoesScreen() {
       // "Outros" e o toque não leva a lugar nenhum (lição de 11/08).
       case "grupo_saida":
         router.navigate("/meu-grupo"); return;
+      // Mesmo destino do toque na push (lib/notifTap.ts): álbum → galeria.
       case "batismo":
-        router.navigate("/batismo"); return;
+        router.navigate(destinoNotificacaoBatismo(data)); return;
       case "devocional":
         router.navigate("/devocional"); return;
       case "comunicado": {

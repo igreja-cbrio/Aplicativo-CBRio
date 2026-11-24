@@ -2,6 +2,7 @@ import { destinoNotificacaoComunicado } from "@/lib/comunicadoLink";
 import { destinoDevocionalKids } from "@/lib/kidsDevocionalDestino";
 import { destinoAvisoKids } from "@/lib/kidsAvisoDestino";
 import { destinoCertificadoKids } from "@/lib/kidsCertificadoDestino";
+import { destinoNotificacaoBatismo } from "@/lib/batismoFotosDestino";
 import { destinoNotificacaoChat } from "@/lib/assistenteChat";
 import { router } from "expo-router";
 import * as Notifications from "expo-notifications";
@@ -109,8 +110,10 @@ export function attachNotifTapListener(): () => void {
       case "grupo_saida":
         router.navigate("/meu-grupo");
         return;
+      // Álbum publicado (24/11/2026) chega com `destino: 'fotos'` + `album_id` e
+      // abre a galeria; os lembretes antigos (sem album_id) seguem em /batismo.
       case "batismo":
-        router.navigate("/batismo");
+        router.navigate(destinoNotificacaoBatismo(data));
         return;
       case "culto": {
         const cultoId = (data as { culto_id?: string }).culto_id;

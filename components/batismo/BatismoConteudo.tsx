@@ -1,12 +1,12 @@
-import { FlatList } from '@/components/navigation/DockContent';
-import { ActivityIndicator, Image, Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@/components/ui/Typography';
 import { Button } from '@/components/ui/Button';
 import { useColors } from '@/contexts/ThemeContext';
 import { useT } from '@/lib/i18n';
-import type { MeuBatismo, FotoBatismo } from '@/lib/batismo';
+import type { MeuBatismo } from '@/lib/batismo';
 import { makeStyles } from './batismoStyles';
+import { FotosBatismoCard, type EstadoFotosBatismo } from './FotosBatismoCard';
 import { BatismoCountdownCard } from './BatismoCountdownCard';
 import { contagemBatismo } from '@/lib/batismoContagem';
 import { BatismoConviteCard } from './BatismoConviteCard';
@@ -14,20 +14,17 @@ import { useRelogioBatismo } from '@/lib/useRelogioBatismo';
 
 export function BatismoConteudo({
   batismo,
-  fotos,
-  fotosLoading,
+  fotosEstado,
   checkinFazendo,
   onCheckin,
-  onAbrirFoto,
   colors,
   styles,
 }: {
   batismo: MeuBatismo;
-  fotos: FotoBatismo[];
-  fotosLoading: boolean;
+  /** Álbuns do batismo desta conta (`GET /app/batismo/fotos`). */
+  fotosEstado: EstadoFotosBatismo;
   checkinFazendo: boolean;
   onCheckin: () => void;
-  onAbrirFoto: (f: FotoBatismo) => void;
   colors: ReturnType<typeof useColors>;
   styles: ReturnType<typeof makeStyles>;
 }) {
@@ -92,36 +89,14 @@ export function BatismoConteudo({
         </View>
       )}
 
-      {/* Galeria de fotos do dia */}
-      {(realizado || passou || ehHoje) && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t("Fotos do dia")}</Text>
-          {fotosLoading ? (
-            <ActivityIndicator color={colors.primary} />
-          ) : fotos.length === 0 ? (
-            <Text style={styles.cardTxt}>
-              {t("As fotos do dia ainda não foram publicadas. Volte mais tarde — o marketing posta logo depois do batismo. 📸")}
-            </Text>
-          ) : (
-            <FlatList
-              data={fotos}
-              keyExtractor={(f) => f.nome}
-              numColumns={3}
-              scrollEnabled={false}
-              columnWrapperStyle={{ gap: 6 }}
-              ItemSeparatorComponent={() => <View style={{ height: 6 }} />}
-              renderItem={({ item }) => (
-                <Pressable
-                  onPress={() => onAbrirFoto(item)}
-                  style={styles.thumb}
-                >
-                  <Image source={{ uri: item.url }} style={styles.thumbImg} />
-                </Pressable>
-              )}
-            />
-          )}
-        </View>
-      )}
+      {/* Fotos do batismo (24/11/2026): o álbum privado mora em /batismo-fotos.
+          O cartão aparece sempre que o servidor disser que há álbum desta conta. */}
+      <FotosBatismoCard
+        estado={fotosEstado}
+        mostrarSemAlbum={realizado || passou || ehHoje}
+        colors={colors}
+        styles={styles}
+      />
     </>
   );
 }

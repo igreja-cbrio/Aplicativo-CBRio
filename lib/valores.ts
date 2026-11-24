@@ -4,7 +4,7 @@
 export type Valor = { key: string; nome: string; rotas: string[] };
 
 export const VALORES: Valor[] = [
-  { key: "seguir", nome: "Seguir a Jesus", rotas: ["/batismo", "/modo-culto", "/culto-detalhe"] },
+  { key: "seguir", nome: "Seguir a Jesus", rotas: ["/batismo", "/batismo-fotos", "/modo-culto", "/culto-detalhe"] },
   { key: "conectar", nome: "Conectar", rotas: ["/grupos", "/meu-grupo", "/grupo-detalhe"] },
   { key: "investir", nome: "Investir tempo com Deus", rotas: ["/devocional"] },
   { key: "servir", nome: "Servir", rotas: ["/voluntariado"] },
