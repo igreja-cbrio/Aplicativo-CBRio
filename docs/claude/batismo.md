@@ -209,12 +209,26 @@ ou servidor; o servidor só registra o ACEITE.
   segundo plano ⇒ a WebView é recriada e recebe `iniciar` só com as fotos sem resposta.
 - **Falhas por foto**: `falha_foto` com 503/429/410/0 conta como não verificada e vale "Tentar de
   novo" só nelas (410 = pede as páginas de novo antes, para ter `busca_url` novas); 404 não.
-- **Resultado**: a galeria recebe só ids e contagens (`ResultadoBusca`), mostra duas seções com
-  "Selecionar todas" usando a seleção e o download em lote que já existiam, e "Ver o álbum
-  todo" sai do modo. Trocar de álbum, sair da tela (blur) ou sair do modo descarta o resultado.
+- **Resultado**: a galeria recebe só ids e contagens (`ResultadoBusca`) e mostra duas seções com
+  "Selecionar todas" usando a seleção e o download em lote que já existiam.
   X/voltar durante a busca entrega o que achou até ali (cada busca conta no limite do dia).
+- ⚠️⚠️ **O resultado FICA ao sair e voltar** (pedido do Matheus, 24/11/2026, desenho do
+  conselho): `lib/resultadoBuscaMemoria.ts` guarda na **MEMÓRIA do app** (nunca AsyncStorage,
+  SecureStore, arquivo, servidor, log ou telemetria: o teste reprova), por conta (uid) + álbum,
+  até 24 h e só na régua de hoje. Só ids e contagens, copiados campo a campo. Busca nova só
+  substitui quando entrega algo verificado. Apaga: sair da conta e QUALQUER troca de uid no
+  `onAuthStateChange` (refresh vencido não passa pelo `signOut`), "Apagar resultado", álbum fora
+  da lista/não liberado, `busca_facial` diferente de `liberada` (o interruptor leva o guardado
+  junto). "Ver o álbum todo" só troca de vista (aparece "Ver o resultado da sua busca").
+  ⚠️ Ao voltar, a tela carrega o álbum INTEIRO antes de mostrar o resultado: a grade só tem a
+  1ª página e o resto pareceria "não encontrado". Avisa fotos do resultado que saíram do álbum
+  e fotos novas não verificadas. Some quando o app fecha (ou o sistema o mata): guardar em
+  disco é decisão do Matheus e exigiria emenda da LEI e texto novo no aceite (o servidor só
+  aceita uma `versao`).
 - **Não verificado sem aparelho**: WebGL dentro da WebView 1×1 nos dois sistemas, o tempo real
   de 946 fotos, a câmera frontal dentro do `<Modal>`, se o binário publicado tem o nativo
   `ExpoKeepAwake` (sem ele, a tela pode apagar e a busca retoma na volta).
 - Mutantes: limiar inclusivo, sequência vazando, id fora do lote, 404 retentável, aceite sem
   `ok: true` (em `scripts/mutantes.mjs`).
+- Mutantes do resultado guardado: interruptor não apaga, nunca vence, busca vazia apaga o
+  bom, troca de conta não apaga, sair da tela volta a apagar.

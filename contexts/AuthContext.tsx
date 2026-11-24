@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { Platform } from "react-native";
@@ -18,6 +19,7 @@ import {
   REMEMBER_PREF_KEY,
 } from "@/lib/supabase";
 import { limparCache } from "@/lib/cache";
+import { apagarTodosResultados } from "@/lib/resultadoBuscaMemoria";
 import { trackEvento } from "@/lib/telemetria";
 import { definirBiometriaAtiva } from "@/lib/biometria";
 import { unregisterPush } from "@/lib/push";
@@ -92,6 +94,8 @@ async function signInComBackoff(email: string, password: string) {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
+  /** Conta da sessão atual, para apagar o resultado da busca por selfie ao trocar. */
+  const uidDaSessao = useRef<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [rememberPref, setRememberPref] = useState(true);
   const [preview, setPreview] = useState(false);
@@ -105,13 +109,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setRememberSession(value);
       }
       const { data } = await supabase.auth.getSession();
+      uidDaSessao.current = data.session?.user?.id ?? null;
       setSession(data.session);
       setLoading(false);
     })();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => setSession(newSession)
-    );
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      // Resultado da busca por selfie (memória do app): outra conta ou sessão
+      // encerrada (inclusive por refresh vencido, que não passa pelo signOut) apaga.
+      const uid = newSession?.user?.id ?? null;
+      if (uid !== uidDaSessao.current) {
+        apagarTodosResultados();
+        uidDaSessao.current = uid;
+      }
+      setSession(newSession);
+    });
     return () => listener.subscription.unsubscribe();
   }, []);
 
@@ -289,6 +301,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       async signOut(scope = "local") { // só este aparelho · ver lib/logout.ts
         setPreview(false);
+        apagarTodosResultados();
         await logoutWithCleanup({
           clearCache: limparCache,
           disableBiometry: () => definirBiometriaAtiva(false),

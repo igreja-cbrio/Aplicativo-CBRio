@@ -1080,6 +1080,37 @@ const MUTANTES = [
     de: "  try { player.pause(); } catch { /* player já liberado pelo expo-audio */ }",
     para: "  player.pause();",
   },
+  // ── Resultado da busca por selfie que fica ao sair e voltar (24/11/2026) ──
+  {
+    nome: "resultado guardado: interruptor da busca (ou menor) não apaga o guardado",
+    arq: "lib/resultadoBuscaMemoria.ts",
+    de: '  if (resp.busca_facial !== "liberada") return "apagar";\n',
+    para: "",
+  },
+  {
+    nome: "resultado guardado: nunca vence (sem as 24 h)",
+    arq: "lib/resultadoBuscaMemoria.ts",
+    de: "  const vencido = agora - g.em > VALIDADE_RESULTADO_MS || agora < g.em - 60_000;",
+    para: "  const vencido = false;",
+  },
+  {
+    nome: "resultado guardado: busca sem foto verificada apaga o resultado bom",
+    arq: "lib/resultadoBuscaMemoria.ts",
+    de: "  if (!uid || !albumId || !r || numero(r.verificadas) <= 0) return false;",
+    para: "  if (!uid || !albumId || !r) return false;",
+  },
+  {
+    nome: "resultado guardado: trocar de conta não apaga (a conta B vê o da A)",
+    arq: "contexts/AuthContext.tsx",
+    de: "      if (uid !== uidDaSessao.current) {\n        apagarTodosResultados();",
+    para: "      if (uid !== uidDaSessao.current) {\n        void 0;",
+  },
+  {
+    nome: "resultado guardado: sair da tela volta a apagar o resultado",
+    arq: "app/(app)/batismo-fotos.tsx",
+    de: "      () => () => {\n        setBuscaAberta(false);\n      },",
+    para: "      () => () => {\n        setBuscaAberta(false);\n        setResultadoBusca(null);\n      },",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a
