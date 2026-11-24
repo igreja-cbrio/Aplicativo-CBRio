@@ -4,7 +4,7 @@ import { useFocusEffect } from "expo-router";
 import { apiGet } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
-export type Mural = { id: string; titulo: string; corpo: string; destaque: boolean; publicado_em: string | null; foto_url?: string | null };
+export type Mural = { id: string; titulo: string; corpo: string; destaque: boolean; publicado_em: string | null; foto_url?: string | null; video_url?: string | null };
 export type Evento = { id: string; titulo: string; descricao: string | null; data: string | null; hora: string | null; local: string | null; destaque: boolean };
 export type Horario = { id: string; rotulo: string; descricao: string | null; ordem: number };
 export type Sala = { id: string; nome: string; faixa: string | null; cor: string | null; logo_url: string | null };
