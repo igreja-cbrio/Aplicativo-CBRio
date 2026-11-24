@@ -117,6 +117,19 @@ function GravadorNativo(p: Props) {
   </View>;
 }
 
+/**
+ * Pausa sem derrubar a tela. Quando a prévia desmonta (ao ENVIAR o áudio), o
+ * `useAudioPlayer` do expo-audio libera o player ANTES das nossas limpezas,
+ * porque foi declarado antes, e `pause()` num player liberado LANÇA
+ * NativeSharedObjectNotFoundException. Erro em limpeza de efeito sobe até o
+ * ErrorBoundary e a pessoa vê "Algo deu errado". Medido em 24/11/2026 na
+ * telemetria (`render_crash` em PreviaNativa, iOS 1.0.5 build 53): o primeiro
+ * binário do iPhone com o módulo de áudio. Todo `pause()` da prévia passa por aqui.
+ */
+function pausarSemQuebrar(player: { pause(): void }) {
+  try { player.pause(); } catch { /* player já liberado pelo expo-audio */ }
+}
+
 export function PreviaAudio({ uri, busy }: { uri: string; busy: boolean }) {
   return disponivel ? <PreviaNativa key={uri} uri={uri} busy={busy} /> : null;
 }
@@ -127,15 +140,15 @@ function PreviaNativa({ uri, busy }: { uri: string; busy: boolean }) {
   const [erro, setErro] = useState(false);
   const focada = useRef(true), vivo = useRef(true), revisao = useRef(0), ocupado = useRef(busy); ocupado.current = busy;
   useEffect(() => { vivo.current = true; return () => { vivo.current = false; revisao.current++; }; }, []);
-  useFocusEffect(useCallback(() => { focada.current = true; return () => { focada.current = false; revisao.current++; player.pause(); }; }, [player]));
-  useEffect(() => { if (busy) { revisao.current++; player.pause(); } }, [busy, player]);
-  useEffect(() => { const sub = AppState.addEventListener('change', s => { if (s !== 'active') { revisao.current++; player.pause(); } }); return () => sub.remove(); }, [player]);
+  useFocusEffect(useCallback(() => { focada.current = true; return () => { focada.current = false; revisao.current++; pausarSemQuebrar(player); }; }, [player]));
+  useEffect(() => { if (busy) { revisao.current++; pausarSemQuebrar(player); } }, [busy, player]);
+  useEffect(() => { const sub = AppState.addEventListener('change', s => { if (s !== 'active') { revisao.current++; pausarSemQuebrar(player); } }); return () => sub.remove(); }, [player]);
   return <Pressable disabled={busy || !status.isLoaded} accessibilityRole="button" onPress={async () => {
     const r = ++revisao.current;
     const vigente = () => vivo.current && focada.current && revisao.current === r && !ocupado.current;
     try {
     setErro(false);
-    if (status.playing) { player.pause(); return; }
+    if (status.playing) { pausarSemQuebrar(player); return; }
     await A.setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true, shouldPlayInBackground: false });
     if (!vigente()) return;
     if (status.didJustFinish) await player.seekTo(0);
