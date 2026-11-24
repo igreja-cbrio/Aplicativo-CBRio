@@ -11,17 +11,17 @@
     "runtime": "valor de `runtimeVersion` cozido NESTE binario. Desde 16/09/2026 ele e string literal e NAO acompanha a `version` (ver o teste em test/reguas.test.ts). Registrar aqui e o que permite saber se o OTA que vamos publicar alcanca o binario da loja."
   },
   "ios": {
-    "rotulo": "build 48",
-    "publicado_em": "2026-11-13",
-    "commit": "89633ef",
+    "rotulo": "build 53",
+    "publicado_em": "2026-11-24",
+    "commit": "f88c6d8",
     "runtime": "1.0.0",
-    "nota": "Versao 1.0.3 'Pronto para distribuicao' na App Store desde 13/11/2026 20:01 (Historico do App Store Connect: enviada para revisao 13/11 11:47, em revisao 19:26, aprovada 20:01). O build 48 (EAS e0289141) foi compilado da branch do PR #228 (481c029, codex/assistente-layout-voz) antes do squash; a arvore de 481c029 e IDENTICA a de 89633ef (o squash do #228 no main), por isso o ledger usa 89633ef. Primeiro binario iOS com o modulo nativo do ditado (expo-speech-recognition). O ledger ficou parado no build 44 e nao registrou as versoes 1.0.2 (builds 45/46, outubro) nem esta. O build 49 (a59baf3, 16/11) foi enviado ao App Store Connect mas NAO e publicavel: a versao 1.0.3 ja esta liberada, e o 49 tem o mesmo nativo do 48 (so mudam devDependencies de teste); o JS novo chega por OTA."
+    "nota": "Versao 1.0.5 'Ready for Distribution' no App Store Connect, visto em 24/11/2026 15:00 BRT (print do Matheus). Enviada a revisao pelo Codex em 23/11 17:38 BRT, no lugar da 1.0.4 (build 52), que saiu da fila. O build 53 (EAS 38d17c22) foi compilado de 3deea69, commit da branch codex/som-gota-suave antes do squash; app.json, package.json, package-lock.json, eas.json, assets e targets de 3deea69 sao IDENTICOS aos de f88c6d8 (o squash do #252 no main), por isso o ledger usa f88c6d8. Nativo novo em relacao ao build 48: expo-audio (mensagem de audio no chat) e o som de notificacao 'Gota suave' (assets/sounds/cbrio_chime.*). NAO tem expo-media-library (#255). Ate 24/11 15h a telemetria ainda nao mostrava o build 53 no publico (a liberacao da Apple leva horas)."
   },
   "android": {
-    "rotulo": "versionCode 12",
-    "publicado_em": "2026-11-16",
-    "commit": "a59baf3",
+    "rotulo": "versionCode 15",
+    "publicado_em": "2026-11-23",
+    "commit": "64ef7a9",
     "runtime": "1.0.0",
-    "nota": "Primeira release Android desde a vc 9 (16/09), 61 dias depois. Build EAS 2129b991 (version 1.0.3, canal production) gerado de worktree limpa em origin/main; submissao ce80c3a8 terminou FINISHED sem erro na track production (aprovada pelo Matheus em 16/11). Confirmado pela telemetria: `build_number = 12` em app_eventos a partir de 2026-11-16 17:44 BRT (5 instalacoes ate 17/11 10h). Primeiro binario Android com o modulo nativo do ditado (expo-speech-recognition, #228) e os plugins novos do app.json. A vc 11 (13/11) saiu da branch do PR #228, nao do main, e nunca foi submetida."
+    "nota": "Versao 1.0.4 em producao no Play Console, 'Available on Google Play', full rollout, conferido em 24/11/2026 (Latest releases and bundles). Enviada pelo Codex em 23/11 com o perfil de submit padrao (track production). A vc 15 (EAS d19df69e) foi compilada de 3a1759b, commit da branch codex/membros-audio-20261123 antes do squash; app.json, package.json, package-lock.json, eas.json, assets e targets de 3a1759b sao IDENTICOS aos de 64ef7a9 (o squash do #247 no main), por isso o ledger usa 64ef7a9. Nativo novo em relacao a vc 12: expo-audio (mensagem de audio no chat). NAO tem o som 'Gota suave' nem expo-media-library. A vc 16 (1.0.5, EAS 08f1a073, de 3deea69) foi gerada mas nunca enviada a Play. Telemetria: build_number 15 em 3 contas ate 24/11 15h."
   }
 }

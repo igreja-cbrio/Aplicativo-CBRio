@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- ⚠️⚠️ VERSÃO 1.0.6 · lojas fora do ledger, textos de permissão e envio seguro (2026-11-24)
 - ⚠️⚠️ A PORTA DE ENTRADA DA LOJA ESTAVA VELHA · medido (03/09/2026)
 - ⚠️⚠️ INSTALOU E VEIO A VERSÃO ANTIGA · o portão na primeira abertura (29/08/2026)
 - ⚠️⚠️ AUDITORIA DO APP · ONDA 2 · A PUBLICAÇÃO (2026-08-07)
@@ -712,3 +713,49 @@ atualizado") · **Error Boundary raiz** (não existe nenhum: todo throw de rende
 fecha o app) · falha de rede parar de virar tela vazia enganosa ·
 `completar-cadastro` usar `lib/validators` · `build_number` na telemetria (chega
 nulo em 100% dos eventos) · i18n de perfil e escala-supervisor.
+
+## ⚠️⚠️ VERSÃO 1.0.6 · lojas fora do ledger, textos de permissão e envio seguro (2026-11-24)
+
+**O que estava no ar sem o ledger saber.** Em 23/11 uma sessão do Codex gerou
+builds de branch: 1.0.4 (iOS 52, Android vc 15, de `3a1759b`) e 1.0.5 (iOS 53,
+Android vc 16, de `3deea69`). A **vc 15 foi para a produção da Play** pelo perfil
+padrão (track `production`, "Available on Google Play", full rollout) e a
+**1.0.5 do iPhone foi aprovada** ("Ready for Distribution" em 24/11). A vc 16 nunca
+foi enviada. O `loja-publicado.json` ainda dizia build 48 / vc 12.
+- Os dois commits de branch têm `app.json`, `package.json`, lock, `eas.json`,
+  `assets` e `targets` IDÊNTICOS aos squashes na main (`3deea69` ≡ `f88c6d8` #252;
+  `3a1759b` ≡ `64ef7a9` #247). O ledger usa os da main: sobrevivem à branch apagada.
+- Conferir o Android: Play Console → Test and release → Latest releases and
+  bundles (conta "CBRio Devs"). O CLI não responde isso.
+
+**Defeito que só apareceu com o binário novo.** A 1.0.5 é o 1º binário do iPhone com
+`expo-audio`: enviar áudio no chat derrubava a tela (`pause()` em player já
+liberado na limpeza da prévia). Consertado por OTA no #258 (`pausarSemQuebrar`).
+Lição: módulo nativo opcional esconde o defeito até o binário que o traz; testar o
+caminho do módulo no TestFlight ANTES de mandar à revisão.
+
+**O que a 1.0.6 muda (só configuração):**
+- Todo texto de permissão do iPhone em português. A câmera saía "Allow
+  $(PRODUCT_NAME) to access your camera" (o `expo-image-picker` não tinha
+  `cameraPermission`), e as duas chaves de localização "sempre" vinham em inglês do
+  plugin legado do `expo-location` (o app nunca pede "sempre").
+- Plugins que escrevem a MESMA chave do Info.plist com o MESMO texto: o
+  `@expo/config-plugins` deixa valer o último da lista em silêncio. O microfone do
+  `expo-audio` apagava o do ditado; o de fotos do `expo-media-library` apagaria o do
+  `expo-image-picker`.
+- Android: `blockedPermissions` com `READ_MEDIA_VISUAL_USER_SELECTED` (o
+  `expo-media-library` declara no próprio manifest). Lido no Kotlin 18.2.1: com
+  `requestPermissionsAsync(true, ...)` o Android 13+ não pede nada para SALVAR, e o
+  app nunca lê a galeria pela media-library. ⚠️ Chamar a permissão da galeria sem
+  `writeOnly` passa a LANÇAR no Android 13+ (o teste reprova).
+- `eas.json`: perfil de envio `interno` (track internal). O `production` continua
+  publicando de verdade (decisão do #154).
+- Catraca: `diffNativo` agora acusa `android.blockedPermissions`.
+- Trava: `test/permissoesLoja.test.ts` (textos, permissões, perfis de envio e
+  nenhum `import` no topo de `expo-audio`/`expo-media-library`).
+
+**Ainda com o Matheus:** mandar a 1.0.6 à revisão da Apple e promovê-la na Play;
+App Privacy (Audio Data) e Data safety (gravações de voz) para o áudio do chat; nota
+ao revisor sobre a busca por selfie (no aparelho, nada biométrico sai); senha da
+conta `appstore.review@cbrio.app` em `legal/` num repositório público.
+

@@ -131,6 +131,8 @@ function diffNativo(p) {
   const secoes = [
     ['plugins', (x) => x.plugins],
     ['android.permissions', (x) => x.android && x.android.permissions],
+    // Permissão BLOQUEADA também é nativo: some do manifest só num binário novo (24/11/2026).
+    ['android.blockedPermissions', (x) => x.android && x.android.blockedPermissions],
     ['android.googleServicesFile', (x) => x.android && x.android.googleServicesFile],
     ['ios.entitlements', (x) => x.ios && x.ios.entitlements],
     ['ios.infoPlist', (x) => x.ios && x.ios.infoPlist],

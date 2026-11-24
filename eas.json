@@ -50,6 +50,12 @@
         "serviceAccountKeyPath": "./google-play-service-account.json",
         "track": "production"
       }
+    },
+    "interno": {
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "internal"
+      }
     }
   }
 }

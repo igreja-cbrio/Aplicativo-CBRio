@@ -45,7 +45,8 @@ está no ERP, em `docs/mapa/APPS.md`.
 ## ⚠️⚠️ Regras transversais (uma linha cada · a íntegra está no arquivo indicado)
 
 - **OTA só sai de uma worktree LIMPA em `origin/main`** (um OTA tirado de branch antiga já derrubou 18 PRs da frota) → `batismo.md`.
-- **`runtimeVersion` literal permanece `"1.0.0"`** (desacoplado de `version`, agora 1.0.2): módulos novos são opcionais no JS para binários antigos; não voltar à policy `appVersion` sem migração → `publicacao-ota-auditorias.md`.
+- **Build de LOJA também só sai de worktree limpa em `origin/main`, e o envio é sempre com `--id <build>`, nunca `--latest`**: o perfil `production` publica na Play de verdade; teste vai com `--profile interno` → `publicacao-ota-auditorias.md` (24/11/2026).
+- **`runtimeVersion` literal permanece `"1.0.0"`** (desacoplado de `version`, que acompanha a loja: 1.0.6 em 24/11/2026): módulos novos são opcionais no JS para binários antigos; não voltar à policy `appVersion` sem migração → `publicacao-ota-auditorias.md`.
 - **Quem decide o que é válido é o BACKEND, não o app**: régua de negócio (o que está aberto, quem pode, qual status vale) vem de endpoint do ERP, nunca reproduzida aqui → `geral-integracao-erp.md`.
 - **`behavior` do `KeyboardAvoidingView` NUNCA é `undefined`** → `ui-navegacao.md`.
 - **`<Modal>` dentro de `<Modal>` nasce ATRÁS no iOS**: componente embutido (ex.: `CalendarioBR embutido`) dentro de modal → `ui-navegacao.md`.
@@ -127,11 +128,11 @@ aparelho, e continua sendo passo humano antes de release.
   nada, mas é estável — o header da Home usa assim e pode ficar.)
 - **Supabase** para autenticação (e futuramente dados)
 - **EAS Update (OTA):** `expo-updates` configurado (canais `development`/
-  `preview`/`production` no `eas.json`; `runtimeVersion.policy = appVersion`).
-  Mudança **só de JS** vai ao ar sem revisão da Apple:
-  `eas update --channel production --message "..."`. Só chega a builds com a
-  MESMA `version` do app.json (runtime 1.0.0) e que já contenham
-  `expo-updates`. Mudança nativa (módulo, plugin, permissão) continua exigindo
+  `preview`/`production` no `eas.json`; `runtimeVersion` literal `"1.0.0"` desde
+  16/09/2026, desacoplado da `version`). Mudança **só de JS** vai ao ar sem
+  revisão da Apple, sempre por `npm run ota -- "..."` (nunca `eas update` cru).
+  Chega a todo binário com runtime 1.0.0 (todas as versões 1.0.x) que já
+  contenha `expo-updates`. Mudança nativa (módulo, plugin, permissão) continua exigindo
   build novo + revisão.
   ⚠️⚠️ **NÃO DÁ PRA AFIRMAR PELO EAS QUE O iPHONE RECEBE OTA** (apurado em
   05/08/2026): o EAS **não tem nenhum build iOS depois de 11/06** (o mais recente
@@ -150,8 +151,10 @@ aparelho, e continua sendo passo humano antes de release.
   `eas channel:view production` confirma o canal apontando pro branch
   `production` nas DUAS plataformas. Ou seja: esse binário recebe todo OTA que a
   gente publicar. Ele está **construído (IPA pronto, distribuição STORE), NÃO
-  submetido** — `eas submit -p ios --profile production --latest` inicia revisão
-  da Apple e é decisão de gente.
+  submetido**. ⚠️ `eas submit -p ios` só SOBE o build ao App Store Connect
+  (TestFlight); enviar à revisão é um passo no ASC e é decisão de gente. Sempre
+  `--id <build>`, nunca `--latest` (24/11/2026: os últimos builds do EAS eram de
+  branch do Codex).
   ✅ **Contas de revisão PREPARADAS (05/08/2026)** — as três passam no portão,
   conferido rodando a régua real do `identidade/status`:
   `apple.review@cbrio.com.br` · `appstore.review@cbrio.app` ·
@@ -217,11 +220,12 @@ aparelho, e continua sendo passo humano antes de release.
 - **EAS Submit — Play Store (Android):** configurado no `eas.json` (`submit.production.android`)
   com `serviceAccountKeyPath: ./google-play-service-account.json` (JSON da conta de
   serviço `eas-submit@crm-cbrio.iam.gserviceaccount.com` · projeto Cloud `crm-cbrio` ·
-  **gitignored, NUNCA commitar**) e `track: internal`. Fluxo: `eas build -p android
-  --profile production` (gera **AAB**, `autoIncrement` no versionCode) →
-  `eas submit -p android --profile production --latest`. Cai no track **internal**;
-  promover pra produção no Play Console. A permissão da conta de serviço no Play é
-  "Release apps to testing tracks" (Users and permissions). iOS submit já existia
+  **gitignored, NUNCA commitar**; numa worktree limpa, copiar do clone principal só
+  para o envio). ⚠️⚠️ Desde o #154 (03/09) `submit.production.android.track` é
+  **`production`**: `eas submit -p android --profile production` PUBLICA na Play
+  (foi assim que a vc 15 entrou no ar em 23/11). Para teste:
+  `eas submit -p android --profile interno --id <build>` (track **internal**),
+  e a promoção fica com o Matheus no Play Console. iOS submit já existia
   (`ascAppId`/`appleTeamId`).
 - **Estilização:** `StyleSheet` nativo (decisão: melhor performance/confiabilidade
   no celular; sem Tailwind/NativeWind). **Tema claro/escuro** com paletas em

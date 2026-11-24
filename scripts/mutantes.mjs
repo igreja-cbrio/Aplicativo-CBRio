@@ -1080,6 +1080,21 @@ const MUTANTES = [
     de: "  try { player.pause(); } catch { /* player já liberado pelo expo-audio */ }",
     para: "  player.pause();",
   },
+  // ── Versão 1.0.6 · permissões e catraca (24/11/2026) ─────────────────────
+  {
+    // Permissão bloqueada só some do manifest num binário novo: a catraca tem de ver.
+    nome: "catraca: ignorar android.blockedPermissions no diff nativo",
+    arq: "scripts/driftLoja.js",
+    de: "    ['android.blockedPermissions', (x) => x.android && x.android.blockedPermissions],\n",
+    para: "",
+  },
+  {
+    // Os dois plugins escrevem NSPhotoLibraryUsageDescription; vale o último, em silêncio.
+    nome: "loja: texto de fotos do expo-media-library diferente do expo-image-picker",
+    arq: "app.json",
+    de: '"photosPermission": "O CBRio usa as fotos que você escolher para o seu perfil, o cadastro das crianças no Kids, a capa do grupo e as mensagens do chat.",\n          "savePhotosPermission"',
+    para: '"photosPermission": "O CBRio usa suas fotos para definir o avatar do seu perfil.",\n          "savePhotosPermission"',
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a
