@@ -1108,8 +1108,27 @@ const MUTANTES = [
   {
     nome: "resultado guardado: sair da tela volta a apagar o resultado",
     arq: "app/(app)/batismo-fotos.tsx",
-    de: "      () => () => {\n        setBuscaAberta(false);\n      },",
-    para: "      () => () => {\n        setBuscaAberta(false);\n        setResultadoBusca(null);\n      },",
+    de: "      return () => {\n        setBuscaAberta(false);\n      };",
+    para: "      return () => {\n        setBuscaAberta(false);\n        setResultadoBusca(null);\n      };",
+  },
+  {
+    // Revisão de 24/11: puxar para atualizar durante o restauro trocava a lista inteira por 60 fotos.
+    nome: "resultado guardado: carga completa sem geração nova (lista parcial sobrescreve)",
+    arq: "app/(app)/batismo-fotos.tsx",
+    de: "      geracao.current += 1;\n    }\n    return r.fotos;",
+    para: "    }\n    return r.fotos;",
+  },
+  {
+    nome: "resultado guardado: restauro que falha deixa a galeria presa no carregando",
+    arq: "app/(app)/batismo-fotos.tsx",
+    de: "        setPag((p) => ({ ...p, carregou: true, carregando: false, erro }));\n",
+    para: "",
+  },
+  {
+    nome: "resultado guardado: lista de álbuns não poda o que deixou de valer",
+    arq: "lib/resultadoBuscaMemoria.ts",
+    de: '    if (resp.busca_facial !== "liberada" || !liberados.has(g.albumId)) guardados.delete(k);',
+    para: '    if (resp.busca_facial !== "liberada") guardados.delete(k);',
   },
 ];
 

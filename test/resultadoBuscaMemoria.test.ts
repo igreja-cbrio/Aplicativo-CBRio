@@ -16,6 +16,7 @@ import {
   lerResultado,
   mudancasDoAlbum,
   oQueFazerComGuardado,
+  podarResultados,
   quandoFoiABusca,
 } from "../lib/resultadoBuscaMemoria";
 
@@ -128,6 +129,37 @@ describe("o que fazer com o guardado ao voltar", () => {
   });
 });
 
+describe("poda a cada lista de álbuns (não depende do álbum aberto)", () => {
+  const lista = (busca: string | null, albuns: { id: string; situacao: string }[]) => ({ albuns, busca_facial: busca });
+  beforeEach(() => {
+    guardarResultado("u1", "a1", res(), IDS, AGORA);
+    guardarResultado("u1", "a2", res(), IDS, AGORA);
+    guardarResultado("u2", "a1", res(), IDS, AGORA);
+  });
+
+  it("interruptor/menor: apaga todos os desta conta, e só desta conta", () => {
+    podarResultados("u1", lista("indisponivel", [{ id: "a1", situacao: "liberado" }, { id: "a2", situacao: "liberado" }]));
+    expect(lerResultado("u1", "a1", AGORA)).toBeNull();
+    expect(lerResultado("u1", "a2", AGORA)).toBeNull();
+    expect(lerResultado("u2", "a1", AGORA)).not.toBeNull();
+  });
+
+  it("álbum que saiu da lista ou deixou de estar liberado: apaga só ele", () => {
+    podarResultados("u1", lista("liberada", [{ id: "a1", situacao: "conflito" }]));
+    expect(lerResultado("u1", "a1", AGORA)).toBeNull();
+    expect(lerResultado("u1", "a2", AGORA)).toBeNull();
+    guardarResultado("u1", "a1", res(), IDS, AGORA);
+    podarResultados("u1", lista("liberada", [{ id: "a1", situacao: "liberado" }]));
+    expect(lerResultado("u1", "a1", AGORA)).not.toBeNull();
+  });
+
+  it("sem conta ou sem lista: não mexe", () => {
+    podarResultados(null, lista("indisponivel", []));
+    podarResultados("u1", null);
+    expect(lerResultado("u1", "a1", AGORA)).not.toBeNull();
+  });
+});
+
 describe("o que mudou no álbum depois da busca", () => {
   it("conta fotos do resultado que saíram e fotos novas sem verificar", () => {
     guardarResultado("u1", "alb", res(), IDS, AGORA);
@@ -162,9 +194,21 @@ describe("travas de texto", () => {
 
   it("a galeria não apaga ao sair da tela e só mostra o guardado depois de carregar o álbum inteiro", () => {
     const tela = ler("app/(app)/batismo-fotos.tsx");
-    const foco = tela.slice(tela.indexOf("useFocusEffect("), tela.indexOf("useFocusEffect(") + 200);
-    expect(foco).not.toContain("setResultadoBusca(null)");
-    expect(tela).toMatch(/carregarTodasParaBusca\(\)\.then\(\s*\(fotos\) => \{[\s\S]{0,200}setResultadoBusca\(guardado\.resultado\)/);
+    // A limpeza do foco (sair da tela) só fecha a busca em andamento: não apaga o resultado.
+    expect(tela).toMatch(/return \(\) => \{\s*setBuscaAberta\(false\);\s*\};\s*\}, \[\]\),/);
+    expect(tela).toMatch(/carregarTodasParaBusca\(\)\.then\(\s*\(fotos\) => \{[\s\S]{0,400}setResultadoBusca\(guardado\.resultado\)/);
     expect(tela).toContain('if (decisao === "apagar") {');
+  });
+
+  it("revisão de 24/11: lista inteira não é trocada por parcial, erro do restauro aparece, poda a cada lista", () => {
+    const tela = ler("app/(app)/batismo-fotos.tsx");
+    // Depois da carga completa, uma geração nova descarta carga parcial que começou durante ela.
+    expect(tela).toMatch(/setSelecionadas\(\(s\) => new Set\(\[\.\.\.s\]\.filter\(\(x\) => r\.fotos\.some\(\(f\) => f\.id === x\)\)\)\);\s*geracao\.current \+= 1;\s*\}\s*return r\.fotos;/);
+    // Restauro que falha não deixa a galeria presa no "carregando".
+    expect(tela).toContain("setPag((p) => ({ ...p, carregou: true, carregando: false, erro }));");
+    // Cada lista de álbuns poda o que deixou de valer.
+    expect(tela).toContain("podarResultados(uidRef.current, resp);");
+    // Voltar o foco confere se o resultado na tela ainda vale.
+    expect(tela).toMatch(/if \(resultadoRef\.current && !lerResultado\(uidRef\.current, albumRef\.current\)\) \{/);
   });
 });

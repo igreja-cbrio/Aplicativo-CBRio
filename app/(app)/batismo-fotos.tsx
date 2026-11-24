@@ -65,6 +65,7 @@ import {
   lerResultado,
   mudancasDoAlbum,
   oQueFazerComGuardado,
+  podarResultados,
   quandoFoiABusca,
 } from "@/lib/resultadoBuscaMemoria";
 import { useAuth } from "@/contexts/AuthContext";
@@ -135,6 +136,8 @@ export default function BatismoFotosScreen() {
   const uid = user?.id ?? null;
   const uidRef = useRef(uid);
   uidRef.current = uid;
+  const resultadoRef = useRef(resultadoBusca);
+  resultadoRef.current = resultadoBusca;
 
   const ativa = useRef(true);
   const geracao = useRef(0);
@@ -160,6 +163,8 @@ export default function BatismoFotosScreen() {
     try {
       const resp = await listarAlbuns();
       if (!ativa.current) return;
+      // Busca desligada, menor ou álbum que saiu: o resultado guardado vai junto.
+      podarResultados(uidRef.current, resp);
       setTela({ tipo: "pronto", resp });
       setAlbumId((atual) => (atual && resp.albuns.some((a) => a.id === atual) ? atual : albumInicial(resp.albuns, albumParam)?.id ?? null));
     } catch {
@@ -225,15 +230,29 @@ export default function BatismoFotosScreen() {
     if (albumId) recarregarAlbum();
   }, [albumId, recarregarAlbum]);
 
+  // A conta pode chegar depois da lista de álbuns: poda de novo com ela.
+  useEffect(() => {
+    if (tela.tipo === "pronto") podarResultados(uid, tela.resp);
+  }, [tela, uid]);
+
   // Saiu da tela (outra rota por cima, outra aba): fecha a busca em andamento.
   // O RESULTADO já entregue fica (memória do app), e volta ao abrir de novo.
+  // Ao voltar o foco, o resultado na tela tem de continuar valendo (24 h, apagado
+  // em outra instância da tela): senão sai, e o restauro decide de novo.
   useFocusEffect(
-    useCallback(
-      () => () => {
+    useCallback(() => {
+      if (resultadoRef.current && !lerResultado(uidRef.current, albumRef.current)) {
+        setResultadoBusca(null);
+        setMetaResultado(null);
+        setSelecionando(false);
+        setSelecionadas(new Set());
+        setIndiceVisto(null);
+        setRestauro("parado");
+      }
+      return () => {
         setBuscaAberta(false);
-      },
-      [],
-    ),
+      };
+    }, []),
   );
 
   /**
@@ -251,6 +270,10 @@ export default function BatismoFotosScreen() {
     if (ativa.current && g === geracao.current) {
       setPag({ fotos: r.fotos, cursor: r.cursor, carregou: true, carregando: false, erro: null, carregadaEm: r.carregadaEm });
       setSelecionadas((s) => new Set([...s].filter((x) => r.fotos.some((f) => f.id === x))));
+      // Puxar para atualizar ou "carregar mais" que começou durante a varredura
+      // não pode trocar a lista INTEIRA por uma parcial depois (o resultado
+      // restaurado diria "não encontramos você"): nova geração os descarta.
+      geracao.current += 1;
     }
     return r.fotos;
   }, []);
@@ -323,12 +346,27 @@ export default function BatismoFotosScreen() {
     carregarTodasParaBusca().then(
       (fotos) => {
         if (!ativa.current || albumRef.current !== guardado.albumId) return;
+        setSelecionando(false);
+        setSelecionadas(new Set());
+        setIndiceVisto(null);
         setMetaResultado({ em: guardado.em, ...mudancasDoAlbum(guardado, fotos.map((f) => f.id)) });
         setResultadoBusca(guardado.resultado);
         setRestauro("parado");
       },
-      () => {
-        if (ativa.current && albumRef.current === guardado.albumId) setRestauro("erro");
+      (e) => {
+        if (!ativa.current || albumRef.current !== guardado.albumId) return;
+        // A carga inicial do álbum foi descartada (geração nova): sem isto a
+        // galeria ficava presa no "carregando". O erro real aparece (sem acesso,
+        // conflito, falha) em vez de um "Tentar de novo" genérico.
+        const erro = classificarErroFotos(e);
+        setPag((p) => ({ ...p, carregou: true, carregando: false, erro }));
+        if (erro.tipo === "sem_acesso" || erro.tipo === "conflito") {
+          apagarResultado(uid, albumId);
+          setVistaAlbum(true);
+          setRestauro("parado");
+          return;
+        }
+        setRestauro("erro");
       },
     );
   }, [tela, albumId, uid, vistaAlbum, resultadoBusca, buscaAberta, restauro, carregarTodasParaBusca]);
@@ -654,6 +692,8 @@ export default function BatismoFotosScreen() {
   const album = albuns.find((a) => a.id === albumId) ?? null;
   const salvando = progresso !== null;
   const podeBuscar = tela.tipo === "pronto" && buscaDisponivel(tela.resp.busca_facial, album, pag.fotos);
+  // O botão "Ver o resultado da sua busca" só aparece se o restauro de fato restauraria.
+  const temGuardado = tela.tipo === "pronto" && oQueFazerComGuardado(lerResultado(uid, albumId), tela.resp, albumId) === "restaurar";
   const selecionadasLista = useMemo(() => pag.fotos.filter((f) => selecionadas.has(f.id)), [pag.fotos, selecionadas]);
   const tamanhoSel = tamanhoSomado(selecionadasLista);
 
@@ -798,7 +838,7 @@ export default function BatismoFotosScreen() {
             {t("Batismo de")} {rotuloDaData(album.data_batismo)}
             {album.total ? ` · ${album.total} ${album.total === 1 ? t("foto") : t("fotos")}` : ""}
           </Text>
-          {vistaAlbum && !selecionando && !!lerResultado(uid, albumId) && (
+          {vistaAlbum && !selecionando && temGuardado && (
             <Pressable
               onPress={verResultadoGuardado}
               disabled={salvando}
@@ -809,7 +849,7 @@ export default function BatismoFotosScreen() {
               <Text style={styles.botaoBuscaTxt}>{t("Ver o resultado da sua busca")}</Text>
             </Pressable>
           )}
-          {podeBuscar && !selecionando && !(vistaAlbum && !!lerResultado(uid, albumId)) && (
+          {podeBuscar && !selecionando && !(vistaAlbum && temGuardado) && (
             <Pressable
               onPress={abrirBusca}
               disabled={salvando}

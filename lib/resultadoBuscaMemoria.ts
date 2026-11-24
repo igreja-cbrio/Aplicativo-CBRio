@@ -109,6 +109,23 @@ export function apagarTodosResultados(): void {
   guardados.clear();
 }
 
+/**
+ * A cada lista de álbuns que chega: apaga TODOS os guardados desta conta cuja
+ * busca deixou de valer (interruptor ligado, menor, conta sem cadastro) ou cujo
+ * álbum saiu da lista / deixou de estar liberado. Não depende do álbum aberto.
+ */
+export function podarResultados(
+  uid: string | null | undefined,
+  resp: { albuns: readonly { id: string; situacao: string }[]; busca_facial: string | null } | null,
+): void {
+  if (!uid || !resp) return;
+  const liberados = new Set(resp.albuns.filter((a) => a.situacao === "liberado").map((a) => a.id));
+  for (const [k, g] of [...guardados]) {
+    if (g.uid !== uid) continue;
+    if (resp.busca_facial !== "liberada" || !liberados.has(g.albumId)) guardados.delete(k);
+  }
+}
+
 export type DecisaoGuardado = "restaurar" | "apagar" | "nada";
 
 /**
