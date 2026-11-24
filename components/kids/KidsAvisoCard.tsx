@@ -8,6 +8,7 @@ import { useKidsTheme } from "@/contexts/KidsThemeContext";
 import { useT } from "@/lib/i18n";
 import { makeCardStyles } from "./KidsSecao";
 import type { Mural } from "@/lib/kidsArea";
+import { KidsAvisoVideo } from "./KidsAvisoVideo";
 
 export function KidsAvisoCard({ aviso }: { aviso: Mural }) {
   const { colors, mode } = useTheme();
@@ -33,6 +34,7 @@ export function KidsAvisoCard({ aviso }: { aviso: Mural }) {
         </SafeAreaView>
       </Modal>
     </> : null}
+    {aviso.video_url ? <KidsAvisoVideo uri={aviso.video_url} titulo={aviso.titulo} /> : null}
     {aviso.corpo ? <Text style={s.cardCorpo}>{aviso.corpo}</Text> : null}
   </View>;
 }
