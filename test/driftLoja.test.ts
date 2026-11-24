@@ -129,6 +129,14 @@ describe("diffNativo · conservador de propósito", () => {
     expect(itens.join(" ")).toContain("android.permissions");
   });
 
+  it("permissão BLOQUEADA nova do Android acusa (some do manifest só no binário)", () => {
+    const itens = diffNativo({
+      ...base,
+      appAgora: { expo: { ...base.appAgora.expo, android: { permissions: ["A"], blockedPermissions: ["B"] } } },
+    });
+    expect(itens.join(" ")).toContain("android.blockedPermissions");
+  });
+
   it("mudança que o OTA CARREGA não acusa (nome, splash)", () => {
     const itens = diffNativo({
       ...base,
