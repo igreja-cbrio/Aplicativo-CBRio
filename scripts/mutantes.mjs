@@ -1052,6 +1052,20 @@ const MUTANTES = [
     de: "new Set([0, 410, 429, 500, 502, 503, 504])",
     para: "new Set([0, 410, 429, 500, 503, 504])",
   },
+  {
+    // O Android mata o app com a câmera aberta: a selfie crua fica no cache e
+    // só a limpeza na abertura do app a alcança (o texto do aceite promete apagar).
+    nome: "busca facial: abertura do app deixar de limpar a selfie que sobrou",
+    arq: "app/_layout.tsx",
+    de: "  useEffect(() => { limparSobrasNaAbertura(); }, []);\n",
+    para: "",
+  },
+  {
+    nome: "busca facial: limpeza da abertura do app esperar 30 min (a sobra recente fica)",
+    arq: "lib/limparSobrasCamera.ts",
+    de: "  limparSobrasDaCamera({ idadeMinimaMs: 0 }).catch(() => {});",
+    para: "  limparSobrasDaCamera().catch(() => {});",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

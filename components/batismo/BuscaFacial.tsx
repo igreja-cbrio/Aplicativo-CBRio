@@ -165,9 +165,15 @@ export function BuscaFacial({
     [],
   );
 
-  // Sobra de selfie de uma busca anterior que o sistema interrompeu com a câmera aberta.
+  // Sobra de selfie de uma busca que o sistema interrompeu com a câmera aberta
+  // (ver lib/limparSobrasCamera.ts): ao abrir, o que tem mais de 30 min; ao
+  // sair, tudo o que é mais velho que esta abertura.
   useEffect(() => {
+    const abertaEm = Date.now();
     limparSobrasDaCamera().catch(() => {});
+    return () => {
+      limparSobrasDaCamera({ idadeMinimaMs: Date.now() - abertaEm }).catch(() => {});
+    };
   }, []);
 
   // Tela acordada só enquanto procura (se o binário tiver o módulo nativo).

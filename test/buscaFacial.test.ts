@@ -453,8 +453,11 @@ describe("o componente usa as réguas certas", () => {
     expect(fonte).toContain("onShouldStartLoadWithRequest={(req) => navegacaoPermitida(req.url)}");
   });
 
-  it("limpa as sobras da câmera ao abrir e apaga o arquivo do picker depois de ler a selfie", () => {
+  it("limpa as sobras da câmera (abertura do app, abertura e fim da busca) e apaga o arquivo do picker depois de ler a selfie", () => {
     expect(fonte).toContain("limparSobrasDaCamera()");
+    expect(fonte).toContain("limparSobrasDaCamera({ idadeMinimaMs: Date.now() - abertaEm })");
+    const raiz = semComentarios(readFileSync(join(__dirname, "../app/_layout.tsx"), "utf8"));
+    expect(raiz).toContain("useEffect(() => { limparSobrasNaAbertura(); }, []);");
     expect(fonte).toMatch(/FileSystem\.deleteAsync\(asset\.uri, \{ idempotent: true \}\)/);
   });
 });

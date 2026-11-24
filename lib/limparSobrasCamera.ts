@@ -8,10 +8,15 @@
 // CBRio com a câmera na frente (aparelho com pouca memória), nenhum dos dois
 // `finally` roda e a selfie em resolução cheia fica no cache.
 //
-// Por isso a busca limpa a pasta do picker ao abrir. Só apaga arquivo com mais
-// de `IDADE_MINIMA_MS`: as outras telas que usam o picker (perfil, Kids, grupo)
-// mandam a foto logo depois de escolher, e um arquivo recente pode ser delas.
-// Nunca lança erro: limpeza que falha não pode travar a busca.
+// Três limpezas, nenhuma lança erro (limpeza que falha não trava nada):
+//  1. ABERTURA DO APP (`limparSobrasNaAbertura`, uma vez por início do JS, no
+//     layout raiz): é ela que resolve o caso acima, porque o app morto reabre.
+//     Na abertura nada do picker está em uso (a foto escolhida em perfil, Kids,
+//     grupo ou chat vive só em estado React, que morreu junto), então apaga tudo.
+//  2. FIM DA BUSCA (desmontar `BuscaFacial`): apaga o que é mais velho que a
+//     abertura da busca, para quem reabriu o app e voltou à busca logo depois.
+//  3. ABERTURA DA BUSCA: só arquivos com mais de `IDADE_MINIMA_MS`, porque uma
+//     outra tela pode ter acabado de escolher uma foto.
 import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 
@@ -23,13 +28,16 @@ export const IDADE_MINIMA_MS = 30 * 60_000;
  * (segundos desde 1970, como o `getInfoAsync` devolve), já é sobra?
  * Nome estranho ou data ausente: não apaga (na dúvida, fica).
  */
-export function ehSobraDaCamera(nome: unknown, modificadoS: unknown, agoraMs: number): boolean {
+export function ehSobraDaCamera(nome: unknown, modificadoS: unknown, agoraMs: number, idadeMinimaMs: number = IDADE_MINIMA_MS): boolean {
   if (typeof nome !== "string" || !/^[A-Za-z0-9._-]+$/.test(nome) || /^\.+$/.test(nome)) return false;
   if (typeof modificadoS !== "number" || !Number.isFinite(modificadoS) || modificadoS <= 0) return false;
-  return agoraMs - modificadoS * 1000 >= IDADE_MINIMA_MS;
+  return agoraMs - modificadoS * 1000 >= Math.max(0, idadeMinimaMs);
 }
 
-export async function limparSobrasDaCamera(agoraMs: number = Date.now()): Promise<void> {
+export async function limparSobrasDaCamera({
+  agoraMs = Date.now(),
+  idadeMinimaMs = IDADE_MINIMA_MS,
+}: { agoraMs?: number; idadeMinimaMs?: number } = {}): Promise<void> {
   if (Platform.OS === "web") return;
   try {
     const raiz = FileSystem.cacheDirectory;
@@ -42,7 +50,7 @@ export async function limparSobrasDaCamera(agoraMs: number = Date.now()): Promis
       try {
         const arq = await FileSystem.getInfoAsync(pasta + nome);
         if (!arq.exists || arq.isDirectory) continue;
-        if (!ehSobraDaCamera(nome, arq.modificationTime, agoraMs)) continue;
+        if (!ehSobraDaCamera(nome, arq.modificationTime, agoraMs, idadeMinimaMs)) continue;
         await FileSystem.deleteAsync(pasta + nome, { idempotent: true });
       } catch {
         /* um arquivo que não deu não impede os outros */
@@ -51,4 +59,13 @@ export async function limparSobrasDaCamera(agoraMs: number = Date.now()): Promis
   } catch {
     /* limpeza é só higiene: nunca derruba a busca */
   }
+}
+
+let limpouNaAbertura = false;
+
+/** Limpeza 1: uma vez por início do JS (o layout raiz pode remontar). */
+export function limparSobrasNaAbertura(): void {
+  if (limpouNaAbertura) return;
+  limpouNaAbertura = true;
+  limparSobrasDaCamera({ idadeMinimaMs: 0 }).catch(() => {});
 }
