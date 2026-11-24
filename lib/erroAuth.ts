@@ -18,6 +18,7 @@ export type CodigoErroAuth =
   | "senha_errada"
   | "email_nao_confirmado"
   | "rede"
+  | "senha_igual"
   | "outro";
 
 type ErroLido = { code?: unknown; status?: unknown; message?: unknown; name?: unknown };
@@ -33,6 +34,7 @@ export function codigoErroAuth(e: unknown): CodigoErroAuth {
   if (code === "email_address_invalid" || code === "validation_failed" && /email/i.test(msg) || /invalid email|unable to validate email/i.test(msg)) return "email_invalido";
   if (code === "invalid_credentials" || /invalid login credentials/i.test(msg)) return "senha_errada";
   if (code === "email_not_confirmed" || /email not confirmed/i.test(msg)) return "email_nao_confirmado";
+  if (code === "same_password" || /should be different from the old/i.test(msg)) return "senha_igual";
   if (nome === "AuthRetryableFetchError" || /network request failed|failed to fetch|network error/i.test(msg)) return "rede";
   return "outro";
 }
@@ -46,6 +48,7 @@ export const MENSAGENS_ERRO_AUTH: Record<Exclude<CodigoErroAuth, "outro">, strin
   senha_errada: "E-mail ou senha incorretos.",
   email_nao_confirmado: "Confirme sua conta antes de entrar.",
   rede: "Sem conexão com a internet agora. Confira a rede e tente de novo.",
+  senha_igual: "A nova senha precisa ser diferente da atual.",
 };
 
 /**

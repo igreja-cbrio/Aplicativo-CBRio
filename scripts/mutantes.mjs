@@ -1171,7 +1171,13 @@ const MUTANTES = [
     para: '  if (v.fonte === "nunca") {',
   },
   {
-    nome: "portão: fechar a tela de criar conta baixa a bandeira do login empilhado",
+    nome: "portão: aplicar o OTA no meio do carimbo da ficha do cadastro nativo",
+    arq: "components/app/PortaoAtualizacao.tsx",
+    de: "  const fichaAberta = fichaNaTela || cadastroGravando;",
+    para: "  const fichaAberta = fichaNaTela;",
+  },
+  {
+    nome: "portão: fechar uma tela baixa a bandeira de outra que continua aberta",
     arq: "lib/cadastroAberto.ts",
     de: "  if (abertas > 0) return;\n",
     para: "",

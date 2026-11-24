@@ -182,6 +182,8 @@ export function attachNotifTapListener(): () => void {
         // Home. Push sem destino agora NÃO navega — o aviso já está no sino,
         // com contador. O evento abaixo existe pra a gente descobrir qual tipo
         // apareceu sem mapa (em vez de o app "adivinhar" uma tela).
+        // Não navegou: o "voltar depois de um tempo fora = Home" segue valendo.
+        ultimoToqueEm = 0;
         trackEvento("notif_tap_sem_destino", { notification_type: tipo ?? "(sem tipo)" });
         return;
     }

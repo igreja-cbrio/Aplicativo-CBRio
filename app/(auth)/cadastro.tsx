@@ -29,15 +29,17 @@ import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { FormularioRolavel } from "@/components/ui/FormularioRolavel";
 import { useDialogo } from "@/components/ui/Dialogo";
-import { codigoErroAuth, mensagemErroAuth } from "@/lib/erroAuth";
+import { mensagemErroAuth } from "@/lib/erroAuth";
 import { abrirFichaCadastro, fecharFichaCadastro } from "@/lib/cadastroAberto";
 
 export default function CadastroScreen() {
-  const { signUp, signIn } = useAuth();
+  const { signUp } = useAuth();
   const t = useT();
   // ⚠️ Lançamento (24/11/2026): o portão de atualização não pode reiniciar o app
-  // no meio desta tela (apagaria o que a pessoa digitou, ou o retorno do login
-  // com Google/Apple, que sai do app e volta). Mesma bandeira do /completar-cadastro.
+  // no meio desta tela (apagaria o que a pessoa digitou). Mesma bandeira do
+  // /completar-cadastro; enquanto o cadastro grava, o portão também espera
+  // `lib/cadastroEmAndamento` (senão aplicaria quando a tela desmonta, no meio
+  // do carimbo da ficha).
   useEffect(() => {
     abrirFichaCadastro();
     return () => { fecharFichaCadastro(); };
@@ -146,17 +148,10 @@ export default function CadastroScreen() {
       }
       // Com a sessão criada, o guard de rotas leva direto para a área logada.
     } catch (e) {
-      // ⚠️ Nunca a mensagem crua do Supabase (inglês). "Já existe conta": quem
-      // aperta "Criar conta" de novo, ou quem já tinha conta com a mesma senha,
-      // entra direto — o portão de cadastro cuida do resto.
-      if (codigoErroAuth(e) === "ja_tem_conta") {
-        try {
-          await signIn(email, password, true);
-          return;
-        } catch {
-          /* senha diferente: cai na mensagem, que aponta Entrar / Esqueci minha senha */
-        }
-      }
+      // ⚠️ Nunca a mensagem crua do Supabase (inglês). "Já existe conta" NÃO
+      // entra sozinho: família divide e-mail e repete senha, e entrar calado
+      // colocaria a mãe na própria conta achando que criou a do filho. A
+      // mensagem aponta Entrar / Esqueci minha senha (revisão de 24/11).
       setError(t(mensagemErroAuth(e, "Não foi possível criar a conta.")));
     } finally {
       // Baixa a bandeira SEMPRE — inclusive quando deu erro. Aí o portão volta

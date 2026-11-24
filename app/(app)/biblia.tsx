@@ -124,7 +124,7 @@ export default function Biblia() {
         const ativo = selecionados.includes(v.verse);
         const marcada = CORES.find(x => x.nome === marcacoes[v.verse])?.cor;
         return <Pressable key={v.verse} onPress={() => alternar(v.verse)} style={[styles.verse, marcada ? { backgroundColor: marcada } : undefined, ativo && styles.verseSelected]}><Text style={[styles.verseText, { fontSize: tamVerso.fontSize, lineHeight: tamVerso.lineHeight }]}><Text style={[styles.verseNumber, ativo && styles.verseNumberSelected]}>{v.verse} </Text>{v.text.trim()}</Text></Pressable>;
-      })}<Text style={styles.translation}>{versao.nome} · {t("domínio público")}</Text></View>}
+      })}<Text style={styles.translation}>{versao.nome} · {versao.licenca === "domínio público" ? t("domínio público") : versao.licenca}</Text></View>}
     </ScrollView>
     {selecionados.length > 0 && <View style={[styles.actions, { bottom: dockInset + 78 }]}>
       {temMarcacaoSelecionada

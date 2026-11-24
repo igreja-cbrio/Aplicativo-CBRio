@@ -1,5 +1,5 @@
 import { Text } from "@/components/ui/Typography";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Image,
   Platform,
@@ -17,7 +17,6 @@ import { SocialButton } from "@/components/ui/SocialButton";
 import { StatusBar } from "expo-status-bar";
 import { alturaVideoLogin } from "@/lib/loginLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { abrirFichaCadastro, fecharFichaCadastro } from "@/lib/cadastroAberto";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -35,13 +34,6 @@ export default function LoginScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
-  // ⚠️ Lançamento (24/11/2026): o portão de atualização não pode reiniciar o app
-  // no meio desta tela (apagaria o que a pessoa digitou, ou o retorno do login
-  // com Google/Apple, que sai do app e volta). Mesma bandeira do /completar-cadastro.
-  useEffect(() => {
-    abrirFichaCadastro();
-    return () => { fecharFichaCadastro(); };
-  }, []);
 
   const { height: alturaTela } = useWindowDimensions();
   const [alturaDisponivel, setAlturaDisponivel] = useState(alturaTela - insets.bottom);
