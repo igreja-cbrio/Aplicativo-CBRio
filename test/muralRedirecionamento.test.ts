@@ -6,6 +6,7 @@ vi.mock('react-native', () => ({ ActivityIndicator: 'Loading', Image: 'Image', P
 vi.mock('../components/navigation/DockContent', () => ({ ScrollView: 'Scroll' }));
 vi.mock('../components/ui/Typography', () => ({ Text: 'Text' }));
 vi.mock('react-native-safe-area-context', () => ({ SafeAreaView: 'Safe' }));
+vi.mock('react-native-webview', () => ({ WebView: 'WebView' }));
 vi.mock('@expo/vector-icons', () => ({ Ionicons: 'Icon' }));
 vi.mock('expo-router', async () => { const React = await import('react'); return { Stack: { Screen: () => null }, router: { replace: h.replace, setParams: h.setParams }, usePathname: () => '/mural', useLocalSearchParams: () => h.params, useFocusEffect: (fn: any) => React.useEffect(fn, [fn]) }; });
 vi.mock('../contexts/ThemeContext', () => ({ useColors: () => ({}) }));
@@ -33,3 +34,5 @@ it('resposta atrasada após sair da tela não abre inscrição', async () => { l
 it('troca de conta descarta a consulta anterior', async () => { let resolve!: (v: any) => void; h.get.mockReturnValueOnce(new Promise(r => { resolve = r; })).mockResolvedValue({ comunicados: [] }); await montar(); h.uid = 'outra'; await act(async () => tree.update(React.createElement(Mural))); await act(async () => resolve({ comunicados: [aviso()] })); expect(h.replace).not.toHaveBeenCalled(); });
 it('link inválido não abre navegador nem outra rota', async () => { h.get.mockResolvedValue({ comunicados: [aviso('teste:1', 'javascript:alert(1)')] }); await montar(); expect(h.replace).not.toHaveBeenCalled(); expect(h.open).not.toHaveBeenCalled(); });
 it('outro comunicado aberto na mesma tela resolve somente a nova inscrição', async () => { h.params = { comunicado_id: 'primeiro' }; h.get.mockResolvedValue({ comunicados: [aviso('primeiro', '/next')] }); await montar(); h.params = { comunicado_id: 'teste:1', abrir_inscricao: '1' }; h.get.mockResolvedValue({ comunicados: [aviso()] }); await act(async () => tree.update(React.createElement(Mural))); expect(h.replace).toHaveBeenCalledExactlyOnceWith('/inscricao-batismo'); });
+
+it('renderiza vídeo opcional sem bloquear o link de inscrição', async () => { h.params = {}; h.get.mockResolvedValue({ comunicados: [{ ...aviso(), video_url: 'https://example.com/aviso.mp4' }] }); await montar(); const player = tree.root.findByType('WebView' as any); expect(player.props.source.html).toContain('https://example.com/aviso.mp4'); expect(player.props.javaScriptEnabled).toBe(false); expect(player.props.mediaPlaybackRequiresUserAction).toBe(true); });
