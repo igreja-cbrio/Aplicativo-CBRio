@@ -34,6 +34,8 @@ import {
 } from "@/lib/validators";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
+import { albumDoCartao } from "@/components/batismo/FotosBatismoCard";
+import { listarAlbuns, rotuloDaData, type AlbumBatismo } from "@/lib/batismoFotos";
 
 function isoToBR(iso?: string | null) {
   if (!iso) return "";
@@ -60,6 +62,19 @@ export default function PerfilScreen() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  // Atalho "Minhas fotos do batismo" (24/11/2026 · pedido do Matheus): só aparece
+  // quando o ERP diz que esta conta tem álbum. Falha na consulta só esconde o
+  // atalho — o caminho completo (Inscrições → Batismo) continua mostrando o erro.
+  const [albumFotos, setAlbumFotos] = useState<AlbumBatismo | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let vivo = true;
+    listarAlbuns()
+      .then((resp) => { if (vivo) setAlbumFotos(albumDoCartao({ tipo: "ok", resp })); })
+      .catch(() => { if (vivo) setAlbumFotos(null); });
+    return () => { vivo = false; };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -308,6 +323,27 @@ export default function PerfilScreen() {
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </Pressable>
           </GlassCard>
+
+          {albumFotos && (
+            <GlassCard style={styles.cartoesCard}>
+              <Pressable
+                style={styles.cartoesRow}
+                onPress={() => router.navigate({ pathname: "/batismo-fotos", params: { album: albumFotos.id, origem: "perfil" } })}
+                accessibilityRole="button"
+              >
+                <Ionicons name="images-outline" size={22} color={colors.brandMid} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cartoesText}>{t("Minhas fotos do batismo")}</Text>
+                  <Text style={styles.cartoesHint}>
+                    {albumFotos.situacao === "conflito"
+                      ? t("Encontramos mais de uma data de batismo no seu cadastro. A equipe vai conferir antes de liberar as fotos.")
+                      : `${t("Álbum do batismo de")} ${rotuloDaData(albumFotos.data_batismo)}${albumFotos.total ? ` · ${albumFotos.total} ${albumFotos.total === 1 ? t("foto") : t("fotos")}` : ""}`}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </Pressable>
+            </GlassCard>
+          )}
 
           <View style={styles.form}>
             <Input
