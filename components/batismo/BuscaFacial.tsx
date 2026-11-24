@@ -36,6 +36,7 @@ import { useLang, useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { registrarConsentimentoBusca, type FotoAlbum } from "@/lib/batismoFotos";
 import { liberarTela, manterTelaAcordada } from "@/lib/telaAcordada";
+import { limparSobrasDaCamera } from "@/lib/limparSobrasCamera";
 import {
   CONSENTIMENTO_CAIXA_MAIORIDADE,
   CONSENTIMENTO_CAIXA_ROSTO,
@@ -57,12 +58,14 @@ import {
   lerMensagem,
   mensagemDoErro,
   navegacaoPermitida,
+  origemDaMensagemPermitida,
   pendentes,
   podeComecar,
   resumirBusca,
   scriptIniciar,
   situacaoDaBusca,
   type ErroBusca,
+  type FimDaBusca,
   type ResultadoBusca,
 } from "@/lib/buscaFacial";
 
@@ -162,6 +165,11 @@ export function BuscaFacial({
     [],
   );
 
+  // Sobra de selfie de uma busca anterior que o sistema interrompeu com a câmera aberta.
+  useEffect(() => {
+    limparSobrasDaCamera().catch(() => {});
+  }, []);
+
   // Tela acordada só enquanto procura (se o binário tiver o módulo nativo).
   useEffect(() => {
     if (fase.tipo !== "buscando") return;
@@ -250,7 +258,8 @@ export function BuscaFacial({
 
   function aoMensagem(e: WebViewMessageEvent) {
     if (!ativa.current || !buscandoRef.current || pausadaRef.current) return;
-    if (!navegacaoPermitida(e.nativeEvent.url)) return;
+    // Android: `url` é só a ORIGEM (ver `origemDaMensagemPermitida`).
+    if (!origemDaMensagemPermitida(e.nativeEvent.url)) return;
     const m = lerMensagem(e.nativeEvent.data, loteSetRef.current);
     if (!m) return;
     armarVigia();
@@ -344,12 +353,12 @@ export function BuscaFacial({
       setFase({ tipo: "revisao" });
       return;
     }
-    entregar(false);
+    entregar("fim");
   }
 
   /** Entrega só ids e contagens à galeria e descarta selfie e distâncias. */
-  function entregar(interrompida: boolean) {
-    const r = resumirBusca(ordemRef.current, comBusca(), resultadosRef.current, falhasRef.current, interrompida);
+  function entregar(fim: FimDaBusca) {
+    const r = resumirBusca(ordemRef.current, comBusca(), resultadosRef.current, falhasRef.current, fim);
     pararPagina();
     descartar();
     onResultado(r);
@@ -367,7 +376,7 @@ export function BuscaFacial({
   }
 
   function parar() {
-    entregar(true);
+    entregar("pessoa");
   }
 
   /**
@@ -377,11 +386,17 @@ export function BuscaFacial({
    */
   function fechar() {
     if (fase.tipo === "buscando") {
-      entregar(true);
+      entregar("pessoa");
       return;
     }
-    if (fase.tipo === "revisao") {
-      entregar(false);
+    // "revisao", ou o "Tentar de novo" dela recarregando a lista (fase
+    // "preparando" com resultados na memória): a busca já terminou e já contou
+    // no limite do dia, então vira resultado em vez de ir para o lixo. Na
+    // primeira preparação os mapas estão vazios e o fluxo só fecha.
+    if (fase.tipo === "revisao" || (fase.tipo === "preparando" && (resultadosRef.current.size > 0 || falhasRef.current.size > 0))) {
+      // O `carregarTodas()` em voo não pode recomeçar a busca depois da entrega.
+      ativa.current = false;
+      entregar("fim");
       return;
     }
     pararPagina();
@@ -527,7 +542,7 @@ export function BuscaFacial({
       for (const id of s.retentaveis) falhasRef.current.delete(id);
       const ids = s.retentaveis.filter((id) => urlsRef.current.has(id));
       if (ids.length === 0) {
-        entregar(false);
+        entregar("fim");
         return;
       }
       iniciarLote(ids);
@@ -653,11 +668,12 @@ export function BuscaFacial({
             <Text style={styles.tituloBusca}>{t("A busca terminou.")}</Text>
             <Text style={styles.texto}>{fotosEncontradas(encontradas)}.</Text>
             <Text style={styles.texto}>
-              {s.naoVerificadas} {s.naoVerificadas === 1 ? t("foto não pôde ser verificada.") : t("fotos não puderam ser verificadas.")}{" "}
+              {s.retentaveis.length}{" "}
+              {s.retentaveis.length === 1 ? t("foto não pôde ser verificada.") : t("fotos não puderam ser verificadas.")}{" "}
               {t("Quer tentar de novo só nelas?")}
             </Text>
             <Button title={t("Tentar de novo")} onPress={tentarDeNovoFalhas} style={styles.botaoLargo} />
-            <Button title={t("Ver resultado")} variant="ghost" onPress={() => entregar(false)} style={styles.botaoLargo} />
+            <Button title={t("Ver resultado")} variant="ghost" onPress={() => entregar("fim")} style={styles.botaoLargo} />
           </View>
         );
       }
@@ -678,7 +694,7 @@ export function BuscaFacial({
               </>
             )}
             {temAlgo && acao !== "selfie" && (
-              <Button title={t("Ver o que foi encontrado")} variant="ghost" onPress={() => entregar(true)} style={styles.botaoLargo} />
+              <Button title={t("Ver o que foi encontrado")} variant="ghost" onPress={() => entregar("erro")} style={styles.botaoLargo} />
             )}
             <Pressable onPress={sair} hitSlop={8} accessibilityRole="button">
               <Text style={styles.link}>{t("Voltar ao álbum")}</Text>

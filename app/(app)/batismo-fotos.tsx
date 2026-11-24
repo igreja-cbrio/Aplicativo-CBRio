@@ -629,7 +629,8 @@ export default function BatismoFotosScreen() {
           </Text>
           {resultadoBusca.interrompida ? (
             <Text style={styles.resultadoLinha}>
-              {t("Você parou a busca:")} {resultadoBusca.verificadas} {t("de")} {resultadoBusca.total} {t("fotos verificadas.")}
+              {resultadoBusca.fimDaBusca === "erro" ? t("A busca parou antes do fim:") : t("Você parou a busca:")} {resultadoBusca.verificadas}{" "}
+              {t("de")} {resultadoBusca.total} {t("fotos verificadas.")}
             </Text>
           ) : resultadoBusca.naoVerificadas > 0 ? (
             <Text style={styles.resultadoLinha}>

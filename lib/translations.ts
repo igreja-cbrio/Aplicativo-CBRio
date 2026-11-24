@@ -2378,6 +2378,7 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   // Modo "Resultado da busca" na galeria
   "Resultado da busca": { en: "Search results", es: "Resultado de la búsqueda" },
   "Você parou a busca:": { en: "You stopped the search:", es: "Detuviste la búsqueda:" },
+  "A busca parou antes do fim:": { en: "The search stopped before finishing:", es: "La búsqueda se detuvo antes de terminar:" },
   "fotos verificadas.": { en: "photos checked.", es: "fotos verificadas." },
   "foto não pôde ser verificada.": { en: "photo couldn't be checked.", es: "foto no se pudo verificar." },
   "fotos não puderam ser verificadas.": { en: "photos couldn't be checked.", es: "fotos no se pudieron verificar." },
@@ -2402,5 +2403,6 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "O CBRio precisa da câmera para tirar a selfie. Você pode liberar nos Ajustes do aparelho.": { en: "CBRio needs the camera to take the selfie. You can allow it in your device Settings.", es: "CBRio necesita la cámara para tomar la selfie. Puedes habilitarla en los Ajustes del dispositivo." },
   "Não foi possível usar a câmera agora. Tente de novo.": { en: "Couldn't use the camera right now. Please try again.", es: "No se pudo usar la cámara ahora. Inténtalo de nuevo." },
   "Não foi possível carregar todas as fotos do álbum. Verifique sua conexão e tente de novo.": { en: "Couldn't load all the album photos. Check your connection and try again.", es: "No se pudieron cargar todas las fotos del álbum. Revisa tu conexión e inténtalo de nuevo." },
-  "A busca por selfie ainda não está disponível para este álbum. Você ainda pode ver e baixar todas as fotos.": { en: "Selfie search isn't available for this album yet. You can still view and download all the photos.", es: "La búsqueda por selfie aún no está disponible para este álbum. Aún puedes ver y descargar todas las fotos." },
+  "A busca por selfie não está disponível agora. Você ainda pode ver e baixar todas as fotos do álbum.": { en: "Selfie search isn't available right now. You can still view and download all the album photos.", es: "La búsqueda por selfie no está disponible ahora. Aún puedes ver y descargar todas las fotos del álbum." },
+  "Atualize o app para usar a busca por selfie. Você ainda pode ver e baixar todas as fotos do álbum.": { en: "Update the app to use selfie search. You can still view and download all the album photos.", es: "Actualiza la app para usar la búsqueda por selfie. Aún puedes ver y descargar todas las fotos del álbum." },
 };

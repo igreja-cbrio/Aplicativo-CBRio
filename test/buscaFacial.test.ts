@@ -5,6 +5,9 @@
 // busca tem tradução (o portão de i18n não enxerga `t(CONSTANTE)`).
 // Sem rede: `apiPost` é falso.
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { semComentarios } from "../scripts/semComentarios.mjs";
 
 const mock = vi.hoisted(() => ({ apiGet: vi.fn(), apiPost: vi.fn() }));
 vi.mock("../lib/api", () => ({ apiGet: mock.apiGet, apiPost: mock.apiPost }));
@@ -34,6 +37,8 @@ import {
   lerMensagem,
   mensagemDoErro,
   navegacaoPermitida,
+  origemDaMensagemPermitida,
+  STATUS_RETENTAVEL,
   pendentes,
   podeComecar,
   resumirBusca,
@@ -209,6 +214,25 @@ describe("de onde a mensagem pode vir e o que vai para a página", () => {
     expect(navegacaoPermitida(undefined)).toBe(false);
   });
 
+  it("mensagem: a página da busca OU só a origem (o Android entrega só a origem no onMessage)", () => {
+    // react-native-webview 13 no Android: addWebMessageListener → url = sourceOrigin ("https://www.cbrio.org").
+    // Exigir o caminho aqui descartava toda mensagem e a busca nunca começava no Android.
+    expect(origemDaMensagemPermitida("https://www.cbrio.org")).toBe(true);
+    expect(origemDaMensagemPermitida("https://www.cbrio.org/")).toBe(true);
+    expect(origemDaMensagemPermitida(PAGINA_BUSCA_FACIAL)).toBe(true);
+    expect(origemDaMensagemPermitida("https://www.cbrio.org/app-busca-facial/index.html")).toBe(true);
+    // about:blank navega, mas não fala com o app
+    expect(origemDaMensagemPermitida("about:blank")).toBe(false);
+    expect(origemDaMensagemPermitida("http://www.cbrio.org")).toBe(false);
+    expect(origemDaMensagemPermitida("https://cbrio.org")).toBe(false);
+    expect(origemDaMensagemPermitida("https://www.cbrio.org.evil.example")).toBe(false);
+    expect(origemDaMensagemPermitida("https://u:p@www.cbrio.org")).toBe(false);
+    expect(origemDaMensagemPermitida("https://www.cbrio.org/api/app/batismo/fotos")).toBe(false);
+    expect(origemDaMensagemPermitida("https://www.cbrio.org:8443")).toBe(false);
+    expect(origemDaMensagemPermitida(undefined)).toBe(false);
+    expect(origemDaMensagemPermitida(null)).toBe(false);
+  });
+
   it("o prefixo de busca é o mesmo caminho de miniatura que o app já valida", () => {
     expect(PREFIXO_URL_BUSCA).toBe(BASE_API + PREFIXO_MINIATURA);
   });
@@ -297,10 +321,33 @@ describe("retomada e Tentar de novo", () => {
     expect(situacaoDaBusca(ordem, comBusca, res, new Map([["b", 503]])).recarregarLista).toBe(false);
   });
 
+  it("5xx passageiro da miniatura (502 do SharePoint, 500/504 da Vercel) vale Tentar de novo; 403 e 404 não", () => {
+    for (const st of [500, 502, 504]) expect(STATUS_RETENTAVEL.has(st)).toBe(true);
+    for (const st of [400, 401, 403, 404]) expect(STATUS_RETENTAVEL.has(st)).toBe(false);
+    const s = situacaoDaBusca(["a", "b", "c"], new Set(["a", "b", "c"]), new Map(), new Map([["a", 502], ["b", 504], ["c", 403]]));
+    expect(s.retentaveis).toEqual(["a", "b"]);
+  });
+
   it("resumo: só ids e contagens (nenhuma distância sai da busca)", () => {
-    const r = resumirBusca(["a", "b", "c"], new Set(["a", "b", "c"]), new Map([["a", 0.1], ["b", 0.9]]), new Map([["c", 0]]), true);
-    expect(r).toEqual({ suas: ["a"], talvez: ["b", "c"], pelaSequencia: ["b", "c"], total: 3, verificadas: 2, naoVerificadas: 1, interrompida: true });
+    const r = resumirBusca(["a", "b", "c"], new Set(["a", "b", "c"]), new Map([["a", 0.1], ["b", 0.9]]), new Map([["c", 0]]), "pessoa");
+    expect(r).toEqual({
+      suas: ["a"],
+      talvez: ["b", "c"],
+      pelaSequencia: ["b", "c"],
+      total: 3,
+      verificadas: 2,
+      naoVerificadas: 1,
+      interrompida: true,
+      fimDaBusca: "pessoa",
+    });
     expect(JSON.stringify(r)).not.toContain("0.1");
+  });
+
+  it("resumo: diz se a busca chegou ao fim, se a pessoa parou ou se parou por erro", () => {
+    const resumo = (fim: "fim" | "pessoa" | "erro") => resumirBusca(["a"], new Set(["a"]), new Map([["a", 0.1]]), new Map(), fim);
+    expect(resumo("fim")).toMatchObject({ interrompida: false, fimDaBusca: "fim" });
+    expect(resumo("pessoa")).toMatchObject({ interrompida: true, fimDaBusca: "pessoa" });
+    expect(resumo("erro")).toMatchObject({ interrompida: true, fimDaBusca: "erro" });
   });
 });
 
@@ -340,7 +387,14 @@ describe("aceite", () => {
     const e = (status: number, codigo?: string) => Object.assign(new Error("x"), { status, corpo: codigo ? { codigo } : null });
     expect(erroDoConsentimento(e(403, "menor"))).toBe("menor");
     expect(erroDoConsentimento(e(429, "limite"))).toBe("limite");
-    expect(erroDoConsentimento(e(429))).toBe("limite");
+    // 429 sem código é o limitador de 15 minutos da rota, não o limite do dia.
+    expect(erroDoConsentimento(e(429))).toBe("consentimento");
+    // Busca desligada (kill switch) e texto do aceite mudado: não oferecem "Tentar de novo" sem fim.
+    expect(erroDoConsentimento(e(503, "indisponivel"))).toBe("indisponivel");
+    expect(erroDoConsentimento(e(400, "versao"))).toBe("versao");
+    expect(acaoDoErro("indisponivel")).toBe("nenhuma");
+    expect(acaoDoErro("versao")).toBe("nenhuma");
+    expect(erroDoConsentimento(e(503))).toBe("consentimento");
     expect(erroDoConsentimento(e(409, "conflito"))).toBe("conflito");
     expect(erroDoConsentimento(e(404, "sem_acesso"))).toBe("sem_acesso");
     expect(erroDoConsentimento(e(401))).toBe("sessao");
@@ -387,5 +441,20 @@ describe("textos", () => {
     expect(acaoDoErro("sem_webgl")).toBe("nenhuma");
     expect(acaoDoErro("menor")).toBe("nenhuma");
     expect(acaoDoErro("limite")).toBe("nenhuma");
+  });
+});
+
+describe("o componente usa as réguas certas", () => {
+  const fonte = semComentarios(readFileSync(join(__dirname, "../components/batismo/BuscaFacial.tsx"), "utf8"));
+
+  it("onMessage confere a ORIGEM (o Android não manda o caminho); a navegação confere a página", () => {
+    expect(fonte).toContain("origemDaMensagemPermitida(e.nativeEvent.url)");
+    expect(fonte).not.toContain("navegacaoPermitida(e.nativeEvent.url)");
+    expect(fonte).toContain("onShouldStartLoadWithRequest={(req) => navegacaoPermitida(req.url)}");
+  });
+
+  it("limpa as sobras da câmera ao abrir e apaga o arquivo do picker depois de ler a selfie", () => {
+    expect(fonte).toContain("limparSobrasDaCamera()");
+    expect(fonte).toMatch(/FileSystem\.deleteAsync\(asset\.uri, \{ idempotent: true \}\)/);
   });
 });

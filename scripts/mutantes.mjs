@@ -1037,6 +1037,21 @@ const MUTANTES = [
     de: '  if (!r || r.ok !== true) throw new Error("O aceite não foi registrado.");',
     para: '  if (!r) throw new Error("O aceite não foi registrado.");',
   },
+  {
+    // react-native-webview 13 no Android entrega só a ORIGEM no onMessage:
+    // exigir o caminho descarta toda mensagem e a busca nunca começa.
+    nome: "busca facial: onMessage exigir o caminho da página (Android nunca busca)",
+    arq: "lib/buscaFacial.ts",
+    de: '  if (url === ORIGEM_BUSCA_FACIAL || url === `${ORIGEM_BUSCA_FACIAL}/`) return true;\n',
+    para: "",
+  },
+  {
+    // A miniatura responde 502 "Tente de novo" em falha passageira do SharePoint.
+    nome: "busca facial: 502 da miniatura virar falha definitiva",
+    arq: "lib/buscaFacial.ts",
+    de: "new Set([0, 410, 429, 500, 502, 503, 504])",
+    para: "new Set([0, 410, 429, 500, 503, 504])",
+  },
 ];
 
 // ⚠️ O working tree deste repo tem arquivos com CRLF (Windows), então casar a

@@ -84,8 +84,13 @@ export const LIMIAR_PROVAVEL = 0.55;
 export const VIZINHANCA_SEQUENCIA = 2;
 /** Estimativa de dados por foto (miniatura de 640 px). */
 export const MB_POR_FOTO = 0.08;
-/** `falha_foto` com estes status é passageira: vale "Tentar de novo". 410 = link vencido (pede as páginas de novo). */
-export const STATUS_RETENTAVEL: ReadonlySet<number> = new Set([0, 410, 429, 503]);
+/**
+ * `falha_foto` com estes status é passageira: vale "Tentar de novo". 410 = link
+ * vencido (pede as páginas de novo). 500/502/504: a rota da miniatura responde
+ * 502 "Tente de novo" para falha passageira do SharePoint, e a Vercel devolve
+ * 500/504 quando a função cai ou estoura o tempo. 403/404 são definitivos.
+ */
+export const STATUS_RETENTAVEL: ReadonlySet<number> = new Set([0, 410, 429, 500, 502, 503, 504]);
 /** WebView que morre seguidas vezes sem nenhuma foto nova verificada: para e diz que deu erro. */
 export const MAX_RECRIACOES = 3;
 /**
@@ -169,7 +174,7 @@ export function lerMensagem(raw: unknown, idsValidos: ReadonlySet<string>): Mens
   }
 }
 
-/** A mensagem só vale se veio da própria página da busca (não de outro documento/quadro). */
+/** A WebView só navega para a página da busca (`onShouldStartLoadWithRequest`). */
 export function navegacaoPermitida(url: unknown): boolean {
   if (url === "about:blank") return true;
   if (typeof url !== "string" || url.length > 2000) return false;
@@ -182,6 +187,20 @@ export function navegacaoPermitida(url: unknown): boolean {
   if (u.protocol !== "https:" || u.username || u.password) return false;
   if (u.host !== HOST_BUSCA) return false;
   return u.pathname === CAMINHO_BUSCA || u.pathname.startsWith(`${CAMINHO_BUSCA}/`);
+}
+
+/**
+ * A mensagem (`onMessage`) só vale se veio da página da busca.
+ * ⚠️⚠️ No Android o `nativeEvent.url` NÃO é a URL da página: o
+ * react-native-webview 13 usa `addWebMessageListener` e entrega só a ORIGEM
+ * (`https://www.cbrio.org`, sem caminho). Exigir o caminho aqui descartava
+ * TODA mensagem no Android e a busca nunca começava. A trava do caminho fica
+ * na navegação (`navegacaoPermitida`), e a CSP da página (`default-src 'none'`)
+ * não deixa abrir quadro de outra página dentro dela.
+ */
+export function origemDaMensagemPermitida(url: unknown): boolean {
+  if (url === ORIGEM_BUSCA_FACIAL || url === `${ORIGEM_BUSCA_FACIAL}/`) return true;
+  return url !== "about:blank" && navegacaoPermitida(url);
 }
 
 // ── O que vai para a página ────────────────────────────────────────────────
@@ -349,12 +368,21 @@ export function situacaoDaBusca(
   return { verificadas, naoVerificadas, retentaveis, recarregarLista };
 }
 
+/**
+ * Como a busca acabou: `fim` (chegou ao fim), `pessoa` (a pessoa parou ou
+ * fechou no meio) ou `erro` (parou por erro e a pessoa pediu para ver o que já
+ * tinha sido encontrado).
+ */
+export type FimDaBusca = "fim" | "pessoa" | "erro";
+
 /** O que a galeria recebe no fim: só ids e contagens. Nenhuma distância sai da busca. */
 export type ResultadoBusca = Classificacao & {
   total: number;
   verificadas: number;
   naoVerificadas: number;
+  /** A busca não chegou ao fim (`fimDaBusca` diz por quê). */
   interrompida: boolean;
+  fimDaBusca: FimDaBusca;
 };
 
 export function resumirBusca(
@@ -362,7 +390,7 @@ export function resumirBusca(
   comBusca: ReadonlySet<string>,
   resultados: ReadonlyMap<string, number | null>,
   falhas: ReadonlyMap<string, number>,
-  interrompida: boolean,
+  fimDaBusca: FimDaBusca,
 ): ResultadoBusca {
   const c = classificar(resultados, ordem);
   const s = situacaoDaBusca(ordem, comBusca, resultados, falhas);
@@ -371,7 +399,8 @@ export function resumirBusca(
     total: s.verificadas + s.naoVerificadas,
     verificadas: s.verificadas,
     naoVerificadas: s.naoVerificadas,
-    interrompida,
+    interrompida: fimDaBusca !== "fim",
+    fimDaBusca,
   };
 }
 
@@ -396,7 +425,8 @@ export type ErroBusca =
   | "camera_negada"
   | "camera"
   | "lista"
-  | "indisponivel";
+  | "indisponivel"
+  | "versao";
 
 const MENSAGENS: Record<ErroBusca, string> = {
   modelos: "Não foi possível preparar a busca agora. Verifique sua internet e tente de novo.",
@@ -415,7 +445,8 @@ const MENSAGENS: Record<ErroBusca, string> = {
   camera_negada: "O CBRio precisa da câmera para tirar a selfie. Você pode liberar nos Ajustes do aparelho.",
   camera: "Não foi possível usar a câmera agora. Tente de novo.",
   lista: "Não foi possível carregar todas as fotos do álbum. Verifique sua conexão e tente de novo.",
-  indisponivel: "A busca por selfie ainda não está disponível para este álbum. Você ainda pode ver e baixar todas as fotos.",
+  indisponivel: "A busca por selfie não está disponível agora. Você ainda pode ver e baixar todas as fotos do álbum.",
+  versao: "Atualize o app para usar a busca por selfie. Você ainda pode ver e baixar todas as fotos do álbum.",
 };
 
 export const CODIGOS_ERRO = Object.keys(MENSAGENS) as ErroBusca[];
@@ -450,12 +481,22 @@ export function acaoDoErro(codigo: ErroBusca): AcaoDoErro {
 
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === "object" ? (v as Record<string, unknown>) : {});
 
-/** Erro do POST do aceite → código. Qualquer coisa fora do contrato é "não registrou" (a busca NÃO começa). */
+/**
+ * Erro do POST do aceite → código. Qualquer coisa fora do contrato é "não
+ * registrou" (a busca NÃO começa). Os códigos vêm de `registrarBusca` no ERP
+ * (backend/services/batismoAlbuns.js): `menor` 403, `limite` 429 (3 por dia),
+ * `conflito` 409, `sem_acesso` 404, `indisponivel` 503 (busca desligada ou
+ * cadastro que deixou de valer) e `versao` 400 (texto do aceite mudou no
+ * servidor). 429 SEM `codigo` é o limitador de 15 minutos da rota, não o
+ * limite do dia: cai em "não registrou, tente de novo".
+ */
 export function erroDoConsentimento(e: unknown): ErroBusca {
   const err = obj(e);
   const codigo = obj(err.corpo).codigo;
   if (codigo === "menor") return "menor";
-  if (err.status === 429 || codigo === "limite") return "limite";
+  if (codigo === "limite") return "limite";
+  if (codigo === "versao") return "versao";
+  if (codigo === "indisponivel") return "indisponivel";
   if (err.status === 409 || codigo === "conflito") return "conflito";
   if (err.status === 404 || codigo === "sem_acesso") return "sem_acesso";
   if (err.status === 401) return "sessao";
