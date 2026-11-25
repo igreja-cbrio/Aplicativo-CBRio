@@ -2245,6 +2245,7 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Notas e marcações": { en: "Notes and highlights", es: "Notas y marcas" },
   "Meu histórico": { en: "My history", es: "Mi historial" },
   "Dias e planos lidos": { en: "Days and plans read", es: "Días y planes leídos" },
+  "Continuar onde parei": { en: "Continue where I left off", es: "Continuar donde lo dejé" },
   "Sete leituras, de quinta a quarta": { en: "Seven readings, Thursday to Wednesday", es: "Siete lecturas, de jueves a miércoles" },
   "Devocional em família": { en: "Family devotional", es: "Devocional en familia" },
   "Uma semana, uma conversa em família": { en: "One week, one family conversation", es: "Una semana, una conversación en familia" },
