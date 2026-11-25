@@ -9,6 +9,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
 import { apiGet } from "@/lib/api";
 import { listarPlanos, planosSugeridos, type PlanoDevocional, type PlanoSugerido } from "@/lib/devocional";
+import { minhasLeituras, nomeDoLivro, type LeituraResumo } from "@/lib/leituraGrupoApi";
+import { diaAtual } from "@/lib/leituraGrupo";
+import { hojeBRT } from "@/lib/dataBRT";
 import { useMembro } from "@/lib/useMembro";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { useT } from "@/lib/i18n";
@@ -29,7 +32,12 @@ export default function Planos() {
   const carregarSugeridos = useCallback(() => {
     planosSugeridos(membro?.membroId ?? null).then((p) => { setSugeridos(p); setFalhou(false); }).catch(() => setFalhou(true));
   }, [membro?.membroId]);
-  useFocusEffect(useCallback(() => { carregarSugeridos(); }, [carregarSugeridos]));
+  // Leituras em grupo (25/11/2026). `null` = carregando · erro vira aviso, nunca lista vazia.
+  const [leituras, setLeituras] = useState<LeituraResumo[] | null>(null), [falhouLeituras, setFalhouLeituras] = useState(false);
+  const carregarLeituras = useCallback(() => {
+    minhasLeituras().then((l) => { setLeituras(l); setFalhouLeituras(false); }).catch(() => setFalhouLeituras(true));
+  }, []);
+  useFocusEffect(useCallback(() => { carregarSugeridos(); carregarLeituras(); }, [carregarSugeridos, carregarLeituras]));
   const quarta = planos.find(p => p.slug === "quarta-com-deus");
   const semana = planos.find(p => !p.slug && p.titulo.toLowerCase().includes("semana"));
   function abrirPlano(plano?: PlanoDevocional) {
@@ -46,6 +54,23 @@ export default function Planos() {
       <Card icon="play" numero="01" titulo="Pense Pedrão" texto={pense?.titulo ?? t("Uma mensagem breve para o seu dia")} onPress={abrirPense} s={s} c={c} />
       <Card icon="flame-outline" numero="02" titulo="Quarta com Deus" texto={t("Sete leituras, de quinta a quarta")} onPress={() => abrirPlano(quarta)} s={s} c={c} />
       <Card icon="calendar-outline" numero="03" titulo={t("Devocional da semana")} texto={t("A leitura preparada para esta semana")} onPress={() => abrirPlano(semana)} s={s} c={c} />
+      <Text style={s.secao}>{t("LEITURA EM GRUPO")}</Text>
+      <Text style={s.vazioTxt}>{t("Escolha um livro, convide quem quiser e leiam juntos, um trecho por dia.")}</Text>
+      <View style={s.grupoAcoes}>
+        <Pressable onPress={() => router.navigate("/devocional-leitura-nova")} style={({ pressed }) => [s.grupoBtn, s.grupoBtnPrim, pressed && s.pressed]} accessibilityRole="button"><Ionicons name="add" size={18} color="#fff" /><Text style={[s.grupoBtnTxt, { color: "#fff" }]}>{t("Criar leitura")}</Text></Pressable>
+        <Pressable onPress={() => router.navigate("/devocional-leitura-entrar")} style={({ pressed }) => [s.grupoBtn, pressed && s.pressed]} accessibilityRole="button"><Ionicons name="key-outline" size={17} color={c.primary} /><Text style={s.grupoBtnTxt}>{t("Entrar com código")}</Text></Pressable>
+      </View>
+      {falhouLeituras && !leituras
+        ? <Pressable onPress={carregarLeituras} style={s.erroBox} accessibilityRole="button"><Ionicons name="cloud-offline-outline" size={18} color={c.textMuted} /><Text style={s.erroTxt}>{t("Não foi possível carregar suas leituras.")}</Text><Text style={s.erroRetry}>{t("Tentar de novo")}</Text></Pressable>
+        : (leituras ?? []).map((l) => {
+          const hoje = diaAtual(l.data_inicio, l.dias, hojeBRT());
+          const status = hoje === 0 ? t("Começa em") + " " + l.data_inicio.split("-").reverse().join("/") : hoje > l.dias ? t("Concluída") : `${t("Dia")} ${hoje} ${t("de")} ${l.dias}`;
+          return <Pressable key={l.id} onPress={() => router.navigate({ pathname: "/devocional-leitura", params: { leituraId: l.id } })} style={({ pressed }) => [s.card, s.cardLeitura, pressed && s.pressed]}>
+            <View style={s.icon}><Ionicons name="people-outline" size={22} color={c.primary} /></View>
+            <View style={s.flex}><Text style={s.cardTitle} numberOfLines={1}>{l.titulo}</Text><Text style={s.cardText}>{nomeDoLivro(l.livro_ordem)} · {status} · {l.participantes} {l.participantes === 1 ? t("pessoa") : t("pessoas")}</Text><Text style={s.cardText}>{t("Você leu")} {l.meus_lidos}/{l.dias}</Text></View>
+            <Ionicons name="chevron-forward" size={20} color={c.textMuted} />
+          </Pressable>;
+        })}
       <Text style={s.secao}>{t("PLANOS SUGERIDOS")}</Text>
       {falhou && !sugeridos
         ? <Pressable onPress={carregarSugeridos} style={s.erroBox} accessibilityRole="button"><Ionicons name="cloud-offline-outline" size={18} color={c.textMuted} /><Text style={s.erroTxt}>{t("Não foi possível carregar os planos.")}</Text><Text style={s.erroRetry}>{t("Tentar de novo")}</Text></Pressable>
@@ -88,4 +113,6 @@ const css = (c: any) => StyleSheet.create({
   planoRodape: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 4 }, planoRitmo: { color: c.primary, fontSize: 12, fontWeight: "800", letterSpacing: .6 }, planoRitmoDestaque: { color: "#fff" },
   erroBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 16, padding: 14, flexWrap: "wrap" }, erroTxt: { color: c.textMuted, fontSize: 13, flex: 1 }, erroRetry: { color: c.primary, fontSize: 13, fontWeight: "800" },
   vazioTxt: { color: c.textMuted, fontSize: 13, lineHeight: 19 },
+  grupoAcoes: { flexDirection: "row", gap: 8 }, grupoBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: 14, borderWidth: 1, borderColor: c.primary }, grupoBtnPrim: { backgroundColor: c.primary },
+  grupoBtnTxt: { color: c.primary, fontWeight: "800", fontSize: 14 }, cardLeitura: { minHeight: 84 },
 });

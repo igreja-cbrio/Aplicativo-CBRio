@@ -54,6 +54,7 @@ import { router, type Href } from "expo-router";
  *   │   │              └→ /next (membro OU gestão, decidido pelo servidor)
  *   │   ├── /videos
  *   │   └── /configuracoes → /trocar-senha, /fale-conosco, /sobre
+ *   │                        └→ /sobre → /configuracoes-avancadas → /creditos
  *   ├── /notificacoes      (o sino está na faixa em qualquer tela)
  *   │   └── /mural
  *   ├── /modo-culto        (card de ao vivo na Home)
@@ -107,6 +108,12 @@ const PAI: Record<string, string> = {
   "/devocional-plano-dia": "/devocional-plano",
   "/devocional-registros": "/devocional",
   "/devocional-leituras": "/devocional",
+  // Leitura em grupo (25/11/2026): tudo nasce em Planos de leitura; o dia volta
+  // pra tela central da leitura (que precisa do leituraId · PARAMS_QUE_SOBEM).
+  "/devocional-leitura-nova": "/devocional-planos",
+  "/devocional-leitura-entrar": "/devocional-planos",
+  "/devocional-leitura": "/devocional-planos",
+  "/devocional-leitura-dia": "/devocional-leitura",
 
   // menu
   "/perfil": "/menu",
@@ -155,6 +162,9 @@ const PAI: Record<string, string> = {
   "/fale-conosco": "/configuracoes",
   "/fale-conosco-chat": "/fale-conosco",
   "/sobre": "/configuracoes",
+  // Fim da tela Sobre → avançadas → créditos de quem fez o app (25/11/2026).
+  "/configuracoes-avancadas": "/sobre",
+  "/creditos": "/configuracoes-avancadas",
 
   // avisos e culto
   "/notificacoes": "/",
@@ -203,6 +213,7 @@ export function registrarRotaAtual(rota: string, params?: Record<string, unknown
 // senão o plano seria outra instância). Parâmetro ausente simplesmente não sobe.
 const PARAMS_QUE_SOBEM: Record<string, string[]> = {
   "/devocional-plano-dia": ["planoId"],
+  "/devocional-leitura-dia": ["leituraId"],
   // O aviso é da CRIANÇA: voltar sem o `id` abriria a ficha vazia.
   "/kids-aviso": ["id"],
 };
