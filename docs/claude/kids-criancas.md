@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Autorizações de imagem e declaração dos genitores nas cerimônias do app (25/11/2026)
+
 - Check-in explícito na aba Kids (2026-11-25)
 
 - Batismo nativo e seleção dos filhos (2026-11-23)
@@ -401,3 +403,34 @@ com ícone de QR e orientação para selecionar os filhos e gerar o código.
 Reutiliza `/kids`, antes identificado no menu como “Minhas crianças”.
 Kids volta ao menu principal; o check-in volta ao Kids. Minha família continua
 com acesso ao Kids. Entrada e retirada seguem presenciais; sem mudança de API.
+
+
+## Autorizações de imagem e declaração dos genitores nas cerimônias do app (25/11/2026)
+
+Decisão expressa do usuário: inscrições de batismo infantil e apresentação pelo
+app só concluem após dois aceites positivos, separados e inicialmente desmarcados:
+uso de imagem/voz (fotos, vídeos, live e gravação da cerimônia) e declaração sobre
+a concordância dos genitores. Trata-se de regra institucional solicitada, não de
+exigência legal. Foi informado o risco de condicionar participação infantil à
+divulgação de imagem (LGPD arts. 5º e 14). Não afirmar conformidade jurídica
+integral nem que o clique de uma conta equivale à assinatura de ambos.
+
+GET autenticado `/app/kids/inscricoes/termos?atividade=batismo|apresentacao` fornece
+versão e textos canônicos. As duas portas recebem `consentimentos_kids` com
+`versao`, `imagem:true` e `genitores:true`. O servidor exige booleanos estritos
+antes de mutações da inscrição; versão ausente/antiga gera 409 com código
+`termos_kids_desatualizados`. Clientes antigos devem atualizar o aplicativo.
+Vínculo de retirada no Kids não substitui declaração de representação legal.
+
+O app limpa os aceites ao trocar criança, identidade manual, conta, modalidade
+ou termos, e bloqueia envio enquanto os termos não carregam. WhatsApp permanece
+independente e opcional. Não reaproveitar o consentimento da foto cadastral Kids.
+A prova específica usa os tipos existentes `imagem` e `menor_responsavel` em
+`inscricao_consentimentos`, com texto/versão e contexto da criança e do declarante,
+sem CPF no snapshot. Ato registrado não prova conclusão da inscrição: falha
+posterior pode deixar registro da tentativa. Falha de prova impede a inscrição.
+Não reclassificar inscrições antigas como se contivessem os novos aceites.
+
+Escopo: formulários infantis autenticados do aplicativo. Os formulários públicos
+genéricos e seus termos não foram substituídos. Sem migration, alteração de
+RLS ou dependência nativa. Publicar backend antes da OTA.
