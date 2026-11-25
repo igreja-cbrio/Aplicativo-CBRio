@@ -90,7 +90,12 @@ export type MusicaCatalogo = {
   // Letra e cifra (o "preview" do PCO): só vêm nas músicas da liturgia do culto.
   letra?: string | null;
   cifra?: string | null;
+  // PDFs (cifra/letra) que vivem no Planning Center: só a lista; abrir pede ao
+  // servidor uma URL temporária (`rotaAbrirAnexo`).
+  anexos?: AnexoMusica[];
 };
+
+export type AnexoMusica = { id: string; nome: string; tipo: string | null };
 
 export const ROTA_CATALOGO_MUSICAS = "/app/voluntariado/liturgia-musicas";
 
@@ -175,4 +180,14 @@ export function rotuloMusica(m: MusicaCatalogo | null | undefined): string {
 export function previstoAoEscolher(previstoAtual: string, musica: MusicaCatalogo | null): string {
   if (String(previstoAtual || "").trim()) return previstoAtual;
   return musica?.duracao_seg ? segParaMMSS(musica.duracao_seg) : previstoAtual;
+}
+
+export function rotaAbrirAnexo(serviceId: string, anexoId: string): string {
+  return `${rotaLiturgia(serviceId)}/anexos/${encodeURIComponent(anexoId)}/abrir`;
+}
+
+// "Cifra G.pdf" → "Cifra G". Nome vazio vira "Arquivo".
+export function nomeAnexo(nome: string | null | undefined): string {
+  const n = String(nome || "").trim().replace(/\.(pdf|png|jpe?g|gif|webp)$/i, "").trim();
+  return n || "Arquivo";
 }

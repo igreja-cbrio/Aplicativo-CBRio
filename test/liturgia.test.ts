@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import {
   horaBRT, duracaoCurta, dividirSecoes, rotaLiturgia, type ItemLiturgia,
   segParaMMSS, mmssParaSeg, rascunhoDe, moverItem, itensParaSalvar, rotuloMusica, previstoAoEscolher, type RascunhoItem,
+  rotaAbrirAnexo, nomeAnexo,
 } from '../lib/liturgia';
 import { rotaPai } from '../lib/hierarquia';
 
@@ -136,5 +137,22 @@ describe('liturgia · música com duração e preview do Planning Center', () =>
     expect(s).toContain('musica.letra');
     expect(s).toContain('musica.cifra');
     expect(s).toContain('previstoAoEscolher(itemEscolhendo.previsto, m)');
+  });
+});
+
+describe('liturgia · PDFs do Planning Center', () => {
+  it('rota de abrir escapa os ids', () => {
+    expect(rotaAbrirAnexo('s/1', 'a 2')).toBe('/app/voluntariado/liturgia/s%2F1/anexos/a%202/abrir');
+  });
+  it('nome do botão sem extensão', () => {
+    expect(nomeAnexo('Cifra G.pdf')).toBe('Cifra G');
+    expect(nomeAnexo('Letra.JPG')).toBe('Letra');
+    expect(nomeAnexo('  ')).toBe('Arquivo');
+  });
+  it('a tela abre o PDF pela URL que o servidor devolve, só https, e diz quando falha', () => {
+    const s = semComentarios(readFileSync('app/(app)/(principal)/liturgia.tsx', 'utf8'));
+    expect(s).toContain('apiPost<{ url: string }>(rotaAbrirAnexo(String(id), a.id), {})');
+    expect(s).toMatch(/\^https:/);
+    expect(s).toContain('Não foi possível abrir o arquivo agora.');
   });
 });
