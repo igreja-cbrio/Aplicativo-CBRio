@@ -47,6 +47,16 @@ describe('liturgia do culto · telas', () => {
     expect(s).toContain('service_id: e.service_id ?? null');
     expect(s).toMatch(/pathname: "\/liturgia", params: \{ id: e\.service_id/);
   });
+  it('a liturgia mostra as músicas do Louvor, com link checado e erro dito', () => {
+    const s = semComentarios(readFileSync('app/(app)/liturgia.tsx', 'utf8'));
+    expect(s).toContain('dados.musicas_erro');
+    expect(s).toContain('linkMusicaSeguro(m.link)');
+    expect(s).toContain('Não foi possível carregar as músicas.');
+  });
+  it('o card "Músicas do culto de hoje" leva até a liturgia do culto', () => {
+    const s = semComentarios(readFileSync('components/voluntariado/MusicasCulto.tsx', 'utf8'));
+    expect(s).toMatch(/pathname: "\/liturgia", params: \{ id: culto\.id/);
+  });
   it('Montar escala tem o relógio do culto escolhido', () => {
     const s = semComentarios(readFileSync('app/(app)/escala-supervisor.tsx', 'utf8'));
     expect(s).toMatch(/pathname: "\/liturgia", params: \{ id: servicoSel\.id/);

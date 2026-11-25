@@ -8,7 +8,7 @@
 import { ScrollView } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,7 +17,8 @@ import { useColors } from "@/contexts/ThemeContext";
 import { apiGet } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
-import { dividirSecoes, duracaoCurta, horaBRT, rotaLiturgia, type ItemLiturgia, type Liturgia } from "@/lib/liturgia";
+import { dividirSecoes, duracaoCurta, horaBRT, rotaLiturgia, type ItemLiturgia, type Liturgia, type MusicaLiturgia } from "@/lib/liturgia";
+import { linkMusicaSeguro } from "@/lib/louvorMusicas";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 function fmtDia(iso: string | null): string | null {
@@ -61,6 +62,34 @@ export default function LiturgiaScreen() {
 
   const secoes = dados ? dividirSecoes(dados.itens) : { culto: [], posCulto: [] };
   const total = duracaoCurta(dados?.total_previsto_seg ?? null);
+
+  // Mesma checagem do card do Louvor antes de abrir: só http(s), sem credenciais.
+  function abrirMusica(m: MusicaLiturgia) {
+    const seguro = linkMusicaSeguro(m.link);
+    if (seguro) Linking.openURL(seguro).catch(() => {});
+  }
+
+  function renderMusica(m: MusicaLiturgia, ultimo: boolean) {
+    const temLink = !!linkMusicaSeguro(m.link);
+    return (
+      <View key={`musica-${m.ordem}`} style={[styles.item, !ultimo && styles.itemDivisor]}>
+        <Text style={styles.itemHora}>{m.ordem}.</Text>
+        <View style={styles.itemCorpo}>
+          <Text style={styles.itemTitulo}>{m.titulo}</Text>
+          {!!(m.artista || m.tom) && (
+            <Text style={styles.itemDur}>
+              {[m.artista, m.tom ? t("Tom: {tom}").replace("{tom}", m.tom) : null].filter(Boolean).join(" · ")}
+            </Text>
+          )}
+          {temLink && (
+            <Pressable onPress={() => abrirMusica(m)} accessibilityRole="link" hitSlop={8} style={styles.tentar}>
+              <Text style={styles.tentarTxt}>{t("Abrir link da música")}</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+    );
+  }
 
   function renderItem(item: ItemLiturgia, ultimo: boolean) {
     const hora = horaBRT(item.inicio);
@@ -140,6 +169,26 @@ export default function LiturgiaScreen() {
                     {secoes.culto.map((it, i) => renderItem(it, i === secoes.culto.length - 1))}
                   </View>
                 )}
+              </>
+            )}
+
+            {/* Músicas do Louvor (25/11/2026): moram na liturgia; o card
+                "Músicas do culto de hoje" continua sendo onde se adiciona. */}
+            {(dados.musicas_erro || dados.musicas !== undefined) && (
+              <View style={styles.card}>
+                <Text style={styles.secao}>{t("Músicas")}</Text>
+                {dados.musicas_erro || !dados.musicas ? (
+                  <Text style={styles.cardTxt}>{t("Não foi possível carregar as músicas.")}</Text>
+                ) : dados.musicas.length === 0 ? (
+                  <Text style={styles.cardTxt}>{t("Nenhuma música adicionada para este culto.")}</Text>
+                ) : (
+                  dados.musicas.map((m, i) => renderMusica(m, i === dados.musicas!.length - 1))
+                )}
+              </View>
+            )}
+
+            {dados.fonte !== "vazio" && (
+              <>
                 {secoes.posCulto.length > 0 && (
                   <View style={styles.card}>
                     <Text style={styles.secao}>{t("Pós-culto")}</Text>

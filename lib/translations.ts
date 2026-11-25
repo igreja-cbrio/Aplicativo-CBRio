@@ -10,6 +10,7 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Liturgia": {"en": "Service order", "es": "Liturgia"},
   "Ver liturgia do culto": {"en": "See the service order", "es": "Ver la liturgia del culto"},
   "Especial": {"en": "Special", "es": "Especial"},
+  "Músicas": {"en": "Songs", "es": "Canciones"},
   "previsto": {"en": "planned", "es": "previsto"},
   "Pós-culto": {"en": "After the service", "es": "Después del culto"},
   "Roteiro padrão deste tipo de culto. A Produção ainda pode ajustar os horários.": {"en": "Default order for this type of service. The Production team may still adjust the times.", "es": "Guion estándar de este tipo de culto. Producción todavía puede ajustar los horarios."},

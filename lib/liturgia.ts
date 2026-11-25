@@ -13,11 +13,24 @@ export type ItemLiturgia = {
   especial: boolean;
 };
 
+// Músicas do Louvor do culto (as mesmas do card "Músicas do culto de hoje").
+export type MusicaLiturgia = {
+  ordem: number;
+  titulo: string;
+  artista: string | null;
+  tom: string | null;
+  link: string | null;
+};
+
 export type Liturgia = {
   culto: { id: string; nome: string; scheduled_at: string | null };
   fonte: "culto" | "padrao" | "vazio";
   itens: ItemLiturgia[];
   total_previsto_seg: number | null;
+  // `null` + `musicas_erro` = não deu pra ler; nunca confundir com "nenhuma".
+  // Opcionais: API anterior a 25/11 (tarde) não mandava.
+  musicas?: MusicaLiturgia[] | null;
+  musicas_erro?: boolean;
   pode_editar: boolean;
 };
 

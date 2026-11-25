@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { View, StyleSheet, Linking, Pressable } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, router } from "expo-router";
 import { Text } from "@/components/ui/Typography";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -76,6 +76,9 @@ export function MusicasCulto() {
         {dados?.cultos.map(culto => <View key={culto.id} style={s.culto}>
           <Text style={s.subtitulo}>{culto.name || culto.service_type_name || t("Culto")}</Text>
           <Text style={s.meta}>{new Date(culto.scheduled_at).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" })}</Text>
+          {/* 25/11/2026 · pedido do Marcos: as músicas moram na liturgia; este
+              card segue sendo onde o Louvor adiciona e leva até ela. */}
+          <Pressable accessibilityRole="button" style={s.secundario} onPress={() => router.push({ pathname: "/liturgia", params: { id: culto.id } } as any)}><Text style={s.acao}>{t("Ver liturgia do culto")}</Text></Pressable>
           {!culto.musicas.length && <Text style={s.meta}>{t("Nenhuma música adicionada para este culto.")}</Text>}
           {culto.musicas.map((m, i) => <View key={m.id} style={s.musica}>
             <Text style={s.subtitulo}>{i + 1}. {m.titulo}</Text>
