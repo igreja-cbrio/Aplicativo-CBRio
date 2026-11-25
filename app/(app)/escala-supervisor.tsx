@@ -35,6 +35,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
+import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, runOnJS } from "react-native-reanimated";
@@ -713,7 +714,20 @@ export default function EscalaSupervisorScreen() {
           <Ionicons name="chevron-back" size={26} color={colors.text} />
         </Pressable>
         <Text style={styles.title}>{t("Montar escala")}</Text>
-        <View style={{ width: 26 }} />
+        {servicoSel ? (
+          // Relógio = liturgia do culto escolhido (25/11/2026 · fase 1, só
+          // leitura). Editar por aqui entra na fase 2.
+          <Pressable
+            onPress={() => router.push({ pathname: "/liturgia", params: { id: servicoSel.id } } as any)}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={t("Ver liturgia do culto")}
+          >
+            <Ionicons name="time-outline" size={24} color={colors.primary} />
+          </Pressable>
+        ) : (
+          <View style={{ width: 26 }} />
+        )}
       </View>
 
       {carregando ? (

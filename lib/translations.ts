@@ -6,6 +6,16 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Liturgia do culto": {"en": "Service order", "es": "Liturgia del culto"},
+  "Liturgia": {"en": "Service order", "es": "Liturgia"},
+  "Ver liturgia do culto": {"en": "See the service order", "es": "Ver la liturgia del culto"},
+  "Especial": {"en": "Special", "es": "Especial"},
+  "Músicas": {"en": "Songs", "es": "Canciones"},
+  "previsto": {"en": "planned", "es": "previsto"},
+  "Pós-culto": {"en": "After the service", "es": "Después del culto"},
+  "Roteiro padrão deste tipo de culto. A Produção ainda pode ajustar os horários.": {"en": "Default order for this type of service. The Production team may still adjust the times.", "es": "Guion estándar de este tipo de culto. Producción todavía puede ajustar los horarios."},
+  "A liturgia deste culto ainda não foi montada.": {"en": "The order for this service has not been set yet.", "es": "La liturgia de este culto todavía no fue armada."},
+  "Não foi possível carregar a liturgia agora.": {"en": "Could not load the service order right now.", "es": "No se pudo cargar la liturgia ahora."},
   "Músicas do culto de hoje": {"en": "Today's worship songs", "es": "Canciones del culto de hoy"},
   "Não foi possível salvar a música. Tente novamente.": {"en": "Could not save the song. Please try again.", "es": "No se pudo guardar la canción. Inténtalo de nuevo."},
   "Não foi possível remover a música. Tente novamente.": {"en": "Could not remove the song. Please try again.", "es": "No se pudo quitar la canción. Inténtalo de nuevo."},

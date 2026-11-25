@@ -34,6 +34,7 @@ import { router, type Href } from "expo-router";
  *   │   ├── /grupo-inscricoes  /grupo-editar
  *   ├── /voluntariado      barra: Servir
  *   │   ├── /escala-supervisor
+ *   │   ├── /liturgia          (liturgia do culto · só leitura)
  *   │   └── /checkin-voluntarios   (só no dia do culto)
  *   ├── /cuidados          barra
  *   ├── /devocional        barra (casa de 5 portas · 23/09/2026)
@@ -91,6 +92,9 @@ const PAI: Record<string, string> = {
 
   // servir
   "/escala-supervisor": "/voluntariado",
+  // Liturgia do culto (25/11/2026): abre do card da escala e de Montar escala;
+  // nos dois casos o "cd .." volta para o Servir.
+  "/liturgia": "/voluntariado",
   // Check-in do supervisor: entra PELA aba Servir (pedido do Matheus, 25/08),
   // então o pai é /voluntariado — não /escala-supervisor, que é irmã.
   "/checkin-voluntarios": "/voluntariado",
