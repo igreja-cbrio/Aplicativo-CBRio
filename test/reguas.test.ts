@@ -232,10 +232,10 @@ describe("hierarquia · a árvore do `cd ..`", () => {
     expect(rotaPai("/kids-eventos")).toBe("/kids-mural");
   });
 
-  it("KIDS é o menu: /kids-area sobe pra /familia e o check-in (/kids) sobe pra Área", () => {
+  it("KIDS volta ao menu principal e o check-in volta à aba Kids", () => {
     subirUmNivel("/kids-area");
     subirUmNivel("/kids");
-    expect(navegacoes).toEqual(["/familia", "/kids-area"]);
+    expect(navegacoes).toEqual(["/menu", "/kids-area"]);
   });
 
   it("subirUmNivel navega pro pai (é o que a seta e o botão físico chamam)", () => {
