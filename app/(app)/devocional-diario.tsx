@@ -37,7 +37,7 @@ import {
   type CheckinDevocional,
 } from "@/lib/devocional";
 import { compartilharDevocional } from "@/lib/devocionalShare";
-import { mensagemDoErro } from "@/lib/devocional";
+import { mensagemDoErro, registrarConteudoVisto } from "@/lib/devocional";
 import { useFonteLeitura } from "@/lib/useFonteLeitura";
 import { ControleFonte } from "@/components/devocional/ControleFonte";
 import { PassagemBiblica, TextoDevocional } from "@/components/devocional/TextoLeitura";
@@ -292,7 +292,7 @@ export default function DevocionalDiarioScreen() {
               <View key={item.id} style={styles.cardDevocional}>
                 <Text style={styles.devTitulo}>{item.titulo}</Text>
                 {item.passagem && !item.passagem_texto && <Text style={styles.passagemRef}>{item.passagem}</Text>}
-                <VideoDevocional url={item.video_url} />
+                <VideoDevocional url={item.video_url} onFim={() => registrarConteudoVisto("Vídeo · " + (item.titulo ?? "devocional")).catch(() => undefined)} />
                 {/* Passagem em "papel" (estética da aba Bíblia) + texto em
                     parágrafos curtos, com o A−/A+ (24/09/2026). */}
                 {item.passagem_texto && (

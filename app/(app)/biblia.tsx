@@ -17,6 +17,7 @@ import { useFonteLeitura } from "@/lib/useFonteLeitura";
 import { escalar } from "@/lib/fonteLeitura";
 import { FONTE_SERIF } from "@/lib/fonteSerif";
 import { ControleFonte } from "@/components/devocional/ControleFonte";
+import { chegouAoFim } from "@/lib/fimDeLeitura";
 
 const CORES = [{ nome: "amarelo" as const, cor: "#F8E59A" }, { nome: "azul" as const, cor: "#BFDDEA" }, { nome: "verde" as const, cor: "#CDE2C2" }, { nome: "rosa" as const, cor: "#EAC6D2" }];
 export default function Biblia() {
@@ -31,6 +32,9 @@ export default function Biblia() {
   const [versao, setVersao] = useState<VersaoBiblica>(VERSOES_BIBLIA[0]), [versoesAbertas, setVersoesAbertas] = useState(false);
   const [marcacoes, setMarcacoes] = useState<Record<number, string>>({});
   const scrollRef = useRef<ScrollView>(null);
+  // Investir (25/11/2026): o capítulo conta quando a pessoa chega ao FIM dele.
+  // Uma vez por capítulo aberto; as medidas vêm da própria rolagem.
+  const contado = useRef<string | null>(null), alturaVisivel = useRef(0), alturaConteudo = useRef(0);
   const restaurouUltima = useRef(false);
   const normalizar = (v: string) => v.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
   const livrosFiltrados = LIVROS_BIBLIA.filter(l => normalizar(l.nome).includes(normalizar(busca)));
@@ -67,13 +71,21 @@ export default function Biblia() {
       setMarcacoes(mapa);
       setLivro(livroAlvo); setVersiculos(versos); setCapitulo(numero); setSelecionados([]);
       scrollRef.current?.scrollTo({ y: 0, animated: false });
-      if (membro?.membroId) await registrarLeituraBiblia(membro.membroId, livroAlvo.nome + " " + numero);
+      contado.current = null; alturaConteudo.current = 0;
     } catch { Alert.alert(t("Erro"), t("Não foi possível carregar este capítulo. Confira a internet e tente de novo, ou escolha outra versão.")); }
     finally { setCarregando(false); }
   }
   async function trocarVersao(nova: VersaoBiblica) {
     setVersao(nova); setVersoesAbertas(false);
     if (capitulo) await abrirCapitulo(capitulo, livro, nova);
+  }
+  function conferirFim(rolagem: number) {
+    if (!livro || !capitulo || !versiculos.length || !membro?.membroId) return;
+    const chave = livro.nome + " " + capitulo;
+    if (contado.current === chave) return;
+    if (!chegouAoFim({ rolagem, alturaVisivel: alturaVisivel.current, alturaConteudo: alturaConteudo.current, folgaFinal: dockInset + 220 })) return;
+    contado.current = chave;
+    registrarLeituraBiblia(membro.membroId, chave).catch(() => { contado.current = null; });
   }
   function alternar(numero: number) { setSelecionados(v => v.includes(numero) ? v.filter(x => x !== numero) : [...v, numero].sort((a, b) => a - b)); }
   const textoSelecionado = versiculos.filter(v => selecionados.includes(v.verse)).map(v => v.text.trim()).join(" ");
@@ -116,7 +128,11 @@ export default function Biblia() {
       </View> : <Text style={styles.headerTitle} numberOfLines={1}>{titulo}</Text>}
       {capitulo ? <ControleFonte passo={fonte.passo} mudar={fonte.mudar} papel /> : <View style={styles.back} />}
     </View>
-    <ScrollView ref={scrollRef} contentContainerStyle={[styles.content, Boolean(capitulo) && [styles.readerContent, { paddingBottom: dockInset + 220 }]]} showsVerticalScrollIndicator={!capitulo}>
+    <ScrollView ref={scrollRef}
+      onLayout={e => { alturaVisivel.current = e.nativeEvent.layout.height; }}
+      onContentSizeChange={(_, h) => { alturaConteudo.current = h; conferirFim(0); }}
+      onScroll={e => conferirFim(e.nativeEvent.contentOffset.y)} scrollEventThrottle={250}
+      contentContainerStyle={[styles.content, Boolean(capitulo) && [styles.readerContent, { paddingBottom: dockInset + 220 }]]} showsVerticalScrollIndicator={!capitulo}>
       {!livro && <BookList busca={busca} setBusca={setBusca} livros={livrosFiltrados} abrir={setLivro} s={styles} c={colors} t={t} />}
       {livro && !capitulo && <><Text style={styles.eyebrow}>{t("CAPÍTULOS")}</Text><Text style={styles.title}>{livro.nome}</Text><View style={styles.chapters}>{Array.from({ length: livro.capitulos }, (_, i) => <Pressable key={i + 1} style={styles.chapter} onPress={() => abrirCapitulo(i + 1)}><Text style={styles.chapterText}>{i + 1}</Text></Pressable>)}</View></>}
       {carregando && <ActivityIndicator color={colors.primary} size="large" />}
