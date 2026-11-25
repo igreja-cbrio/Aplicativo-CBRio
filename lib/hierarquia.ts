@@ -107,6 +107,12 @@ const PAI: Record<string, string> = {
   "/devocional-plano-dia": "/devocional-plano",
   "/devocional-registros": "/devocional",
   "/devocional-leituras": "/devocional",
+  // Leitura em grupo (25/11/2026): tudo nasce em Planos de leitura; o dia volta
+  // pra tela central da leitura (que precisa do leituraId · PARAMS_QUE_SOBEM).
+  "/devocional-leitura-nova": "/devocional-planos",
+  "/devocional-leitura-entrar": "/devocional-planos",
+  "/devocional-leitura": "/devocional-planos",
+  "/devocional-leitura-dia": "/devocional-leitura",
 
   // menu
   "/perfil": "/menu",
@@ -203,6 +209,7 @@ export function registrarRotaAtual(rota: string, params?: Record<string, unknown
 // senão o plano seria outra instância). Parâmetro ausente simplesmente não sobe.
 const PARAMS_QUE_SOBEM: Record<string, string[]> = {
   "/devocional-plano-dia": ["planoId"],
+  "/devocional-leitura-dia": ["leituraId"],
   // O aviso é da CRIANÇA: voltar sem o `id` abriria a ficha vazia.
   "/kids-aviso": ["id"],
 };

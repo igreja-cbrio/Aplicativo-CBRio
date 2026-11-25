@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- ⚠️⚠️ DEVOCIONAL · LEITURA EM GRUPO (25/11/2026)
 - ⚠️⚠️ DEVOCIONAL · UMA tela pra TODO plano + YouTube dentro do app (25/09/2026 · 2ª leva)
 - ⚠️⚠️ DEVOCIONAL · VÍDEO na leitura + SEMANAS no plano longo (25/09/2026)
 - ⚠️ DEVOCIONAL · voltar da leitura abria "Plano não encontrado" (24/09/2026 · 3ª leva)
@@ -232,3 +233,28 @@ contar no portão de i18n; a leitura da Bíblia tem cores fixas de "papel"
 ## Kids semanal (2026-11-23)
 
 Devocional → Devocionais Kids lista edições por domingo, com título e série. Dados em `/app/kids/devocionais`; PDF privado assinado por ação, sem cache entre contas. Notificação `kids_devocional` abre a semana indicada, inclusive fora da primeira página. Pai da tela é Devocional. Publicação e destinatários são definidos no ERP (Kids → Aplicativo).
+
+## ⚠️⚠️ DEVOCIONAL · LEITURA EM GRUPO (25/11/2026)
+
+Pedido do Marcos: em Planos de leitura, a pessoa escolhe o livro, convida quem quiser,
+escolhe em quantos dias; o sistema divide por dia; cada um marca "Li esse devocional" e
+todos veem quem já leu e quem falta; a tela central mostra as pessoas da leitura.
+Decisões dele: convite por LINK/CÓDIGO (sem busca de membros por nome · não expor a
+lista da igreja), divisão por CAPÍTULOS INTEIROS, sem lembrete por push na v1.
+
+- Telas: `devocional-leitura-nova` (livro → capítulos de/até → dias → início → nome →
+  prévia por dia → "Criar e convidar" abre o Share), `devocional-leitura` (central:
+  hoje, quem está lendo com barra de progresso, todos os dias, convidar, sair/excluir),
+  `devocional-leitura-dia` (texto do dia, "Li esse devocional", JÁ LERAM / FALTA LER) e
+  `devocional-leitura-entrar` (código; destino do link `cbrio://devocional-leitura-entrar?codigo=`).
+  Seção "LEITURA EM GRUPO" em `devocional-planos`.
+- Régua pura `lib/leituraGrupo.ts` (+ `test/leituraGrupo.test.ts`): `dividirLeitura` —
+  dias ≤ capítulos ⇒ capítulos inteiros com corte no acumulado de versículos mais perto
+  do ideal; dias > capítulos ⇒ capítulos maiores partidos em blocos de versículos (o
+  último bloco vai "até o fim", sem `ate`, pra versão com contagem diferente não perder
+  verso). Contagem em `lib/versiculosPorCapitulo.ts` (Bíblia Livre: 1.189 caps, 31.103 versos).
+  A divisão é calculada UMA vez e gravada no banco (`divisao` jsonb).
+- Banco: só RPCs (`devocional_leitura_*`, ERP migration `20261125160000`); as tabelas não
+  têm grant pro app. O servidor recusa marcar dia futuro (BRT), >60 pessoas, >20 leituras
+  em andamento por criador. Marcar lido também grava em "Leituras da Bíblia" (melhor esforço).
+- Não alimenta `mem_devocionais` (KPI do Investir) — decisão em aberto.
