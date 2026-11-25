@@ -193,7 +193,7 @@ describe("travas de texto", () => {
   });
 
   it("a galeria não apaga ao sair da tela e só mostra o guardado depois de carregar o álbum inteiro", () => {
-    const tela = ler("app/(app)/batismo-fotos.tsx");
+    const tela = ler("app/(app)/(principal)/batismo-fotos.tsx");
     // A limpeza do foco (sair da tela) só fecha a busca em andamento: não apaga o resultado.
     expect(tela).toMatch(/return \(\) => \{\s*setBuscaAberta\(false\);\s*\};\s*\}, \[\]\),/);
     expect(tela).toMatch(/carregarTodasParaBusca\(\)\.then\(\s*\(fotos\) => \{[\s\S]{0,400}setResultadoBusca\(guardado\.resultado\)/);
@@ -201,7 +201,7 @@ describe("travas de texto", () => {
   });
 
   it("revisão de 24/11: lista inteira não é trocada por parcial, erro do restauro aparece, poda a cada lista", () => {
-    const tela = ler("app/(app)/batismo-fotos.tsx");
+    const tela = ler("app/(app)/(principal)/batismo-fotos.tsx");
     // Depois da carga completa, uma geração nova descarta carga parcial que começou durante ela.
     expect(tela).toMatch(/setSelecionadas\(\(s\) => new Set\(\[\.\.\.s\]\.filter\(\(x\) => r\.fotos\.some\(\(f\) => f\.id === x\)\)\)\);\s*geracao\.current \+= 1;\s*\}\s*return r\.fotos;/);
     // Restauro que falha não deixa a galeria presa no "carregando".

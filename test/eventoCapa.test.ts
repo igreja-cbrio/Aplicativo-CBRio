@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { URL } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const detalhe = readFileSync(new URL("../app/(app)/evento.tsx", import.meta.url), "utf8");
-const lista = readFileSync(new URL("../app/(app)/inscricoes.tsx", import.meta.url), "utf8");
+const detalhe = readFileSync(new URL("../app/(app)/(principal)/evento.tsx", import.meta.url), "utf8");
+const lista = readFileSync(new URL("../app/(app)/(principal)/inscricoes.tsx", import.meta.url), "utf8");
 
 describe("capas de eventos sem recorte", () => {
   it("mostra a arte inteira no detalhe e na miniatura", () => {

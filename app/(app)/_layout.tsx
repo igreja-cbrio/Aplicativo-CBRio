@@ -1,28 +1,16 @@
-import { HomeTutorial } from "@/components/onboarding/HomeTutorial";
 import { temConviteSupervisor } from '@/lib/supervisorConvitePendente';
 import { useIsFocused } from "@react-navigation/native";
-import { DockInsetContext } from "@/components/navigation/DockContent";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Stack, router, useGlobalSearchParams, usePathname } from "expo-router";
-import { AppState, BackHandler, Platform, View } from "react-native";
+import { AppState, BackHandler, Platform } from "react-native";
 import { KidsThemeProvider } from "@/contexts/KidsThemeContext";
 import { MembroProvider } from "@/contexts/MembroContext";
 import { CadastroGate } from "@/components/auth/CadastroGate";
-import { AppScreenFrame } from "@/components/navigation/AppScreenFrame";
-import { chromeDaTela } from "@/lib/appNavigation";
-import { BottomBar } from "@/components/ui/BottomBar";
-import { ChatFab } from "@/components/chat/ChatFab";
-import { useColors, useTheme } from "@/contexts/ThemeContext";
 import { MenuProvider } from "@/contexts/MenuContext";
-import { StatusBar } from "expo-status-bar";
 import { ehRaiz, registrarRotaAtual, subirUmNivel } from "@/lib/hierarquia";
 import { toqueDeNotificacaoRecente } from "@/lib/notifTap";
 
-/** Só as 7 telas-base mostram o atalho do assistente; detalhe/formulário e o próprio chat nunca. */
-const ROTAS_COM_CHAT_FAB = new Set(["/", "/meu-grupo", "/voluntariado", "/cuidados", "/devocional", "/generosidade", "/menu"]);
-
-/** Navegação comum: marca no topo, menu lateral e atalhos da nova Home. */
+export const unstable_settings = { anchor: "(principal)" };
 
 /**
  * Quanto tempo fora faz o app "começar de novo" na Home ao voltar.
@@ -48,19 +36,11 @@ const ROTAS_COM_CHAT_FAB = new Set(["/", "/meu-grupo", "/voluntariado", "/cuidad
 const MS_PARA_RECOMECAR = 3 * 60 * 1000;
 
 export default function AppLayout() {
-  const colors = useColors();
-  const insets = useSafeAreaInsets();
-  const [dockHeight, setDockHeight] = useState(78 + Math.max(insets.bottom, 12));
-  const { mode } = useTheme();
   const pathname = usePathname();
   const focused = useIsFocused();
   const focusRef = useRef(focused);
   focusRef.current = focused;
   const paramsGlobais = useGlobalSearchParams();
-
-  // Onboarding é a única tela sem casca: quem está completando o cadastro não
-  // deve ter atalho pra sair pelo rodapé.
-  const semBarra = !chromeDaTela(pathname).dock;
 
   // Rota atual num ref: o listener de AppState é montado UMA vez e leria um
   // pathname congelado se dependesse do closure.
@@ -130,55 +110,14 @@ export default function AppLayout() {
   return (
     <MembroProvider>
       <KidsThemeProvider><MenuProvider>
-      {/* Portão de cadastro: quem entrou sem cadastro de gente (nome real +
-          telefone + nascimento) é levado a /completar-cadastro. Não bloqueia
-          render — só navega quando o servidor confirma que falta algo. */}
-      <CadastroGate>
-        <HomeTutorial>
-        <View style={{ flex: 1, backgroundColor: colors.background }}>
-          {!semBarra && <StatusBar style={pathname === "/" || mode === "dark" ? "light" : "dark"} />}
-
-          {/* Conteúdo ocupa a tela inteira e passa por trás do dock. */}
-          <View style={{ flex: 1 }}>
-            <DockInsetContext.Provider value={dockHeight}>
-            <Stack
-              screenLayout={({ route, children }) => <AppScreenFrame rota={route.name}>{children}</AppScreenFrame>}
-              screenOptions={{
-                headerShown: false,
-                freezeOnBlur: true,
-                animation: "ios_from_right",
-                animationDuration: 180,
-              }}
-            >
-              {/* ⚠️ TROCA DE ABA NÃO DESLIZA (11/08/2026 · "a navegação tá
-                  travada"). `ios_from_right` significa "entrei um nível" — e
-                  entre as 5 telas da barra ninguém entra em nada: elas são
-                  IRMÃS. Deslizar 280 ms lateralmente a cada toque na barra é o
-                  que dava peso; barra de abas em qualquer app troca na hora.
-                  ⚠️ A Home entra na lista porque a seta VOLTA pra ela dessas
-                  telas — se ela animasse, a ida seria instantânea e a volta não,
-                  o que se lê como lentidão de novo.
-                  ⚠️ As telas de PROFUNDIDADE (perfil, cartões, kids, evento…)
-                  seguem com o `ios_from_right` do screenOptions: ali o
-                  deslizamento é a informação de que se desceu um nível. */}
-              <Stack.Screen name="index" options={{ animation: "none" }} />
-              <Stack.Screen name="meu-grupo" options={{ animation: "none" }} />
-              <Stack.Screen name="voluntariado" options={{ animation: "none" }} />
-              <Stack.Screen name="cuidados" options={{ animation: "none" }} />
-              <Stack.Screen name="devocional" options={{ animation: "none" }} />
-              <Stack.Screen name="generosidade" options={{ animation: "none" }} />
-              <Stack.Screen name="menu" options={{ animation: "none" }} />
-            </Stack>
-            </DockInsetContext.Provider>
-          </View>
-
-          {ROTAS_COM_CHAT_FAB.has(pathname) && <ChatFab bottomOffset={dockHeight} />}
-
-          {/* Uma única instância fora do Stack, inclusive na Home e durante o gesto de voltar. */}
-          {!semBarra && <BottomBar onLayout={(event) => setDockHeight(event.nativeEvent.layout.height)} />}
-        </View>
-      </HomeTutorial>
-      </CadastroGate>
+        <CadastroGate>
+          {/* O chat cobre a casca inteira. O dock continua montado na tela abaixo,
+              e o UIKit o revela junto com ela durante o gesto, inclusive cancelado. */}
+          <Stack screenOptions={{ headerShown: false, animation: "ios_from_right", animationDuration: 180 }}>
+            <Stack.Screen name="(principal)" options={{ animation: "none" }} />
+            <Stack.Screen name="fale-conosco-chat" />
+          </Stack>
+        </CadastroGate>
       </MenuProvider></KidsThemeProvider>
     </MembroProvider>
   );

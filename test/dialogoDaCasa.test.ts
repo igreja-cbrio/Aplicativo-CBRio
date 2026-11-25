@@ -121,7 +121,7 @@ describe("diálogo da casa: confirmação nativa só onde há um PORQUÊ listado
   });
 
   it("os Aprovar das duas telas de pedidos são do diálogo da casa, não Alert.alert", () => {
-    for (const tela of ["app/(app)/grupo-membros.tsx", "app/(app)/grupo-inscricoes.tsx"]) {
+    for (const tela of ["app/(app)/(principal)/grupo-membros.tsx", "app/(app)/(principal)/grupo-inscricoes.tsx"]) {
       const src = semComentarios(ler(tela));
       expect(src).toContain('titulo: t("Aceitar inscrição")');
       expect(alertasDe(src).some((a) => a.titulo.includes("Aceitar inscrição")), `${tela} voltou a confirmar com Alert.alert`).toBe(false);
@@ -185,7 +185,7 @@ describe("rolar até o campo: FormularioRolavel nas portas e o gancho no Input",
   });
 
   it("as três portas (login, cadastro, completar cadastro) usam FormularioRolavel, não ScrollView crua", () => {
-    for (const tela of ["app/(auth)/login.tsx", "app/(auth)/cadastro.tsx", "app/(app)/completar-cadastro.tsx"]) {
+    for (const tela of ["app/(auth)/login.tsx", "app/(auth)/cadastro.tsx", "app/(app)/(principal)/completar-cadastro.tsx"]) {
       const src = semComentarios(ler(tela));
       expect(src, tela).toContain("<FormularioRolavel");
       expect(src, `${tela} ainda abre <ScrollView`).not.toMatch(/<ScrollView[\s>]/);

@@ -11,7 +11,7 @@ describe("menu lateral e atalhos do app", () => {
     const destinations = items.map((item) => item.href);
     expect(new Set(destinations).size).toBe(destinations.length);
     for (const href of destinations) {
-      expect(existsSync(resolve("app/(app)", href === "/" ? "index.tsx" : `${href.slice(1)}.tsx`)), href).toBe(true);
+      expect(existsSync(resolve("app/(app)/(principal)", href === "/" ? "index.tsx" : `${href.slice(1)}.tsx`)), href).toBe(true);
     }
   });
   it("mantém acessíveis recursos retirados do antigo bloco da Home", () => {

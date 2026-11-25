@@ -19,7 +19,7 @@ describe("toque em push × volta para a Home", () => {
     expect(ler("lib/notifTap.ts")).toMatch(/ultimoToqueEm = 0;\s*trackEvento\("notif_tap_sem_destino"/);
   });
   it("criar conta segura o portão de atualização (mesma bandeira do completar-cadastro); o login NÃO", () => {
-    for (const p of ["app/(auth)/cadastro.tsx", "app/(app)/completar-cadastro.tsx"]) {
+    for (const p of ["app/(auth)/cadastro.tsx", "app/(app)/(principal)/completar-cadastro.tsx"]) {
       expect(ler(p), p).toMatch(/useEffect\(\(\) => \{\s*abrirFichaCadastro\(\);\s*return \(\) => \{ fecharFichaCadastro\(\); \};\s*\}, \[\]\);/);
     }
     // No login a 1ª abertura precisa aplicar o OTA (conserto de 29/08: "instalei e veio a versão antiga").

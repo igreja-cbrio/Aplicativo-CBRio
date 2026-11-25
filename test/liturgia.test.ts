@@ -37,18 +37,18 @@ describe('liturgia do culto · telas', () => {
     expect(rotaPai('/liturgia', { id: 'x' })).toBe('/voluntariado');
   });
   it('a tela é só leitura: não chama verbo de escrita', () => {
-    const s = semComentarios(readFileSync('app/(app)/liturgia.tsx', 'utf8'));
+    const s = semComentarios(readFileSync('app/(app)/(principal)/liturgia.tsx', 'utf8'));
     expect(s).toContain('rotaLiturgia(');
     expect(s).toContain('useFocusEffect');
     expect(s).not.toMatch(/api(Post|Patch|Put|Delete)/);
   });
   it('card da escala abre a liturgia pelo culto que o servidor mandou', () => {
-    const s = semComentarios(readFileSync('app/(app)/voluntariado.tsx', 'utf8'));
+    const s = semComentarios(readFileSync('app/(app)/(principal)/voluntariado.tsx', 'utf8'));
     expect(s).toContain('service_id: e.service_id ?? null');
     expect(s).toMatch(/pathname: "\/liturgia", params: \{ id: e\.service_id/);
   });
   it('a liturgia mostra as músicas do Louvor, com link checado e erro dito', () => {
-    const s = semComentarios(readFileSync('app/(app)/liturgia.tsx', 'utf8'));
+    const s = semComentarios(readFileSync('app/(app)/(principal)/liturgia.tsx', 'utf8'));
     expect(s).toContain('dados.musicas_erro');
     expect(s).toContain('linkMusicaSeguro(m.link)');
     expect(s).toContain('Não foi possível carregar as músicas.');
@@ -58,7 +58,7 @@ describe('liturgia do culto · telas', () => {
     expect(s).toMatch(/pathname: "\/liturgia", params: \{ id: culto\.id/);
   });
   it('Montar escala tem o relógio do culto escolhido', () => {
-    const s = semComentarios(readFileSync('app/(app)/escala-supervisor.tsx', 'utf8'));
+    const s = semComentarios(readFileSync('app/(app)/(principal)/escala-supervisor.tsx', 'utf8'));
     expect(s).toMatch(/pathname: "\/liturgia", params: \{ id: servicoSel\.id/);
   });
 });

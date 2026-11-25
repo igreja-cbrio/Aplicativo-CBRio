@@ -1934,8 +1934,8 @@ describe("diálogos nativos que ficam", () => {
   it("⚠️ o diálogo é IRMÃO: quem usa o hook renderiza <dlg.Dialogo />", () => {
     // Chamar `confirmar()` sem montar o componente devolve uma promise que nunca
     // resolve — o fluxo trava em silêncio, sem erro nenhum na tela.
-    const telas = ["app/(app)/grupo-detalhe.tsx", "app/(app)/apresentacao-crianca.tsx",
-      "app/(app)/falar-com-a-igreja.tsx", "app/(app)/inscricao-batismo.tsx"];
+    const telas = ["app/(app)/(principal)/grupo-detalhe.tsx", "app/(app)/(principal)/apresentacao-crianca.tsx",
+      "app/(app)/(principal)/falar-com-a-igreja.tsx", "app/(app)/(principal)/inscricao-batismo.tsx"];
     for (const tela of telas) {
       const src = ler(tela);
       if (!src) continue;
@@ -2009,7 +2009,7 @@ describe("aviso do certificado do Kids · os DOIS mapas entendem o tipo", () => 
   };
   it("⚠️⚠️ MUTATION GUARD · push e lista roteiam o tipo, com ícone e chip Kids", () => {
     expect(semComentarios(ler("lib/notifTap.ts")), "notifTap não roteia o tipo").toContain(`"${TIPO}"`);
-    const lista = semComentarios(ler("app/(app)/notificacoes.tsx"));
+    const lista = semComentarios(ler("app/(app)/(principal)/notificacoes.tsx"));
     expect(lista, "a lista não trata o tipo").toContain(`"${TIPO}"`);
     expect(lista, "sem ícone").toContain(`${TIPO}: "ribbon"`);
     expect(lista, "sem categoria Kids").toContain(`${TIPO}: "Kids"`);
@@ -2027,11 +2027,11 @@ describe("aviso de grupo · o app tem que rotear o tipo que o ERP manda", () => 
     // diferentes e já divergiram antes; um aviso que chega e não abre tela é o
     // mesmo que não avisar.
     expect(semComentarios(ler("lib/notifTap.ts")), "notifTap não roteia o tipo").toContain(`"${TIPO}"`);
-    expect(semComentarios(ler("app/(app)/notificacoes.tsx")), "a lista não trata o tipo").toContain(`"${TIPO}"`);
+    expect(semComentarios(ler("app/(app)/(principal)/notificacoes.tsx")), "a lista não trata o tipo").toContain(`"${TIPO}"`);
   });
 
   it("o aviso aparece com ícone e cai no chip certo — senão vira 'Outros'", () => {
-    const src = semComentarios(ler("app/(app)/notificacoes.tsx"));
+    const src = semComentarios(ler("app/(app)/(principal)/notificacoes.tsx"));
     // ⚠️ Sem regex de propósito: `\s` dentro de template literal vira `s` e o
     // teste passa a procurar outra coisa (foi o que aconteceu na 1ª versão).
     expect(src, "sem ícone, o aviso aparece sem símbolo na lista").toContain(`${TIPO}: "`);
@@ -2581,7 +2581,7 @@ describe("batismo · escolher a data (#177 · 26/09/2026)", () => {
   const ler = (rel: string): string => {
     try { return readFileSync(join(raiz, rel), "utf8"); } catch { return ""; }
   };
-  const TELA = "app/(app)/inscricao-batismo.tsx";
+  const TELA = "app/(app)/(principal)/inscricao-batismo.tsx";
   // ⚠️ Sem comentário: a explicação cita o código errado como exemplo, e a
   // contagem crua leria a explicação como uso (armadilha de 11/08).
   const src = () => semComentarios(ler(TELA));

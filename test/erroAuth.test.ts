@@ -51,7 +51,7 @@ describe("textos", () => {
 
 describe("as telas usam o tradutor (nada de e.message cru)", () => {
   const ler = (p: string) => semComentarios(readFileSync(join(__dirname, "..", p), "utf8"));
-  it.each(["app/(auth)/cadastro.tsx", "app/(app)/trocar-senha.tsx", "app/(auth)/redefinir-senha.tsx"])("%s", (p) => {
+  it.each(["app/(auth)/cadastro.tsx", "app/(app)/(principal)/trocar-senha.tsx", "app/(auth)/redefinir-senha.tsx"])("%s", (p) => {
     const fonte = ler(p);
     expect(fonte).toContain("mensagemErroAuth(e,");
     expect(fonte).not.toMatch(/e instanceof Error \? e\.message/);

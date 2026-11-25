@@ -13,14 +13,15 @@ import { useTheme } from "@/contexts/ThemeContext";
 
 const TARGETS: TutorialTargetId[] = ["care", "devotional", "groups", "serve", "giving"];
 
-export function QuickLinks() {
+export function QuickLinks({ rota }: { rota?: string } = {}) {
   const tutorial = useTutorial();
   const tutorialIndex = tutorial?.highlightedTarget ? TARGETS.indexOf(tutorial.highlightedTarget) : -1;
   const scrollRef = useRef<ScrollView>(null);
   const { width, fontScale } = useWindowDimensions();
   const { fontMultiplier } = useTheme();
   const scroll = width < 360 || fontScale * fontMultiplier > 1.2;
-  const pathname = usePathname(), t = useT();
+  const globalPathname = usePathname(), t = useT();
+  const pathname = rota ?? globalPathname;
   const labels = useMemo(() => QUICK_LINKS.map(item => t(item.label)), [t]);
   // Só a versão que contém o controle UIKit usa a interação nativa. A OTA é
   // segura em binários antigos: nenhum gesto/lupa customizado é simulado.

@@ -5,7 +5,7 @@ import { QuickLinks } from "@/components/navigation/QuickLinks";
 
 export const BOTTOMBAR_H = 68;
 /** Atalhos flutuam sobre a tela; a área fora da cápsula deixa os gestos passarem. */
-export function BottomBar({ onLayout }: { onLayout?: (event: LayoutChangeEvent) => void }) {
+export function BottomBar({ onLayout, rota }: { rota?: string; onLayout?: (event: LayoutChangeEvent) => void }) {
   const insets = useSafeAreaInsets();
   const [keyboard, setKeyboard] = useState(false);
   useEffect(() => {
@@ -14,5 +14,5 @@ export function BottomBar({ onLayout }: { onLayout?: (event: LayoutChangeEvent) 
     return () => { show.remove(); hide.remove(); };
   }, []);
   if (keyboard) return null;
-  return <View pointerEvents="box-none" onLayout={onLayout} style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 10, paddingHorizontal: Math.max(insets.left, insets.right), paddingBottom: Math.max(insets.bottom, 12), backgroundColor: "transparent" }}><View style={{ width: "100%", maxWidth: 720, alignSelf: "center" }}><QuickLinks /></View></View>;
+  return <View pointerEvents="box-none" onLayout={onLayout} style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 10, paddingHorizontal: Math.max(insets.left, insets.right), paddingBottom: Math.max(insets.bottom, 12), backgroundColor: "transparent" }}><View style={{ width: "100%", maxWidth: 720, alignSelf: "center" }}><QuickLinks rota={rota} /></View></View>;
 }

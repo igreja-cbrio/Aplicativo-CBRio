@@ -46,7 +46,7 @@ describe('ação no chat', () => {
   });
   it('espelho do ERP: as telas da lista existem no app', async () => {
     const fs = await import('node:fs');
-    for (const destino of DESTINOS_TELA) expect(fs.existsSync(`app/(app)${destino}.tsx`), destino).toBe(true);
+    for (const destino of DESTINOS_TELA) expect(fs.existsSync(`app/(app)/(principal)${destino}.tsx`), destino).toBe(true);
   });
 });
 
