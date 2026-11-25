@@ -1,38 +1,44 @@
 import { ScrollView } from "@/components/navigation/DockContent";
-import { Text, TextInput } from "@/components/ui/Typography";
+import { Text } from "@/components/ui/Typography";
 import { useMemo, useState } from "react";
 import {
-  Alert,
+  Platform,
   Linking,
   Pressable,
   StyleSheet,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, router, useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/ui/Button";
 import { useColors } from "@/contexts/ThemeContext";
-import { useAuth } from "@/contexts/AuthContext";
-import { useMembro } from "@/lib/useMembro";
-import { criarInscricao } from "@/lib/inscricoes";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { abrirMapaIgreja, ENDERECO_IGREJA, type AplicativoMapa } from "@/lib/igrejaLocalizacao";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 
 const WHATSAPP = "https://wa.me/5521997567770";
 const INSTAGRAM = "https://instagram.com/igrejacbrio";
 const EMAIL = "contato@cbrio.com.br";
-const MAPS = "https://maps.apple.com/?q=CBRio+Barra+da+Tijuca";
+
 
 export default function FaleConoscoScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const t = useT();
-  const { user } = useAuth();
-  const { membro } = useMembro();
+  const [mostrarMapas, setMostrarMapas] = useState(false);
+  const [abrindoMapa, setAbrindoMapa] = useState(false);
+  const [erroMapa, setErroMapa] = useState(false);
+  async function abrirMapa(app: AplicativoMapa) {
+    if (abrindoMapa) return;
+    setAbrindoMapa(true); setErroMapa(false);
+    try { await abrirMapaIgreja(app, Platform.OS, url => Linking.openURL(url)); }
+    catch { setErroMapa(true); }
+    finally { setAbrindoMapa(false); }
+  }
 
 
 
@@ -72,8 +78,16 @@ export default function FaleConoscoScreen() {
             <Canal icon="logo-whatsapp" label="WhatsApp" onPress={() => Linking.openURL(WHATSAPP)} colors={colors} styles={styles} t={t} />
             <Canal icon="mail" label="E-mail" onPress={() => Linking.openURL(`mailto:${EMAIL}`)} colors={colors} styles={styles} t={t} />
             <Canal icon="logo-instagram" label="Instagram" onPress={() => Linking.openURL(INSTAGRAM)} colors={colors} styles={styles} t={t} />
-            <Canal icon="location" label={t("Como chegar")} onPress={() => Linking.openURL(MAPS)} colors={colors} styles={styles} t={t} />
+            <Canal icon="location" label={t("Como chegar")} onPress={() => { setMostrarMapas(v => !v); setErroMapa(false); }} colors={colors} styles={styles} t={t} />
           </View>
+
+          {mostrarMapas && <View style={styles.card}>
+            <Text style={styles.cardTitle}>{t("Como chegar")}</Text>
+            <Text style={styles.cardText}>{t(ENDERECO_IGREJA)}</Text>
+            <Button title={t("Mapas do celular")} onPress={() => abrirMapa('mapas')} disabled={abrindoMapa} />
+            <Button title={t("Waze")} variant="ghost" onPress={() => abrirMapa('waze')} disabled={abrindoMapa} />
+            {erroMapa && <Text accessibilityLiveRegion="polite" style={styles.cardText}>{t("Não foi possível abrir o mapa. Tente novamente ou use o endereço acima.")}</Text>}
+          </View>}
 
           {/* ⚠️⚠️ O FORMULÁRIO SAIU DAQUI (11/08/2026 · apontamento 14). Ele era
               a QUARTA porta de preenchimento do app, e a mais escondida — quatro
