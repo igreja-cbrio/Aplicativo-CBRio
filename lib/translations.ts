@@ -6,6 +6,12 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Apenas alguns grupos ainda estão abertos para inscrição. As inscrições para a nova temporada de grupos abrirão em 2027.": { en: "Only a few groups are still open for registration. Registration for the new group season will open in 2027.", es: "Solo algunos grupos siguen abiertos para inscripción. Las inscripciones para la nueva temporada de grupos abrirán en 2027." },
+  "Este grupo não está recebendo inscrições no momento.": { en: "This group is not accepting registrations at the moment.", es: "Este grupo no está recibiendo inscripciones en este momento." },
+  "Nenhum grupo aberto para inscrição encontrado.": { en: "No groups open for registration found.", es: "No se encontraron grupos abiertos para inscripción." },
+  "Copiar chave Pix": { en: "Copy Pix key", es: "Copiar clave Pix" },
+  "Copie a chave e cole na opção Pix do seu banco. Informe o valor e confira os dados antes de confirmar.": { en: "Copy the key and paste it into the Pix option in your banking app. Enter the amount and check the details before confirming.", es: "Copia la clave y pégala en la opción Pix de tu banco. Introduce el importe y verifica los datos antes de confirmar." },
+  "Não foi possível copiar. Toque e segure a chave acima para copiá-la.": { en: "Could not copy. Touch and hold the key above to copy it.", es: "No se pudo copiar. Mantén pulsada la clave de arriba para copiarla." },
   "Ver liturgia do culto (falta completar)": {"en": "See the service order (needs completing)", "es": "Ver la liturgia del culto (falta completar)"},
   "Autorizações para a cerimônia": {"en": "Ceremony authorizations", "es": "Autorizaciones para la ceremonia"},
   "Carregando autorizações…": {"en": "Loading authorizations…", "es": "Cargando autorizaciones…"},

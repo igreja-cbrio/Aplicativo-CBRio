@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Grupos abertos e próxima temporada (2026-11-25)
 - ⚠️⚠️ GRUPOS · os 3 ajustes pedidos pelos LÍDERES na reunião (21/09/2026)
 - ⚠️⚠️ GERENCIAR GRUPO · o botão "Recusar" NÃO FAZIA NADA há 7 semanas (23/09/2026)
 - ✅ NEW HEART · o "só homens" era INTENCIONAL (Marcos · 11/08/2026)
@@ -658,3 +659,8 @@ Dois relatos do Marcos:
    Estados normal/registrado ficam como estavam (lá o herói já fala do próximo).
 
 Só tela → precisa de OTA (`npm run ota -- "msg"`).
+
+
+## Grupos abertos e próxima temporada (2026-11-25)
+
+A busca mantém a régua do backend `/public/grupos/buscar`, sem filtro de capacidade. Exibe aviso de que apenas alguns grupos seguem abertos e de que a nova temporada abrirá inscrições em 2027, conforme pedido do Matheus. Lista e mapa mostram erro em falha de atualização; voltar ao app atualiza a busca. Detalhe só oferece inscrição quando o ID está na lista canônica de `/public/grupos/app-inscricao`; temporada aberta sozinha não libera um grupo fechado.

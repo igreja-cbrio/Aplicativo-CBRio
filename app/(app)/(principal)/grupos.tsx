@@ -1,8 +1,9 @@
 import { ScrollView } from "@/components/navigation/DockContent";
 import { ValorHeader } from "@/components/ui/ValorHeader";
 import { Text, TextInput } from "@/components/ui/Typography";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AppState,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -120,6 +121,7 @@ export function BuscadorGrupos({ embutido = false }: { embutido?: boolean }) {
   const { membro } = useMembro();
   const t = useT();
 
+  const cargaAtual = useRef(0);
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [meusIds, setMeusIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -136,14 +138,17 @@ export function BuscadorGrupos({ embutido = false }: { embutido?: boolean }) {
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
 
   const carregar = useCallback(async () => {
+    const carga = ++cargaAtual.current;
     setLoading(true);
     try {
       const data = await buscarGruposPublico();
+      if (carga !== cargaAtual.current) return;
       setFalhou(false);
       setGrupos(data ?? []);
     } catch {
       // Erro de rede/servidor NÃO pode virar "Nenhum grupo encontrado" — o
       // usuário acreditava que não havia grupos. Marca a falha pra tela avisar.
+      if (carga !== cargaAtual.current) return;
       setFalhou(true);
     }
 
@@ -154,9 +159,10 @@ export function BuscadorGrupos({ embutido = false }: { embutido?: boolean }) {
         .eq("membro_id", membro.membroId)
         .is("saiu_em", null)
         .is("deleted_at", null);
+      if (carga !== cargaAtual.current) return;
       setMeusIds((meus ?? []).map((m) => m.grupo_id as string));
     }
-    setLoading(false);
+    if (carga === cargaAtual.current) setLoading(false);
   }, [membro?.membroId]);
 
   // ⚠️ RECARREGA AO FOCAR (05/08/2026): o web e o app leem o MESMO banco, mas
@@ -166,6 +172,13 @@ export function BuscadorGrupos({ embutido = false }: { embutido?: boolean }) {
   useFocusEffect(
     useCallback(() => {
       carregar();
+      const subscription = AppState.addEventListener("change", (state) => {
+        if (state === "active") carregar();
+      });
+      return () => {
+        subscription.remove();
+        cargaAtual.current += 1;
+      };
     }, [carregar])
   );
 
@@ -320,6 +333,13 @@ export function BuscadorGrupos({ embutido = false }: { embutido?: boolean }) {
         )}
         {!embutido && <ValorHeader rotulo={t("Encontrar um grupo")} style={{ marginBottom: 0 }} />}
 
+        <View style={styles.avisoInscricoes}>
+          <Ionicons name="information-circle-outline" size={20} color={colors.brandMid} />
+          <Text style={styles.avisoInscricoesTxt}>
+            {t("Apenas alguns grupos ainda estão abertos para inscrição. As inscrições para a nova temporada de grupos abrirão em 2027.")}
+          </Text>
+        </View>
+
         <View style={styles.toggle}>
           <Pressable
             style={[styles.toggleItem, view === "lista" && styles.toggleItemSel]}
@@ -400,6 +420,8 @@ export function BuscadorGrupos({ embutido = false }: { embutido?: boolean }) {
 
       {loading ? (
         <Text style={styles.muted}>{t("Carregando…")}</Text>
+      ) : falhou ? (
+        <ErrorState onRetry={carregar} />
       ) : view === "mapa" ? (
         <View style={styles.mapWrap}>
           <GruposMapa
@@ -429,10 +451,8 @@ export function BuscadorGrupos({ embutido = false }: { embutido?: boolean }) {
             </Text>
           )}
 
-          {filtrados.length === 0 && falhou ? (
-            <ErrorState onRetry={carregar} />
-          ) : filtrados.length === 0 ? (
-            <Text style={styles.muted}>{t("Nenhum grupo encontrado.")}</Text>
+          {filtrados.length === 0 ? (
+            <Text style={styles.muted}>{t("Nenhum grupo aberto para inscrição encontrado.")}</Text>
           ) : (
             secoes.map(({ categoria, itens }) => (
               <View key={categoria} style={{ gap: spacing.sm }}>
@@ -461,6 +481,12 @@ export default function GruposScreen() {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
+    avisoInscricoes: {
+      flexDirection: "row", alignItems: "flex-start", gap: spacing.sm,
+      padding: spacing.md, borderRadius: radius.md,
+      backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.glassBorder,
+    },
+    avisoInscricoesTxt: { flex: 1, color: colors.text, fontSize: font.size.sm, lineHeight: 20 },
     safe: { flex: 1, backgroundColor: colors.background },
     header: { padding: spacing.lg, paddingBottom: spacing.md, gap: spacing.md },
     // ⚠️ Era `paddingTop: 0` e o toggle Lista|Mapa colava nas abas de cima

@@ -18,6 +18,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { supabase } from "@/lib/supabase";
 import { pedirEntrarGrupo } from "@/lib/grupos";
+import { grupoAbertoParaInscricao } from "@/lib/grupoInscricaoDisponivel";
 import { getTemporadaGrupos } from "@/lib/temporadaGrupos";
 import { useAdminGrupo } from "@/lib/useAdminGrupo";
 import { useT } from "@/lib/i18n";
@@ -121,7 +122,7 @@ export default function GrupoDetalheScreen() {
     // grupo que estava aberto, e nada indicava que era erro.
     const temporada = await getTemporadaGrupos();
     if (temporada.falhou) { setEstado("erro"); return; }
-    if (!temporada.aberta) { setEstado("fechada"); return; }
+    if (!grupoAbertoParaInscricao(temporada, id)) { setEstado("fechada"); return; }
     // ⚠️ O BACKEND recusa inscrição sem CPF (Contrato de porta · desde
     // 24/07/2026: `POST /app/inscricoes` devolve 400 "CPF é obrigatório").
     // Medido em 05/08/2026: **50 das 75 contas do app** apontam pra cadastro
@@ -272,7 +273,7 @@ export default function GrupoDetalheScreen() {
               <View style={styles.statusOk}>
                 <Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} />
                 <Text style={styles.statusOkTxt}>
-                  {t("As inscrições de grupos estão fechadas. Avisaremos quando a temporada abrir.")}
+                  {t("Este grupo não está recebendo inscrições no momento.")}
                 </Text>
               </View>
             ) : estado === "erro" ? (

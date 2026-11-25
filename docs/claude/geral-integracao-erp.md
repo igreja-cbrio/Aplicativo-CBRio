@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Generosidade com chave Pix (2026-11-25)
 - Como chegar: endereço e escolha de aplicativo (2026-11-25)
 
 - Chat: gravação e envio de áudio (2026-11-23)
@@ -749,3 +750,8 @@ Android abre o aplicativo que atende geo:, com alternativa web se indisponível.
 Waze usa link universal, incluindo o endereço completo. Falha ao abrir é exibida
 na tela, preservando o endereço para consulta. Não exige permissão de localização
 nem mudança no binário das lojas.
+
+
+## Generosidade com chave Pix (2026-11-25)
+
+Pedido explícito do Matheus substitui a orientação histórica de esconder a chave: Generosidade mostra `pix@cbrio.com.br` e botão de copiar, com confirmação após sucesso e alternativa de selecionar manualmente em erro. O botão Contribuir no site foi removido devido aos problemas relatados no checkout. `FEATURES.generosidade` continua false; cartão, Apple Pay e checkout não foram reativados. O checkout externo não foi corrigido nem desativado globalmente.

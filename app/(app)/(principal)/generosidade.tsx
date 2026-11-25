@@ -55,12 +55,7 @@ function formatBRL(centavos: number): string {
 }
 
 export default function GenerosidadeScreen() {
-  // Módulo de DOAÇÃO desligado (App Store · aguardando Benevity) → a rota
-  // mostra a tela do VALOR, sem meio de pagamento.
-  // ⚠️ Em 05/08/2026 ela chegou a mostrar a chave PIX e foi RETIRADA no mesmo
-  // dia: exibir meio de doação no app é o que a guideline 3.2.2(iv) proíbe
-  // ("não queremos correr o risco disso sair do ar"). A tela de texto voltou
-  // por pedido do Marcos — SEM chave, QR, link de pagamento ou valor.
+  // Checkout desativado: a tela pública oferece somente a chave Pix.
   if (!FEATURES.generosidade) return <GenerosidadeTexto />;
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);

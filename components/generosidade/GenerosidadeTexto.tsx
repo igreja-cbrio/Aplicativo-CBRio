@@ -1,75 +1,43 @@
 import { ScrollView } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
-// ============================================================================
-// GENEROSIDADE · só o VALOR, sem meio de doação (Marcos · 05/08/2026)
-//
-// É a face da rota `/generosidade` enquanto `FEATURES.generosidade` está
-// desligado. O item voltou ao menu por pedido dele — mas **sem a chave PIX**:
-//
-// ⚠️⚠️ NÃO COLOCAR CHAVE PIX, QR, LINK DE PAGAMENTO NEM VALOR AQUI.
-// Exibir meio de doação dentro do app é o que a guideline **3.2.2(iv)** da App
-// Store proíbe, e foi o que tirou o módulo de doações da submissão em out/2026.
-// Chegamos a publicar a chave por algumas horas em 05/08 e o Marcos mandou
-// retirar ao saber do risco: "não queremos correr o risco disso sair do ar;
-// vamos pensar em uma forma de fazer isso posteriormente". Esta tela é sobre o
-// VALOR (ensino), não sobre a transação.
-//
-// ✅ O QUE A MESMA GUIDELINE PERMITE (e é o que o botão abaixo faz): a 3.2.2(iv)
-// diz que app de arrecadação para causa "may only collect funds outside of the
-// app, such as via Safari". Então o caminho é **abrir a página de doação no
-// NAVEGADOR EXTERNO** (`Linking.openURL` → sai do app), nunca uma tela nossa.
-//
-// ⚠️⚠️ NÃO trocar por WebView, `expo-web-browser`/`openBrowserAsync`, iframe ou
-// modal com o site dentro. Navegador embutido é coletar DENTRO do app — é
-// exatamente o que derruba o app da loja. `Linking.openURL` não é preferência de
-// estilo aqui: é a diferença entre permitido e proibido.
-// ============================================================================
-import { useMemo, useState } from "react";
-import { Linking, Pressable, StyleSheet, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
-import { apiGet } from "@/lib/api";
+import * as Clipboard from "expo-clipboard";
+import { PIX_KEY } from "@/constants/pix";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
-
-// Host canônico com `www.` de propósito: o apex `cbrio.org` responde 307 e alguns
-// navegadores embutidos/antigos tropeçam no redirecionamento (mesma razão do
-// `lib/api.ts` e do `lib/eventos.ts`).
-const URL_DOAR = "https://www.cbrio.org/doar";
-
-/**
- * O link de doação, JÁ COM o token que preenche a tela com os dados da pessoa.
- *
- * Pedido do Matheus (01/09/2026): *"está pedindo nome, e-mail, celular e CPF —
- * sendo que no app já tem essas informações dela."* O servidor emite um token
- * curto (30 min) e a página abre preenchida.
- *
- * ⚠️⚠️ ISTO NÃO MUDA NADA sobre a guideline 3.2.2(iv): continua sendo
- * `Linking.openURL` para o NAVEGADOR EXTERNO. O que muda é só a query string.
- * NÃO trocar por WebView — ver o aviso no topo deste arquivo.
- *
- * ⚠️ Falha (offline, sessão vencida, servidor antigo) devolve o link FIXO, que é
- * o comportamento de hoje: a pessoa doa digitando. Doação nunca pode depender de
- * um prefill dar certo.
- */
-async function linkDeDoacao(): Promise<string> {
-  try {
-    const r = await apiGet<{ url?: string }>("/app/generosidade/link");
-    return typeof r?.url === "string" && r.url.startsWith("https://") ? r.url : URL_DOAR;
-  } catch {
-    return URL_DOAR;
-  }
-}
 
 export function GenerosidadeTexto() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
-  const [abrindo, setAbrindo] = useState(false);
+  const [copiado, setCopiado] = useState(false);
+  const [erroCopia, setErroCopia] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
+
+  async function copiarChave() {
+    if (timer.current) clearTimeout(timer.current);
+    setCopiado(false);
+    setErroCopia(false);
+    try {
+      const ok = await Clipboard.setStringAsync(PIX_KEY);
+      if (!ok) throw new Error("clipboard");
+      setCopiado(true);
+      timer.current = setTimeout(() => setCopiado(false), 3000);
+    } catch {
+      setErroCopia(true);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={["left", "right"]}>
@@ -105,33 +73,28 @@ export function GenerosidadeTexto() {
           </Text>
         </GlassCard>
 
-        <GlassCard style={styles.card}>
-          <Text style={styles.rotulo}>{t("Como contribuir")}</Text>
+        <View style={styles.pixCard}>
+          <Text style={styles.rotulo}>{t("Chave PIX")}</Text>
+          <Text style={styles.chave} selectable>{PIX_KEY}</Text>
           <Text style={styles.p}>
-            {t("A contribuição é feita na página da igreja, com Pix ou cartão. O botão abaixo abre o navegador do seu celular.")}
+            {t("Copie a chave e cole na opção Pix do seu banco. Informe o valor e confira os dados antes de confirmar.")}
           </Text>
           <Pressable
-            onPress={() => {
-              // ⚠️ Navegador EXTERNO, sem WebView (ver o aviso no topo do arquivo).
-              // Falha silenciosa de propósito: se não houver navegador para abrir,
-              // a pessoa segue com o caminho de falar com a igreja logo abaixo.
-              // ⚠️ Busca o link (com o token) e SÓ ENTÃO abre. Sem o await, a
-              // pessoa cairia na tela em branco e teria que digitar tudo — que é
-              // exatamente o que este pedido resolve.
-              if (abrindo) return;
-              setAbrindo(true);
-              linkDeDoacao()
-                .then((url) => Linking.openURL(url))
-                .catch(() => {})
-                .finally(() => setAbrindo(false));
-            }}
+            onPress={copiarChave}
             style={({ pressed }) => [styles.btn, pressed && { opacity: 0.85 }]}
             accessibilityRole="button"
-            accessibilityHint={t("Abre a página de contribuição no navegador")}
+            accessibilityLabel={t("Copiar chave Pix")}
           >
-            <Ionicons name="open-outline" size={18} color="#fff" />
-            <Text style={styles.btnTxt}>{t("Contribuir no site")}</Text>
+            <Ionicons name={copiado ? "checkmark" : "copy-outline"} size={18} color="#fff" />
+            <Text style={styles.btnTxt} accessibilityLiveRegion="polite">
+              {copiado ? t("Copiado!") : t("Copiar chave Pix")}
+            </Text>
           </Pressable>
+          {erroCopia && (
+            <Text style={styles.p} accessibilityRole="alert">
+              {t("Não foi possível copiar. Toque e segure a chave acima para copiá-la.")}
+            </Text>
+          )}
           <Pressable
             onPress={() => router.navigate("/fale-conosco")}
             style={({ pressed }) => [styles.btnSec, pressed && { opacity: 0.85 }]}
@@ -140,7 +103,7 @@ export function GenerosidadeTexto() {
             <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.text} />
             <Text style={styles.btnSecTxt}>{t("Falar com a igreja")}</Text>
           </Pressable>
-        </GlassCard>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -160,6 +123,11 @@ const makeStyles = (colors: Palette) =>
     },
     lead: { color: colors.text, fontSize: font.size.lg, fontWeight: "700", textAlign: "center" },
     card: { padding: spacing.lg, gap: spacing.sm, borderRadius: radius.lg },
+    pixCard: {
+      padding: spacing.lg, gap: spacing.sm, borderRadius: radius.lg,
+      backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    },
+    chave: { color: colors.text, fontSize: font.size.lg, fontWeight: "700" },
     rotulo: {
       color: colors.brandMid, fontSize: 12, fontWeight: "800",
       textTransform: "uppercase", letterSpacing: 0.5,

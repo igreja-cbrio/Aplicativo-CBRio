@@ -21,12 +21,7 @@
 // passou a dizer "CNPJ pix@cbrio.com.br". Dado fiscal não empresta constante.
 export const CNPJ_IGREJA = "07.023.068/0001-35";
 
-// Chave PIX atual da CBRio (informada pelo Marcos em 05/08/2026).
-// ⚠️ NÃO É EXIBIDA EM LUGAR NENHUM hoje: o único leitor é o módulo de doações,
-// que está desligado por `FEATURES.generosidade`. A tela que mostrava a chave
-// foi RETIRADA no mesmo dia — mostrar chave de doação no app é o que a
-// guideline 3.2.2(iv) da App Store proíbe, e o Marcos preferiu não arriscar o
-// app sair do ar ("vamos pensar em uma forma de fazer isso posteriormente").
+// Chave exibida na Generosidade, conforme pedido de 25/11/2026.
 export const PIX_KEY = "pix@cbrio.com.br";
 export const PIX_KEY_FORMATADA = "pix@cbrio.com.br";
 export const PIX_KEY_TIPO = "E-mail";
