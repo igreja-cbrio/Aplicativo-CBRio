@@ -1,5 +1,5 @@
 import { Text } from "@/components/ui/Typography";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -29,10 +29,22 @@ import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { FormularioRolavel } from "@/components/ui/FormularioRolavel";
 import { useDialogo } from "@/components/ui/Dialogo";
+import { mensagemErroAuth } from "@/lib/erroAuth";
+import { abrirFichaCadastro, fecharFichaCadastro } from "@/lib/cadastroAberto";
 
 export default function CadastroScreen() {
   const { signUp } = useAuth();
   const t = useT();
+  // ⚠️ Lançamento (24/11/2026): o portão de atualização não pode reiniciar o app
+  // no meio desta tela (apagaria o que a pessoa digitou). Mesma bandeira do
+  // /completar-cadastro; enquanto o cadastro grava, o portão também espera
+  // `lib/cadastroEmAndamento` (senão aplicaria quando a tela desmonta, no meio
+  // do carimbo da ficha).
+  useEffect(() => {
+    abrirFichaCadastro();
+    return () => { fecharFichaCadastro(); };
+  }, []);
+
   const dlg = useDialogo();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -136,7 +148,11 @@ export default function CadastroScreen() {
       }
       // Com a sessão criada, o guard de rotas leva direto para a área logada.
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("Não foi possível criar a conta."));
+      // ⚠️ Nunca a mensagem crua do Supabase (inglês). "Já existe conta" NÃO
+      // entra sozinho: família divide e-mail e repete senha, e entrar calado
+      // colocaria a mãe na própria conta achando que criou a do filho. A
+      // mensagem aponta Entrar / Esqueci minha senha (revisão de 24/11).
+      setError(t(mensagemErroAuth(e, "Não foi possível criar a conta.")));
     } finally {
       // Baixa a bandeira SEMPRE — inclusive quando deu erro. Aí o portão volta
       // a decidir normalmente (e é ele quem manda pra tela de cadastro, com
@@ -203,7 +219,7 @@ export default function CadastroScreen() {
                 label={t("Senha")}
                 value={password}
                 onChangeText={setPassword}
-                placeholder={t("Mínimo 6 caracteres")}
+                placeholder={t("Mínimo 6 caracteres. Evite senhas comuns como 123456.")}
                 secure
               />
 

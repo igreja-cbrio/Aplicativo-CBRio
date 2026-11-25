@@ -16,6 +16,7 @@ import { useColors, useTheme } from "@/contexts/ThemeContext";
 import { MenuProvider } from "@/contexts/MenuContext";
 import { StatusBar } from "expo-status-bar";
 import { ehRaiz, registrarRotaAtual, subirUmNivel } from "@/lib/hierarquia";
+import { toqueDeNotificacaoRecente } from "@/lib/notifTap";
 
 /** Só as 7 telas-base mostram o atalho do assistente; detalhe/formulário e o próprio chat nunca. */
 const ROTAS_COM_CHAT_FAB = new Set(["/", "/meu-grupo", "/voluntariado", "/cuidados", "/devocional", "/generosidade", "/menu"]);
@@ -108,7 +109,8 @@ export default function AppLayout() {
       if (saiuEm == null) return;
       const fora = Date.now() - saiuEm;
       saiuEm = null;
-      if (fora < MS_PARA_RECOMECAR || !focusRef.current) return;
+      // Toque numa push acabou de levar a pessoa ao aviso: não desfaz (lib/notifTap.ts).
+      if (fora < MS_PARA_RECOMECAR || !focusRef.current || toqueDeNotificacaoRecente()) return;
 
       const rota = rotaRef.current;
       // Já está na Home, ou está no meio do cadastro (resetar apagaria o que a

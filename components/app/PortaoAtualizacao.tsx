@@ -38,6 +38,7 @@ import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { assinarFichaCadastro, lerFichaCadastro } from "@/lib/cadastroAberto";
+import { assinarCadastroNativo, lerCadastroNativo } from "@/lib/cadastroEmAndamento";
 import { decidirAplicacao, leEmbutido } from "@/lib/portaoUpdate";
 
 /**
@@ -231,7 +232,13 @@ export function PortaoAtualizacao({ children }: { children: React.ReactNode }) {
   // ⚠️ Ficha de cadastro aberta ⇒ o portão espera (ver lib/cadastroAberto.ts).
   // O caminho rápido manda um código por E-MAIL: a pessoa TEM que sair do app
   // pra ler, e cobrar a atualização na volta apagava o formulário dela.
-  const fichaAberta = useSyncExternalStore(assinarFichaCadastro, lerFichaCadastro, lerFichaCadastro);
+  const fichaNaTela = useSyncExternalStore(assinarFichaCadastro, lerFichaCadastro, lerFichaCadastro);
+  // ⚠️ 24/11/2026: o cadastro nativo desmonta a tela assim que a sessão nasce,
+  // com o carimbo da ficha (completarCadastroApp) ainda em voo. Sem esperar
+  // isto, o portão aplicaria o OTA nesse instante e o reinício reabriria a
+  // corrida de 07/08 (o CadastroGate pede a ficha de novo).
+  const cadastroGravando = useSyncExternalStore(assinarCadastroNativo, lerCadastroNativo, lerCadastroNativo);
+  const fichaAberta = fichaNaTela || cadastroGravando;
 
   async function aplicar() {
     setAplicando(true);

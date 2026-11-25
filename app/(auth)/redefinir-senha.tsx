@@ -10,6 +10,7 @@ import { createRecoveryClient } from "@/lib/supabase";
 import { preparePasswordRecovery } from "@/lib/passwordRecovery";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { mensagemErroAuth } from "@/lib/erroAuth";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
@@ -78,7 +79,10 @@ export default function RedefinirSenha() {
       Alert.alert(t("Senha redefinida ✅"), t("Entre novamente usando sua nova senha."));
       router.replace("/(auth)/login");
     } catch (e) {
-      Alert.alert(t("Erro"), e instanceof Error ? e.message : t("Não foi possível redefinir."));
+      // "Link de recuperação inválido." já vem em português de lib/passwordRecovery
+      // (link vencido ou trocado): mantém, para a pessoa saber que precisa de outro link.
+      const propria = e instanceof Error && e.message === "Link de recuperação inválido." ? e.message : null;
+      Alert.alert(t("Erro"), t(propria ?? mensagemErroAuth(e, "Não foi possível redefinir.")));
     }
     finally { setSalvando(false); }
   }

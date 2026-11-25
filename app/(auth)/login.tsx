@@ -34,6 +34,7 @@ export default function LoginScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
+
   const { height: alturaTela } = useWindowDimensions();
   const [alturaDisponivel, setAlturaDisponivel] = useState(alturaTela - insets.bottom);
   const [alturaFormulario, setAlturaFormulario] = useState(0);
