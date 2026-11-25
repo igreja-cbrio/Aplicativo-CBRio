@@ -64,8 +64,8 @@ import { router, type Href } from "expo-router";
  *   └── /culto-detalhe     (próximos cultos, na Home)
  */
 const PAI: Record<string, string> = {
-  // Devocional Kids virou "Devocional em família", um dos Planos de leitura (25/11/2026).
-  "/devocional-kids": "/devocional-planos",
+  // Kids abre diretamente pela aba Devocional e volta para ela.
+  "/devocional-kids": "/devocional",
   // Carta de transferência saiu do menu e mora no Meu perfil (25/11/2026). Quem
   // entra pela porta de Cuidados volta pra Cuidados (`origem`, em `rotaPai`).
   "/carta-transferencia": "/perfil",
@@ -118,7 +118,7 @@ const PAI: Record<string, string> = {
   // Anotações e histórico abrem pelo topo da Bíblia desde 25/11/2026.
   "/devocional-registros": "/biblia",
   "/devocional-leituras": "/biblia",
-  // Leitura em grupo (25/11/2026): tudo nasce em Planos de leitura; o dia volta
+  // Leitura em grupo (25/11/2026): nasce no card Devocional; o dia volta
   // pra tela central da leitura (que precisa do leituraId · PARAMS_QUE_SOBEM).
   "/devocional-leitura-nova": "/devocional-planos",
   "/devocional-leitura-entrar": "/devocional-planos",

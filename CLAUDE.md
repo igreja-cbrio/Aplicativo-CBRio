@@ -31,7 +31,7 @@ está no ERP, em `docs/mapa/APPS.md`.
 
 | Arquivo (`docs/claude/…`) | O que tem |
 |---|---|
-| `devocional.md` | Devocional: casa nova (Bíblia, Planos, Comentários, Anotações, Leituras), check-in, vídeo, planos por inscrição |
+| `devocional.md` | Devocional: cards compactos, Kids na home, Bíblia, comentários, anotações, leituras, check-in, vídeo e planos |
 | `servir-escala.md` | Servir e escala: montar escala por time, Pessoas do Servir, leitor/líder/admin, preferência de domingo, check-in do supervisor |
 | `grupos.md` | Grupos: gerenciar grupo (abas, editar, recusar), ajustes dos líderes, tela do supervisor, inscrição, NEW HEART |
 | `kids-criancas.md` | Kids e crianças: card do Kids, apresentação de criança (porta nativa, saúde), atalho, Kids arquivado |

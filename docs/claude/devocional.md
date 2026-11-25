@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Devocional · Kids na home e cards compactos (25/11/2026)
 - ⚠️⚠️ DEVOCIONAL · casa ENXUTA, sem rolagem (25/11/2026)
 - ⚠️⚠️ DEVOCIONAL · INVESTIR conta toda leitura (25/11/2026)
 - ⚠️⚠️ DEVOCIONAL · LEITURA EM GRUPO v2: vários livros, capítulos inteiros, dias úteis, sem prazo (25/11/2026)
@@ -313,6 +314,8 @@ Decisões do Marcos (ERP migration `20261125200000`, RPC `devocional_leitura_cri
 
 ## ⚠️⚠️ DEVOCIONAL · casa ENXUTA, sem rolagem (25/11/2026)
 
+> Disposição e acesso do Kids substituídos pelo ajuste de cards compactos abaixo.
+
 Pedido do Marcos: "estamos achando muitas opções"; a aba Devocional não rola, tudo na tela.
 - Home (`devocional.tsx`): SEM ScrollView. Bíblia + Planos de leitura (destaque) e
   Comentários + Vídeos e séries; as linhas dividem a altura por `flex`. Não acrescentar
@@ -324,3 +327,15 @@ Pedido do Marcos: "estamos achando muitas opções"; a aba Devocional não rola,
   Saíram "Devocional da semana" (sem conteúdo) e "Planos sugeridos".
 - Plano "Valores de Cristo" (teste do Marcos) DESATIVADO no banco (`ativo/destaque/
   inscricao_habilitada = false`, 5 inscrições preservadas).
+
+## Devocional · Kids na home e cards compactos (25/11/2026)
+
+- Pedido do Matheus: “Planos de leitura” passa a **Devocional**, inclusive no
+  título da tela interna e nas instruções do convite para leitura em grupo.
+- **Devocional Kids** tem card próprio na home, abaixo de Bíblia + Devocional;
+  sai da lista interna. A seta do Kids volta diretamente para `/devocional`.
+- Cards não esticam mais para ocupar a tela: primeira linha com mínimo de 148,
+  Kids horizontal com 88 e comunidade com 140. Altura pode crescer com o texto.
+  Scroll com reserva do dock garante acesso em telas pequenas/fontes ampliadas.
+- Anotações/histórico continuam na Bíblia; rotas e conteúdo das leituras
+  permanecem iguais. Mudança visual e de navegação, sem dependência nativa.
