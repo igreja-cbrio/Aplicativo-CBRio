@@ -25,6 +25,11 @@ describe("menu lateral e atalhos do app", () => {
     expect(destinations).not.toContain("/familia");
     expect(destinations.filter((href) => href === "/notificacoes")).toHaveLength(1);
     expect(rotaPai("/familia")).toBe("/perfil");
+    // 25/11/2026: a carta de transferência também saiu do menu e mora no perfil;
+    // quem entra por Cuidados volta pra Cuidados.
+    expect(destinations).not.toContain("/carta-transferencia");
+    expect(rotaPai("/carta-transferencia")).toBe("/perfil");
+    expect(rotaPai("/carta-transferencia", { origem: "cuidados" })).toBe("/cuidados");
     // Conteúdos mudou pra dentro do Devocional (porta própria), fora do menu.
     expect(destinations).not.toContain("/conteudos");
     expect(destinations).toContain("/videos");

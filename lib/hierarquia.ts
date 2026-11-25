@@ -47,6 +47,7 @@ import { router, type Href } from "expo-router";
  *   ├── /menu              barra
  *   │   ├── /perfil → /cartoes
  *   │   │     └→ /familia
+ *   │   │     └→ /carta-transferencia   (também abre de Cuidados)
  *   │   ├── /kids-area (KIDS, menu) → /kids → /kids-filho → /kids-aviso, /kids-solicitar-vinculo
  *   │   │                        └→ /kids-mural  /kids-eventos  /kids-horarios  /kids-salas  /kids-certificados
  *   │   ├── /jornada
@@ -65,7 +66,9 @@ import { router, type Href } from "expo-router";
 const PAI: Record<string, string> = {
   // Devocional Kids virou "Devocional em família", um dos Planos de leitura (25/11/2026).
   "/devocional-kids": "/devocional-planos",
-  "/carta-transferencia": "/cuidados",
+  // Carta de transferência saiu do menu e mora no Meu perfil (25/11/2026). Quem
+  // entra pela porta de Cuidados volta pra Cuidados (`origem`, em `rotaPai`).
+  "/carta-transferencia": "/perfil",
   "/noticias": "/",
   "/agenda": "/",
   // telas de barra → Home
@@ -190,6 +193,7 @@ export function rotaPai(rota: string, params: Record<string, unknown> = {}): str
   // Atalho "Minhas fotos do batismo" no Meu perfil (24/11/2026): quem entrou pelo
   // perfil volta para o perfil, não para o Meu batismo.
   if (params.origem === "perfil" && limpa === "/batismo-fotos") return "/perfil";
+  if (params.origem === "cuidados" && limpa === "/carta-transferencia") return "/cuidados";
   return PAI[limpa] ?? "/";
 }
 
