@@ -29,13 +29,15 @@ import { htmlDoVideo, idDoYoutube, navegacaoPermitida, ORIGEM_DO_PLAYER, videoSe
  * O tempo passa de um player pro outro (o inline posta `currentTime`), pra quem
  * abre a tela cheia no meio não recomeçar do zero.
  */
-export function VideoDevocional({ url }: { url: string | null | undefined }) {
+/** `onFim`: o vídeo chegou ao fim (conta em Investir · 25/11/2026). Chamado uma vez por vídeo. */
+export function VideoDevocional({ url, onFim }: { url: string | null | undefined; onFim?: () => void }) {
   const t = useT();
   const insets = useSafeAreaInsets();
   // Link do YouTube (toca embutido, sem sair do app) ou arquivo nosso (https).
   const seguro = idDoYoutube(url) ? (url as string).trim() : videoSeguro(url);
   const inline = useRef<WebView>(null);
   const tempo = useRef(0);
+  const avisouFim = useRef(false);
   const [cheia, setCheia] = useState<number | null>(null);
   const [falhou, setFalhou] = useState(false);
   const htmlInline = useMemo(() => (seguro ? htmlDoVideo(seguro) : ""), [seguro]);
@@ -48,6 +50,7 @@ export function VideoDevocional({ url }: { url: string | null | undefined }) {
       const m = JSON.parse(raw);
       if (typeof m?.t === "number" && isFinite(m.t)) aoTempo(m.t);
       if (m?.erro) setFalhou(true);
+      if (m?.fim && !avisouFim.current) { avisouFim.current = true; onFim?.(); }
     } catch { /* mensagem que não é nossa */ }
   }
 
