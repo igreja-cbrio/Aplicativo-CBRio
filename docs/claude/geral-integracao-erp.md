@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Como chegar: endereço e escolha de aplicativo (2026-11-25)
+
 - Chat: gravação e envio de áudio (2026-11-23)
 
 - Chat: apresentação do Pedrinho (2026-11-16)
@@ -735,3 +737,15 @@ o WAV e o CAF da notificação passam a 0,65 s, PCM mono 44,1 kHz/16 bits, pico 
 Nome cbrio_chime preservado para compatibilidade com todos os remetentes e o canal
 Android existente. A troca do recurso nativo só chega com novo binário instalado; OTA
 não troca o som do sistema. Sem mudança de runtime ou dependência.
+
+
+## Como chegar: endereço e escolha de aplicativo (2026-11-25)
+
+Fale conosco deixou de pesquisar “CBRio Barra da Tijuca”, que levava à praia.
+`lib/igrejaLocalizacao.ts` usa Avenida das Américas, 7907, Barra da Tijuca,
+Rio de Janeiro/RJ, Brasil. A tela exibe também Open Mall (subsolo).
+Ao tocar em Como chegar aparecem Mapas do celular e Waze. iPhone usa Apple Maps;
+Android abre o aplicativo que atende geo:, com alternativa web se indisponível.
+Waze usa link universal, incluindo o endereço completo. Falha ao abrir é exibida
+na tela, preservando o endereço para consulta. Não exige permissão de localização
+nem mudança no binário das lojas.

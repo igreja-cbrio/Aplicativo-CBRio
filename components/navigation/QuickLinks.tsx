@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useTutorial, TutorialTarget, type TutorialTargetId } from "@/contexts/TutorialContext";
+import React, { useCallback, useMemo, useRef } from "react";
 import { Text } from "@/components/ui/Typography";
 import { DockSurface } from "@/components/navigation/DockSurface";
 import { NativeShortcuts } from "@/modules/native-shortcuts/src/NativeShortcuts";
@@ -10,7 +11,12 @@ import { irParaBarra } from "@/lib/nav";
 import { QUICK_LINKS } from "@/lib/appNavigation";
 import { useTheme } from "@/contexts/ThemeContext";
 
+const TARGETS: TutorialTargetId[] = ["care", "devotional", "groups", "serve", "giving"];
+
 export function QuickLinks() {
+  const tutorial = useTutorial();
+  const tutorialIndex = tutorial?.highlightedTarget ? TARGETS.indexOf(tutorial.highlightedTarget) : -1;
+  const scrollRef = useRef<ScrollView>(null);
   const { width, fontScale } = useWindowDimensions();
   const { fontMultiplier } = useTheme();
   const scroll = width < 360 || fontScale * fontMultiplier > 1.2;
@@ -18,24 +24,30 @@ export function QuickLinks() {
   const labels = useMemo(() => QUICK_LINKS.map(item => t(item.label)), [t]);
   // Só a versão que contém o controle UIKit usa a interação nativa. A OTA é
   // segura em binários antigos: nenhum gesto/lupa customizado é simulado.
-  if (NativeShortcuts && !scroll) return <NativeShortcuts
+  const reveal = useCallback((index: number) => { if (scroll) scrollRef.current?.scrollTo({ x: Math.max(0, index * 120 - 12), animated: false }); }, [scroll]);
+  if (NativeShortcuts && !scroll) return <TutorialTarget id="dock"><NativeShortcuts
     labels={labels}
-    selectedIndex={QUICK_LINKS.findIndex(item => pathname === item.href)}
+    selectedIndex={tutorialIndex >= 0 ? tutorialIndex : QUICK_LINKS.findIndex(item => pathname === item.href)}
     style={{ height: 74, width: "100%" }}
     onShortcutSelect={({ nativeEvent }) => {
+      if (tutorial?.highlightedTarget) return;
       const item = QUICK_LINKS[nativeEvent.index];
       if (item) irParaBarra(pathname, item.href);
     }}
-  />;
+  /></TutorialTarget>;
   // UITabBar já aplica o próprio recuo. Só o fallback precisa dessa margem.
-  return <View style={styles.fallbackMargin}><DockSurface><ScrollView horizontal scrollEnabled={scroll} showsHorizontalScrollIndicator={false} style={styles.dock} contentContainerStyle={styles.content}>
-    {QUICK_LINKS.map((item, i) => <Pressable key={item.href} accessibilityRole="button" accessibilityLabel={labels[i]} accessibilityState={{ selected: pathname === item.href }} onPress={() => irParaBarra(pathname, item.href)} style={({ pressed }) => [styles.item, scroll ? { width: 120, flexBasis: 120, flexGrow: 0, flexShrink: 0 } : { flex: i === 4 ? 1.4 : 1 }, i > 0 && styles.divider, (pressed || pathname === item.href) && styles.selected]}>
-      <Ionicons name={item.icon} size={21} color="#29434a" />
-      {/* Uma linha só, encolhendo um pouco: entre 1,05x e 1,2x de letra o modo
-          rolável ainda não ligou e "Devocional" quebrava na última letra. */}
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.label, scroll && { fontSize: 12 }]}>{labels[i]}</Text>
-    </Pressable>)}
+  return <View style={styles.fallbackMargin}><DockSurface><ScrollView ref={scrollRef} horizontal scrollEnabled={scroll} showsHorizontalScrollIndicator={false} style={styles.dock} contentContainerStyle={styles.content}>
+    {QUICK_LINKS.map((item, i) => <QuickLinkTarget key={item.href} id={TARGETS[i]} index={i} reveal={reveal} style={scroll ? { width: 120, flexBasis: 120, flexGrow: 0, flexShrink: 0 } : { flex: i === 4 ? 1.4 : 1 }}>
+      <Pressable accessibilityRole="button" accessibilityLabel={labels[i]} accessibilityState={{ selected: pathname === item.href }} onPress={() => irParaBarra(pathname, item.href)} style={({ pressed }) => [styles.item, i > 0 && styles.divider, (pressed || pathname === item.href) && styles.selected]}>
+        <Ionicons name={item.icon} size={21} color="#29434a" />
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.label, scroll && { fontSize: 12 }]}>{labels[i]}</Text>
+      </Pressable>
+    </QuickLinkTarget>)}
   </ScrollView></DockSurface></View>;
+}
+function QuickLinkTarget({ id, index, reveal, ...props }: Omit<React.ComponentProps<typeof TutorialTarget>, "reveal"> & { index: number; reveal: (index: number) => void }) {
+  const show = useCallback(() => reveal(index), [reveal, index]);
+  return <TutorialTarget {...props} id={id} reveal={show} />;
 }
 const styles = StyleSheet.create({
   fallbackMargin: { paddingHorizontal: 20 },
