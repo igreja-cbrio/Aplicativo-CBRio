@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- ⚠️ DEVOCIONAL · COMENTÁRIO sempre com o TEXTO + "Ver mais" (25/11/2026)
 - ⚠️⚠️ DEVOCIONAL · UMA tela pra TODO plano + YouTube dentro do app (25/09/2026 · 2ª leva)
 - ⚠️⚠️ DEVOCIONAL · VÍDEO na leitura + SEMANAS no plano longo (25/09/2026)
 - ⚠️ DEVOCIONAL · voltar da leitura abria "Plano não encontrado" (24/09/2026 · 3ª leva)
@@ -232,3 +233,20 @@ contar no portão de i18n; a leitura da Bíblia tem cores fixas de "papel"
 ## Kids semanal (2026-11-23)
 
 Devocional → Devocionais Kids lista edições por domingo, com título e série. Dados em `/app/kids/devocionais`; PDF privado assinado por ação, sem cache entre contas. Notificação `kids_devocional` abre a semana indicada, inclusive fora da primeira página. Pai da tela é Devocional. Publicação e destinatários são definidos no ERP (Kids → Aplicativo).
+
+## ⚠️ DEVOCIONAL · COMENTÁRIO sempre com o TEXTO + "Ver mais" (25/11/2026)
+
+Pedido do Marcos: o comentário mostrava só a referência; quer o texto selecionado, e
+capítulo inteiro cortado com "Ver mais" para os cards terem o mesmo tamanho.
+
+- Causa medida no banco: o único comentário publicado (17/11) veio do atalho
+  "Comentários" da casa, que tinha um campo de referência DIGITADA — por ele o app
+  nunca tinha o texto. Bíblia, diário e dia do plano já mandavam `textoBiblico`.
+- O campo digitado SAIU. Sem trecho, o composer mostra "Escolher o texto na Bíblia"
+  (`/biblia` → selecionar → Comentar volta com `referencia` + `textoBiblico`). O
+  trecho vive em estado sincronizado com os params (a tela pode já estar montada) e
+  é limpo depois de publicar (`router.setParams`).
+- `lib/trechoBiblico.ts` (`resumirTrecho`, `LIMITE_TRECHO = 240`, corta no fim de
+  palavra com "…") + `components/devocional/TrechoBiblico.tsx` ("Ver mais"/"Ver
+  menos"). Usado no composer, no feed e em Anotações e Marcações.
+- Comentário antigo sem `texto_biblico` continua mostrando só a referência.
