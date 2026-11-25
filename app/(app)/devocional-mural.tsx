@@ -9,6 +9,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { listarMural, publicarNoMural, type PostMural } from "@/lib/devocional";
 import { subirUmNivel } from "@/lib/hierarquia";
+import { TrechoBiblico } from "@/components/devocional/TrechoBiblico";
 import { useT } from "@/lib/i18n";
 
 const ALCANCES: { valor: PostMural["alcance"]; rotulo: string; icone: keyof typeof Ionicons.glyphMap }[] = [
@@ -19,28 +20,41 @@ const ALCANCES: { valor: PostMural["alcance"]; rotulo: string; icone: keyof type
 export default function Mural() {
   const c = useColors(), s = useMemo(() => css(c), [c]), { membro } = useMembro(), t = useT();
   const params = useLocalSearchParams<{ referencia?: string; textoBiblico?: string; itemId?: string }>();
-  const [posts, setPosts] = useState<PostMural[]>([]), [referencia, setReferencia] = useState(params.referencia ?? ""), [texto, setTexto] = useState("");
+  const [posts, setPosts] = useState<PostMural[]>([]), [texto, setTexto] = useState("");
+  // O trecho vem SEMPRE de quem chamou (Bíblia, diário, dia do plano), com referência e texto.
+  // Antes havia um campo para digitar a referência à mão, e por ele o comentário saía sem o texto.
+  const [trecho, setTrecho] = useState<{ referencia: string; texto: string; itemId?: string } | null>(null);
+  useEffect(() => {
+    if (params.referencia?.trim()) setTrecho({ referencia: params.referencia.trim(), texto: params.textoBiblico?.trim() ?? "", itemId: params.itemId || undefined });
+  }, [params.referencia, params.textoBiblico, params.itemId]);
   const [alcance, setAlcance] = useState<PostMural["alcance"]>("igreja"), [carregando, setCarregando] = useState(true), [enviando, setEnviando] = useState(false);
   async function carregar() { setPosts(await listarMural()); setCarregando(false); }
   useEffect(() => { carregar().catch(e => Alert.alert(t("Erro"), e.message)); }, [t]);
   async function publicar() {
-    if (!membro?.membroId || !referencia.trim() || texto.trim().length < 2) return Alert.alert(t("Falta pouco"), t("Informe a referência e seu comentário."));
+    if (!membro?.membroId || !trecho || texto.trim().length < 2) return Alert.alert(t("Falta pouco"), t("Escolha o texto na Bíblia e escreva seu comentário."));
     setEnviando(true);
     try {
-      await publicarNoMural({ membroId: membro.membroId, texto, alcance, referenciaBiblica: referencia, textoBiblico: params.textoBiblico, itemId: params.itemId });
-      setReferencia(""); setTexto(""); await carregar();
+      await publicarNoMural({ membroId: membro.membroId, texto, alcance, referenciaBiblica: trecho.referencia, textoBiblico: trecho.texto, itemId: trecho.itemId });
+      setTrecho(null); setTexto(""); router.setParams({ referencia: undefined, textoBiblico: undefined, itemId: undefined }); await carregar();
     } catch (e) { Alert.alert(t("Não foi possível publicar"), e instanceof Error ? e.message : t("Tente novamente.")); }
     finally { setEnviando(false); }
   }
   return <SafeAreaView style={s.safe} edges={["left", "right"]}>
     <Stack.Screen options={{ headerShown: false }} />
-    <View style={s.header}><Pressable onPress={() => params.referencia ? router.back() : subirUmNivel()} hitSlop={12} style={s.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}><Ionicons name="chevron-back" size={24} color={c.text} /></Pressable><Text style={s.headerTitle}>{t("Comentários")}</Text><View style={s.back} /></View>
+    <View style={s.header}><Pressable onPress={() => subirUmNivel()} hitSlop={12} style={s.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}><Ionicons name="chevron-back" size={24} color={c.text} /></Pressable><Text style={s.headerTitle}>{t("Comentários")}</Text><View style={s.back} /></View>
     <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
       <Text style={s.eyebrow}>{t("COMUNIDADE")}</Text><Text style={s.title}>{t("Comentários da comunidade")}</Text>
       <Text style={s.muted}>{t("Compartilhe com responsabilidade. Sua publicação será identificada com seu nome.")}</Text>
       <View style={s.composer}>
-        {params.textoBiblico ? <View style={s.selectedVerse}><Text style={s.ref}>{referencia}</Text><Text style={s.quote}>“{params.textoBiblico.trim()}”</Text></View> :
-          <TextInput style={s.input} value={referencia} onChangeText={setReferencia} placeholder={t("Referência bíblica (ex.: 1Cr 2.3)")} placeholderTextColor={c.textMuted} />}
+        {trecho ? <View style={s.selectedVerse}>
+            <View style={s.selectedHead}><Text style={[s.ref, s.flex]}>{trecho.referencia}</Text><Pressable onPress={() => router.navigate("/biblia")} hitSlop={8} accessibilityRole="button"><Text style={s.trocar}>{t("Trocar")}</Text></Pressable></View>
+            {trecho.texto ? <TrechoBiblico texto={trecho.texto} style={s.quote} corLink={c.primary} /> : null}
+          </View> :
+          <Pressable style={s.escolher} onPress={() => router.navigate("/biblia")} accessibilityRole="button">
+            <Ionicons name="book-outline" size={20} color={c.primary} />
+            <View style={s.flex}><Text style={s.escolherTitulo}>{t("Escolher o texto na Bíblia")}</Text><Text style={s.scope}>{t("Selecione os versículos e toque em Comentar.")}</Text></View>
+            <Ionicons name="chevron-forward" size={18} color={c.textMuted} />
+          </Pressable>}
         <TextInput style={[s.input, s.area]} value={texto} onChangeText={setTexto} placeholder={t("O que esse texto falou com você?")} placeholderTextColor={c.textMuted} multiline maxLength={1200} />
         <Text style={s.label}>{t("Quem pode ver?")}</Text>
         <View style={s.audiences}>{ALCANCES.map(a => <Pressable key={a.valor} onPress={() => setAlcance(a.valor)} style={[s.audience, alcance === a.valor && s.audienceOn]}><Ionicons name={a.icone} size={16} color={alcance === a.valor ? "#fff" : c.textMuted} /><Text style={[s.audienceText, alcance === a.valor && s.audienceTextOn]}>{t(a.rotulo)}</Text></Pressable>)}</View>
@@ -49,7 +63,7 @@ export default function Mural() {
       <Text style={s.feedTitle}>{t("Publicações recentes")}</Text>
       {carregando ? <ActivityIndicator color={c.primary} /> : posts.map(p => <View key={p.id} style={s.card}>
         <View style={s.authorRow}><View style={s.avatar}><Text style={s.avatarText}>{p.autor_nome?.trim().charAt(0).toUpperCase()}</Text></View><View style={s.authorText}><Text style={s.author}>{p.autor_nome}</Text><Text style={s.scope}>{t(ALCANCES.find(a => a.valor === p.alcance)?.rotulo ?? "Toda a igreja")}</Text></View></View>
-        <Text style={s.ref}>{p.item_passagem || p.referencia_biblica}</Text>{p.texto_biblico && <Text style={s.quote}>“{p.texto_biblico}”</Text>}<Text style={s.body}>{p.texto}</Text>
+        <Text style={s.ref}>{p.item_passagem || p.referencia_biblica}</Text>{p.texto_biblico ? <TrechoBiblico texto={p.texto_biblico} style={s.quote} corLink={c.primary} /> : null}<Text style={s.body}>{p.texto}</Text>
       </View>)}
     </ScrollView>
   </SafeAreaView>;
@@ -57,7 +71,9 @@ export default function Mural() {
 const css = (c: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: c.background }, header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 14 }, back: { width: 32, minHeight: 32, alignItems: "flex-start", justifyContent: "center" }, headerTitle: { flex: 1, color: c.text, fontSize: 18, fontWeight: "800", textAlign: "center" },
   content: { paddingHorizontal: 20, paddingBottom: 64, gap: 13 }, eyebrow: { color: c.primary, fontSize: 11, fontWeight: "800", letterSpacing: 1.5, marginTop: 8 }, title: { color: c.text, fontSize: 29, fontWeight: "800" }, muted: { color: c.textMuted, lineHeight: 21 },
-  composer: { backgroundColor: c.surface, borderRadius: 18, padding: 15, gap: 11, borderWidth: 1, borderColor: c.border }, selectedVerse: { backgroundColor: c.background, padding: 13, borderRadius: 12, borderLeftWidth: 3, borderLeftColor: c.primary },
+  composer: { backgroundColor: c.surface, borderRadius: 18, padding: 15, gap: 11, borderWidth: 1, borderColor: c.border }, selectedVerse: { backgroundColor: c.background, padding: 13, borderRadius: 12, borderLeftWidth: 3, borderLeftColor: c.primary, gap: 6 },
+  selectedHead: { flexDirection: "row", alignItems: "center", gap: 8 }, flex: { flex: 1 }, trocar: { color: c.primary, fontWeight: "800", fontSize: 13 },
+  escolher: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: c.background, borderRadius: 13, padding: 14, borderWidth: 1, borderColor: c.border }, escolherTitulo: { color: c.text, fontWeight: "800" },
   input: { backgroundColor: c.background, color: c.text, borderRadius: 13, padding: 14, borderWidth: 1, borderColor: c.border }, area: { minHeight: 100, textAlignVertical: "top" }, label: { color: c.text, fontSize: 13, fontWeight: "800" },
   audiences: { flexDirection: "row", flexWrap: "wrap", gap: 7 }, audience: { flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 9, backgroundColor: c.background, borderWidth: 1, borderColor: c.border }, audienceOn: { backgroundColor: c.primary, borderColor: c.primary },
   audienceText: { color: c.textMuted, fontSize: 12, fontWeight: "700" }, audienceTextOn: { color: "#fff" }, cta: { backgroundColor: c.primary, padding: 15, borderRadius: 14, alignItems: "center" }, disabled: { opacity: .55 }, ctaText: { color: "#fff", fontSize: 16, fontWeight: "800" },
