@@ -85,7 +85,7 @@ export default function FaleConoscoScreen() {
             <Text style={styles.cardTitle}>{t("Como chegar")}</Text>
             <Text style={styles.cardText}>{t(ENDERECO_IGREJA)}</Text>
             <Button title={t("Mapas do celular")} onPress={() => abrirMapa('mapas')} disabled={abrindoMapa} />
-            <Button title="Waze" variant="ghost" onPress={() => abrirMapa('waze')} disabled={abrindoMapa} />
+            <Button title={t("Waze")} variant="ghost" onPress={() => abrirMapa('waze')} disabled={abrindoMapa} />
             {erroMapa && <Text accessibilityLiveRegion="polite" style={styles.cardText}>{t("Não foi possível abrir o mapa. Tente novamente ou use o endereço acima.")}</Text>}
           </View>}
 

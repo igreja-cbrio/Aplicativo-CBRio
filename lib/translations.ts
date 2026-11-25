@@ -6,6 +6,7 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Waze": { en: "Waze", es: "Waze" },
   "Mapas do celular": { en: "Phone maps", es: "Mapas del celular" },
   "Não foi possível abrir o mapa. Tente novamente ou use o endereço acima.": { en: "Could not open the map. Try again or use the address above.", es: "No se pudo abrir el mapa. Inténtalo de nuevo o usa la dirección de arriba." },
   "Check-in das crianças": { en: "Children’s check-in", es: "Check-in de los niños" },
