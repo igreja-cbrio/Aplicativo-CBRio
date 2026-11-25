@@ -27,7 +27,7 @@ export default function CreditosScreen() {
           <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back}>
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>{t("Créditos")}</Text>
+          <Text style={styles.title}>{t("Créditos do sistema")}</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -37,17 +37,6 @@ export default function CreditosScreen() {
           resizeMode="cover"
           accessibilityLabel={t("Marcos e Matheus, que fizeram o app")}
         />
-
-        <View style={styles.card}>
-          <Text style={styles.achou}>{t("Você achou a gente.")}</Text>
-          <Text style={styles.texto}>
-            {t("Somos o Marcos e o Matheus. Fizemos este app para a CBRio.")}
-          </Text>
-          <Text style={styles.texto}>
-            {t("Ele chegou à igreja toda em 25 de novembro de 2026.")}
-          </Text>
-          <Text style={styles.rodape}>{t("Se algo quebrar, foi o outro.")}</Text>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -62,15 +51,4 @@ const makeStyles = (colors: Palette) =>
     title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
     // A foto é 3:4 (retrato); a proporção fixa evita salto de layout.
     foto: { width: "100%", aspectRatio: 3 / 4, borderRadius: radius.lg },
-    card: {
-      padding: spacing.md,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      backgroundColor: colors.surface,
-      gap: spacing.sm,
-    },
-    achou: { color: colors.text, fontSize: font.size.lg, fontWeight: "800" },
-    texto: { color: colors.text, fontSize: font.size.md, lineHeight: 22 },
-    rodape: { color: colors.textMuted, fontSize: font.size.sm, fontStyle: "italic", marginTop: spacing.sm },
   });

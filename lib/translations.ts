@@ -2518,10 +2518,6 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Configurações muito avançadas": { en: "Very advanced settings", es: "Ajustes muy avanzados" },
   "Tem certeza?": { en: "Are you sure?", es: "¿Estás seguro?" },
   "Daqui pra frente é por sua conta.": { en: "From here on, you're on your own.", es: "De aquí en adelante, es por tu cuenta." },
-  "Créditos": { en: "Credits", es: "Créditos" },
+  "Créditos do sistema": { en: "System credits", es: "Créditos del sistema" },
   "Marcos e Matheus, que fizeram o app": { en: "Marcos and Matheus, who built the app", es: "Marcos y Matheus, que hicieron la app" },
-  "Você achou a gente.": { en: "You found us.", es: "Nos encontraste." },
-  "Somos o Marcos e o Matheus. Fizemos este app para a CBRio.": { en: "We're Marcos and Matheus. We built this app for CBRio.", es: "Somos Marcos y Matheus. Hicimos esta app para CBRio." },
-  "Ele chegou à igreja toda em 25 de novembro de 2026.": { en: "It reached the whole church on November 25, 2026.", es: "Llegó a toda la iglesia el 25 de noviembre de 2026." },
-  "Se algo quebrar, foi o outro.": { en: "If something breaks, it was the other one.", es: "Si algo se rompe, fue el otro." },
 };
