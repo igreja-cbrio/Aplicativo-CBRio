@@ -333,13 +333,6 @@ export function BuscadorGrupos({ embutido = false }: { embutido?: boolean }) {
         )}
         {!embutido && <ValorHeader rotulo={t("Encontrar um grupo")} style={{ marginBottom: 0 }} />}
 
-        <View style={styles.avisoInscricoes}>
-          <Ionicons name="information-circle-outline" size={20} color={colors.brandMid} />
-          <Text style={styles.avisoInscricoesTxt}>
-            {t("Apenas alguns grupos ainda estão abertos para inscrição. As inscrições para a nova temporada de grupos abrirão em 2027.")}
-          </Text>
-        </View>
-
         <View style={styles.toggle}>
           <Pressable
             style={[styles.toggleItem, view === "lista" && styles.toggleItemSel]}
@@ -436,6 +429,13 @@ export function BuscadorGrupos({ embutido = false }: { embutido?: boolean }) {
           keyboardShouldPersistTaps="handled"
           refreshControl={<RefreshControl refreshing={loading} onRefresh={carregar} tintColor={colors.primary}/>}
         >
+          <View style={styles.avisoInscricoes}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.brandMid} />
+            <Text style={styles.avisoInscricoesTxt}>
+              {t("Apenas alguns grupos ainda estão abertos para inscrição. As inscrições para a nova temporada de grupos abrirão em 2027.")}
+            </Text>
+          </View>
+
           {meusGrupos.length > 0 && (
             <View style={{ gap: spacing.sm }}>
               <Text style={styles.section}>{t("Meus grupos")}</Text>

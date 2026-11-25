@@ -664,3 +664,5 @@ Só tela → precisa de OTA (`npm run ota -- "msg"`).
 ## Grupos abertos e próxima temporada (2026-11-25)
 
 A busca mantém a régua do backend `/public/grupos/buscar`, sem filtro de capacidade. Exibe aviso de que apenas alguns grupos seguem abertos e de que a nova temporada abrirá inscrições em 2027, conforme pedido do Matheus. Lista e mapa mostram erro em falha de atualização; voltar ao app atualiza a busca. Detalhe só oferece inscrição quando o ID está na lista canônica de `/public/grupos/app-inscricao`; temporada aberta sozinha não libera um grupo fechado.
+
+O aviso fica no início do conteúdo rolável da lista, nunca no cabeçalho fixo: o texto fixo reduzia demais a área disponível para os grupos. Ao rolar, o aviso sai junto com os cartões; no mapa ele não ocupa altura.
