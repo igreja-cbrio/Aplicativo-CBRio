@@ -9,9 +9,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
 import { apiGet } from "@/lib/api";
 import { listarPlanos, planosSugeridos, type PlanoDevocional, type PlanoSugerido } from "@/lib/devocional";
-import { minhasLeituras, nomeDoLivro, type LeituraResumo } from "@/lib/leituraGrupoApi";
-import { diaAtual } from "@/lib/leituraGrupo";
-import { hojeBRT } from "@/lib/dataBRT";
+import { minhasLeituras, type LeituraResumo } from "@/lib/leituraGrupoApi";
+import { livrosDaLeitura, resumoDosLivros } from "@/lib/leituraGrupo";
 import { useMembro } from "@/lib/useMembro";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { useT } from "@/lib/i18n";
@@ -55,7 +54,7 @@ export default function Planos() {
       <Card icon="flame-outline" numero="02" titulo="Quarta com Deus" texto={t("Sete leituras, de quinta a quarta")} onPress={() => abrirPlano(quarta)} s={s} c={c} />
       <Card icon="calendar-outline" numero="03" titulo={t("Devocional da semana")} texto={t("A leitura preparada para esta semana")} onPress={() => abrirPlano(semana)} s={s} c={c} />
       <Text style={s.secao}>{t("LEITURA EM GRUPO")}</Text>
-      <Text style={s.vazioTxt}>{t("Escolha um livro, convide quem quiser e leiam juntos, um trecho por dia.")}</Text>
+      <Text style={s.vazioTxt}>{t("Escolha um ou mais livros, convide quem quiser e leiam juntos, no seu ritmo.")}</Text>
       <View style={s.grupoAcoes}>
         <Pressable onPress={() => router.navigate("/devocional-leitura-nova")} style={({ pressed }) => [s.grupoBtn, s.grupoBtnPrim, pressed && s.pressed]} accessibilityRole="button"><Ionicons name="add" size={18} color="#fff" /><Text style={[s.grupoBtnTxt, { color: "#fff" }]}>{t("Criar leitura")}</Text></Pressable>
         <Pressable onPress={() => router.navigate("/devocional-leitura-entrar")} style={({ pressed }) => [s.grupoBtn, pressed && s.pressed]} accessibilityRole="button"><Ionicons name="key-outline" size={17} color={c.primary} /><Text style={s.grupoBtnTxt}>{t("Entrar com código")}</Text></Pressable>
@@ -63,11 +62,9 @@ export default function Planos() {
       {falhouLeituras && !leituras
         ? <Pressable onPress={carregarLeituras} style={s.erroBox} accessibilityRole="button"><Ionicons name="cloud-offline-outline" size={18} color={c.textMuted} /><Text style={s.erroTxt}>{t("Não foi possível carregar suas leituras.")}</Text><Text style={s.erroRetry}>{t("Tentar de novo")}</Text></Pressable>
         : (leituras ?? []).map((l) => {
-          const hoje = diaAtual(l.data_inicio, l.dias, hojeBRT());
-          const status = hoje === 0 ? t("Começa em") + " " + l.data_inicio.split("-").reverse().join("/") : hoje > l.dias ? t("Concluída") : `${t("Dia")} ${hoje} ${t("de")} ${l.dias}`;
           return <Pressable key={l.id} onPress={() => router.navigate({ pathname: "/devocional-leitura", params: { leituraId: l.id } })} style={({ pressed }) => [s.card, s.cardLeitura, pressed && s.pressed]}>
             <View style={s.icon}><Ionicons name="people-outline" size={22} color={c.primary} /></View>
-            <View style={s.flex}><Text style={s.cardTitle} numberOfLines={1}>{l.titulo}</Text><Text style={s.cardText}>{nomeDoLivro(l.livro_ordem)} · {status} · {l.participantes} {l.participantes === 1 ? t("pessoa") : t("pessoas")}</Text><Text style={s.cardText}>{t("Você leu")} {l.meus_lidos}/{l.dias}</Text></View>
+            <View style={s.flex}><Text style={s.cardTitle} numberOfLines={1}>{l.titulo}</Text><Text style={s.cardText}>{resumoDosLivros(livrosDaLeitura(l))} · {l.participantes} {l.participantes === 1 ? t("pessoa") : t("pessoas")}</Text><Text style={s.cardText}>{t("Você leu")} {l.meus_lidos}/{l.dias}</Text></View>
             <Ionicons name="chevron-forward" size={20} color={c.textMuted} />
           </Pressable>;
         })}

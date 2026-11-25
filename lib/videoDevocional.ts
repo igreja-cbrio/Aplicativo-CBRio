@@ -62,7 +62,7 @@ export function htmlDoVideo(url: string, opcoes: { inicio?: number; tocar?: bool
 var pl=null;window.pausar=function(){try{pl.pauseVideo()}catch(e){}};window.irPara=function(s){try{pl.seekTo(s,true)}catch(e){}};
 function onYouTubeIframeAPIReady(){pl=new YT.Player('p',{videoId:'${yt}',width:'100%',height:'100%',
 playerVars:{playsinline:1,rel:0,modestbranding:1,fs:1,start:${inicio},autoplay:${opcoes.tocar ? 1 : 0}},
-events:{onReady:function(e){${opcoes.tocar ? "e.target.playVideo();" : ""}},onError:function(){m({erro:true})}}});
+events:{onReady:function(e){${opcoes.tocar ? "e.target.playVideo();" : ""}},onStateChange:function(e){if(e.data===0)m({fim:true})},onError:function(){m({erro:true})}}});
 setInterval(function(){try{var t=pl.getCurrentTime();if(typeof t==='number')m({t:t})}catch(e){}},1000);}
 </script><script src="https://www.youtube.com/iframe_api"></script></body></html>`;
   }
@@ -74,5 +74,6 @@ setInterval(function(){try{var t=pl.getCurrentTime();if(typeof t==='number')m({t
 window.pausar=function(){try{v.pause()}catch(e){}};window.irPara=function(s){try{v.currentTime=s}catch(e){}};
 v.addEventListener('timeupdate',function(){var n=Date.now();if(n-u>900){u=n;m({t:v.currentTime})}});
 v.addEventListener('pause',function(){m({t:v.currentTime})});
+v.addEventListener('ended',function(){m({fim:true})});
 v.addEventListener('error',function(){m({erro:true})});})();</script></body></html>`;
 }

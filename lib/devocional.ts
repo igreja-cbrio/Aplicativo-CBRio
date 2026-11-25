@@ -199,6 +199,12 @@ export async function excluirRegistro(registro: RegistroDevocional): Promise<voi
   const { error } = await supabase.from(tabela).delete().eq("id", registro.id);
   if (error) throw error;
 }
+/** Conteúdo visto até o fim (vídeo do devocional) conta em Investir. RPC do ERP (migration 20261125180000). */
+export async function registrarConteudoVisto(origem: string): Promise<void> {
+  const { error } = await supabase.rpc("devocional_registrar_conteudo_visto", { p_origem: origem });
+  if (error) throw error;
+}
+
 export async function registrarLeituraBiblia(membroId: string, referencia: string): Promise<void> {
   const { error } = await supabase.from("devocional_leituras_biblia").upsert(
     { membro_id: membroId, data_leitura: hojeISO(), referencia },

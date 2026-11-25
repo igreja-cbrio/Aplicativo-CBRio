@@ -13,15 +13,17 @@ import { mensagemDoErro } from "@/lib/erroMensagem";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useDialogo } from "@/components/ui/Dialogo";
 import { AvatarPessoa } from "@/components/devocional/AvatarPessoa";
-import { diaAtual, diaLiberado, referenciaDoDia, somarDias, textoConvite } from "@/lib/leituraGrupo";
-import { detalheLeitura, nomeDoLivro, sairDaLeitura, type LeituraDetalhe } from "@/lib/leituraGrupoApi";
+import { dataDoDia, diaLiberado, livrosDaLeitura, proximaLeitura, referenciaDoDia, resumoDosLivros, textoConvite } from "@/lib/leituraGrupo";
+import { detalheLeitura, sairDaLeitura, type LeituraDetalhe } from "@/lib/leituraGrupoApi";
 
 const dataBR = (iso: string) => iso.split("-").reverse().join("/");
 
 /**
- * Tela CENTRAL de uma leitura em grupo (25/11/2026): quem está lendo e como cada
- * um vai, o dia de hoje e a lista de todos os dias. Só participante abre (a RPC
- * de detalhe recusa quem não participa).
+ * Tela CENTRAL de uma leitura em grupo: a próxima leitura da pessoa, quem está
+ * lendo e quanto cada um já leu, e todos os dias. Só participante abre.
+ * ⚠️ Decisão do Marcos (25/11): NÃO é pacto de data. A tela nunca mostra atraso
+ * nem compara com o calendário: a data só diz quando cada dia libera, e o progresso
+ * é "leu X de N dias".
  */
 export default function LeituraGrupo() {
   const c = useColors(), s = useMemo(() => css(c), [c]), t = useT();
@@ -35,10 +37,8 @@ export default function LeituraGrupo() {
   }, [leituraId, t]);
   useFocusEffect(carregar);
 
-  const livro = l ? nomeDoLivro(l.livro_ordem) : "";
-  const hojeDia = l ? diaAtual(l.data_inicio, l.dias, l.hoje) : 0;
   const eu = l?.participantes.find(p => p.membro_id === l.eu);
-  const liberados = l ? Math.min(l.dias, Math.max(0, hojeDia === l.dias + 1 ? l.dias : hojeDia)) : 0;
+  const proxima = l ? proximaLeitura(l.divisao, l.data_inicio, eu?.lidos ?? [], l.hoje) : null;
   const leramPorDia = useMemo(() => {
     const m = new Map<number, number>();
     l?.participantes.forEach(p => p.lidos.forEach(d => m.set(d, (m.get(d) ?? 0) + 1)));
@@ -47,7 +47,7 @@ export default function LeituraGrupo() {
 
   function convidar() {
     if (!l) return;
-    Share.share({ message: textoConvite({ titulo: l.titulo, dias: l.dias, dataInicio: l.data_inicio, codigo: l.codigo }) }).catch(() => undefined);
+    Share.share({ message: textoConvite({ titulo: l.titulo, dias: l.dias, dataInicio: l.data_inicio, codigo: l.codigo, fimDeSemana: l.fim_de_semana }) }).catch(() => undefined);
   }
   async function sair() {
     if (!l) return;
@@ -66,31 +66,28 @@ export default function LeituraGrupo() {
       <Pressable onPress={convidar} hitSlop={12} style={s.back} accessibilityRole="button" accessibilityLabel={t("Convidar")}><Ionicons name="person-add-outline" size={21} color={c.text} /></Pressable></View>
     {erro && !l ? <ErrorState texto={erro} onRetry={carregar} /> : !l ? <ActivityIndicator color={c.primary} style={{ marginTop: 40 }} /> :
       <ScrollView contentContainerStyle={s.content}>
-        <Text style={s.eyebrow}>{(l.cap_inicio === l.cap_fim ? `${livro} ${l.cap_inicio}` : `${livro} ${l.cap_inicio}–${l.cap_fim}`).toUpperCase()}</Text>
+        <Text style={s.eyebrow}>{resumoDosLivros(livrosDaLeitura(l)).toUpperCase()}</Text>
         <Text style={s.title}>{l.titulo}</Text>
-        <Text style={s.muted}>{l.dias} {l.dias === 1 ? t("dia") : t("dias")} · {dataBR(l.data_inicio)} {t("a")} {dataBR(somarDias(l.data_inicio, l.dias - 1))}</Text>
+        <Text style={s.muted}>{l.dias} {l.dias === 1 ? t("dia") : t("dias")}{l.fim_de_semana === false ? ` · ${t("de segunda a sexta")}` : ""}</Text>
 
-        {hojeDia === 0 ? <View style={s.hoje}><Ionicons name="hourglass-outline" size={22} color="#fff" /><Text style={s.hojeTxt}>{t("Começa em")} {dataBR(l.data_inicio)}</Text></View>
-          : hojeDia > l.dias ? <View style={s.hoje}><Ionicons name="trophy-outline" size={22} color="#fff" /><Text style={s.hojeTxt}>{t("Leitura concluída")}</Text></View>
-            : <Pressable onPress={() => abrirDia(hojeDia)} style={({ pressed }) => [s.hoje, pressed && s.pressed]} accessibilityRole="button">
-              <View style={s.flex}><Text style={s.hojeRotulo}>{t("HOJE")} · {t("DIA")} {hojeDia}</Text><Text style={s.hojeTxt}>{referenciaDoDia(livro, l.livro_ordem, l.divisao[hojeDia - 1])}</Text>
-                <Text style={s.hojeSub}>{leramPorDia.get(hojeDia) ?? 0} {t("de")} {l.participantes.length} {t("já leram")}</Text></View>
-              <Ionicons name={eu?.lidos.includes(hojeDia) ? "checkmark-circle" : "book-outline"} size={30} color="#fff" />
-            </Pressable>}
+        {proxima?.dia ? <Pressable onPress={() => abrirDia(proxima.dia!)} style={({ pressed }) => [s.hoje, pressed && s.pressed]} accessibilityRole="button">
+            <View style={s.flex}><Text style={s.hojeRotulo}>{t("SUA PRÓXIMA LEITURA")} · {t("DIA")} {proxima.dia}</Text><Text style={s.hojeTxt}>{referenciaDoDia(l.divisao[proxima.dia - 1], l.livro_ordem)}</Text></View>
+            <Ionicons name="book-outline" size={30} color="#fff" />
+          </Pressable>
+          : proxima?.liberaEm ? <View style={s.hoje}><Ionicons name="checkmark-circle-outline" size={24} color="#fff" /><View style={s.flex}><Text style={s.hojeTxt}>{t("Tudo lido até aqui")}</Text><Text style={s.hojeSub}>{t("A próxima leitura libera em")} {dataBR(proxima.liberaEm)}</Text></View></View>
+            : <View style={s.hoje}><Ionicons name="trophy-outline" size={24} color="#fff" /><Text style={[s.hojeTxt, s.flex]}>{t("Você leu todos os dias")}</Text></View>}
 
         <Text style={s.secao}>{t("QUEM ESTÁ LENDO")} · {l.participantes.length}</Text>
         <View style={s.card}>
           {l.participantes.map(p => {
-            const feitos = p.lidos.filter(d => d <= liberados).length;
-            const pct = liberados ? feitos / liberados : 0;
-            const leuHoje = hojeDia >= 1 && hojeDia <= l.dias && p.lidos.includes(hojeDia);
+            const pct = l.dias ? p.lidos.length / l.dias : 0;
             return <View key={p.membro_id} style={s.pessoa}>
-              <AvatarPessoa nome={p.nome} foto={p.foto_url} cor={c.primary} borda={leuHoje ? "#2E9E6B" : undefined} />
+              <AvatarPessoa nome={p.nome} foto={p.foto_url} cor={c.primary} />
               <View style={s.flex}>
                 <Text style={s.nome} numberOfLines={1}>{p.nome}{p.membro_id === l.eu ? ` (${t("você")})` : ""}{p.papel === "criador" ? " · " + t("criou") : ""}</Text>
                 <View style={s.barra}><View style={[s.barraCheia, { width: `${Math.round(pct * 100)}%` }]} /></View>
               </View>
-              <Text style={s.conta}>{feitos}/{liberados || l.dias}</Text>
+              <Text style={s.conta}>{p.lidos.length}/{l.dias}</Text>
             </View>;
           })}
         </View>
@@ -99,11 +96,11 @@ export default function LeituraGrupo() {
         <Text style={s.secao}>{t("TODOS OS DIAS")}</Text>
         <View style={s.card}>
           {l.divisao.map((d, i) => {
-            const dia = i + 1, aberto = diaLiberado(dia, l.data_inicio, l.hoje), meu = eu?.lidos.includes(dia);
+            const dia = i + 1, aberto = diaLiberado(l.divisao, l.data_inicio, dia, l.hoje), meu = eu?.lidos.includes(dia);
             return <Pressable key={dia} onPress={() => abrirDia(dia)} style={({ pressed }) => [s.diaLinha, pressed && s.pressed]} accessibilityRole="button">
               <Ionicons name={meu ? "checkmark-circle" : aberto ? "ellipse-outline" : "lock-closed-outline"} size={20} color={meu ? "#2E9E6B" : c.textMuted} />
-              <View style={s.flex}><Text style={[s.diaTitulo, dia === hojeDia && { color: c.primary }]}>{t("Dia")} {dia} · {referenciaDoDia(livro, l.livro_ordem, d)}</Text>
-                <Text style={s.diaSub}>{dataBR(somarDias(l.data_inicio, i))}{aberto ? ` · ${leramPorDia.get(dia) ?? 0}/${l.participantes.length} ${t("leram")}` : ""}</Text></View>
+              <View style={s.flex}><Text style={[s.diaTitulo, dia === proxima?.dia && { color: c.primary }]}>{t("Dia")} {dia} · {referenciaDoDia(d, l.livro_ordem)}</Text>
+                <Text style={s.diaSub}>{aberto ? `${leramPorDia.get(dia) ?? 0}/${l.participantes.length} ${t("leram")}` : `${t("Libera em")} ${dataBR(dataDoDia(l.divisao, l.data_inicio, dia))}`}</Text></View>
               <Ionicons name="chevron-forward" size={18} color={c.textMuted} />
             </Pressable>;
           })}

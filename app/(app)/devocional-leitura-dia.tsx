@@ -18,8 +18,8 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { ControleFonte } from "@/components/devocional/ControleFonte";
 import { PassagemBiblica } from "@/components/devocional/TextoLeitura";
 import { AvatarPessoa } from "@/components/devocional/AvatarPessoa";
-import { diaLiberado, referenciaDoDia, somarDias, versiculosDoCapitulo } from "@/lib/leituraGrupo";
-import { detalheLeitura, marcarDia, nomeDoLivro, textoDoDia, type LeituraDetalhe } from "@/lib/leituraGrupoApi";
+import { dataDoDia, diaLiberado, nomeDoLivroOrdem, referenciaDoDia, versiculosDoCapitulo } from "@/lib/leituraGrupo";
+import { detalheLeitura, marcarDia, textoDoDia, type LeituraDetalhe } from "@/lib/leituraGrupoApi";
 import type { VersiculoLivre } from "@/lib/bibliaLivre";
 
 /**
@@ -41,7 +41,6 @@ export default function LeituraDia() {
   }, [params.leituraId, t]);
   useFocusEffect(carregar);
 
-  const livro = l ? nomeDoLivro(l.livro_ordem) : "";
   const trechoDoDia = l?.divisao[dia - 1];
   const chaveTexto = l && trechoDoDia ? `${l.livro_ordem}:${JSON.stringify(trechoDoDia)}` : "";
   useEffect(() => {
@@ -51,7 +50,10 @@ export default function LeituraDia() {
     textoDoDia(l.livro_ordem, trechoDoDia).then(partes => {
       if (!vivo) return;
       setBlocos(partes.map(({ trecho, versiculos }) => ({
-        ref: trecho.de ? `${livro} ${trecho.cap}:${trecho.de}–${trecho.ate ?? versiculosDoCapitulo(l.livro_ordem, trecho.cap)}` : `${livro} ${trecho.cap}`,
+        ref: (() => {
+          const lv = trecho.livro ?? l.livro_ordem, nome = nomeDoLivroOrdem(lv);
+          return trecho.de ? `${nome} ${trecho.cap}:${trecho.de}–${trecho.ate ?? versiculosDoCapitulo(lv, trecho.cap)}` : `${nome} ${trecho.cap}`;
+        })(),
         texto: versiculos.map((v: VersiculoLivre) => `${v.verse} ${v.text}`).join(" "),
       })));
     }).catch(() => vivo && setErroTexto(true));
@@ -61,7 +63,8 @@ export default function LeituraDia() {
 
   const eu = l?.participantes.find(p => p.membro_id === l.eu);
   const li = !!eu?.lidos.includes(dia);
-  const aberto = l ? diaLiberado(dia, l.data_inicio, l.hoje) : false;
+  const aberto = l ? diaLiberado(l.divisao, l.data_inicio, dia, l.hoje) : false;
+  const liberaEm = l ? dataDoDia(l.divisao, l.data_inicio, dia).split("-").reverse().join("/") : "";
   const leram = l?.participantes.filter(p => p.lidos.includes(dia)) ?? [];
   const faltam = l?.participantes.filter(p => !p.lidos.includes(dia)) ?? [];
 
@@ -73,7 +76,7 @@ export default function LeituraDia() {
       if (!li) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
         // Também entra no histórico pessoal de "Leituras da Bíblia".
-        if (membro?.membroId && trechoDoDia) registrarLeituraBiblia(membro.membroId, referenciaDoDia(livro, l.livro_ordem, trechoDoDia)).catch(() => undefined);
+        if (membro?.membroId && trechoDoDia) registrarLeituraBiblia(membro.membroId, referenciaDoDia(trechoDoDia, l.livro_ordem)).catch(() => undefined);
       }
       carregar();
     } catch (e) { Alert.alert(t("Não foi possível salvar"), mensagemDoErro(e)); }
@@ -85,8 +88,8 @@ export default function LeituraDia() {
     <View style={s.header}><Pressable onPress={() => subirUmNivel()} hitSlop={12} style={s.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}><Ionicons name="chevron-back" size={24} color={c.text} /></Pressable><Text style={s.headerTitle}>{t("Dia")} {dia}{l ? ` ${t("de")} ${l.dias}` : ""}</Text><View style={s.back} /></View>
     {erro && !l ? <ErrorState texto={erro} onRetry={carregar} /> : !l || !trechoDoDia ? <ActivityIndicator color={c.primary} style={{ marginTop: 40 }} /> :
       <ScrollView contentContainerStyle={s.content}>
-        <Text style={s.eyebrow}>{l.titulo.toUpperCase()} · {somarDias(l.data_inicio, dia - 1).split("-").reverse().join("/")}</Text>
-        <Text style={s.title}>{referenciaDoDia(livro, l.livro_ordem, trechoDoDia)}</Text>
+        <Text style={s.eyebrow}>{l.titulo.toUpperCase()}</Text>
+        <Text style={s.title}>{referenciaDoDia(trechoDoDia, l.livro_ordem)}</Text>
         <ControleFonte passo={fonte.passo} mudar={fonte.mudar} cor={c.text} fundo={c.surface} />
         {erroTexto ? <ErrorState texto={t("Não foi possível carregar o texto.")} onRetry={() => setTentativa(n => n + 1)} />
           : !blocos ? <ActivityIndicator color={c.primary} style={{ marginVertical: 24 }} />
@@ -94,7 +97,7 @@ export default function LeituraDia() {
 
         <Pressable onPress={alternar} disabled={!aberto || salvando} style={[s.cta, li && s.ctaFeito, (!aberto || salvando) && s.disabled]} accessibilityRole="button">
           <Ionicons name={li ? "checkmark-circle" : aberto ? "book-outline" : "lock-closed-outline"} size={20} color={li ? c.primary : "#fff"} />
-          <Text style={[s.ctaTxt, li && { color: c.primary }]}>{!aberto ? `${t("Libera em")} ${somarDias(l.data_inicio, dia - 1).split("-").reverse().join("/")}` : li ? t("Você leu · toque para desfazer") : t("Li esse devocional")}</Text>
+          <Text style={[s.ctaTxt, li && { color: c.primary }]}>{!aberto ? `${t("Libera em")} ${liberaEm}` : li ? t("Você leu · toque para desfazer") : t("Li esse devocional")}</Text>
         </Pressable>
 
         <Text style={s.secao}>{t("JÁ LERAM")} · {leram.length}</Text>

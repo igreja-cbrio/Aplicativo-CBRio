@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- ⚠️⚠️ DEVOCIONAL · INVESTIR conta toda leitura (25/11/2026)
+- ⚠️⚠️ DEVOCIONAL · LEITURA EM GRUPO v2: vários livros, capítulos inteiros, dias úteis, sem prazo (25/11/2026)
 - ⚠️ DEVOCIONAL · COMENTÁRIO sempre com o TEXTO + "Ver mais" (25/11/2026)
 - ⚠️⚠️ DEVOCIONAL · LEITURA EM GRUPO (25/11/2026)
 - ⚠️⚠️ DEVOCIONAL · UMA tela pra TODO plano + YouTube dentro do app (25/09/2026 · 2ª leva)
@@ -276,3 +278,34 @@ lista da igreja), divisão por CAPÍTULOS INTEIROS, sem lembrete por push na v1.
   têm grant pro app. O servidor recusa marcar dia futuro (BRT), >60 pessoas, >20 leituras
   em andamento por criador. Marcar lido também grava em "Leituras da Bíblia" (melhor esforço).
 - Não alimenta `mem_devocionais` (KPI do Investir) — decisão em aberto.
+
+## ⚠️⚠️ DEVOCIONAL · INVESTIR conta toda leitura (25/11/2026)
+
+Decisão do Marcos: plano de leitura, leitura em grupo, Bíblia e conteúdo visto até o final
+contam em Investir. A régua vive no BANCO (ERP migration `20261125180000`): gatilhos em
+`devocional_leitura_grupo_lidos`, `devocional_leituras_biblia` e `devocional_leituras_planos`
+gravam 1 linha/dia em `mem_devocionais` (a tabela que NSM/jornada/KPIs leem).
+
+- Bíblia (`biblia.tsx`): `registrarLeituraBiblia` saiu da ABERTURA do capítulo e foi pro FIM
+  (`lib/fimDeLeitura.ts` · `chegouAoFim`, com a folga das barras flutuantes; texto que cabe
+  na tela conta de cara). ⚠️ Efeito colateral: "continuar de onde parou" (`ultimaLeituraBiblia`)
+  passa a voltar ao último capítulo LIDO até o fim, não ao último aberto.
+- Vídeo (`VideoDevocional` · prop `onFim`): `<video>` `ended` e YouTube estado 0 mandam
+  `{fim:true}`; diário e dia do plano chamam `registrarConteudoVisto` (RPC
+  `devocional_registrar_conteudo_visto`). Uma vez por vídeo montado.
+- Fora: Pense e pregações (abrem o YouTube fora do app) e PDF do Kids — não dá pra medir o fim.
+
+## ⚠️⚠️ DEVOCIONAL · LEITURA EM GRUPO v2: vários livros, capítulos inteiros, dias úteis, sem prazo (25/11/2026)
+
+Decisões do Marcos (ERP migration `20261125200000`, RPC `devocional_leitura_criar_v2`):
+- **Vários livros** na ordem escolhida ("Adicionar outro livro"); `livros` jsonb.
+- **Capítulos sempre inteiros**: dias = 1..total de capítulos. A tela diz isso ("N capítulos ·
+  de 1 a N dias") e mostra o ritmo ("2 capítulos por dia"). A divisão em versículos da v1 acabou.
+- **"Incluir sábado e domingo"** (Switch). A data de cada dia vai na `divisao` (`data`),
+  calculada por `datasDosDias`/`montarDivisao` (`lib/leituraGrupo.ts`).
+- ⚠️⚠️ **NÃO é pacto de data** ("não deve ficar aparecendo quantos dias atrasado a pessoa
+  está, isso gera uma cobrança"): a tela central mostra **"Sua próxima leitura"** (1º dia
+  liberado não lido, `proximaLeitura`), o progresso é **"lidos/total"** e os dias futuros só
+  dizem "Libera em dd/mm". Nada de "hoje é o dia X", "concluída" por data ou atraso. Dia
+  liberado continua liberado enquanto a leitura existir; entrar também não tem prazo.
+- Leituras v1 (sem `livros`/`data`) continuam funcionando: `livrosDaLeitura`, `dataDoDia`.
