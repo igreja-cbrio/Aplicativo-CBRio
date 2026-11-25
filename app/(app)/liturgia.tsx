@@ -15,7 +15,7 @@ import { Text } from "@/components/ui/Typography";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { SeletorMusicaLiturgia } from "@/components/voluntariado/SeletorMusicaLiturgia";
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Linking, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,7 +25,7 @@ import { apiGet, apiPut } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import {
-  dividirSecoes, duracaoCurta, horaBRT, itensParaSalvar, moverItem, rascunhoDe, rotaLiturgia, rotuloMusica,
+  dividirSecoes, duracaoCurta, horaBRT, itensParaSalvar, moverItem, previstoAoEscolher, rascunhoDe, rotaLiturgia, rotuloMusica,
   type ItemLiturgia, type Liturgia, type MusicaCatalogo, type MusicaLiturgia, type RascunhoItem,
 } from "@/lib/liturgia";
 import { linkMusicaSeguro } from "@/lib/louvorMusicas";
@@ -53,6 +53,8 @@ export default function LiturgiaScreen() {
   const [salvando, setSalvando] = useState(false);
   const [erroSalvar, setErroSalvar] = useState<string | null>(null);
   const [musicaDe, setMusicaDe] = useState<string | null>(null); // chave do item escolhendo música
+  // Letra/cifra aberta no modo leitura: "<chave do item>:letra" ou ":cifra".
+  const [textoAberto, setTextoAberto] = useState<string | null>(null);
   const editando = rascunho !== null;
 
   // Recarrega ao focar: a Produção ajusta o cronograma pelo sistema web.
@@ -153,6 +155,7 @@ export default function LiturgiaScreen() {
     const hora = horaBRT(item.inicio);
     const dur = duracaoCurta(item.previsto_seg);
     const musica = item.musica ?? null;
+    const chaveItem = `${item.secao}-${item.ordem}`;
     return (
       <View key={`${item.secao}-${item.ordem}`} style={[styles.item, !ultimo && styles.itemDivisor]}>
         <Text style={styles.itemHora}>{hora ?? "--:--"}</Text>
@@ -173,10 +176,30 @@ export default function LiturgiaScreen() {
           )}
           {!!dur && <Text style={styles.itemDur}>{dur}</Text>}
           {!!item.observacao && <Text style={styles.itemObs}>{item.observacao}</Text>}
-          {!!musica && !!linkMusicaSeguro(musica.link) && (
-            <Pressable onPress={() => abrirLink(musica.link)} accessibilityRole="link" hitSlop={8} style={styles.tentar}>
-              <Text style={styles.tentarTxt}>{t("Abrir link da música")}</Text>
-            </Pressable>
+          {!!musica && (!!linkMusicaSeguro(musica.link) || !!musica.letra || !!musica.cifra) && (
+            <View style={styles.acoesMusica}>
+              {!!linkMusicaSeguro(musica.link) && (
+                <Pressable onPress={() => abrirLink(musica.link)} accessibilityRole="link" hitSlop={8} style={styles.tentar}>
+                  <Text style={styles.tentarTxt}>{t("Abrir link da música")}</Text>
+                </Pressable>
+              )}
+              {!!musica.letra && (
+                <Pressable onPress={() => setTextoAberto((a) => (a === `${chaveItem}:letra` ? null : `${chaveItem}:letra`))} accessibilityRole="button" hitSlop={8} style={styles.tentar}>
+                  <Text style={styles.tentarTxt}>{textoAberto === `${chaveItem}:letra` ? t("Esconder letra") : t("Ver letra")}</Text>
+                </Pressable>
+              )}
+              {!!musica.cifra && (
+                <Pressable onPress={() => setTextoAberto((a) => (a === `${chaveItem}:cifra` ? null : `${chaveItem}:cifra`))} accessibilityRole="button" hitSlop={8} style={styles.tentar}>
+                  <Text style={styles.tentarTxt}>{textoAberto === `${chaveItem}:cifra` ? t("Esconder cifra") : t("Ver cifra")}</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+          {!!musica && textoAberto === `${chaveItem}:letra` && !!musica.letra && (
+            <Text style={styles.letra} selectable>{musica.letra}</Text>
+          )}
+          {!!musica && textoAberto === `${chaveItem}:cifra` && !!musica.cifra && (
+            <Text style={styles.cifra} selectable>{musica.cifra}</Text>
           )}
         </View>
       </View>
@@ -355,7 +378,7 @@ export default function LiturgiaScreen() {
         atual={itemEscolhendo?.musica ?? null}
         onFechar={() => setMusicaDe(null)}
         onEscolher={(m: MusicaCatalogo | null) => {
-          if (itemEscolhendo) alterar(itemEscolhendo.chave, { musica: m });
+          if (itemEscolhendo) alterar(itemEscolhendo.chave, { musica: m, previsto: previstoAoEscolher(itemEscolhendo.previsto, m) });
           setMusicaDe(null);
         }}
       />
@@ -408,6 +431,9 @@ const makeStyles = (colors: Palette) =>
     tag: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.glassBorder },
     tagTxt: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
     tentar: { alignSelf: "flex-start", paddingVertical: 6 },
+    acoesMusica: { flexDirection: "row", flexWrap: "wrap", columnGap: spacing.md },
+    letra: { color: colors.text, fontSize: font.size.sm, lineHeight: 22, marginTop: spacing.xs },
+    cifra: { color: colors.text, fontSize: 13, lineHeight: 20, marginTop: spacing.xs, fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" },
     tentarTxt: { color: colors.primary, fontSize: font.size.sm, fontWeight: "700" },
     editLinha: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.sm },
     setas: { gap: 2 },

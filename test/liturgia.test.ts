@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
   horaBRT, duracaoCurta, dividirSecoes, rotaLiturgia, type ItemLiturgia,
-  segParaMMSS, mmssParaSeg, rascunhoDe, moverItem, itensParaSalvar, rotuloMusica, type RascunhoItem,
+  segParaMMSS, mmssParaSeg, rascunhoDe, moverItem, itensParaSalvar, rotuloMusica, previstoAoEscolher, type RascunhoItem,
 } from '../lib/liturgia';
 import { rotaPai } from '../lib/hierarquia';
 
@@ -120,5 +120,21 @@ describe('liturgia · edição (fase 2)', () => {
     expect(s).toContain('apiGet<{ musicas: MusicaCatalogo[] }>(ROTA_CATALOGO_MUSICAS)');
     expect(s).toContain('apiPost<{ musica: MusicaCatalogo }>(ROTA_CATALOGO_MUSICAS');
     expect(s).toMatch(/ListEmptyComponent=\{\s*erro \? null/);
+  });
+});
+
+describe('liturgia · música com duração e preview do Planning Center', () => {
+  const m = { id: 'm1', titulo: 'T', artista: null, tom: null, link: null, duracao_seg: 312 };
+  it('previsto vazio ganha a duração da música; digitado nunca é trocado', () => {
+    expect(previstoAoEscolher('', m)).toBe('5:12');
+    expect(previstoAoEscolher('6:00', m)).toBe('6:00');
+    expect(previstoAoEscolher('', { ...m, duracao_seg: null })).toBe('');
+    expect(previstoAoEscolher('', null)).toBe('');
+  });
+  it('a tela mostra letra e cifra da música do momento e usa a duração ao escolher', () => {
+    const s = semComentarios(readFileSync('app/(app)/liturgia.tsx', 'utf8'));
+    expect(s).toContain('musica.letra');
+    expect(s).toContain('musica.cifra');
+    expect(s).toContain('previstoAoEscolher(itemEscolhendo.previsto, m)');
   });
 });

@@ -86,6 +86,10 @@ export type MusicaCatalogo = {
   artista: string | null;
   tom: string | null;
   link: string | null;
+  duracao_seg?: number | null; // do arranjo do Planning Center
+  // Letra e cifra (o "preview" do PCO): só vêm nas músicas da liturgia do culto.
+  letra?: string | null;
+  cifra?: string | null;
 };
 
 export const ROTA_CATALOGO_MUSICAS = "/app/voluntariado/liturgia-musicas";
@@ -164,4 +168,11 @@ export function itensParaSalvar(lista: RascunhoItem[]): { itens: ItemParaSalvar[
 export function rotuloMusica(m: MusicaCatalogo | null | undefined): string {
   if (!m) return "";
   return [m.titulo, m.artista, m.tom].filter(Boolean).join(" · ");
+}
+
+// Ao escolher uma música, o previsto VAZIO ganha a duração dela (o que já foi
+// digitado nunca é trocado).
+export function previstoAoEscolher(previstoAtual: string, musica: MusicaCatalogo | null): string {
+  if (String(previstoAtual || "").trim()) return previstoAtual;
+  return musica?.duracao_seg ? segParaMMSS(musica.duracao_seg) : previstoAtual;
 }

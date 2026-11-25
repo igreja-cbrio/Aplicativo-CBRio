@@ -6,6 +6,10 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Ver letra": {"en": "See lyrics", "es": "Ver letra"},
+  "Esconder letra": {"en": "Hide lyrics", "es": "Ocultar letra"},
+  "Ver cifra": {"en": "See chords", "es": "Ver cifrado"},
+  "Esconder cifra": {"en": "Hide chords", "es": "Ocultar cifrado"},
   "Alguém alterou esta liturgia enquanto você editava. Carregamos a versão atual; faça sua mudança de novo.": {"en": "Someone changed this service order while you were editing. We loaded the current version; please make your change again.", "es": "Alguien cambió esta liturgia mientras editabas. Cargamos la versión actual; haz tu cambio de nuevo."},
   "Buscar música ou artista": {"en": "Search song or artist", "es": "Buscar canción o artista"},
   "Cadastrar e escolher": {"en": "Add and choose", "es": "Registrar y elegir"},
