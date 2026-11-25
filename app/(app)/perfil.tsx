@@ -385,6 +385,25 @@ export default function PerfilScreen() {
             </Pressable>
           </GlassCard>
 
+          {/* Carta de transferência — saiu do menu "Você" e veio pra cá (pedido
+              do Marcos, 25/11/2026). A porta em Cuidados continua. */}
+          <GlassCard style={styles.cartoesCard}>
+            <Pressable
+              style={styles.cartoesRow}
+              onPress={() => router.navigate("/carta-transferencia")}
+              accessibilityRole="button"
+            >
+              <Ionicons name="document-text-outline" size={22} color={colors.brandMid} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cartoesText}>{t("Carta de transferência")}</Text>
+                <Text style={styles.cartoesHint}>
+                  {t("Peça sua transferência para outra igreja e acompanhe o atendimento.")}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </Pressable>
+          </GlassCard>
+
           <View style={styles.form}>
             <Input
               label={t("Nome completo")}

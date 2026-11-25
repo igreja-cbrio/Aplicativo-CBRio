@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { useDialogo } from "@/components/ui/Dialogo";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { compartilharCartaPdf } from "@/lib/cartaPdf";
+import { subirUmNivel } from "@/lib/hierarquia";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import {
@@ -149,7 +150,7 @@ export default function CartaTransferencia() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t("Voltar")}
-              onPress={() => router.navigate("/cuidados")}
+              onPress={() => subirUmNivel()}
               hitSlop={12}
             >
               <Ionicons name="chevron-back" size={28} color={colors.text} />
