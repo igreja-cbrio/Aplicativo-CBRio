@@ -12,6 +12,7 @@ import { useDialogo } from '@/components/ui/Dialogo';
 import { FilhosInscricao, useFilhosInscricao } from '@/components/kids/FilhosInscricao';
 import { detalheFilhoInscricao, nascimentoBR, type FilhoDetalhe } from '@/lib/kidsFilhosInscricao';
 import { formBatismoCrianca } from '@/lib/kidsBatismoForm';
+import { ConsentimentosCerimonia, useConsentimentosCerimonia } from '@/components/kids/ConsentimentosCerimonia';
 import { apiGet, apiPost } from '@/lib/api';
 import { dateBRToISO, isValidCPF, isValidDateBR, maskCPF, maskDateBR } from '@/lib/validators';
 
@@ -28,7 +29,8 @@ function Formulario() {
   const [datas, setDatas] = useState<DataBatismo[]>([]), [data, setData] = useState(''), [hora, setHora] = useState('');
   const [textos, setTextos] = useState<Textos | null>(null), [carregando, setCarregando] = useState(true), [erroCarga, setErroCarga] = useState(false);
   const [ocupado, setOcupado] = useState(false), [enviado, setEnviado] = useState(false), [erro, setErro] = useState('');
-  const [aceite, setAceite] = useState(false), [imagem, setImagem] = useState(false), [whatsapp, setWhatsapp] = useState(false);
+  const [aceite, setAceite] = useState(false), [whatsapp, setWhatsapp] = useState(false);
+  const consentimentos = useConsentimentosCerimonia('batismo', JSON.stringify([escolhido, filho?.chave, form.nome, form.nascimento, form.cpf]));
   const geracao = useRef(0), ativo = useRef(true), enviando = useRef(false);
   useEffect(() => { ativo.current = true; return () => { ativo.current = false; geracao.current++; }; }, []);
   const carregar = useCallback(async () => {
@@ -36,7 +38,7 @@ function Formulario() {
     try {
       const [r, tx] = await Promise.all([apiGet<{ datas: DataBatismo[] }>('/public/batismo/horarios', { auth: false }), apiGet<Textos>('/public/batismo/textos', { auth: false })]);
       if (!ativo.current) return;
-      if (!Array.isArray(r.datas) || !tx.termos_lgpd || !tx.imagem) throw new Error('indisponível');
+      if (!Array.isArray(r.datas) || !tx.termos_lgpd) throw new Error('indisponível');
       setDatas(r.datas); setData(r.datas[0]?.data_batismo || ''); setHora(''); setTextos(tx);
     } catch { if (ativo.current) setErroCarga(true); }
     finally { if (ativo.current) setCarregando(false); }
@@ -44,7 +46,7 @@ function Formulario() {
   useEffect(() => { void carregar(); }, [carregar]);
   function iniciar(f: FilhoDetalhe | null) {
     setFilho(f); setForm(formBatismoCrianca(f, consulta.dados?.responsavel)); setEscolhido(true);
-    setErro(''); setAceite(false); setImagem(false); setWhatsapp(false); setHora('');
+    setErro(''); setAceite(false); consentimentos.reset(); setWhatsapp(false); setHora('');
   }
   async function escolher(chave: string) {
     const v = ++geracao.current; setOcupado(true); setErro('');
@@ -54,26 +56,27 @@ function Formulario() {
   }
   function campo(k: keyof typeof form, valor: string | boolean | null) { setForm(v => ({ ...v, [k]: valor })); }
   async function confirmar() {
-    if (!escolhido || ocupado || enviando.current || !textos || erroCarga || carregando) return;
+    if (!consentimentos.pronto || !escolhido || ocupado || enviando.current || !textos || erroCarga || carregando) return;
     if (!form.nome.trim() || !isValidDateBR(form.nascimento) || !isValidCPF(form.cpf) || !form.sexo || !form.telefone || !form.email || !form.camisa || !data || !hora || !aceite) {
       setErro(t('Complete os dados que faltam, escolha a data e o horário e aceite os termos.')); return;
     }
     if (form.mobilidade && !form.limitacao.trim()) { setErro(t('Descreva a limitação de mobilidade da criança.')); return; }
-    if (!await dlg.confirmar({ titulo: t('Confirmar a inscrição desta criança?'), mensagem: `${form.nome} · ${nascimentoBR(data)} · ${hora}`, acao: t('Confirmar inscrição') })) return;
-    if (!ativo.current || enviando.current) return;
-    enviando.current = true; setOcupado(true); setErro('');
+    enviando.current = true; setOcupado(true);
+    if (!await dlg.confirmar({ titulo: t('Confirmar a inscrição desta criança?'), mensagem: `${form.nome} · ${nascimentoBR(data)} · ${hora}`, acao: t('Confirmar inscrição') })) { enviando.current = false; if (ativo.current) setOcupado(false); return; }
+    if (!ativo.current) { enviando.current = false; return; }
+    setErro('');
     try {
       const r = await apiPost<{ ok: boolean; duplicado?: boolean; mensagem?: string }>('/app/kids/inscricoes/batismo', {
         filho: filho?.chave || null, nome_completo: form.nome.trim(), cpf: form.cpf, data_nascimento: dateBRToISO(form.nascimento), sexo: form.sexo,
         telefone: form.telefone, email: form.email, tamanho_camisa: form.camisa, data_batismo: data, horario_culto: hora,
         possui_deficiencia: form.mobilidade, deficiencia_descricao: form.limitacao, observacoes: form.observacoes,
-        aceita_termos: aceite, consent_imagem: imagem, whatsapp_optin: whatsapp,
+        aceita_termos: aceite, consent_imagem: consentimentos.imagem, whatsapp_optin: whatsapp, consentimentos_kids: consentimentos.payload,
       });
       if (!ativo.current) return;
       if (r.duplicado) setErro(r.mensagem || t('Esta criança já tem uma inscrição de batismo em andamento.'));
       else if (r.ok) setEnviado(true);
       else setErro(t('Não foi possível enviar.'));
-    } catch (e) { if (ativo.current) setErro(e instanceof Error ? e.message : t('Não foi possível enviar.')); }
+    } catch (e) { if (ativo.current) { consentimentos.tratarErro(e); setErro(e instanceof Error ? e.message : t('Não foi possível enviar.')); } }
     finally { enviando.current = false; if (ativo.current) setOcupado(false); }
   }
   const horarios = datas.find(d => d.data_batismo === data)?.horarios || [];
@@ -81,7 +84,7 @@ function Formulario() {
     style={[s.opcao, { backgroundColor: atual === o.value ? c.primary : c.surface, borderColor: c.border }]}><Text style={{ color: atual === o.value ? '#fff' : c.text }}>{o.label}</Text></Pressable>)}</View>;
   const titulo = (texto: string) => <Text style={[s.titulo, { color: c.text }]}>{texto}</Text>;
   return <FormScaffold title={t('Batismo de crianças')} subtitle={t('Escolha seu filho e complete somente o que falta para a inscrição.')} icon="water" submitLabel={t('Inscrever a criança')}
-    onSubmit={confirmar} submitting={ocupado} submitDisabled={!escolhido || carregando || erroCarga || !datas.length || !horarios.length} enviado={enviado}
+    onSubmit={confirmar} submitting={ocupado} submitDisabled={!consentimentos.pronto || !escolhido || carregando || erroCarga || !datas.length || !horarios.length} enviado={enviado}
     enviadoTexto={t('Recebemos a inscrição da criança. A equipe entrará em contato com o responsável.')} error={erro} overlay={<dlg.Dialogo />}>
     {!escolhido ? <>
       <FilhosInscricao consulta={consulta} escolher={escolher} ocupado={ocupado} />
@@ -115,9 +118,9 @@ function Formulario() {
       <Input label={t('Observações (opcional)')} value={form.observacoes} onChangeText={v => campo('observacoes', v)} multiline editable={!ocupado} />
       {textos ? <View pointerEvents={ocupado ? 'none' : 'auto'} style={{ gap: 16 }}>
         {titulo(t('Autorizações do responsável'))}
-        <Checkbox label={textos.termos_lgpd} checked={aceite} onChange={setAceite} />
-        <Checkbox label={textos.imagem} checked={imagem} onChange={setImagem} />
-        <Checkbox label={textos.aviso_optin} checked={whatsapp} onChange={setWhatsapp} />
+        <Checkbox label={textos.termos_lgpd} checked={aceite} disabled={ocupado} onChange={setAceite} />
+        <ConsentimentosCerimonia consentimentos={consentimentos} disabled={ocupado} />
+        <Checkbox label={textos.aviso_optin} checked={whatsapp} disabled={ocupado} onChange={setWhatsapp} />
       </View> : null}
     </>}
   </FormScaffold>;

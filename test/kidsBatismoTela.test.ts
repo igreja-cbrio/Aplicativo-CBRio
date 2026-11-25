@@ -19,7 +19,7 @@ import Tela from '../app/(app)/(principal)/kids-batismo';
 let tree:ReactTestRenderer|undefined;
 const flush=async()=>{for(let i=0;i<8;i++)await Promise.resolve();};
 const filho={chave:'kids:1',nome:'Criança Exemplo',data_nascimento:'2020-03-10',sexo:'M',saude:{tem_limitacao_fisica:false},batismo:{cpf:'52998224725',telefone:'21999998888',email:'pai@example.test'}};
-beforeEach(()=>{(globalThis as any).IS_REACT_ACT_ENVIRONMENT=true;vi.clearAllMocks();m.user='pai';m.get.mockImplementation((p:string)=>Promise.resolve(p.endsWith('horarios')?{datas:[{data_batismo:'2026-12-27',horarios:[{horario:'09:30',label:'09:30'}]}]}:{termos_lgpd:'Termos',imagem:'Imagem',aviso_optin:'WhatsApp'}));m.detalhe.mockResolvedValue(filho);m.confirmar.mockResolvedValue(true);m.post.mockResolvedValue({ok:true});});
+beforeEach(()=>{(globalThis as any).IS_REACT_ACT_ENVIRONMENT=true;vi.clearAllMocks();m.user='pai';m.get.mockImplementation((p:string)=>Promise.resolve(p.includes('/termos?')?{versao:'v1',imagem:'Imagem criança',genitores:'Genitores',aviso:'Aviso'}:p.endsWith('horarios')?{datas:[{data_batismo:'2026-12-27',horarios:[{horario:'09:30',label:'09:30'}]}]}:{termos_lgpd:'Termos',imagem:'Imagem',aviso_optin:'WhatsApp'}));m.detalhe.mockResolvedValue(filho);m.confirmar.mockResolvedValue(true);m.post.mockResolvedValue({ok:true});});
 afterEach(async()=>{if(tree)await act(async()=>tree!.unmount());tree=undefined;});
 async function montar(){await act(async()=>{tree=create(React.createElement(Tela));await flush();});}
 async function selecionar(){await act(async()=>{tree!.root.findByType('FilhosInscricao' as any).props.escolher('kids:1');await flush();});}
@@ -29,9 +29,9 @@ it.each([false,true])('seleciona filho e distingue inscrição nova de duplicada
  await selecionar();expect(tree!.root.findAllByProps({label:'CPF da criança'})).toHaveLength(0);
  expect(tree!.root.findAllByProps({label:'Nome completo da criança'})).toHaveLength(0);
  const radio=(label:string)=>tree!.root.findAllByType('Pressable' as any).find(n=>n.findAllByType('Text' as any).some(t=>t.props.children===label))!;
- await act(async()=>{radio('09:30').props.onPress();radio('P').props.onPress();tree!.root.findByProps({label:'Termos'}).props.onChange(true);});
+ await act(async()=>{radio('09:30').props.onPress();radio('P').props.onPress();tree!.root.findByProps({label:'Termos'}).props.onChange(true);tree!.root.findByProps({label:'Imagem criança'}).props.onChange(true);tree!.root.findByProps({label:'Genitores'}).props.onChange(true);});
  await act(async()=>{await tree!.root.findByType('FormScaffold' as any).props.onSubmit();});
- expect(m.post).toHaveBeenCalledWith('/app/kids/inscricoes/batismo',expect.objectContaining({filho:'kids:1',nome_completo:filho.nome,cpf:filho.batismo.cpf,telefone:'21999998888',data_nascimento:filho.data_nascimento,data_batismo:'2026-12-27',horario_culto:'09:30',aceita_termos:true,consent_imagem:false}));
+ expect(m.post).toHaveBeenCalledWith('/app/kids/inscricoes/batismo',expect.objectContaining({filho:'kids:1',nome_completo:filho.nome,cpf:filho.batismo.cpf,telefone:'21999998888',data_nascimento:filho.data_nascimento,data_batismo:'2026-12-27',horario_culto:'09:30',aceita_termos:true,consent_imagem:true,consentimentos_kids:{versao:'v1',imagem:true,genitores:true}}));
  expect(tree!.root.findByType('FormScaffold' as any).props.enviado).toBe(!duplicado);
  if(duplicado) expect(tree!.root.findByType('FormScaffold' as any).props.error).toBe('A inscrição anterior foi mantida.');
 });
@@ -45,4 +45,25 @@ it('falha ao carregar detalhe mantém seleção e impede envio',async()=>{
  m.detalhe.mockRejectedValue(new Error('Criança não disponível.'));await montar();await selecionar();
  expect(tree!.root.findByType('FormScaffold' as any).props.error).toBe('Criança não disponível.');
  expect(tree!.root.findByType('FormScaffold' as any).props.submitDisabled).toBe(true);expect(m.post).not.toHaveBeenCalled();
+});
+
+it.each(['nenhum','imagem','genitores'])('não envia sem os dois aceites: %s',async(aceite)=>{
+ await montar();await selecionar();
+ await act(async()=>{if(aceite!=='nenhum')tree!.root.findByProps({label:aceite==='imagem'?'Imagem criança':'Genitores'}).props.onChange(true);});
+ expect(tree!.root.findByType('FormScaffold' as any).props.submitDisabled).toBe(true);
+ await act(async()=>{await tree!.root.findByType('FormScaffold' as any).props.onSubmit();});
+ expect(m.post).not.toHaveBeenCalled();
+});
+it('trocar criança limpa as duas autorizações',async()=>{
+ await montar();await selecionar();
+ await act(async()=>{tree!.root.findByProps({label:'Imagem criança'}).props.onChange(true);tree!.root.findByProps({label:'Genitores'}).props.onChange(true);});
+ await act(async()=>{tree!.root.findByProps({title:'Selecionar outra criança'}).props.onPress();});
+ await selecionar();
+ expect(tree!.root.findByProps({label:'Imagem criança'}).props.checked).toBe(false);
+ expect(tree!.root.findByProps({label:'Genitores'}).props.checked).toBe(false);
+});
+it('cadastro manual também começa sem autorização',async()=>{
+ await montar();await act(async()=>{tree!.root.findByProps({title:'Inscrever uma criança ainda não cadastrada'}).props.onPress();});
+ expect(tree!.root.findByProps({label:'Imagem criança'}).props.checked).toBe(false);
+ expect(tree!.root.findByType('FormScaffold' as any).props.submitDisabled).toBe(true);
 });
