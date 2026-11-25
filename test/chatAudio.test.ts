@@ -41,7 +41,7 @@ it("player acompanha reprodução, pausa, avanço pela onda e mostra o tempo rea
     },
     button: { addEventListener: (_e: string, fn: () => void) => { listeners.button = { click: fn }; }, classList: { toggle: () => {} }, setAttribute: () => {} },
     onda: {
-      addEventListener: (_e: string, fn: (e: any) => void) => { listeners.onda = { click: fn }; },
+      addEventListener: (e: string, fn: (ev: any) => void) => { (listeners.onda ||= {})[e] = fn; },
       querySelectorAll: () => barras, setAttribute: () => {},
       getBoundingClientRect: () => ({ left: 0, width: 100 }),
     },
@@ -60,6 +60,18 @@ it("player acompanha reprodução, pausa, avanço pela onda e mostra o tempo rea
   expect(nodes.audio.paused).toBe(false);
   listeners.onda.click({ clientX: 40 });
   expect(nodes.audio.currentTime).toBe(30);
+  // teclado: setas andam 5s, End vai pro fim (slider acessível — review da PR)
+  const ev = (key: string) => ({ key, preventDefault: () => {} });
+  listeners.onda.keydown(ev("ArrowRight"));
+  expect(nodes.audio.currentTime).toBe(35);
+  listeners.onda.keydown(ev("ArrowLeft"));
+  listeners.onda.keydown(ev("ArrowLeft"));
+  expect(nodes.audio.currentTime).toBe(25);
+  listeners.onda.keydown(ev("End"));
+  expect(nodes.audio.currentTime).toBe(75);
+  listeners.onda.keydown(ev("Home"));
+  expect(nodes.audio.currentTime).toBe(0);
+  nodes.audio.currentTime = 30;
   listeners.audio.timeupdate();
   expect(nodes.tempo.textContent).toBe("0:30");
   expect(barras.filter(b => b.tocada)).toHaveLength(12);

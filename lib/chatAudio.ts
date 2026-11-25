@@ -49,6 +49,7 @@ export function htmlAudioChat(url: string, origem: string | undefined, meu = fal
   const fail=()=>{window.ReactNativeWebView?.postMessage('audio-error');};
   button.addEventListener('click',()=>{if(audio.paused){audio.play().catch(fail);}else{audio.pause();}});
   onda.addEventListener('click',e=>{const r=onda.getBoundingClientRect();if(Number.isFinite(audio.duration)&&audio.duration>0&&r.width>0){audio.currentTime=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width))*audio.duration;}});
+  onda.addEventListener('keydown',e=>{if(!Number.isFinite(audio.duration)||audio.duration<=0)return;if(e.key==='ArrowRight'||e.key==='ArrowLeft'){const passo=e.key==='ArrowRight'?5:-5;audio.currentTime=Math.min(audio.duration,Math.max(0,audio.currentTime+passo));e.preventDefault();}else if(e.key==='Home'){audio.currentTime=0;e.preventDefault();}else if(e.key==='End'){audio.currentTime=audio.duration;e.preventDefault();}});
   ['loadedmetadata','durationchange','timeupdate','play','pause','ended'].forEach(event=>audio.addEventListener(event,pintar));
   audio.addEventListener('error',fail);document.addEventListener('visibilitychange',()=>{if(document.hidden)audio.pause();});
   </script></body></html>`;
