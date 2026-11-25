@@ -11,6 +11,7 @@ import { streakDevocional } from "@/lib/devocional";
 import { useNotificacoesNaoLidas } from "@/lib/useNotificacoes";
 import { useMembro } from "@/lib/useMembro";
 import { useT } from "@/lib/i18n";
+import { DESTINO_AVISOS } from "@/lib/menuRegras";
 
 export default function InicioScreen() {
   const { membro } = useMembro(), { count } = useNotificacoesNaoLidas(), t = useT();
@@ -46,7 +47,7 @@ export default function InicioScreen() {
   const notices: HomeNotice[] = [
     ...avisoBatismo,
     { id: "devocional", title: t("Não perca seu streak diário na devocional de Quarta com Deus!"), count: streak ?? undefined, href: "/devocional" },
-    ...avisos.slice(0, 5).map((a) => ({ id: a.id, title: a.titulo, body: a.corpo, href: "/noticias" as const })),
+    ...avisos.slice(0, 5).map((a) => ({ id: a.id, title: a.titulo, body: a.corpo, href: DESTINO_AVISOS })),
   ];
   return <View style={styles.screen}>
     <MarketingHero notices={notices} unreadCount={count} refreshing={refreshing} onRefresh={async () => {

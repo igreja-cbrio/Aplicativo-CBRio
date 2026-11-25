@@ -45,7 +45,7 @@ import { router, type Href } from "expo-router";
  *   │   └── /anotacoes         (tela antiga; segue no mapa)
  *   ├── /menu              barra
  *   │   ├── /perfil → /cartoes
- *   │   ├── /familia → /kids-area (KIDS, menu) → /kids → /kids-filho → /kids-aviso, /kids-solicitar-vinculo
+ *   │   │     └→ /familia → /kids-area (KIDS, menu) → /kids → /kids-filho → /kids-aviso, /kids-solicitar-vinculo
  *   │   │                        └→ /kids-mural  /kids-eventos  /kids-horarios  /kids-salas  /kids-certificados
  *   │   ├── /jornada
  *   │   ├── /generosidade → /comprovante-doacoes
@@ -118,7 +118,8 @@ const PAI: Record<string, string> = {
   // menu
   "/perfil": "/menu",
   "/cartoes": "/perfil",
-  "/familia": "/menu",
+  // Minha família mora dentro do perfil desde 25/11/2026 (saiu do menu).
+  "/familia": "/perfil",
   // KIDS = menu; cada item é uma tela própria e o check-in (/kids) também desce dele.
   "/kids-area": "/familia",
   "/kids-batismo": "/kids-area",

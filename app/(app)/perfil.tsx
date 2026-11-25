@@ -1,6 +1,6 @@
 import { ScrollView } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
@@ -20,7 +20,7 @@ import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
-import { enviarFotoPerfil } from "@/lib/api";
+import { enviarFotoPerfil, getMinhaFamilia } from "@/lib/api";
 import { arquivoDaCapa, capaCabe } from "@/lib/capaGrupo";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { useMembro } from "@/lib/useMembro";
@@ -66,6 +66,19 @@ export default function PerfilScreen() {
   // quando o ERP diz que esta conta tem álbum. Falha na consulta só esconde o
   // atalho — o caminho completo (Inscrições → Batismo) continua mostrando o erro.
   const [albumFotos, setAlbumFotos] = useState<AlbumBatismo | null>(null);
+
+  // Minha família saiu do menu e mora aqui (25/11/2026 · pedido do Marcos).
+  // `null` = ainda não sei (ou a consulta falhou): a linha aparece do mesmo
+  // jeito, só sem os nomes. Recarrega ao focar, que é a volta de /familia.
+  const [familiares, setFamiliares] = useState<string[] | null>(null);
+  useFocusEffect(useCallback(() => {
+    if (!user?.id) return;
+    let vivo = true;
+    getMinhaFamilia()
+      .then((r) => { if (vivo) setFamiliares((r.familiares || []).map((f) => (f.nome || "").trim().split(/\s+/)[0]).filter(Boolean)); })
+      .catch(() => { if (vivo) setFamiliares(null); });
+    return () => { vivo = false; };
+  }, [user?.id]));
 
   useEffect(() => {
     if (!user?.id) return;
@@ -345,6 +358,33 @@ export default function PerfilScreen() {
             </GlassCard>
           )}
 
+          <GlassCard style={styles.cartoesCard}>
+            <Pressable
+              style={styles.cartoesRow}
+              onPress={() => router.navigate("/familia")}
+              accessibilityRole="button"
+            >
+              <Ionicons name="people-outline" size={22} color={colors.brandMid} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cartoesText}>{t("Minha família")}</Text>
+                <Text style={styles.cartoesHint}>
+                  {familiares && familiares.length > 0
+                    ? familiares.join(", ")
+                    : t("Convide quem é da sua família para ficar junto com você no app.")}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.familiaAdd, pressed && { opacity: 0.7 }]}
+              onPress={() => router.navigate("/familia")}
+              accessibilityRole="button"
+            >
+              <Ionicons name="person-add-outline" size={18} color={colors.primary} />
+              <Text style={styles.familiaAddTxt}>{t("Adicionar familiar")}</Text>
+            </Pressable>
+          </GlassCard>
+
           <View style={styles.form}>
             <Input
               label={t("Nome completo")}
@@ -457,6 +497,8 @@ const makeStyles = (colors: Palette) =>
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
     },
+    familiaAdd: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.glassBorder },
+    familiaAddTxt: { color: colors.primary, fontSize: font.size.md, fontWeight: "700" },
     cartoesText: { color: colors.text, fontSize: font.size.md, fontWeight: "600" },
     cartoesHint: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 2, lineHeight: 18 },
     form: { gap: spacing.md },

@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Menu enxuto: avisos + notificações numa tela, família no perfil, Censo condicional (25/11/2026)
 - Legendas completas no dock nativo (16/11/2026)
 - ⚠️ LETRA GRANDE · varredura de telas espremidas ou vazando em 360dp + regras de layout (2026-11-14)
 - Login compacto e logo única no vídeo (13/11/2026)
@@ -594,3 +595,37 @@ de layout React (frame zero, próximo frame, troca de rota, rotação e desmonta
 O teste usa react-test-renderer 19.1.0 apenas como dependência de desenvolvimento;
 não substitui UIKit, cujo visual foi conferido no simulador. Tipos, réguas e
 traduções seguem no portão de publicação.
+
+---
+
+## Menu enxuto: avisos + notificações numa tela, família no perfil, Censo condicional (25/11/2026)
+
+Pedido do Marcos. Três mudanças no menu, todas só de JS.
+
+### 1 · Avisos e notificações são UMA tela (`/notificacoes`) com duas tags
+
+- Tags **Notificações** e **Avisos** no topo. A tag Avisos mostra os comunicados
+  (`components/comunicados/ListaAvisos.tsx`, que era o corpo de `mural.tsx`).
+- **Home** ("veja o que está acontecendo" e os avisos do carrossel) abre com
+  `aba=avisos` (`DESTINO_AVISOS`). **Menu** e **sino** abrem em Notificações. A
+  pessoa troca de tag ali mesmo.
+- O menu ficou com um item só, "Avisos e notificações". "Notícias e avisos" saiu.
+- `/noticias` continua existindo como porta antiga e cai na tag Avisos.
+  `/mural` continua existindo porque é o destino do toque na push de comunicado
+  (`comunicado_id` + `abrir_inscricao`): não trocar esse destino sem mexer junto
+  em `lib/comunicadoLink.ts` e nos testes `notifTapComunicado`/`muralRedirecionamento`.
+- A régua de qual tag abre é `abaInicial` em `lib/menuRegras.ts`.
+
+### 2 · Minha família saiu do menu e mora no perfil
+
+Cartão "Minha família" em `perfil.tsx`, com os primeiros nomes de quem já está
+na família e o botão "Adicionar familiar". Os dois levam a `/familia`, que não
+mudou. Na árvore, `/familia` sobe pra `/perfil`. KIDS continua no menu.
+
+### 3 · Censo só aparece no menu pra quem tem censo esperando resposta
+
+`useCensoNoMenu` pergunta ao `GET /app/censo` a cada abertura da gaveta e a
+régua `censoNoMenu` decide: aparece só com pesquisa aberta e `ja_respondeu`
+falso. Quem já respondeu, quem não tem censo aberto e quem não tem cadastro não
+veem o item. Sem resposta do servidor o item aparece (a tela `/censo` mostra o
+erro); enquanto carrega, fica fora pra não piscar. A rota `/censo` segue viva.

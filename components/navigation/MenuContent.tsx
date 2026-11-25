@@ -5,11 +5,13 @@ import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMembro } from "@/lib/useMembro";
 import { useT } from "@/lib/i18n";
-import { MENU_SECTIONS } from "@/lib/appNavigation";
+import { MENU_SECTIONS, ROTA_CENSO } from "@/lib/appNavigation";
+import { useCensoNoMenu } from "@/lib/useCensoNoMenu";
 import { BRAND_FONT } from "@/lib/fonts";
 
 export function MenuContent({ onNavigate, onSignOut }: { onNavigate: (href: Href) => void; onSignOut: () => void }) {
   const { user } = useAuth(), { membro } = useMembro(), t = useT(), pathname = usePathname();
+  const mostrarCenso = useCensoNoMenu();
   return <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
     <Pressable accessibilityRole="button" accessibilityLabel={t("Meu perfil")} onPress={() => onNavigate("/perfil")} style={styles.profile}>
       {membro?.avatarUrl ? <Image source={{ uri: membro.avatarUrl }} style={styles.avatar} /> : <View style={styles.avatar}><Ionicons name="person-outline" color="#fff" size={24} /></View>}
@@ -17,7 +19,7 @@ export function MenuContent({ onNavigate, onSignOut }: { onNavigate: (href: Href
     </Pressable>
     {MENU_SECTIONS.map((section) => <View key={section.title} style={styles.section}>
       <Text accessibilityRole="header" style={styles.sectionTitle}>{t(section.title)}</Text>
-      {section.items.map((item) => <Pressable key={item.href} accessibilityRole="button" accessibilityState={{ selected: pathname === item.href }} onPress={() => onNavigate(item.href)} style={({ pressed }) => [styles.row, (pressed || pathname === item.href) && styles.selected]}>
+      {section.items.filter((item) => item.href !== ROTA_CENSO || mostrarCenso).map((item) => <Pressable key={item.href} accessibilityRole="button" accessibilityState={{ selected: pathname === item.href }} onPress={() => onNavigate(item.href)} style={({ pressed }) => [styles.row, (pressed || pathname === item.href) && styles.selected]}>
         <Ionicons name={item.icon} size={21} color="#fff" /><Text style={styles.label}>{t(item.label)}</Text><Ionicons name="chevron-forward" size={15} color="#cfdbdc" />
       </Pressable>)}
     </View>)}
