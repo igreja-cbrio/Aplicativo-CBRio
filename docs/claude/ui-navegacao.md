@@ -664,5 +664,10 @@ disponível sem recorte inventado. Nenhum módulo nativo/dependência foi adicio
 
 Validação automatizada cobre migração/contas, armazenamento indisponível,
 portões, recorte, passos/voltar/pular e background. A captura do iPhone de
-produção é referência; não comprova execução do código novo. Antes de OTA,
-validar visualmente em iOS e Android, inclusive fonte ampliada e rotação.
+produção é referência; não comprova execução do código novo. Conferência visual
+em cópia isolada no simulador iOS validou convite, dock nativo, Menu e dock
+rolável com fonte ampliada, usando componentes reais e dados fictícios.
+Typecheck, i18n e 955 testes passaram; exportações iOS/Android concluídas.
+Antes de OTA, ainda validar gestos/VoiceOver, rotação e Android nativo. A tentativa
+Android ficou bloqueada por travamento do System UI do emulador, sem conclusão
+visual. Nenhum OTA foi publicado por esta mudança.
