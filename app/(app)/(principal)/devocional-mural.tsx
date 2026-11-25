@@ -8,7 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
-import { listarMural, publicarNoMural, reagirNoMural, type PostMural } from "@/lib/devocional";
+import { listarMeusTimes, listarMural, publicarNoMural, reagirNoMural, type PostMural, type TimeServir } from "@/lib/devocional";
 import { carregarCapitulo } from "@/lib/bibliaLivre";
 import { CHAVE_FILTRO_MURAL, FILTRO_PADRAO, REACOES, alternarReacao, lerReferencia, normalizarFiltro, textoDosVersos, type FiltroMural, type TipoReacao } from "@/lib/muralDevocional";
 import { subirUmNivel } from "@/lib/hierarquia";
@@ -47,6 +47,9 @@ export default function Mural() {
   // Texto buscado na Bíblia para comentário antigo que guardou só a referência.
   const [textosBuscados, setTextosBuscados] = useState<Record<string, string>>({});
   const buscando = useRef(new Set<string>());
+  // Times do Servir de quem publica: pode mandar só para um deles.
+  const [times, setTimes] = useState<TimeServir[]>([]), [timeId, setTimeId] = useState<string | null>(null);
+  useEffect(() => { listarMeusTimes().then(setTimes).catch(() => setTimes([])); }, []);
 
   // O filtro escolhido fica salvo no aparelho e volta na próxima abertura.
   useEffect(() => {
@@ -94,8 +97,8 @@ export default function Mural() {
     if (!membro?.membroId || !trecho || texto.trim().length < 2) return Alert.alert(t("Falta pouco"), t("Escolha o texto na Bíblia e escreva seu comentário."));
     setEnviando(true);
     try {
-      await publicarNoMural({ membroId: membro.membroId, texto, alcance, referenciaBiblica: trecho.referencia, textoBiblico: trecho.texto, itemId: trecho.itemId });
-      setTrecho(null); setTexto(""); setAberto(false); router.setParams({ referencia: undefined, textoBiblico: undefined, itemId: undefined });
+      await publicarNoMural({ membroId: membro.membroId, texto, alcance, referenciaBiblica: trecho.referencia, textoBiblico: trecho.texto, itemId: trecho.itemId, timeId });
+      setTrecho(null); setTexto(""); setAberto(false); setTimeId(null); router.setParams({ referencia: undefined, textoBiblico: undefined, itemId: undefined });
       if (filtro) await carregar(filtro);
     } catch (e) { Alert.alert(t("Não foi possível publicar"), e instanceof Error ? e.message : t("Tente novamente.")); }
     finally { setEnviando(false); }
@@ -134,6 +137,9 @@ export default function Mural() {
         <TextInput style={[s.input, s.area]} value={texto} onChangeText={setTexto} placeholder={t("O que esse texto falou com você?")} placeholderTextColor={c.textMuted} multiline maxLength={1200} />
         <Text style={s.label}>{t("Quem pode ver?")}</Text>
         <View style={s.audiences}>{ALCANCES.map(a => <Pressable key={a.valor} onPress={() => setAlcance(a.valor)} style={[s.audience, alcance === a.valor && s.audienceOn]}><Ionicons name={a.icone} size={16} color={alcance === a.valor ? "#fff" : c.textMuted} /><Text style={[s.audienceText, alcance === a.valor && s.audienceTextOn]}>{t(a.rotulo)}</Text></Pressable>)}</View>
+        {alcance === "servir" && (times.length ? <View style={s.audiences}>
+            {[{ id: null as string | null, nome: t("Todos os meus times") }, ...times].map(x => <Pressable key={x.id ?? "todos"} onPress={() => setTimeId(x.id)} style={[s.time, timeId === x.id && s.timeOn]} accessibilityRole="button" accessibilityState={{ selected: timeId === x.id }}><Text style={[s.timeText, timeId === x.id && s.timeTextOn]}>{x.nome}</Text></Pressable>)}
+          </View> : <Text style={s.scope}>{t("Você ainda não está em nenhum time do Servir.")}</Text>)}
         <Text style={s.scope}>{t("Sua publicação será identificada com seu nome.")}</Text>
         <View style={s.acoes}>
           <Pressable style={s.cancelar} onPress={cancelar} disabled={enviando} accessibilityRole="button"><Text style={s.cancelarText}>{t("Cancelar")}</Text></Pressable>
@@ -146,7 +152,7 @@ export default function Mural() {
         posts.map(p => {
           const textoBiblico = p.texto_biblico || textosBuscados[p.id];
           return <View key={p.id} style={s.card}>
-            <View style={s.authorRow}><View style={s.avatar}><Text style={s.avatarText}>{p.autor_nome?.trim().charAt(0).toUpperCase()}</Text></View><View style={s.authorText}><Text style={s.author}>{p.autor_nome}</Text><Text style={s.scope}>{t(ALCANCES.find(a => a.valor === p.alcance)?.rotulo ?? "Toda a igreja")}</Text></View></View>
+            <View style={s.authorRow}><View style={s.avatar}><Text style={s.avatarText}>{p.autor_nome?.trim().charAt(0).toUpperCase()}</Text></View><View style={s.authorText}><Text style={s.author}>{p.autor_nome}</Text><Text style={s.scope}>{p.time_nome ? t("Time") + " " + p.time_nome : t(ALCANCES.find(a => a.valor === p.alcance)?.rotulo ?? "Toda a igreja")}</Text>{p.times_comuns?.length ? <Text style={s.comum} numberOfLines={1}>{t("Serve com você em") + " " + p.times_comuns.join(", ")}</Text> : null}</View></View>
             <Text style={s.ref}>{p.item_passagem || p.referencia_biblica}</Text>{textoBiblico ? <TrechoBiblico texto={textoBiblico} style={s.quote} corLink={c.primary} /> : null}<Text style={s.body}>{p.texto}</Text>
             {p.reacoes ? <View style={s.reacoes}>{REACOES.map(r => {
               const n = p.reacoes?.[r.tipo] ?? 0, minha = p.minhas?.includes(r.tipo) ?? false;
@@ -171,6 +177,8 @@ const css = (c: any) => StyleSheet.create({
   audienceText: { color: c.textMuted, fontSize: 12, fontWeight: "700" }, audienceTextOn: { color: "#fff" },
   acoes: { flexDirection: "row", gap: 9 }, cancelar: { paddingHorizontal: 16, justifyContent: "center", borderRadius: 14, borderWidth: 1, borderColor: c.border }, cancelarText: { color: c.textMuted, fontWeight: "800" },
   cta: { backgroundColor: c.primary, padding: 15, borderRadius: 14, alignItems: "center" }, disabled: { opacity: .55 }, ctaText: { color: "#fff", fontSize: 16, fontWeight: "800" },
+  time: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: c.border }, timeOn: { borderColor: c.primary, backgroundColor: c.primary + "22" },
+  timeText: { color: c.textMuted, fontSize: 12, fontWeight: "700" }, timeTextOn: { color: c.primary }, comum: { color: c.primary, fontSize: 11, fontWeight: "700", marginTop: 1 },
   vazio: { color: c.textMuted, textAlign: "center", marginTop: 20, lineHeight: 21 },
   card: { backgroundColor: c.surface, padding: 16, borderRadius: 18, gap: 8, borderWidth: 1, borderColor: c.border },
   authorRow: { flexDirection: "row", alignItems: "center", gap: 10 }, avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: c.primary, alignItems: "center", justifyContent: "center" }, avatarText: { color: "#fff", fontWeight: "800" }, authorText: { flex: 1 }, author: { color: c.text, fontWeight: "800" }, scope: { color: c.textMuted, fontSize: 11 }, ref: { color: c.primary, fontWeight: "800" }, quote: { color: c.text, lineHeight: 22, fontStyle: "italic" }, body: { color: c.text, lineHeight: 22 },

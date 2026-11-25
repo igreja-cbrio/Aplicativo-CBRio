@@ -51,7 +51,12 @@ export type PostMural = {
   autor_nome: string; alcance: "igreja" | "grupo" | "servir"; texto_biblico: string | null;
   // Mural (25/11/2026 · listar_devocional_mural_v2). Ausentes na v1.
   meu?: boolean; reacoes?: Partial<Record<TipoReacao, number>>; minhas?: TipoReacao[];
+  // Times do Servir (25/11/2026 · migration 20261125233000): time escolhido por quem
+  // publicou e times que o autor tem em comum com quem está vendo.
+  time_nome?: string | null; times_comuns?: string[];
 };
+
+export type TimeServir = { id: string; nome: string };
 
 export async function listarPlanos(membroId: string | null): Promise<PlanoDevocional[]> {
   const { data, error } = await supabase.from("devocional_planos")
@@ -141,11 +146,20 @@ export async function reagirNoMural(muralId: string, tipo: TipoReacao): Promise<
   return data === true;
 }
 
-export async function publicarNoMural(params: { membroId: string; texto: string; alcance: PostMural["alcance"]; itemId?: string; referenciaBiblica?: string; textoBiblico?: string }): Promise<void> {
+/** Times do Servir de quem está logado, para publicar só para um deles. */
+export async function listarMeusTimes(): Promise<TimeServir[]> {
+  const { data, error } = await supabase.rpc("devocional_mural_meus_times");
+  if (error) throw error;
+  return (data ?? []) as TimeServir[];
+}
+
+export async function publicarNoMural(params: { membroId: string; texto: string; alcance: PostMural["alcance"]; itemId?: string; referenciaBiblica?: string; textoBiblico?: string; timeId?: string | null }): Promise<void> {
   const { error } = await supabase.from("devocional_mural").insert({
     membro_id: params.membroId, texto: params.texto.trim(), item_id: params.itemId ?? null,
     referencia_biblica: params.referenciaBiblica?.trim() || null, texto_biblico: params.textoBiblico?.trim() || null,
     alcance: params.alcance, status: "publicado",
+    // Só manda a coluna quando há time: assim a publicação comum não depende da migration nova.
+    ...(params.alcance === "servir" && params.timeId ? { time_id: params.timeId } : {}),
   });
   if (error) throw error;
 }
