@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { faltaColuna } from "./videoDevocional";
+import { apiPost } from "./api";
 import type { FiltroMural, TipoReacao } from "./muralDevocional";
 
 // ⚠️ `video_url` (25/09/2026) chega por migration do ERP que o Marcos aplica.
@@ -139,6 +140,14 @@ export async function listarMural(filtro: FiltroMural = "igreja"): Promise<PostM
   return (antiga.data ?? []) as PostMural[];
 }
 
+/**
+ * Pede ao servidor para avisar o autor de que alguém reagiu. O banco decide se
+ * avisa (autor quer aviso, uma vez por pessoa); falha aqui não desfaz a reação.
+ */
+export function avisarReacao(muralId: string): void {
+  apiPost(`/app/devocional/mural/${muralId}/avisar-reacao`, {}).catch(() => undefined);
+}
+
 /** Liga/desliga uma reação. Devolve true se ficou ligada. */
 export async function reagirNoMural(muralId: string, tipo: TipoReacao): Promise<boolean> {
   const { data, error } = await supabase.rpc("devocional_mural_reagir", { p_mural: muralId, p_tipo: tipo });
@@ -153,13 +162,15 @@ export async function listarMeusTimes(): Promise<TimeServir[]> {
   return (data ?? []) as TimeServir[];
 }
 
-export async function publicarNoMural(params: { membroId: string; texto: string; alcance: PostMural["alcance"]; itemId?: string; referenciaBiblica?: string; textoBiblico?: string; timeId?: string | null }): Promise<void> {
+export async function publicarNoMural(params: { membroId: string; texto: string; alcance: PostMural["alcance"]; itemId?: string; referenciaBiblica?: string; textoBiblico?: string; timeId?: string | null; avisarReacoes?: boolean }): Promise<void> {
   const { error } = await supabase.from("devocional_mural").insert({
     membro_id: params.membroId, texto: params.texto.trim(), item_id: params.itemId ?? null,
     referencia_biblica: params.referenciaBiblica?.trim() || null, texto_biblico: params.textoBiblico?.trim() || null,
     alcance: params.alcance, status: "publicado",
     // Só manda a coluna quando há time: assim a publicação comum não depende da migration nova.
     ...(params.alcance === "servir" && params.timeId ? { time_id: params.timeId } : {}),
+    // O banco nasce com aviso ligado; só manda a coluna quando a pessoa desliga.
+    ...(params.avisarReacoes === false ? { notificar_reacoes: false } : {}),
   });
   if (error) throw error;
 }

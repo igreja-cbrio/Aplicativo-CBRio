@@ -141,6 +141,10 @@ export function attachNotifTapListener(): () => void {
       case "devocional":
         router.navigate("/devocional");
         return;
+      // Reação a um comentário do mural (25/11/2026).
+      case "devocional_mural_reacao":
+        router.navigate("/devocional-mural");
+        return;
       case "cuidado":
         router.navigate("/cuidados");
         return;
