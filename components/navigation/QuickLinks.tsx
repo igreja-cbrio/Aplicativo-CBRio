@@ -1,5 +1,5 @@
-import { TutorialTarget, type TutorialTargetId } from "@/contexts/TutorialContext";
-import { useCallback, useMemo, useRef } from "react";
+import { useTutorial, TutorialTarget, type TutorialTargetId } from "@/contexts/TutorialContext";
+import React, { useCallback, useMemo, useRef } from "react";
 import { Text } from "@/components/ui/Typography";
 import { DockSurface } from "@/components/navigation/DockSurface";
 import { NativeShortcuts } from "@/modules/native-shortcuts/src/NativeShortcuts";
@@ -14,6 +14,8 @@ import { useTheme } from "@/contexts/ThemeContext";
 const TARGETS: TutorialTargetId[] = ["care", "devotional", "groups", "serve", "giving"];
 
 export function QuickLinks() {
+  const tutorial = useTutorial();
+  const tutorialIndex = tutorial?.highlightedTarget ? TARGETS.indexOf(tutorial.highlightedTarget) : -1;
   const scrollRef = useRef<ScrollView>(null);
   const { width, fontScale } = useWindowDimensions();
   const { fontMultiplier } = useTheme();
@@ -25,9 +27,10 @@ export function QuickLinks() {
   const reveal = useCallback((index: number) => { if (scroll) scrollRef.current?.scrollTo({ x: Math.max(0, index * 120 - 12), animated: false }); }, [scroll]);
   if (NativeShortcuts && !scroll) return <TutorialTarget id="dock"><NativeShortcuts
     labels={labels}
-    selectedIndex={QUICK_LINKS.findIndex(item => pathname === item.href)}
+    selectedIndex={tutorialIndex >= 0 ? tutorialIndex : QUICK_LINKS.findIndex(item => pathname === item.href)}
     style={{ height: 74, width: "100%" }}
     onShortcutSelect={({ nativeEvent }) => {
+      if (tutorial?.highlightedTarget) return;
       const item = QUICK_LINKS[nativeEvent.index];
       if (item) irParaBarra(pathname, item.href);
     }}

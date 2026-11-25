@@ -18,7 +18,8 @@ it('pular/concluir dispensam, replay é explícito e não apaga a marca', async 
   await act(async () => { tree = create(scene()); });
   expect(value.pending).toBe(true); expect(value.pushReady).toBe(false);
   await act(async () => value.releasePush()); expect(value.pushReady).toBe(true);
-  await act(async () => value.finish()); expect(value.pending).toBe(false);
+  await act(async () => value.highlight('care')); expect(value.highlightedTarget).toBe('care');
+  await act(async () => value.finish()); expect(value.highlightedTarget).toBe(null); expect(value.pending).toBe(false);
   expect(m.finish).toHaveBeenCalledWith({}, 'a');
   await act(async () => value.replay()); expect(value.pending).toBe(true);
   expect(m.finish).toHaveBeenCalledTimes(1);

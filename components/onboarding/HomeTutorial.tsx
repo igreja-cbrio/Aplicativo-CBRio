@@ -11,7 +11,7 @@ import { useCadastroReady } from '@/components/auth/CadastroGate';
 import { useMenu } from '@/contexts/MenuContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useT } from '@/lib/i18n';
-import { podeMostrarTutorial, recorteTutorial, type TutorialRect } from '@/lib/tutorial';
+import { podeMostrarTutorial, recorteTutorial, contornoTutorial, type TutorialRect } from '@/lib/tutorial';
 
 export function HomeTutorial({ children }: { children: ReactNode }) {
   const tutorial = useTutorial()!;
@@ -52,6 +52,12 @@ function TutorialOverlay({ host }: { host: React.RefObject<View | null> }) {
   const progress = useRef(new Animated.Value(1)).current;
   const heading = useRef<React.ElementRef<typeof Text>>(null);
   const targetId = step >= 0 ? steps[step].id : null;
+  const nativeDock = !!targetId && targetId !== 'menu' && !tutorial.targets.current.has(targetId) && tutorial.targets.current.has('dock');
+  useEffect(() => {
+    // Seleção visual do próprio UIKit: não dispara onShortcutSelect nem navega.
+    tutorial.highlight(targetId);
+    return () => tutorial.highlight(null);
+  }, [targetId, tutorial.highlight]);
   useEffect(() => {
     let live = true;
     void AccessibilityInfo.isReduceMotionEnabled().then(value => { if (live) setReduceMotion(value); }).catch(() => {});
@@ -88,12 +94,12 @@ function TutorialOverlay({ host }: { host: React.RefObject<View | null> }) {
   const topLimit = insets.top + 12, bottomLimit = bounds.height - insets.bottom - 12;
   const desiredTop = hole ? (targetId === 'menu' ? hole.y + hole.height + 18 : hole.y - cardHeight - 18) : (bounds.height - cardHeight) / 2;
   const top = Math.max(topLimit, Math.min(desiredTop, bottomLimit - cardHeight));
-  const mask = `M0 0H${bounds.width}V${bounds.height}H0Z` + (hole ? ` M${hole.x} ${hole.y}v${hole.height}h${hole.width}v-${hole.height}Z` : '');
+  const outline = hole ? contornoTutorial(hole) : '';
+  const mask = `M0 0H${bounds.width}V${bounds.height}H0Z ${outline}`;
   const label = step < 0 ? t('Boas-vindas') : t('Etapa {atual} de {total}').replace('{atual}', String(step + 1)).replace('{total}', String(steps.length));
   return <View style={[StyleSheet.absoluteFill, styles.overlay]} accessibilityViewIsModal onAccessibilityEscape={tutorial.finish} importantForAccessibility="yes">
     <View style={StyleSheet.absoluteFill} onStartShouldSetResponder={() => true} />
-    <Svg pointerEvents="none" width={bounds.width} height={bounds.height} style={StyleSheet.absoluteFill}><Path d={mask} fill="rgba(6,29,41,0.68)" fillRule="evenodd" /></Svg>
-    {hole ? <View pointerEvents="none" style={[styles.outline, { left: hole.x, top: hole.y, width: hole.width, height: hole.height }]} /> : null}
+    <Svg pointerEvents="none" width={bounds.width} height={bounds.height} style={StyleSheet.absoluteFill}><Path d={mask} fill="rgba(6,29,41,0.68)" fillRule="evenodd" />{hole && !nativeDock ? <Path d={outline} fill="none" stroke="#ffffff" strokeWidth={1.5} /> : null}</Svg>
     <Animated.View onLayout={event => setCardHeight(event.nativeEvent.layout.height)} style={[styles.card, { top, maxHeight: bottomLimit - topLimit, backgroundColor: paper, opacity: progress, transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [reduceMotion ? 0 : 6, 0] }) }] }]}>
       <View style={styles.row}>
         <Text style={[styles.count, { color: muted }]}>{label}</Text>
@@ -118,7 +124,6 @@ function TutorialOverlay({ host }: { host: React.RefObject<View | null> }) {
 const styles = StyleSheet.create({
   host: { flex: 1 },
   overlay: { zIndex: 100, elevation: 100 },
-  outline: { position: 'absolute', borderWidth: 2, borderColor: '#ffffff', borderRadius: 12 },
   card: { position: 'absolute', left: 16, right: 16, padding: 20, borderRadius: 24, gap: 12, elevation: 4 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   count: { fontSize: 12, flexShrink: 1 },

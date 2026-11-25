@@ -657,7 +657,10 @@ leitor dispensam. Movimento reduzido elimina a animação do cartão.
 
 Alvos Android/fallback são Views reais; dock rolável traz o item à vista antes
 de medir. iOS UIKit não expõe os retângulos individuais no binário atual: os
-cinco passos destacam a barra inteira, com ícone e texto da função. **Não dividir
+cinco passos revelam a barra em cápsula e usam `selectedIndex` para destacar o
+botão real com a seleção arredondada do UIKit, sem moldura branca. Essa seleção
+é efêmera, não navega e volta à rota ao fechar/entrar em background ou Menu.
+Recorte e contorno dos demais alvos compartilham o mesmo raio arredondado. **Não dividir
 a largura por cinco nem substituir o UITabBar por imitação.** O Menu é medido
 individualmente em ambas as plataformas. Sem medida válida, o texto permanece
 disponível sem recorte inventado. Nenhum módulo nativo/dependência foi adicionado.
@@ -668,6 +671,6 @@ produção é referência; não comprova execução do código novo. Conferênci
 em cópia isolada no simulador iOS validou convite, dock nativo, Menu e dock
 rolável com fonte ampliada, usando componentes reais e dados fictícios.
 Typecheck, i18n e 955 testes passaram; exportações iOS/Android concluídas.
-Antes de OTA, ainda validar gestos/VoiceOver, rotação e Android nativo. A tentativa
-Android ficou bloqueada por travamento do System UI do emulador, sem conclusão
-visual. Nenhum OTA foi publicado por esta mudança.
+O usuário confirmou o fluxo manual Android. No iOS, solicitou foco arredondado
+por botão após o primeiro teste; a seleção nativa foi ajustada e aguarda nova
+conferência. Antes de OTA, validar também VoiceOver e rotação. Nenhum OTA foi publicado por esta mudança.

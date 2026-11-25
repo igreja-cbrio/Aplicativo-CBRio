@@ -2,7 +2,7 @@ import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const state = vi.hoisted(() => ({
-  finish: vi.fn(), route: '/', cadastro: true, menu: false, push: true,
+  finish: vi.fn(), highlight: vi.fn(), route: '/', cadastro: true, menu: false, push: true,
   targets: { current: new Map() }, appListener: null as null | ((state: string) => void), back: null as null | (() => boolean),
 }));
 vi.mock('react-native', () => ({
@@ -21,7 +21,7 @@ vi.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ t
 vi.mock('react-native-svg', () => ({ default: 'Svg', Path: 'Path' }));
 vi.mock('@expo/vector-icons', () => ({ Ionicons: 'Icon' }));
 vi.mock('@/components/ui/Typography', () => ({ Text: 'Text' }));
-vi.mock('@/contexts/TutorialContext', () => ({ useTutorial: () => ({ ready: true, pending: true, pushReady: state.push, revision: 0, finish: state.finish, targets: state.targets }) }));
+vi.mock('@/contexts/TutorialContext', () => ({ useTutorial: () => ({ ready: true, pending: true, pushReady: state.push, revision: 0, highlight: state.highlight, finish: state.finish, targets: state.targets }) }));
 vi.mock('@/components/auth/CadastroGate', () => ({ useCadastroReady: () => state.cadastro }));
 vi.mock('@/contexts/MenuContext', () => ({ useMenu: () => ({ visible: state.menu }) }));
 vi.mock('@/contexts/ThemeContext', () => ({ useTheme: () => ({ mode: 'light', fontMultiplier: 1 }) }));
@@ -44,8 +44,8 @@ async function press(label: string) {
 }
 it('convite, seis passos manuais e concluir; voltar preserva o fluxo', async () => {
   await mount(); expect(text()).toContain('Sua igreja, mais perto.');
-  await press('Conhecer o app'); expect(text()).toContain('Você não está sozinho.');
-  await press('Próximo'); expect(text()).toContain('Um tempo com Deus.');
+  await press('Conhecer o app'); expect(state.highlight).toHaveBeenLastCalledWith('care'); expect(text()).toContain('Você não está sozinho.');
+  await press('Próximo'); expect(state.highlight).toHaveBeenLastCalledWith('devotional'); expect(text()).toContain('Um tempo com Deus.');
   await press('Voltar'); expect(text()).toContain('Você não está sozinho.');
   for (let i = 0; i < 5; i++) await press('Próximo');
   expect(text()).toContain('Tem mais para descobrir.');
@@ -65,5 +65,5 @@ it('não aparece em deep link nem disputa cadastro ou permissão push', async ()
 });
 it('background interrompe overlay sem marcar conclusão', async () => {
   await mount(); await act(async () => state.appListener?.('background'));
-  expect(text()).not.toContain('Sua igreja'); expect(state.finish).not.toHaveBeenCalled();
+  expect(text()).not.toContain('Sua igreja'); expect(state.finish).not.toHaveBeenCalled(); expect(state.highlight).toHaveBeenLastCalledWith(null);
 });

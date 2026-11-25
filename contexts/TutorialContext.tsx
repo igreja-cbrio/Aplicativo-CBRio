@@ -7,6 +7,7 @@ import { concluirTutorial, prepararTutorial } from '@/lib/tutorial';
 export type TutorialTargetId = 'care' | 'devotional' | 'groups' | 'serve' | 'giving' | 'menu' | 'dock';
 type Target = { view: View; reveal?: () => void };
 type Value = {
+  highlightedTarget: TutorialTargetId | null; highlight: (id: TutorialTargetId | null) => void;
   ready: boolean; pending: boolean; pushReady: boolean; revision: number;
   finish: () => void; replay: () => void; releasePush: () => void;
   targets: React.RefObject<Map<TutorialTargetId, Target>>;
@@ -23,6 +24,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
 function TutorialSession({ userId, children }: { userId?: string; children: ReactNode }) {
   const [ready, setReady] = useState(!userId), [pending, setPending] = useState(false), [pushReady, setPushReady] = useState(false);
   const [revision, setRevision] = useState(0);
+  const [highlightedTarget, highlight] = useState<TutorialTargetId | null>(null);
   const requestedReplay = useRef(false);
   const targets = useRef(new Map<TutorialTargetId, Target>());
   useEffect(() => {
@@ -35,6 +37,7 @@ function TutorialSession({ userId, children }: { userId?: string; children: Reac
   }, [userId]);
   const finish = useCallback(() => {
     setPending(false);
+    highlight(null);
     if (userId) void concluirTutorial(AsyncStorage, userId);
   }, [userId]);
   const replay = useCallback(() => { if (userId) { requestedReplay.current = true; setPending(true); } }, [userId]);
@@ -43,7 +46,7 @@ function TutorialSession({ userId, children }: { userId?: string; children: Reac
     if (target) targets.current.set(id, target); else targets.current.delete(id);
   }, []);
   const layout = useCallback(() => setRevision(value => value + 1), []);
-  const value = useMemo(() => ({ ready, pending, pushReady, revision, finish, replay, releasePush, targets, register, layout }), [ready, pending, pushReady, revision, finish, replay, releasePush, register, layout]);
+  const value = useMemo(() => ({ highlightedTarget, highlight, ready, pending, pushReady, revision, finish, replay, releasePush, targets, register, layout }), [highlightedTarget, ready, pending, pushReady, revision, finish, replay, releasePush, register, layout]);
   return <TutorialContext.Provider value={value}>{children}</TutorialContext.Provider>;
 }
 

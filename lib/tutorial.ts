@@ -43,3 +43,9 @@ export function recorteTutorial(target: TutorialRect, host: TutorialRect): Tutor
 export function podeMostrarTutorial(input: { pending: boolean; ready: boolean; pushReady: boolean; cadastroReady: boolean; home: boolean; focused: boolean; active: boolean; menuOpen: boolean }) {
   return input.pending && input.ready && input.pushReady && input.cadastroReady && input.home && input.focused && input.active && !input.menuOpen;
 }
+
+/** Mesmo contorno arredondado no recorte e no anel; sem cantos quadrados. */
+export function contornoTutorial({ x, y, width, height }: TutorialRect): string {
+  const r = Math.min(width, height) / 2;
+  return `M${x + r} ${y}H${x + width - r}A${r} ${r} 0 0 1 ${x + width} ${y + r}V${y + height - r}A${r} ${r} 0 0 1 ${x + width - r} ${y + height}H${x + r}A${r} ${r} 0 0 1 ${x} ${y + height - r}V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
+}
