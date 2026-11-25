@@ -1,14 +1,14 @@
 import { ScrollView } from "@/components/navigation/DockContent";
 import { Text, TextInput } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Switch, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
-import { listarMeusTimes, listarMural, publicarNoMural, reagirNoMural, type PostMural, type TimeServir } from "@/lib/devocional";
+import { avisarReacao, listarMeusTimes, listarMural, publicarNoMural, reagirNoMural, type PostMural, type TimeServir } from "@/lib/devocional";
 import { carregarCapitulo } from "@/lib/bibliaLivre";
 import { CHAVE_FILTRO_MURAL, FILTRO_PADRAO, REACOES, alternarReacao, lerReferencia, normalizarFiltro, textoDosVersos, type FiltroMural, type TipoReacao } from "@/lib/muralDevocional";
 import { subirUmNivel } from "@/lib/hierarquia";
@@ -49,6 +49,8 @@ export default function Mural() {
   const buscando = useRef(new Set<string>());
   // Times do Servir de quem publica: pode mandar só para um deles.
   const [times, setTimes] = useState<TimeServir[]>([]), [timeId, setTimeId] = useState<string | null>(null);
+  // Quem escreve escolhe se quer aviso quando reagirem ao comentário.
+  const [avisarReacoes, setAvisarReacoes] = useState(true);
   useEffect(() => { listarMeusTimes().then(setTimes).catch(() => setTimes([])); }, []);
 
   // O filtro escolhido fica salvo no aparelho e volta na próxima abertura.
@@ -86,7 +88,7 @@ export default function Mural() {
     const antes = { reacoes: post.reacoes ?? {}, minhas: post.minhas ?? [] };
     const depois = alternarReacao(antes, tipo);
     setPosts(ps => ps.map(p => p.id === post.id ? { ...p, ...depois } : p));
-    try { await reagirNoMural(post.id, tipo); }
+    try { if (await reagirNoMural(post.id, tipo)) avisarReacao(post.id); }
     catch (e) {
       setPosts(ps => ps.map(p => p.id === post.id ? { ...p, ...antes } : p));
       Alert.alert(t("Não foi possível reagir"), e instanceof Error ? e.message : t("Tente novamente."));
@@ -97,11 +99,16 @@ export default function Mural() {
     if (!membro?.membroId || !trecho || texto.trim().length < 2) return Alert.alert(t("Falta pouco"), t("Escolha o texto na Bíblia e escreva seu comentário."));
     setEnviando(true);
     try {
-      await publicarNoMural({ membroId: membro.membroId, texto, alcance, referenciaBiblica: trecho.referencia, textoBiblico: trecho.texto, itemId: trecho.itemId, timeId });
-      setTrecho(null); setTexto(""); setAberto(false); setTimeId(null); router.setParams({ referencia: undefined, textoBiblico: undefined, itemId: undefined });
+      await publicarNoMural({ membroId: membro.membroId, texto, alcance, referenciaBiblica: trecho.referencia, textoBiblico: trecho.texto, itemId: trecho.itemId, timeId, avisarReacoes });
+      setTrecho(null); setTexto(""); setAberto(false); setTimeId(null); setAvisarReacoes(true); router.setParams({ referencia: undefined, textoBiblico: undefined, itemId: undefined });
       if (filtro) await carregar(filtro);
     } catch (e) { Alert.alert(t("Não foi possível publicar"), e instanceof Error ? e.message : t("Tente novamente.")); }
     finally { setEnviando(false); }
+  }
+  // Uma etiqueta só: o time do comentário; senão, o time em comum; senão, o alcance.
+  function etiqueta(p: PostMural) {
+    const time = p.time_nome || (p.times_comuns?.length ? p.times_comuns.join(", ") : null);
+    return time ? t("Time") + " " + time : t(ALCANCES.find(a => a.valor === p.alcance)?.rotulo ?? "Toda a igreja");
   }
   function cancelar() {
     setAberto(false); setTrecho(null); setTexto("");
@@ -140,6 +147,10 @@ export default function Mural() {
         {alcance === "servir" && (times.length ? <View style={s.audiences}>
             {[{ id: null as string | null, nome: t("Todos os meus times") }, ...times].map(x => <Pressable key={x.id ?? "todos"} onPress={() => setTimeId(x.id)} style={[s.time, timeId === x.id && s.timeOn]} accessibilityRole="button" accessibilityState={{ selected: timeId === x.id }}><Text style={[s.timeText, timeId === x.id && s.timeTextOn]}>{x.nome}</Text></Pressable>)}
           </View> : <Text style={s.scope}>{t("Você ainda não está em nenhum time do Servir.")}</Text>)}
+        <View style={s.aviso}>
+          <View style={s.flex}><Text style={s.label}>{t("Avisar quando reagirem")}</Text><Text style={s.scope}>{t("Você recebe uma notificação quando alguém reagir ao seu comentário.")}</Text></View>
+          <Switch value={avisarReacoes} onValueChange={setAvisarReacoes} trackColor={{ true: c.primary }} accessibilityLabel={t("Avisar quando reagirem")} />
+        </View>
         <Text style={s.scope}>{t("Sua publicação será identificada com seu nome.")}</Text>
         <View style={s.acoes}>
           <Pressable style={s.cancelar} onPress={cancelar} disabled={enviando} accessibilityRole="button"><Text style={s.cancelarText}>{t("Cancelar")}</Text></Pressable>
@@ -152,7 +163,7 @@ export default function Mural() {
         posts.map(p => {
           const textoBiblico = p.texto_biblico || textosBuscados[p.id];
           return <View key={p.id} style={s.card}>
-            <View style={s.authorRow}><View style={s.avatar}><Text style={s.avatarText}>{p.autor_nome?.trim().charAt(0).toUpperCase()}</Text></View><View style={s.authorText}><Text style={s.author}>{p.autor_nome}</Text><Text style={s.scope}>{p.time_nome ? t("Time") + " " + p.time_nome : t(ALCANCES.find(a => a.valor === p.alcance)?.rotulo ?? "Toda a igreja")}</Text>{p.times_comuns?.length ? <Text style={s.comum} numberOfLines={1}>{t("Serve com você em") + " " + p.times_comuns.join(", ")}</Text> : null}</View></View>
+            <View style={s.authorRow}><View style={s.avatar}><Text style={s.avatarText}>{p.autor_nome?.trim().charAt(0).toUpperCase()}</Text></View><View style={s.authorText}><Text style={s.author}>{p.autor_nome}</Text><Text style={s.scope} numberOfLines={1}>{etiqueta(p)}</Text></View></View>
             <Text style={s.ref}>{p.item_passagem || p.referencia_biblica}</Text>{textoBiblico ? <TrechoBiblico texto={textoBiblico} style={s.quote} corLink={c.primary} /> : null}<Text style={s.body}>{p.texto}</Text>
             {p.reacoes ? <View style={s.reacoes}>{REACOES.map(r => {
               const n = p.reacoes?.[r.tipo] ?? 0, minha = p.minhas?.includes(r.tipo) ?? false;
@@ -178,7 +189,7 @@ const css = (c: any) => StyleSheet.create({
   acoes: { flexDirection: "row", gap: 9 }, cancelar: { paddingHorizontal: 16, justifyContent: "center", borderRadius: 14, borderWidth: 1, borderColor: c.border }, cancelarText: { color: c.textMuted, fontWeight: "800" },
   cta: { backgroundColor: c.primary, padding: 15, borderRadius: 14, alignItems: "center" }, disabled: { opacity: .55 }, ctaText: { color: "#fff", fontSize: 16, fontWeight: "800" },
   time: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: c.border }, timeOn: { borderColor: c.primary, backgroundColor: c.primary + "22" },
-  timeText: { color: c.textMuted, fontSize: 12, fontWeight: "700" }, timeTextOn: { color: c.primary }, comum: { color: c.primary, fontSize: 11, fontWeight: "700", marginTop: 1 },
+  timeText: { color: c.textMuted, fontSize: 12, fontWeight: "700" }, timeTextOn: { color: c.primary }, aviso: { flexDirection: "row", alignItems: "center", gap: 10 },
   vazio: { color: c.textMuted, textAlign: "center", marginTop: 20, lineHeight: 21 },
   card: { backgroundColor: c.surface, padding: 16, borderRadius: 18, gap: 8, borderWidth: 1, borderColor: c.border },
   authorRow: { flexDirection: "row", alignItems: "center", gap: 10 }, avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: c.primary, alignItems: "center", justifyContent: "center" }, avatarText: { color: "#fff", fontWeight: "800" }, authorText: { flex: 1 }, author: { color: c.text, fontWeight: "800" }, scope: { color: c.textMuted, fontSize: 11 }, ref: { color: c.primary, fontWeight: "800" }, quote: { color: c.text, lineHeight: 22, fontStyle: "italic" }, body: { color: c.text, lineHeight: 22 },

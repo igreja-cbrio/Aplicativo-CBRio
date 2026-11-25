@@ -167,6 +167,9 @@ export default function NotificacoesScreen() {
         router.navigate(destinoNotificacaoBatismo(data)); return;
       case "devocional":
         router.navigate("/devocional"); return;
+      // Mesmo destino do toque na push (lib/notifTap.ts).
+      case "devocional_mural_reacao":
+        router.navigate("/devocional-mural"); return;
       case "comunicado": {
         router.navigate(destinoNotificacaoComunicado(data)); return;
       }
