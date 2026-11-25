@@ -558,3 +558,12 @@ ERP depende da migration `20261123190652_vol_supervisores_convites.sql`.
 - Sem nenhum botão de escrita (o teste reprova `apiPost/Patch/Put/Delete` na tela). Fase 2 = editar em Montar escala; fase 3 = chave por pessoa em Pessoas do Servir. As músicas do Louvor (`MusicasCulto`, do Matheus) seguem no card próprio até combinar com ele.
 - ⚠️ Depende do ERP no ar antes do OTA: sem a rota, o link abre a tela com "Não foi possível carregar a liturgia agora."
 - **Músicas na liturgia (25/11, mesmo dia · pedido do Marcos):** a liturgia mostra as músicas do Louvor do culto (`louvor_musicas`, mesmas do card do Matheus) entre os momentos do culto e o pós-culto; link checado por `linkMusicaSeguro` antes de abrir; erro de leitura aparece como erro, nunca como "nenhuma música". O card `MusicasCulto` continua onde o Louvor adiciona e ganhou "Ver liturgia do culto" em cada culto.
+
+## Liturgia do culto · fase 2, EDITAR ligado à Produção (2026-11-25)
+
+Pedido do Marcos: o que muda na Produção aparece no app e o que muda no app aparece lá; "Música 1, Música 2…" abre a lista de músicas da igreja. Quem edita: **só quem tem escrita na Produção** ("pouquíssimas pessoas"); ver segue igual à fase 1.
+- O servidor manda `pode_editar` e `versao` no GET; o lápis no cabeçalho só aparece com `pode_editar`. O modo de edição (rascunho local, régua pura em `lib/liturgia.ts`: `rascunhoDe`, `moverItem`, `itensParaSalvar`, `mmssParaSeg`) muda tempo previsto (mm:ss), ordem (setas, sem cruzar culto/pós-culto) e a música de cada momento "Música…".
+- Salvar = `PUT /app/voluntariado/liturgia/:serviceId` com `{ versao, itens }`. O servidor grava no MESMO cronograma do `/producao` (`culto_producao_etapas`), preserva o executado pela `etapa_id` e responde **409** se alguém salvou no meio: a tela recarrega e avisa, nunca sobrescreve.
+- Música: `components/voluntariado/SeletorMusicaLiturgia.tsx` (folha com busca, cadastrar e tirar) sobre o catálogo do sistema (`GET/POST /app/voluntariado/liturgia-musicas`, tabela `louvor_repertorio`). A música escolhida aparece também no modo leitura, com link checado por `linkMusicaSeguro`.
+- Roteiro padrão (culto sem cronograma próprio): salvar cria a liturgia do culto, também na Produção. Culto que não existe na Produção (CBKIDS, AMI) não mostra o lápis.
+- ⚠️ Depende do ERP (#3935 + migration `20261125220000`) no ar antes do OTA: sem eles o lápis não aparece (o GET antigo não manda `pode_editar: true`), então o OTA antes do ERP não quebra nada.

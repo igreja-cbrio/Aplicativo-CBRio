@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { horaBRT, duracaoCurta, dividirSecoes, rotaLiturgia, type ItemLiturgia } from '../lib/liturgia';
+import {
+  horaBRT, duracaoCurta, dividirSecoes, rotaLiturgia, type ItemLiturgia,
+  segParaMMSS, mmssParaSeg, rascunhoDe, moverItem, itensParaSalvar, rotuloMusica, type RascunhoItem,
+} from '../lib/liturgia';
 import { rotaPai } from '../lib/hierarquia';
 
 const semComentarios = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
@@ -36,11 +39,14 @@ describe('liturgia do culto · telas', () => {
   it('a seta da liturgia volta para o Servir', () => {
     expect(rotaPai('/liturgia', { id: 'x' })).toBe('/voluntariado');
   });
-  it('a tela é só leitura: não chama verbo de escrita', () => {
+  it('a tela só escreve pelo PUT da liturgia, com a versão lida, e só quando o servidor deixa', () => {
     const s = semComentarios(readFileSync('app/(app)/liturgia.tsx', 'utf8'));
     expect(s).toContain('rotaLiturgia(');
     expect(s).toContain('useFocusEffect');
-    expect(s).not.toMatch(/api(Post|Patch|Put|Delete)/);
+    expect(s).not.toMatch(/api(Post|Patch|Delete)\(/);
+    expect(s).toContain('apiPut(rotaLiturgia(String(id)), { versao: dados.versao ?? 0, itens: corpo.itens })');
+    expect(s).toContain('dados?.pode_editar && !editando');
+    expect(s).toMatch(/status === 409/);
   });
   it('card da escala abre a liturgia pelo culto que o servidor mandou', () => {
     const s = semComentarios(readFileSync('app/(app)/voluntariado.tsx', 'utf8'));
@@ -60,5 +66,59 @@ describe('liturgia do culto · telas', () => {
   it('Montar escala tem o relógio do culto escolhido', () => {
     const s = semComentarios(readFileSync('app/(app)/escala-supervisor.tsx', 'utf8'));
     expect(s).toMatch(/pathname: "\/liturgia", params: \{ id: servicoSel\.id/);
+  });
+});
+
+describe('liturgia · edição (fase 2)', () => {
+  const item = (o: Partial<ItemLiturgia>): ItemLiturgia => ({
+    ordem: 1, titulo: 'X', secao: 'culto', previsto_seg: 60, inicio: null, observacao: null, especial: false, ...o,
+  });
+  it('mm:ss nos dois sentidos; só minutos vale; lixo é recusado', () => {
+    expect(segParaMMSS(330)).toBe('5:30');
+    expect(segParaMMSS(null)).toBe('');
+    expect(mmssParaSeg('5:30')).toBe(330);
+    expect(mmssParaSeg('5')).toBe(300);
+    expect(mmssParaSeg('')).toBeNull();
+    expect(Number.isNaN(mmssParaSeg('5:75') as number)).toBe(true);
+    expect(Number.isNaN(mmssParaSeg('abc') as number)).toBe(true);
+  });
+  it('rascunho guarda etapa e música; roteiro padrão ganha chave própria', () => {
+    const m = { id: 'm1', titulo: 'Grande É o Senhor', artista: null, tom: 'G', link: null };
+    const r = rascunhoDe([item({ etapa_id: 'e1', titulo: 'Música 1', e_musica: true, musica: m }), item({ titulo: 'Avisos' })]);
+    expect(r[0]).toMatchObject({ chave: 'e1', etapa_id: 'e1', e_musica: true, musica: m, previsto: '1:00' });
+    expect(r[1]).toMatchObject({ chave: 'padrao-1', etapa_id: null, e_musica: false, musica: null });
+  });
+  it('mover não cruza culto/pós-culto e não sai da lista', () => {
+    const base: RascunhoItem[] = [
+      { chave: 'a', etapa_id: 'a', titulo: 'A', secao: 'culto', previsto: '', e_musica: false, musica: null },
+      { chave: 'b', etapa_id: 'b', titulo: 'B', secao: 'culto', previsto: '', e_musica: false, musica: null },
+      { chave: 'p', etapa_id: 'p', titulo: 'P', secao: 'pos_culto', previsto: '', e_musica: false, musica: null },
+    ];
+    expect(moverItem(base, 'b', -1).map(x => x.chave)).toEqual(['b', 'a', 'p']);
+    expect(moverItem(base, 'b', 1)).toBe(base);
+    expect(moverItem(base, 'a', -1)).toBe(base);
+    expect(moverItem(base, 'zz', 1)).toBe(base);
+  });
+  it('salvar manda pós-culto por último, música por id e recusa tempo ilegível pelo nome', () => {
+    const base: RascunhoItem[] = [
+      { chave: 'p', etapa_id: 'p', titulo: 'Oração', secao: 'pos_culto', previsto: '10', e_musica: false, musica: null },
+      { chave: 'a', etapa_id: null, titulo: 'Música 1', secao: 'culto', previsto: '5:30', e_musica: true, musica: { id: 'm1', titulo: 'T', artista: null, tom: null, link: null } },
+    ];
+    const r = itensParaSalvar(base);
+    expect('itens' in r && r.itens).toEqual([
+      { etapa_id: null, titulo: 'Música 1', previsto_seg: 330, secao: 'culto', musica_id: 'm1' },
+      { etapa_id: 'p', titulo: 'Oração', previsto_seg: 600, secao: 'pos_culto', musica_id: null },
+    ]);
+    expect(itensParaSalvar([{ ...base[0], previsto: '9:99' }])).toEqual({ erro: 'Oração' });
+  });
+  it('rótulo da música junta título, artista e tom', () => {
+    expect(rotuloMusica({ id: '1', titulo: 'A', artista: 'B', tom: 'G', link: null })).toBe('A · B · G');
+    expect(rotuloMusica(null)).toBe('');
+  });
+  it('o seletor usa o catálogo do servidor e não esconde erro como lista vazia', () => {
+    const s = semComentarios(readFileSync('components/voluntariado/SeletorMusicaLiturgia.tsx', 'utf8'));
+    expect(s).toContain('apiGet<{ musicas: MusicaCatalogo[] }>(ROTA_CATALOGO_MUSICAS)');
+    expect(s).toContain('apiPost<{ musica: MusicaCatalogo }>(ROTA_CATALOGO_MUSICAS');
+    expect(s).toMatch(/ListEmptyComponent=\{\s*erro \? null/);
   });
 });

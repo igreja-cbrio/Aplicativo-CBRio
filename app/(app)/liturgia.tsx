@@ -1,23 +1,33 @@
-// LITURGIA DO CULTO · fase 1, só leitura (25/11/2026)
+// LITURGIA DO CULTO · fase 1 leitura (25/11/2026) · fase 2 edição (25/11/2026)
 //
 // Pedido do Marcos: quem está escalado precisa ver os horários e os momentos
 // do culto sem abrir a escala. Abre pelo relógio no card da escala (aba
 // Servir) e pelo relógio de Montar escala. Quem decide se a pessoa vê e o que
-// aparece é o servidor (`/app/voluntariado/liturgia/:id`); aqui só exibimos.
-// Editar entra na fase 2 — esta tela não tem nenhum botão de escrita.
+// aparece é o servidor (`/app/voluntariado/liturgia/:id`).
+//
+// Fase 2: a liturgia É o cronograma da Produção do sistema. Quem o servidor
+// marca com `pode_editar` (escrita na Produção · "pouquíssimas pessoas") vê o
+// botão Editar e muda tempos, ordem e a música de cada "Música N"; o que salva
+// aqui aparece no /producao e vice-versa. Se alguém salvou no meio, o servidor
+// recusa (409) e a tela recarrega em vez de sobrescrever.
 import { ScrollView } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
+import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
+import { SeletorMusicaLiturgia } from "@/components/voluntariado/SeletorMusicaLiturgia";
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors } from "@/contexts/ThemeContext";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPut } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
-import { dividirSecoes, duracaoCurta, horaBRT, rotaLiturgia, type ItemLiturgia, type Liturgia, type MusicaLiturgia } from "@/lib/liturgia";
+import {
+  dividirSecoes, duracaoCurta, horaBRT, itensParaSalvar, moverItem, rascunhoDe, rotaLiturgia, rotuloMusica,
+  type ItemLiturgia, type Liturgia, type MusicaCatalogo, type MusicaLiturgia, type RascunhoItem,
+} from "@/lib/liturgia";
 import { linkMusicaSeguro } from "@/lib/louvorMusicas";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
@@ -38,6 +48,12 @@ export default function LiturgiaScreen() {
   const [dados, setDados] = useState<Liturgia | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Edição (fase 2): rascunho local até "Salvar".
+  const [rascunho, setRascunho] = useState<RascunhoItem[] | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState<string | null>(null);
+  const [musicaDe, setMusicaDe] = useState<string | null>(null); // chave do item escolhendo música
+  const editando = rascunho !== null;
 
   // Recarrega ao focar: a Produção ajusta o cronograma pelo sistema web.
   const carregar = useCallback(() => {
@@ -63,9 +79,51 @@ export default function LiturgiaScreen() {
   const secoes = dados ? dividirSecoes(dados.itens) : { culto: [], posCulto: [] };
   const total = duracaoCurta(dados?.total_previsto_seg ?? null);
 
+  function comecarEdicao() {
+    if (!dados) return;
+    setErroSalvar(null);
+    setRascunho(rascunhoDe(dados.itens));
+  }
+
+  function cancelarEdicao() {
+    setRascunho(null);
+    setErroSalvar(null);
+  }
+
+  function alterar(chave: string, patch: Partial<RascunhoItem>) {
+    setRascunho((lista) => (lista ? lista.map((x) => (x.chave === chave ? { ...x, ...patch } : x)) : lista));
+  }
+
+  async function salvar() {
+    if (!rascunho || !dados || !id) return;
+    const corpo = itensParaSalvar(rascunho);
+    if ("erro" in corpo) {
+      setErroSalvar(t("Confira o tempo de “{momento}” (use minutos:segundos, como 5:30).").replace("{momento}", corpo.erro));
+      return;
+    }
+    setSalvando(true);
+    setErroSalvar(null);
+    try {
+      await apiPut(rotaLiturgia(String(id)), { versao: dados.versao ?? 0, itens: corpo.itens });
+      setRascunho(null);
+      carregar();
+    } catch (e: any) {
+      if (e?.status === 409) {
+        // Alguém salvou (no sistema ou em outro celular): a versão da tela ficou velha.
+        setRascunho(null);
+        setErroSalvar(t("Alguém alterou esta liturgia enquanto você editava. Carregamos a versão atual; faça sua mudança de novo."));
+        carregar();
+      } else {
+        setErroSalvar(e?.status && e.status < 500 ? String(e.message) : t("Não foi possível salvar a liturgia agora."));
+      }
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   // Mesma checagem do card do Louvor antes de abrir: só http(s), sem credenciais.
-  function abrirMusica(m: MusicaLiturgia) {
-    const seguro = linkMusicaSeguro(m.link);
+  function abrirLink(link: string | null) {
+    const seguro = linkMusicaSeguro(link);
     if (seguro) Linking.openURL(seguro).catch(() => {});
   }
 
@@ -82,7 +140,7 @@ export default function LiturgiaScreen() {
             </Text>
           )}
           {temLink && (
-            <Pressable onPress={() => abrirMusica(m)} accessibilityRole="link" hitSlop={8} style={styles.tentar}>
+            <Pressable onPress={() => abrirLink(m.link)} accessibilityRole="link" hitSlop={8} style={styles.tentar}>
               <Text style={styles.tentarTxt}>{t("Abrir link da música")}</Text>
             </Pressable>
           )}
@@ -94,6 +152,7 @@ export default function LiturgiaScreen() {
   function renderItem(item: ItemLiturgia, ultimo: boolean) {
     const hora = horaBRT(item.inicio);
     const dur = duracaoCurta(item.previsto_seg);
+    const musica = item.musica ?? null;
     return (
       <View key={`${item.secao}-${item.ordem}`} style={[styles.item, !ultimo && styles.itemDivisor]}>
         <Text style={styles.itemHora}>{hora ?? "--:--"}</Text>
@@ -106,24 +165,85 @@ export default function LiturgiaScreen() {
               </View>
             )}
           </View>
+          {!!musica && (
+            <View style={styles.musicaLinha}>
+              <Ionicons name="musical-notes-outline" size={14} color={colors.primary} />
+              <Text style={styles.musicaTxt}>{rotuloMusica(musica)}</Text>
+            </View>
+          )}
           {!!dur && <Text style={styles.itemDur}>{dur}</Text>}
           {!!item.observacao && <Text style={styles.itemObs}>{item.observacao}</Text>}
+          {!!musica && !!linkMusicaSeguro(musica.link) && (
+            <Pressable onPress={() => abrirLink(musica.link)} accessibilityRole="link" hitSlop={8} style={styles.tentar}>
+              <Text style={styles.tentarTxt}>{t("Abrir link da música")}</Text>
+            </Pressable>
+          )}
         </View>
       </View>
     );
   }
 
+  function renderEdicao(lista: RascunhoItem[], secao: "culto" | "pos_culto") {
+    const daSecao = lista.filter((x) => x.secao === secao);
+    return daSecao.map((x, i) => (
+      <View key={x.chave} style={[styles.editLinha, i < daSecao.length - 1 && styles.itemDivisor]}>
+        <View style={styles.setas}>
+          <Pressable onPress={() => setRascunho((l) => (l ? moverItem(l, x.chave, -1) : l))} disabled={i === 0} hitSlop={6} accessibilityRole="button" accessibilityLabel={t("Subir")}>
+            <Ionicons name="chevron-up" size={20} color={i === 0 ? colors.glassBorder : colors.text} />
+          </Pressable>
+          <Pressable onPress={() => setRascunho((l) => (l ? moverItem(l, x.chave, 1) : l))} disabled={i === daSecao.length - 1} hitSlop={6} accessibilityRole="button" accessibilityLabel={t("Descer")}>
+            <Ionicons name="chevron-down" size={20} color={i === daSecao.length - 1 ? colors.glassBorder : colors.text} />
+          </Pressable>
+        </View>
+        <View style={styles.itemCorpo}>
+          <Text style={styles.itemTitulo}>{x.titulo}</Text>
+          {x.e_musica && (
+            <Pressable onPress={() => setMusicaDe(x.chave)} accessibilityRole="button" style={styles.musicaLinha} hitSlop={6}>
+              <Ionicons name="musical-notes-outline" size={14} color={colors.primary} />
+              <Text style={[styles.musicaTxt, !x.musica && styles.musicaVazia]}>{x.musica ? rotuloMusica(x.musica) : t("Escolher música")}</Text>
+            </Pressable>
+          )}
+        </View>
+        <TextInput
+          value={x.previsto}
+          onChangeText={(v) => alterar(x.chave, { previsto: v.replace(/[^0-9:]/g, "").slice(0, 6) })}
+          placeholder="0:00"
+          placeholderTextColor={colors.textMuted}
+          keyboardType="numbers-and-punctuation"
+          accessibilityLabel={t("Tempo previsto de {momento}").replace("{momento}", x.titulo)}
+          style={styles.tempo}
+        />
+      </View>
+    ));
+  }
+
+  const itemEscolhendo = rascunho?.find((x) => x.chave === musicaDe) ?? null;
+
   return (
     <SafeAreaView style={styles.safe} edges={["left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScrollView contentContainerStyle={styles.content}>
+      <TecladoSeguro style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <View style={styles.header}>
           <Pressable onPress={() => subirUmNivel()} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Voltar")}>
             <Ionicons name="chevron-back" size={26} color={colors.text} />
           </Pressable>
           <Text style={styles.titulo}>{t("Liturgia do culto")}</Text>
-          <View style={{ width: 26 }} />
+          {dados?.pode_editar && !editando && !erro ? (
+            <Pressable onPress={comecarEdicao} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("Editar liturgia")}>
+              <Ionicons name="create-outline" size={24} color={colors.primary} />
+            </Pressable>
+          ) : (
+            <View style={{ width: 26 }} />
+          )}
         </View>
+
+        {!!erroSalvar && (
+          <View style={styles.aviso}>
+            <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
+            <Text style={styles.avisoTxt}>{erroSalvar}</Text>
+          </View>
+        )}
 
         {loading && !dados ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />
@@ -135,6 +255,35 @@ export default function LiturgiaScreen() {
               <Text style={styles.tentarTxt}>{t("Tentar de novo")}</Text>
             </Pressable>
           </View>
+        ) : dados && rascunho ? (
+          <>
+            <View style={styles.aviso}>
+              <Ionicons name="sync-outline" size={18} color={colors.primary} />
+              <Text style={styles.avisoTxt}>
+                {dados.fonte === "padrao"
+                  ? t("Este é o roteiro padrão. Ao salvar, ele vira a liturgia deste culto, também na Produção do sistema.")
+                  : t("O que você salvar aqui muda também o cronograma da Produção no sistema.")}
+              </Text>
+            </View>
+            {rascunho.some((x) => x.secao === "culto") && (
+              <View style={styles.card}>
+                <Text style={styles.secao}>{t("Culto")}</Text>
+                {renderEdicao(rascunho, "culto")}
+              </View>
+            )}
+            {rascunho.some((x) => x.secao === "pos_culto") && (
+              <View style={styles.card}>
+                <Text style={styles.secao}>{t("Pós-culto")}</Text>
+                {renderEdicao(rascunho, "pos_culto")}
+              </View>
+            )}
+            <Pressable onPress={salvar} disabled={salvando} accessibilityRole="button" style={[styles.botao, salvando && { opacity: 0.6 }]}>
+              <Text style={styles.botaoTxt}>{salvando ? t("Salvando…") : t("Salvar liturgia")}</Text>
+            </Pressable>
+            <Pressable onPress={cancelarEdicao} disabled={salvando} accessibilityRole="button" style={styles.botaoSec}>
+              <Text style={styles.botaoSecTxt}>{t("Cancelar")}</Text>
+            </Pressable>
+          </>
         ) : dados ? (
           <>
             <View style={styles.hero}>
@@ -200,6 +349,16 @@ export default function LiturgiaScreen() {
           </>
         ) : null}
       </ScrollView>
+      </TecladoSeguro>
+      <SeletorMusicaLiturgia
+        visivel={!!itemEscolhendo}
+        atual={itemEscolhendo?.musica ?? null}
+        onFechar={() => setMusicaDe(null)}
+        onEscolher={(m: MusicaCatalogo | null) => {
+          if (itemEscolhendo) alterar(itemEscolhendo.chave, { musica: m });
+          setMusicaDe(null);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -243,8 +402,29 @@ const makeStyles = (colors: Palette) =>
     itemTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "700", flexShrink: 1 },
     itemDur: { color: colors.textMuted, fontSize: font.size.sm },
     itemObs: { color: colors.text, fontSize: font.size.sm, lineHeight: 20 },
+    musicaLinha: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", paddingVertical: 2 },
+    musicaTxt: { color: colors.text, fontSize: font.size.sm, flexShrink: 1 },
+    musicaVazia: { color: colors.primary, fontWeight: "700" },
     tag: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.glassBorder },
     tagTxt: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
     tentar: { alignSelf: "flex-start", paddingVertical: 6 },
     tentarTxt: { color: colors.primary, fontSize: font.size.sm, fontWeight: "700" },
+    editLinha: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.sm },
+    setas: { gap: 2 },
+    tempo: {
+      width: 70,
+      textAlign: "center",
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      backgroundColor: colors.background,
+      color: colors.text,
+      borderRadius: radius.sm,
+      paddingVertical: 8,
+      fontSize: font.size.md,
+      fontVariant: ["tabular-nums"],
+    },
+    botao: { backgroundColor: colors.primary, borderRadius: 999, paddingVertical: 14, alignItems: "center" },
+    botaoTxt: { color: "#fff", fontSize: font.size.md, fontWeight: "800" },
+    botaoSec: { paddingVertical: 10, alignItems: "center" },
+    botaoSecTxt: { color: colors.textMuted, fontSize: font.size.md, fontWeight: "700" },
   });
