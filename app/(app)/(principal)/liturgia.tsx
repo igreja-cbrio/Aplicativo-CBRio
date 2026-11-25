@@ -320,6 +320,13 @@ export default function LiturgiaScreen() {
               </View>
             </View>
 
+            {!!dados.faltas?.length && (
+              <View style={styles.aviso}>
+                <View style={styles.pontoFalta} />
+                <Text style={styles.avisoTxt}>{dados.faltas.join(" ")}</Text>
+              </View>
+            )}
+
             {dados.fonte === "padrao" && (
               <View style={styles.aviso}>
                 <Ionicons name="information-circle-outline" size={18} color={colors.warning} />
@@ -406,6 +413,7 @@ const makeStyles = (colors: Palette) =>
       borderColor: colors.glassBorder,
       backgroundColor: colors.surface,
     },
+    pontoFalta: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.danger, marginTop: 5 },
     avisoTxt: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 20, flex: 1 },
     card: {
       padding: spacing.md,

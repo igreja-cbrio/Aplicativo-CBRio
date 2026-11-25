@@ -36,6 +36,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
+import { usePendenciasLiturgia } from "@/lib/usePendenciasLiturgia";
+import { temPendencia } from "@/lib/liturgia";
 import * as Haptics from "expo-haptics";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, runOnJS } from "react-native-reanimated";
@@ -120,6 +122,8 @@ export default function EscalaSupervisorScreen() {
   // Etapa 1 (tipo) → etapa 2 (data) → o culto.
   const [tipoSel, setTipoSel] = useState<string | null>(null);
   const [servicoSel, setServicoSel] = useState<EscalaServico | null>(null);
+  // Ponto vermelho no relógio quando falta liturgia no culto escolhido (25/11/2026).
+  const pendenciasLiturgia = usePendenciasLiturgia([servicoSel?.id]);
   const [escala, setEscala] = useState<EscalaItem[]>([]);
   const [composicao, setComposicao] = useState<ComposicaoItem[]>([]);
   const [ocultos, setOcultos] = useState(0);
@@ -715,15 +719,20 @@ export default function EscalaSupervisorScreen() {
         </Pressable>
         <Text style={styles.title}>{t("Montar escala")}</Text>
         {servicoSel ? (
-          // Relógio = liturgia do culto escolhido (25/11/2026 · fase 1, só
-          // leitura). Editar por aqui entra na fase 2.
+          // Relógio = liturgia do culto escolhido (quem edita a Produção edita
+          // por lá). Ponto vermelho = falta liturgia (régua do servidor).
           <Pressable
             onPress={() => router.push({ pathname: "/liturgia", params: { id: servicoSel.id } } as any)}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel={t("Ver liturgia do culto")}
+            accessibilityLabel={temPendencia(pendenciasLiturgia, servicoSel.id) ? t("Ver liturgia do culto (falta completar)") : t("Ver liturgia do culto")}
           >
-            <Ionicons name="time-outline" size={24} color={colors.primary} />
+            <View>
+              <Ionicons name="time-outline" size={24} color={colors.primary} />
+              {temPendencia(pendenciasLiturgia, servicoSel.id) && (
+                <View style={{ position: "absolute", top: -1, right: -2, width: 10, height: 10, borderRadius: 5, backgroundColor: colors.danger, borderWidth: 1.5, borderColor: colors.background }} />
+              )}
+            </View>
           </Pressable>
         ) : (
           <View style={{ width: 26 }} />

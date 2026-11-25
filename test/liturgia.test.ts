@@ -5,6 +5,7 @@ import {
   segParaMMSS, mmssParaSeg, rascunhoDe, moverItem, itensParaSalvar, rotuloMusica, previstoAoEscolher, type RascunhoItem,
 } from '../lib/liturgia';
 import { rotaPai } from '../lib/hierarquia';
+import { rotaPendencias, temPendencia } from '../lib/liturgia';
 
 const semComentarios = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
 
@@ -136,5 +137,39 @@ describe('liturgia · música com duração e preview do Planning Center', () =>
     expect(s).toContain('musica.letra');
     expect(s).toContain('musica.cifra');
     expect(s).toContain('previstoAoEscolher(itemEscolhendo.previsto, m)');
+  });
+});
+
+describe('liturgia · ponto vermelho no relógio', () => {
+  const A = '11111111-1111-4111-8111-111111111111';
+  const B = '22222222-2222-4222-8222-222222222222';
+  it('rota em lote: sem repetir, só ids válidos, ordem estável; nenhum id = nada a buscar', () => {
+    expect(rotaPendencias([B, A, A, null, 'lixo'])).toBe(`/app/voluntariado/liturgia-pendencias?ids=${A},${B}`);
+    expect(rotaPendencias([null, undefined])).toBeNull();
+  });
+  it('no máximo 40 cultos por consulta', () => {
+    const ids = Array.from({ length: 45 }, (_, i) => `${String(i).padStart(8, '0')}-1111-4111-8111-111111111111`);
+    expect(rotaPendencias(ids)!.split('=')[1].split(',')).toHaveLength(40);
+  });
+  it('ponto só com falta de verdade; culto fora da resposta não acende', () => {
+    expect(temPendencia({ [A]: ['Sem música escolhida: Música 1.'] }, A)).toBe(true);
+    expect(temPendencia({ [A]: [] }, A)).toBe(false);
+    expect(temPendencia({}, B)).toBe(false);
+    expect(temPendencia({ [A]: ['x'] }, null)).toBe(false);
+  });
+  it('Servir não mostra mais o card de músicas e acende o ponto no relógio da escala', () => {
+    const s = semComentarios(readFileSync('app/(app)/(principal)/voluntariado.tsx', 'utf8'));
+    expect(s).not.toContain('<MusicasCulto');
+    expect(s).toContain('usePendenciasLiturgia(escalas.map((e) => e.service_id))');
+    expect(s).toContain('temPendencia(pendenciasLiturgia, e.service_id) && <View style={styles.pontoPendente} />');
+  });
+  it('Montar escala acende o ponto no relógio do culto escolhido', () => {
+    const s = semComentarios(readFileSync('app/(app)/(principal)/escala-supervisor.tsx', 'utf8'));
+    expect(s).toContain('usePendenciasLiturgia([servicoSel?.id])');
+    expect(s).toContain('temPendencia(pendenciasLiturgia, servicoSel.id) && (');
+  });
+  it('a liturgia diz o que falta', () => {
+    const s = semComentarios(readFileSync('app/(app)/(principal)/liturgia.tsx', 'utf8'));
+    expect(s).toContain('dados.faltas.join(" ")');
   });
 });

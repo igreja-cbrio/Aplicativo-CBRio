@@ -568,3 +568,16 @@ Pedido do Marcos: o que muda na Produção aparece no app e o que muda no app ap
 - Catálogo com base no Planning Center (~600 músicas, importado pela aba Músicas do `/producao`): escolher uma música com duração preenche o previsto vazio (`previstoAoEscolher`), e no modo leitura cada momento com música mostra "Ver letra" / "Ver cifra" (o "preview" do PCO, editável só no sistema).
 - Roteiro padrão (culto sem cronograma próprio): salvar cria a liturgia do culto, também na Produção. Culto que não existe na Produção (CBKIDS, AMI) não mostra o lápis.
 - ⚠️ Depende do ERP (#3935 + migration `20261125220000`) no ar antes do OTA: sem eles o lápis não aparece (o GET antigo não manda `pode_editar: true`), então o OTA antes do ERP não quebra nada.
+
+## Ponto vermelho no relógio + card de músicas fora da aba Servir (2026-11-25)
+
+Pedido do Marcos: o card "Músicas do culto de hoje" ficou grande demais na aba Servir (saiu dela; o
+componente `MusicasCulto` continua existindo, sem uso nesta tela) e, *"quando tiver liturgia faltando
+de um culto, o relógio fica com um ponto vermelho"*.
+- `lib/usePendenciasLiturgia.ts` busca em lote `GET /app/voluntariado/liturgia-pendencias?ids=…`
+  (régua `faltasDaLiturgia` no ERP) e recarrega ao focar. `rotaPendencias`/`temPendencia` (puras, em
+  `lib/liturgia.ts`). Falha de rede = sem ponto (o relógio continua abrindo a liturgia).
+- Ponto no relógio do card de Minhas escalas e no relógio de Montar escala; a liturgia mostra `faltas`
+  ("Sem música escolhida: Música 2." / "A Produção ainda não montou a liturgia deste culto.").
+- Culto fora da Produção (CBKIDS, AMI) nunca acende (decisão de produto: o ponto não pode ficar aceso
+  onde ninguém resolve).

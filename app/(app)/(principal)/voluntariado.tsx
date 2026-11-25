@@ -1,4 +1,5 @@
-import { MusicasCulto } from "@/components/voluntariado/MusicasCulto";
+import { usePendenciasLiturgia } from "@/lib/usePendenciasLiturgia";
+import { temPendencia } from "@/lib/liturgia";
 import { ConvitesSupervisor } from '@/components/voluntariado/ConvitesSupervisor';
 import { Modal, ScrollView } from "@/components/navigation/DockContent";
 import { ValorHeader } from "@/components/ui/ValorHeader";
@@ -155,6 +156,9 @@ export default function VoluntariadoScreen() {
 
   // O que o cabeçalho da seção recolhida diz (régua em lib/resumoEscalas.ts).
   const resumoEsc = resumoEscalas(escalas, new Date());
+
+  // Ponto vermelho no relógio quando falta liturgia no culto (25/11/2026).
+  const pendenciasLiturgia = usePendenciasLiturgia(escalas.map((e) => e.service_id));
 
   const [recusaId, setRecusaId] = useState<string | null>(null); // escala abrindo o modal de motivo
   const [recusandoId, setRecusandoId] = useState<string | null>(null); // em envio
@@ -328,7 +332,6 @@ export default function VoluntariadoScreen() {
           </View>
 
           <ConvitesSupervisor />
-          <MusicasCulto />
           {ehSupervisor && (
             <Pressable style={styles.supervisorCard} onPress={() => router.push("/escala-supervisor" as any)}>
               <Ionicons name="calendar" size={22} color={colors.brandPale} />
@@ -449,10 +452,13 @@ export default function VoluntariadoScreen() {
                             onPress={() => router.push({ pathname: "/liturgia", params: { id: e.service_id as string } } as any)}
                             hitSlop={8}
                             accessibilityRole="button"
-                            accessibilityLabel={t("Ver liturgia do culto")}
+                            accessibilityLabel={temPendencia(pendenciasLiturgia, e.service_id) ? t("Ver liturgia do culto (falta completar)") : t("Ver liturgia do culto")}
                             style={({ pressed }) => [styles.liturgiaBtn, pressed && { opacity: 0.6 }]}
                           >
-                            <Ionicons name="time-outline" size={15} color={colors.primary} />
+                            <View>
+                              <Ionicons name="time-outline" size={15} color={colors.primary} />
+                              {temPendencia(pendenciasLiturgia, e.service_id) && <View style={styles.pontoPendente} />}
+                            </View>
                             <Text style={styles.liturgiaTxt}>{t("Liturgia")}</Text>
                           </Pressable>
                         )}
@@ -815,6 +821,7 @@ const makeStyles = (colors: Palette) =>
       padding: spacing.lg,
     },
     escalaInfo: { flex: 1, gap: 2 },
+    pontoPendente: { position: "absolute", top: -2, right: -3, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.danger, borderWidth: 1, borderColor: colors.background },
     liturgiaBtn: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", marginTop: 6, paddingVertical: 2 },
     liturgiaTxt: { color: colors.primary, fontSize: font.size.sm, fontWeight: "700" },
     // Escala com ação (aguardando resposta ou confirmada): empilhada, texto em

@@ -6,6 +6,7 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Ver liturgia do culto (falta completar)": {"en": "See the service order (needs completing)", "es": "Ver la liturgia del culto (falta completar)"},
   "Autorizações para a cerimônia": {"en": "Ceremony authorizations", "es": "Autorizaciones para la ceremonia"},
   "Carregando autorizações…": {"en": "Loading authorizations…", "es": "Cargando autorizaciones…"},
   "Não foi possível carregar as autorizações. Tente novamente para continuar.": {"en": "Could not load authorizations. Try again to continue.", "es": "No se pudieron cargar las autorizaciones. Inténtalo de nuevo para continuar."},
