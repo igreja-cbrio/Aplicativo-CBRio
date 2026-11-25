@@ -1,2 +1,2 @@
-// Mesma fonte oficial de comunicados; porta da Home com retorno direto ao início.
-export { default } from "./mural";
+// Porta antiga dos avisos: abre a mesma tela de /notificacoes, já na tag "Avisos".
+export { default } from "./notificacoes";

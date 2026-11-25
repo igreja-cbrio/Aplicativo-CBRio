@@ -1,3 +1,6 @@
+/** Item do menu que só aparece quando `censoNoMenu` (lib/menuRegras.ts) deixa. */
+export const ROTA_CENSO = "/censo";
+
 /** Destinos compartilhados pela Home, pelo rodapé e pelo menu lateral. */
 export const QUICK_LINKS = [
   { label: "Cuidados", icon: "heart-outline", href: "/cuidados" },
@@ -10,9 +13,8 @@ export const QUICK_LINKS = [
 export const MENU_SECTIONS = [
   { title: "Comunidade", items: [
     { label: "Início", icon: "home-outline", href: "/" },
-    { label: "Notícias e avisos", icon: "megaphone-outline", href: "/noticias" },
     { label: "Agenda e destaques", icon: "calendar-outline", href: "/agenda" },
-    { label: "Notificações", icon: "notifications-outline", href: "/notificacoes" },
+    { label: "Avisos e notificações", icon: "notifications-outline", href: "/notificacoes" },
   ] },
   { title: "Viver a CBRio", items: QUICK_LINKS },
   { title: "Participar", items: [
@@ -24,7 +26,6 @@ export const MENU_SECTIONS = [
   { title: "Você", items: [
     { label: "Carta de transferência", icon: "document-text-outline", href: "/carta-transferencia" },
     { label: "Meu perfil", icon: "person-outline", href: "/perfil" },
-    { label: "Minha família", icon: "people-outline", href: "/familia" },
     { label: "KIDS", icon: "happy-outline", href: "/kids-area" },
     { label: "Sua jornada", icon: "trail-sign-outline", href: "/jornada" },
     { label: "Censo", icon: "clipboard-outline", href: "/censo" },

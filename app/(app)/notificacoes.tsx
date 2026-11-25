@@ -6,20 +6,22 @@ import { destinoNotificacaoBatismo } from "@/lib/batismoFotosDestino";
 import { destinoNotificacaoChat } from "@/lib/assistenteChat";
 import { ScrollView, SectionList } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
   View,
 } from "react-native";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, usePathname, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors } from "@/contexts/ThemeContext";
 import { useNotificacoes, type AppNotificacao } from "@/lib/useNotificacoes";
 import { AcoesNotificacao } from "@/components/notificacoes/AcoesNotificacao";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ListaAvisos } from "@/components/comunicados/ListaAvisos";
+import { abaInicial, type AbaAvisos } from "@/lib/menuRegras";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { irPara } from "@/lib/nav";
@@ -101,6 +103,14 @@ export default function NotificacoesScreen() {
   const t = useT();
   const { itens, loading, carregar, marcarLida, marcarTodasLidas } = useNotificacoes();
   const [filtro, setFiltro] = useState<string>("Todas");
+  // Avisos e notificações são UMA tela com duas tags (25/11/2026 · pedido do
+  // Marcos). A Home chega com `aba=avisos`; o menu e o sino, em Notificações.
+  // A tela pode já estar montada quando chega um destino novo, então a tag
+  // acompanha o parâmetro sempre que ele muda.
+  const { aba: abaParam } = useLocalSearchParams<{ aba?: string }>();
+  const pathname = usePathname();
+  const [aba, setAba] = useState<AbaAvisos>(() => abaInicial(abaParam, pathname));
+  useEffect(() => { setAba(abaInicial(abaParam, pathname)); }, [abaParam, pathname]);
 
   const naoLidas = itens.filter((n) => !n.lida_em).length;
 
@@ -222,8 +232,8 @@ export default function NotificacoesScreen() {
         >
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={styles.title} numberOfLines={1}>{t("Notificações")}</Text>
-        {naoLidas > 0 ? (
+        <Text style={styles.title} numberOfLines={1}>{t("Avisos e notificações")}</Text>
+        {aba === "notificacoes" && naoLidas > 0 ? (
           <Pressable onPress={marcarTodasLidas} hitSlop={8} accessibilityRole="button" accessibilityLabel={t("Marcar todas como lidas")}>
             <Text style={styles.acao}>{t("Marcar todas")}</Text>
           </Pressable>
@@ -232,23 +242,25 @@ export default function NotificacoesScreen() {
         )}
       </View>
 
-      <Pressable
-        onPress={() => router.navigate("/mural")}
-        style={({ pressed }) => [styles.mural, pressed && { opacity: 0.7 }]}
-        accessibilityRole="button"
-        accessibilityLabel={t("Avisos da igreja")}
-      >
-        <View style={styles.muralIcone}>
-          <Ionicons name="megaphone-outline" size={20} color={colors.brandMid} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.muralTitulo}>{t("Avisos da igreja")}</Text>
-          <Text style={styles.muralSub}>{t("Comunicados publicados pela CBRio")}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-      </Pressable>
+      <View style={styles.abas} accessibilityRole="tablist">
+        {([["notificacoes", "Notificações", "notifications-outline"], ["avisos", "Avisos", "megaphone-outline"]] as const).map(([id, rotulo, icone]) => {
+          const sel = aba === id;
+          return (
+            <Pressable
+              key={id}
+              onPress={() => setAba(id)}
+              style={[styles.aba, sel && styles.abaSel]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: sel }}
+            >
+              <Ionicons name={icone} size={18} color={sel ? "#fff" : colors.brandMid} />
+              <Text style={[styles.abaTxt, sel && styles.chipTxtSel]}>{t(rotulo)}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
-      {!loading && itens.length > 0 && chips.length > 1 && (
+      {aba === "notificacoes" && !loading && itens.length > 0 && chips.length > 1 && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -272,7 +284,9 @@ export default function NotificacoesScreen() {
         </ScrollView>
       )}
 
-      {loading ? (
+      {aba === "avisos" ? (
+        <ListaAvisos />
+      ) : loading ? (
         <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.xl }} />
       ) : itens.length === 0 ? (
         <EmptyState icon="notifications-off-outline" titulo={t("Nenhuma notificação por enquanto.")} />
@@ -298,10 +312,10 @@ const makeStyles = (colors: Palette) =>
     back: { width: 24 },
     title: { color: colors.text, fontSize: font.size.lg, fontWeight: "800", flexShrink: 1, textAlign: "center" },
     acao: { color: colors.primary, fontSize: font.size.sm, fontWeight: "700" },
-    mural: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginHorizontal: spacing.lg, marginBottom: spacing.md, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.glassBorder },
-    muralIcone: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.glass, alignItems: "center", justifyContent: "center" },
-    muralTitulo: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
-    muralSub: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 2 },
+    abas: { flexDirection: "row", gap: 8, marginHorizontal: spacing.lg, marginBottom: spacing.md },
+    aba: { flex: 1, minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: 14, borderRadius: radius.full, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+    abaSel: { backgroundColor: colors.primary, borderColor: colors.primary },
+    abaTxt: { color: colors.text, fontSize: font.size.md, fontWeight: "700" },
     chipsBar: { flexGrow: 0, flexShrink: 0 },
     chips: { paddingHorizontal: spacing.lg, gap: 8, paddingBottom: spacing.md, alignItems: "center" },
     chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.full, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
