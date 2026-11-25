@@ -6,6 +6,25 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Músicas do culto de hoje": {"en": "Today's worship songs", "es": "Canciones del culto de hoy"},
+  "Não foi possível salvar a música. Tente novamente.": {"en": "Could not save the song. Please try again.", "es": "No se pudo guardar la canción. Inténtalo de nuevo."},
+  "Não foi possível remover a música. Tente novamente.": {"en": "Could not remove the song. Please try again.", "es": "No se pudo quitar la canción. Inténtalo de nuevo."},
+  "Não foi possível carregar as músicas.": {"en": "Could not load the songs.", "es": "No se pudieron cargar las canciones."},
+  "Não há culto hoje.": {"en": "There is no service today.", "es": "No hay culto hoy."},
+  "Nenhuma música adicionada para este culto.": {"en": "No songs added for this service.", "es": "No se han añadido canciones para este culto."},
+  "Tom: {tom}": {"en": "Key: {tom}", "es": "Tono: {tom}"},
+  "Abrir link da música": {"en": "Open song link", "es": "Abrir enlace de la canción"},
+  "Remover música": {"en": "Remove song", "es": "Quitar canción"},
+  "Remover música?": {"en": "Remove song?", "es": "¿Quitar canción?"},
+  "Título da música": {"en": "Song title", "es": "Título de la canción"},
+  "Artista (opcional)": {"en": "Artist (optional)", "es": "Artista (opcional)"},
+  "Tom (opcional)": {"en": "Key (optional)", "es": "Tono (opcional)"},
+  "Link da música (opcional)": {"en": "Song link (optional)", "es": "Enlace de la canción (opcional)"},
+  "Salvar música": {"en": "Save song", "es": "Guardar canción"},
+  "Adicionar música": {"en": "Add song", "es": "Añadir canción"},
+  "Use um link http ou https válido.": {"en": "Use a valid http or https link.", "es": "Usa un enlace http o https válido."},
+  "Link inválido": {"en": "Invalid link", "es": "Enlace inválido"},
+
   "Não foi possível consultar seus filhos.": {"en": "Could not load your children.", "es": "No se pudieron consultar tus hijos."},
   "Complete os dados que faltam, escolha a data e o horário e aceite os termos.": {"en": "Complete the missing details, choose a date and time, and accept the terms.", "es": "Completa los datos que faltan, elige fecha y horario y acepta los términos."},
   "Confirmar a inscrição desta criança?": {"en": "Confirm this child’s registration?", "es": "¿Confirmar la inscripción de este niño?"},
