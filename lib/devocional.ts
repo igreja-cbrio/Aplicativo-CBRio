@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { faltaColuna } from "./videoDevocional";
+import type { FiltroMural, TipoReacao } from "./muralDevocional";
 
 // ⚠️ `video_url` (25/09/2026) chega por migration do ERP que o Marcos aplica.
 // Pedir coluna inexistente faz o PostgREST recusar a query INTEIRA (42703) —
@@ -48,7 +49,14 @@ export type PostMural = {
   id: string; item_id: string | null; referencia_biblica: string | null; texto: string;
   created_at: string; item_titulo: string | null; item_passagem: string | null;
   autor_nome: string; alcance: "igreja" | "grupo" | "servir"; texto_biblico: string | null;
+  // Mural (25/11/2026 · listar_devocional_mural_v2). Ausentes na v1.
+  meu?: boolean; reacoes?: Partial<Record<TipoReacao, number>>; minhas?: TipoReacao[];
+  // Times do Servir (25/11/2026 · migration 20261125233000): time escolhido por quem
+  // publicou e times que o autor tem em comum com quem está vendo.
+  time_nome?: string | null; times_comuns?: string[];
 };
+
+export type TimeServir = { id: string; nome: string };
 
 export async function listarPlanos(membroId: string | null): Promise<PlanoDevocional[]> {
   const { data, error } = await supabase.from("devocional_planos")
@@ -121,17 +129,37 @@ export async function itemDoPlano(itemId: string): Promise<ItemEdicao | null> {
   return (data as unknown as ItemEdicao | null) ?? null;
 }
 
-export async function listarMural(): Promise<PostMural[]> {
-  const { data, error } = await supabase.rpc("listar_devocional_mural", { p_limite: 60 });
-  if (error) throw error;
-  return (data ?? []) as PostMural[];
+export async function listarMural(filtro: FiltroMural = "igreja"): Promise<PostMural[]> {
+  const { data, error } = await supabase.rpc("listar_devocional_mural_v2", { p_filtro: filtro, p_limite: 60 });
+  if (!error) return (data ?? []) as PostMural[];
+  // Função nova ainda não aplicada no banco (PGRST202): mostra a lista antiga, sem filtro nem reações.
+  if (error.code !== "PGRST202") throw error;
+  const antiga = await supabase.rpc("listar_devocional_mural", { p_limite: 60 });
+  if (antiga.error) throw antiga.error;
+  return (antiga.data ?? []) as PostMural[];
 }
 
-export async function publicarNoMural(params: { membroId: string; texto: string; alcance: PostMural["alcance"]; itemId?: string; referenciaBiblica?: string; textoBiblico?: string }): Promise<void> {
+/** Liga/desliga uma reação. Devolve true se ficou ligada. */
+export async function reagirNoMural(muralId: string, tipo: TipoReacao): Promise<boolean> {
+  const { data, error } = await supabase.rpc("devocional_mural_reagir", { p_mural: muralId, p_tipo: tipo });
+  if (error) throw error;
+  return data === true;
+}
+
+/** Times do Servir de quem está logado, para publicar só para um deles. */
+export async function listarMeusTimes(): Promise<TimeServir[]> {
+  const { data, error } = await supabase.rpc("devocional_mural_meus_times");
+  if (error) throw error;
+  return (data ?? []) as TimeServir[];
+}
+
+export async function publicarNoMural(params: { membroId: string; texto: string; alcance: PostMural["alcance"]; itemId?: string; referenciaBiblica?: string; textoBiblico?: string; timeId?: string | null }): Promise<void> {
   const { error } = await supabase.from("devocional_mural").insert({
     membro_id: params.membroId, texto: params.texto.trim(), item_id: params.itemId ?? null,
     referencia_biblica: params.referenciaBiblica?.trim() || null, texto_biblico: params.textoBiblico?.trim() || null,
     alcance: params.alcance, status: "publicado",
+    // Só manda a coluna quando há time: assim a publicação comum não depende da migration nova.
+    ...(params.alcance === "servir" && params.timeId ? { time_id: params.timeId } : {}),
   });
   if (error) throw error;
 }
