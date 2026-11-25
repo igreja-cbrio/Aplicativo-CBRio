@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Abertura suave e aplicação de OTA (25/11/2026)
+
 - Legendas completas no dock nativo (16/11/2026)
 - ⚠️ LETRA GRANDE · varredura de telas espremidas ou vazando em 360dp + regras de layout (2026-11-14)
 - Login compacto e logo única no vídeo (13/11/2026)
@@ -594,3 +596,17 @@ de layout React (frame zero, próximo frame, troca de rota, rotação e desmonta
 O teste usa react-test-renderer 19.1.0 apenas como dependência de desenvolvimento;
 não substitui UIKit, cujo visual foi conferido no simulador. Tipos, réguas e
 traduções seguem no portão de publicação.
+
+
+## Abertura suave e aplicação de OTA (25/11/2026)
+
+- `SplashPulse` mantém a mesma logo de 180px, posição e fundo na restauração
+  da sessão e durante a aplicação do OTA. Apenas a aplicação exibe “Atualizando…”.
+- `useMovimentoAbertura` começa na escala 1, opacidade constante, e respira até
+  1,025 em 1.200ms por trecho. Sem duração mínima nem atraso no acesso/reload.
+- Começa estático até consultar Reduzir Movimento. Mudanças da preferência são
+  observadas; resposta inicial tardia não sobrescreve evento mais recente. Falha
+  da consulta mantém estático. Background pausa; desmontagem cancela o loop/listeners.
+- Guardas de aplicação, cadastro em andamento, piso da loja e tentativa após
+  falha permanecem. Esta alteração trata a apresentação JS; a splash nativa do
+  binário durante reinício ainda precisa de validação em aparelho com OTA real.

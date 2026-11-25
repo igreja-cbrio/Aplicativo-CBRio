@@ -29,13 +29,14 @@ import { Text } from "@/components/ui/Typography";
 // em dev e no Expo Go, onde `reloadAsync` nem existe.
 // ============================================================================
 import { createContext, useContext, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { ActivityIndicator, AppState, Linking, Platform, Pressable, StyleSheet, View } from "react-native";
+import { AppState, Linking, Platform, Pressable, StyleSheet, View } from "react-native";
 import * as Updates from "expo-updates";
 import { abaixoDoPiso } from "@/lib/versaoApp";
 import { versaoMinimaApp, type VersaoMinima } from "@/lib/api";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
+import { SplashPulse } from "@/components/brand/SplashPulse";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { assinarFichaCadastro, lerFichaCadastro } from "@/lib/cadastroAberto";
 import { assinarCadastroNativo, lerCadastroNativo } from "@/lib/cadastroEmAndamento";
@@ -308,7 +309,7 @@ export function PortaoAtualizacao({ children }: { children: React.ReactNode }) {
   // Não há botão: com `isUpdatePending` e ponto seguro, o efeito acima já
   // aplicou (aplicando=true) e a tela abaixo é uma SPLASH DE APLICAÇÃO, estável
   // até o reload acontecer ou falhar (então vira "tentar de novo").
-  if (aplicando || falhou) return <TelaAplicacao aplicando={aplicando} onTentar={aplicar} colors={colors} styles={styles} t={t} />;
+  if (aplicando || falhou) return <TelaAplicacao aplicando={aplicando} onTentar={aplicar} styles={styles} t={t} />;
 
   return <AtualizacaoManualContext.Provider value={buscarManual}>{children}</AtualizacaoManualContext.Provider>;
 }
@@ -317,38 +318,33 @@ export function PortaoAtualizacao({ children }: { children: React.ReactNode }) {
 function TelaAplicacao({
   aplicando,
   onTentar,
-  colors,
   styles,
   t,
 }: {
   aplicando: boolean;
   onTentar: () => void;
-  colors: Palette;
   styles: ReturnType<typeof makeStyles>;
   t: (s: string) => string;
 }) {
+  if (aplicando) return <SplashPulse mensagem={t("Atualizando…")} />;
+
   return (
     <View style={styles.tela}>
       <View style={styles.miolo}>
         <CbrioHeart size={54} />
         <View style={styles.textos}>
-          <Text style={styles.titulo}>{aplicando ? t("Atualizando…") : t("Não foi possível aplicar")}</Text>
+          <Text style={styles.titulo}>{t("Não foi possível aplicar")}</Text>
           <Text style={styles.corpo}>
-            {aplicando
-              ? t("Uma versão nova do app já está no seu aparelho. O app reinicia em um segundo.")
-              : t("Toque abaixo para tentar de novo.")}
+            {t("Toque abaixo para tentar de novo.")}
           </Text>
-          {!aplicando && (
-            <Pressable
-              style={styles.botao}
-              onPress={onTentar}
-              accessibilityRole="button"
-            >
-              <Text style={styles.botaoTxt}>{t("Tentar de novo")}</Text>
-            </Pressable>
-          )}
+          <Pressable
+            style={styles.botao}
+            onPress={onTentar}
+            accessibilityRole="button"
+          >
+            <Text style={styles.botaoTxt}>{t("Tentar de novo")}</Text>
+          </Pressable>
         </View>
-        {aplicando && <ActivityIndicator color={colors.primary} />}
         <Text style={styles.rodape}>
           {t("A atualização é obrigatória para manter o app funcionando com o sistema da igreja.")}
         </Text>
