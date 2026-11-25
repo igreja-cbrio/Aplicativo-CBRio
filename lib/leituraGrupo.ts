@@ -176,5 +176,5 @@ export function normalizarCodigo(txt: string): string {
 export function textoConvite(params: { titulo: string; dias: number; dataInicio: string; codigo: string; fimDeSemana?: boolean }): string {
   const [a, m, d] = params.dataInicio.split("-");
   const ritmo = params.fimDeSemana === false ? " (de segunda a sexta)" : "";
-  return `Bora ler junto? 📖\n\n${params.titulo} em ${params.dias} ${params.dias === 1 ? "dia" : "dias"}${ritmo}, começando em ${d}/${m}/${a}.\n\nEntre pelo app da CBRio:\nhttps://cbrio.org/l/${params.codigo}\n\nOu em Devocional → Planos de leitura → Entrar com código: ${params.codigo}`;
+  return `Bora ler junto? 📖\n\n${params.titulo} em ${params.dias} ${params.dias === 1 ? "dia" : "dias"}${ritmo}, começando em ${d}/${m}/${a}.\n\nEntre pelo app da CBRio:\nhttps://cbrio.org/l/${params.codigo}\n\nOu abra o card Devocional na aba Devocional e toque em Entrar com código: ${params.codigo}`;
 }

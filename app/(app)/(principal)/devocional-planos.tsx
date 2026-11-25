@@ -39,13 +39,10 @@ export default function Planos() {
     await Linking.openURL("https://www.youtube.com/watch?v=" + pense.video_id);
   }
   return <SafeAreaView style={s.safe} edges={["left", "right"]}><Stack.Screen options={{ headerShown: false }} />
-    <View style={s.header}><Pressable onPress={() => subirUmNivel()} hitSlop={12} style={s.back}><Ionicons name="chevron-back" size={24} color={c.text} /></Pressable><Text style={s.headerTitle}>{t("Planos de leitura")}</Text><View style={s.back} /></View>
+    <View style={s.header}><Pressable onPress={() => subirUmNivel()} hitSlop={12} style={s.back}><Ionicons name="chevron-back" size={24} color={c.text} /></Pressable><Text style={s.headerTitle}>{t("Devocional")}</Text><View style={s.back} /></View>
     <ScrollView contentContainerStyle={s.content}><Text style={s.eyebrow}>{t("ESCOLHA SUA JORNADA")}</Text><Text style={s.title}>{t("Um caminho para cada ritmo")}</Text><Text style={s.subtitle}>{t("Abra uma opção e siga uma leitura por dia.")}</Text>
       <Card icon="play" numero="01" titulo="Pense Pedrão" texto={pense?.titulo ?? t("Uma mensagem breve para o seu dia")} onPress={abrirPense} s={s} c={c} />
       <Card icon="flame-outline" numero="02" titulo="Quarta com Deus" texto={t("Sete leituras, de quinta a quarta")} onPress={() => abrirPlano(quarta)} s={s} c={c} />
-      {/* 25/11/2026 · Marcos: o "Devocional da semana" saiu (não tinha conteúdo) e o Kids entrou como
-          "Devocional em família". Os planos são estes 3 + as leituras em grupo; "Planos sugeridos" saiu. */}
-      <Card icon="people-outline" numero="03" titulo={t("Devocional em família")} texto={t("Uma semana, uma conversa em família")} onPress={() => router.navigate("/devocional-kids")} s={s} c={c} />
       <Text style={s.secao}>{t("LEITURA EM GRUPO")}</Text>
       <Text style={s.vazioTxt}>{t("Escolha um ou mais livros, convide quem quiser e leiam juntos, no seu ritmo.")}</Text>
       <View style={s.grupoAcoes}>

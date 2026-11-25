@@ -1756,6 +1756,8 @@ export const TRANSLATIONS: Record<string, Traducao> = {
 
   // ───────────────── Devocional ─────────────────
   "Devocional": { en: "Devotional", es: "Devocional" },
+  "Devocional Kids": { en: "Kids devotional", es: "Devocional Kids" },
+  "Quarta com Deus e leituras em grupo": { en: "Wednesday with God and group readings", es: "Miércoles con Dios y lecturas en grupo" },
   "nesta semana": { en: "this week", es: "esta semana" },
   "Comece sua semana com a Palavra 💙": { en: "Start your week in the Word 💙", es: "Comienza tu semana con la Palabra 💙" },
   "O devocional volta segunda-feira 💙": { en: "The devotional is back on Monday 💙", es: "El devocional vuelve el lunes 💙" },
