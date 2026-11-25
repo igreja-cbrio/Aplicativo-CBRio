@@ -21,12 +21,12 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors } from "@/contexts/ThemeContext";
-import { apiGet, apiPut } from "@/lib/api";
+import { apiGet, apiPost, apiPut } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import {
-  dividirSecoes, duracaoCurta, horaBRT, itensParaSalvar, moverItem, previstoAoEscolher, rascunhoDe, rotaLiturgia, rotuloMusica,
-  type ItemLiturgia, type Liturgia, type MusicaCatalogo, type MusicaLiturgia, type RascunhoItem,
+  dividirSecoes, duracaoCurta, horaBRT, itensParaSalvar, moverItem, nomeAnexo, previstoAoEscolher, rascunhoDe, rotaAbrirAnexo, rotaLiturgia, rotuloMusica,
+  type AnexoMusica, type ItemLiturgia, type Liturgia, type MusicaCatalogo, type MusicaLiturgia, type RascunhoItem,
 } from "@/lib/liturgia";
 import { linkMusicaSeguro } from "@/lib/louvorMusicas";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -55,6 +55,8 @@ export default function LiturgiaScreen() {
   const [musicaDe, setMusicaDe] = useState<string | null>(null); // chave do item escolhendo música
   // Letra/cifra aberta no modo leitura: "<chave do item>:letra" ou ":cifra".
   const [textoAberto, setTextoAberto] = useState<string | null>(null);
+  const [abrindoAnexo, setAbrindoAnexo] = useState<string | null>(null);
+  const [erroAnexo, setErroAnexo] = useState<string | null>(null);
   const editando = rascunho !== null;
 
   // Recarrega ao focar: a Produção ajusta o cronograma pelo sistema web.
@@ -123,6 +125,24 @@ export default function LiturgiaScreen() {
     }
   }
 
+  // O PDF mora no Planning Center: o servidor devolve uma URL temporária, que
+  // abrimos no visualizador do aparelho. Nada é baixado para o app.
+  async function abrirAnexo(a: AnexoMusica) {
+    if (!id || abrindoAnexo) return;
+    setAbrindoAnexo(a.id);
+    setErroAnexo(null);
+    try {
+      const r = await apiPost<{ url: string }>(rotaAbrirAnexo(String(id), a.id), {});
+      const seguro = r?.url && /^https:\/\//i.test(r.url) ? r.url : null;
+      if (!seguro) throw new Error("sem url");
+      await Linking.openURL(seguro);
+    } catch (e: any) {
+      setErroAnexo(e?.status && e.status < 500 ? String(e.message) : t("Não foi possível abrir o arquivo agora."));
+    } finally {
+      setAbrindoAnexo(null);
+    }
+  }
+
   // Mesma checagem do card do Louvor antes de abrir: só http(s), sem credenciais.
   function abrirLink(link: string | null) {
     const seguro = linkMusicaSeguro(link);
@@ -176,8 +196,14 @@ export default function LiturgiaScreen() {
           )}
           {!!dur && <Text style={styles.itemDur}>{dur}</Text>}
           {!!item.observacao && <Text style={styles.itemObs}>{item.observacao}</Text>}
-          {!!musica && (!!linkMusicaSeguro(musica.link) || !!musica.letra || !!musica.cifra) && (
+          {!!musica && (!!linkMusicaSeguro(musica.link) || !!musica.letra || !!musica.cifra || !!musica.anexos?.length) && (
             <View style={styles.acoesMusica}>
+              {(musica.anexos || []).map((a) => (
+                <Pressable key={a.id} onPress={() => abrirAnexo(a)} disabled={!!abrindoAnexo} accessibilityRole="link" hitSlop={8} style={[styles.tentar, styles.anexo]}>
+                  <Ionicons name="document-text-outline" size={14} color={colors.primary} />
+                  <Text style={styles.tentarTxt}>{abrindoAnexo === a.id ? t("Abrindo…") : nomeAnexo(a.nome)}</Text>
+                </Pressable>
+              ))}
               {!!linkMusicaSeguro(musica.link) && (
                 <Pressable onPress={() => abrirLink(musica.link)} accessibilityRole="link" hitSlop={8} style={styles.tentar}>
                   <Text style={styles.tentarTxt}>{t("Abrir link da música")}</Text>
@@ -260,6 +286,13 @@ export default function LiturgiaScreen() {
             <View style={{ width: 26 }} />
           )}
         </View>
+
+        {!!erroAnexo && (
+          <View style={styles.aviso}>
+            <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
+            <Text style={styles.avisoTxt}>{erroAnexo}</Text>
+          </View>
+        )}
 
         {!!erroSalvar && (
           <View style={styles.aviso}>
@@ -432,6 +465,7 @@ const makeStyles = (colors: Palette) =>
     tagTxt: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
     tentar: { alignSelf: "flex-start", paddingVertical: 6 },
     acoesMusica: { flexDirection: "row", flexWrap: "wrap", columnGap: spacing.md },
+    anexo: { flexDirection: "row", alignItems: "center", gap: 4 },
     letra: { color: colors.text, fontSize: font.size.sm, lineHeight: 22, marginTop: spacing.xs },
     cifra: { color: colors.text, fontSize: 13, lineHeight: 20, marginTop: spacing.xs, fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" },
     tentarTxt: { color: colors.primary, fontSize: font.size.sm, fontWeight: "700" },

@@ -6,6 +6,8 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Não foi possível abrir o arquivo agora.": {"en": "Could not open the file right now.", "es": "No se pudo abrir el archivo ahora."},
+  "Abrindo…": {"en": "Opening…", "es": "Abriendo…"},
   "Ver letra": {"en": "See lyrics", "es": "Ver letra"},
   "Esconder letra": {"en": "Hide lyrics", "es": "Ocultar letra"},
   "Ver cifra": {"en": "See chords", "es": "Ver cifrado"},
