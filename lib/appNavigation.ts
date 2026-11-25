@@ -24,7 +24,6 @@ export const MENU_SECTIONS = [
     { label: "Pregações", icon: "play-circle-outline", href: "/videos" },
   ] },
   { title: "Você", items: [
-    { label: "Carta de transferência", icon: "document-text-outline", href: "/carta-transferencia" },
     { label: "Meu perfil", icon: "person-outline", href: "/perfil" },
     { label: "KIDS", icon: "happy-outline", href: "/kids-area" },
     { label: "Sua jornada", icon: "trail-sign-outline", href: "/jornada" },

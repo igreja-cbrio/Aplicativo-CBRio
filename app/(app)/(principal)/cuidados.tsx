@@ -173,7 +173,7 @@ export default function CuidadosScreen() {
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </Pressable>
 
-          <Pressable style={styles.portaUnica} onPress={() => router.navigate("/carta-transferencia")} accessibilityRole="button">
+          <Pressable style={styles.portaUnica} onPress={() => router.navigate({ pathname: "/carta-transferencia", params: { origem: "cuidados" } })} accessibilityRole="button">
             <View style={styles.portaIcone}><Ionicons name="document-text-outline" size={22} color={colors.primary} /></View>
             <View style={{ flex: 1 }}><Text style={styles.cardTitle}>{t("Carta de transferência")}</Text><Text style={styles.cardText}>{t("Peça sua transferência para outra igreja e acompanhe o atendimento.")}</Text></View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
