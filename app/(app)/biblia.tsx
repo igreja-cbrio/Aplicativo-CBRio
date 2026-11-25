@@ -35,17 +35,20 @@ export default function Biblia() {
   // Investir (25/11/2026): o capítulo conta quando a pessoa chega ao FIM dele.
   // Uma vez por capítulo aberto; as medidas vêm da própria rolagem.
   const contado = useRef<string | null>(null), alturaVisivel = useRef(0), alturaConteudo = useRef(0);
-  const restaurouUltima = useRef(false);
+  // Última leitura (25/11/2026): a Bíblia abria direto no último capítulo e escondia
+  // Minhas anotações e Meu histórico. Agora abre na lista, com um atalho para continuar.
+  const [ultima, setUltima] = useState<{ livro: LivroBiblico; numero: number } | null>(null);
+  const buscouUltima = useRef(false);
   const normalizar = (v: string) => v.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
   const livrosFiltrados = LIVROS_BIBLIA.filter(l => normalizar(l.nome).includes(normalizar(busca)));
   useEffect(() => {
-    if (!membro?.membroId || restaurouUltima.current) return;
-    restaurouUltima.current = true;
+    if (!membro?.membroId || buscouUltima.current) return;
+    buscouUltima.current = true;
     ultimaLeituraBiblia(membro.membroId).then(ultima => {
       if (!ultima) return;
       const separador = ultima.lastIndexOf(" "), nome = ultima.slice(0, separador), numero = Number(ultima.slice(separador + 1));
       const encontrado = LIVROS_BIBLIA.find(l => l.nome === nome);
-      if (encontrado && numero) abrirCapitulo(numero, encontrado);
+      if (encontrado && numero) setUltima({ livro: encontrado, numero });
     }).catch(() => undefined);
   }, [membro?.membroId]);
 
@@ -69,7 +72,7 @@ export default function Biblia() {
         const n = Number(v); if (n && !mapa[n]) mapa[n] = m.cor;
       }));
       setMarcacoes(mapa);
-      setLivro(livroAlvo); setVersiculos(versos); setCapitulo(numero); setSelecionados([]);
+      setLivro(livroAlvo); setVersiculos(versos); setCapitulo(numero); setSelecionados([]); setUltima({ livro: livroAlvo, numero });
       scrollRef.current?.scrollTo({ y: 0, animated: false });
       contado.current = null; alturaConteudo.current = 0;
     } catch { Alert.alert(t("Erro"), t("Não foi possível carregar este capítulo. Confira a internet e tente de novo, ou escolha outra versão.")); }
@@ -133,7 +136,7 @@ export default function Biblia() {
       onContentSizeChange={(_, h) => { alturaConteudo.current = h; conferirFim(0); }}
       onScroll={e => conferirFim(e.nativeEvent.contentOffset.y)} scrollEventThrottle={250}
       contentContainerStyle={[styles.content, Boolean(capitulo) && [styles.readerContent, { paddingBottom: dockInset + 220 }]]} showsVerticalScrollIndicator={!capitulo}>
-      {!livro && <BookList busca={busca} setBusca={setBusca} livros={livrosFiltrados} abrir={setLivro} s={styles} c={colors} t={t} />}
+      {!livro && <BookList busca={busca} setBusca={setBusca} livros={livrosFiltrados} abrir={setLivro} ultima={ultima} continuar={() => ultima && abrirCapitulo(ultima.numero, ultima.livro)} s={styles} c={colors} t={t} />}
       {livro && !capitulo && <><Text style={styles.eyebrow}>{t("CAPÍTULOS")}</Text><Text style={styles.title}>{livro.nome}</Text><View style={styles.chapters}>{Array.from({ length: livro.capitulos }, (_, i) => <Pressable key={i + 1} style={styles.chapter} onPress={() => abrirCapitulo(i + 1)}><Text style={styles.chapterText}>{i + 1}</Text></Pressable>)}</View></>}
       {carregando && <ActivityIndicator color={colors.primary} size="large" />}
       {capitulo && !carregando && <View style={styles.reading}><Text style={styles.chapterNumber}>{capitulo}</Text>{versiculos.map(v => {
@@ -161,7 +164,7 @@ export default function Biblia() {
     </Modal>
   </SafeAreaView>;
 }
-function BookList({ busca, setBusca, livros, abrir, s, c, t }: any) {
+function BookList({ busca, setBusca, livros, abrir, ultima, continuar, s, c, t }: any) {
   const secao = (titulo: string, xs: LivroBiblico[]) => xs.length ? <><Text style={s.testament}>{t(titulo)}</Text>{xs.map(item => <Pressable key={item.api} style={s.book} onPress={() => abrir(item)}><Text style={s.bookText}>{item.nome}</Text><Ionicons name="chevron-forward" size={17} color={c.textMuted} /></Pressable>)}</> : null;
   const antigo = livros.filter((l: LivroBiblico) => LIVROS_BIBLIA.indexOf(l) < 39), novo = livros.filter((l: LivroBiblico) => LIVROS_BIBLIA.indexOf(l) >= 39);
   // Minhas anotações e Meu histórico moraram na home do Devocional até 25/11/2026;
@@ -169,7 +172,7 @@ function BookList({ busca, setBusca, livros, abrir, s, c, t }: any) {
   return <><View style={s.atalhos}>
     <Pressable style={({ pressed }) => [s.atalho, pressed && { opacity: .7 }]} onPress={() => router.navigate("/devocional-registros")} accessibilityRole="button"><Ionicons name="bookmark-outline" size={20} color={c.primary} /><View style={{ flexShrink: 1 }}><Text style={s.atalhoTitulo}>{t("Minhas anotações")}</Text><Text style={s.atalhoLegenda} numberOfLines={1}>{t("Notas e marcações")}</Text></View></Pressable>
     <Pressable style={({ pressed }) => [s.atalho, pressed && { opacity: .7 }]} onPress={() => router.navigate("/devocional-leituras")} accessibilityRole="button"><Ionicons name="stats-chart-outline" size={20} color={c.primary} /><View style={{ flexShrink: 1 }}><Text style={s.atalhoTitulo}>{t("Meu histórico")}</Text><Text style={s.atalhoLegenda} numberOfLines={1}>{t("Dias e planos lidos")}</Text></View></Pressable>
-  </View><Text style={s.eyebrow}>{t("ALMEIDA LIVRE")}</Text><Text style={s.title}>{t("Escolha um livro")}</Text><View style={s.search}><Ionicons name="search" size={19} color={c.textMuted} /><TextInput value={busca} onChangeText={setBusca} style={s.searchInput} placeholder={t("Pesquisar livro")} placeholderTextColor={c.textMuted} autoCorrect={false} /></View>{secao("Antigo Testamento", antigo)}{secao("Novo Testamento", novo)}</>;
+  </View>{ultima && <Pressable style={({ pressed }) => [s.atalho, s.continuar, pressed && { opacity: .7 }]} onPress={continuar} accessibilityRole="button"><Ionicons name="book-outline" size={20} color={c.primary} /><View style={{ flex: 1 }}><Text style={s.atalhoTitulo}>{t("Continuar onde parei")}</Text><Text style={s.atalhoLegenda} numberOfLines={1}>{ultima.livro.nome} {ultima.numero}</Text></View><Ionicons name="chevron-forward" size={17} color={c.textMuted} /></Pressable>}<Text style={s.eyebrow}>{t("ALMEIDA LIVRE")}</Text><Text style={s.title}>{t("Escolha um livro")}</Text><View style={s.search}><Ionicons name="search" size={19} color={c.textMuted} /><TextInput value={busca} onChangeText={setBusca} style={s.searchInput} placeholder={t("Pesquisar livro")} placeholderTextColor={c.textMuted} autoCorrect={false} /></View>{secao("Antigo Testamento", antigo)}{secao("Novo Testamento", novo)}</>;
 }
 const css = (c: any) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: c.background }, readerSafe: { backgroundColor: "#FBFAF7" }, header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 14 }, readerHeader: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#DDD8CE" }, back: { width: 32, minHeight: 32, justifyContent: "center" }, headerTitle: { flex: 1, color: c.text, fontSize: 18, fontWeight: "800", textAlign: "center" },
@@ -177,7 +180,7 @@ const css = (c: any) => StyleSheet.create({
   content: { paddingHorizontal: 20, paddingBottom: 64, gap: 9 }, readerContent: { paddingHorizontal: 25, paddingBottom: 220 }, eyebrow: { color: c.primary, fontSize: 11, fontWeight: "800", letterSpacing: 1.5, marginTop: 8 }, title: { color: c.text, fontSize: 29, fontWeight: "900" },
   search: { flexDirection: "row", alignItems: "center", gap: 9, backgroundColor: c.surface, borderRadius: 14, paddingHorizontal: 13, marginVertical: 7, borderWidth: 1, borderColor: c.border }, searchInput: { flex: 1, color: c.text, height: 48, fontSize: 15 },
   atalhos: { flexDirection: "row", gap: 10, marginTop: 6 }, atalho: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: c.surface, borderRadius: 16, padding: 13, borderWidth: 1, borderColor: c.border },
-  atalhoTitulo: { color: c.text, fontSize: 14, fontWeight: "800" }, atalhoLegenda: { color: c.textMuted, fontSize: 11, marginTop: 2 },
+  continuar: { flex: 0 }, atalhoTitulo: { color: c.text, fontSize: 14, fontWeight: "800" }, atalhoLegenda: { color: c.textMuted, fontSize: 11, marginTop: 2 },
   testament: { color: c.text, fontSize: 18, fontWeight: "900", marginTop: 18, marginBottom: 3 }, book: { paddingVertical: 13, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border }, bookText: { color: c.text, fontSize: 16, fontWeight: "600" },
   chapters: { flexDirection: "row", flexWrap: "wrap", gap: 9, marginTop: 8 }, chapter: { width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: c.surface, borderWidth: 1, borderColor: c.border }, chapterText: { color: c.text, fontSize: 15, fontWeight: "700" },
   reading: { paddingTop: 9 }, chapterNumber: { color: "#2D3B3D", fontFamily: FONTE_SERIF, fontSize: 58, lineHeight: 66, marginBottom: 7 }, verse: { borderRadius: 8, paddingHorizontal: 4, paddingVertical: 3, marginHorizontal: -4 }, verseSelected: { backgroundColor: "#DDECF1" },

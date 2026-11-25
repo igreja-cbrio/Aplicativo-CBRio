@@ -25,7 +25,7 @@ export default function KidsAreaScreen() {
   const t = useT();
 
   const itens: Item[] = [
-    { rota: "/kids", icone: "happy-outline", titulo: t("Minhas crianças"), sub: t("Check-in, fichas e avisos dos seus filhos."), destaque: true },
+    { rota: "/kids", icone: "qr-code-outline", titulo: t("Check-in das crianças"), sub: t("Selecione seus filhos e gere o código para apresentar na chegada ao Kids."), destaque: true },
     { rota: "/kids-mural", icone: "megaphone-outline", titulo: t("Mural de avisos"), sub: t("Avisos e calendário de eventos do Kids.") },
     { rota: { pathname: "/apresentacao-crianca", params: { origem: "kids" } }, icone: "heart-outline", titulo: t("Apresentação de crianças"), sub: t("Inscreva uma criança para a apresentação na igreja.") },
     { rota: "/kids-batismo", icone: "water-outline", titulo: t("Batismo de crianças"), sub: t("Inscreva uma criança para o batismo.") },
