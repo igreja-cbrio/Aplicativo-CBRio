@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Check-in explícito na aba Kids (2026-11-25)
+
 - Batismo nativo e seleção dos filhos (2026-11-23)
 
 - Inscrições de apresentação e batismo no Kids (2026-11-23)
@@ -390,3 +392,12 @@ CPF é sempre da criança, contato é do responsável. Apresentação segue sem 
 Datas, horários, capacidade e textos de consentimento vêm do contrato do servidor.
 Consentimentos nunca são marcados automaticamente. Publicar backend antes da OTA.
 Sem dependência nativa nova; foto segue opcional no contrato nativo existente.
+
+
+## Check-in explícito na aba Kids (2026-11-25)
+
+O primeiro card destacado do menu Kids agora se chama “Check-in das crianças”,
+com ícone de QR e orientação para selecionar os filhos e gerar o código.
+Reutiliza `/kids`, antes identificado no menu como “Minhas crianças”.
+Kids volta ao menu principal; o check-in volta ao Kids. Minha família continua
+com acesso ao Kids. Entrada e retirada seguem presenciais; sem mudança de API.

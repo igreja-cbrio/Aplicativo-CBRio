@@ -6,6 +6,8 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Check-in das crianças": { en: "Children’s check-in", es: "Check-in de los niños" },
+  "Selecione seus filhos e gere o código para apresentar na chegada ao Kids.": { en: "Select your children and generate the code to show when you arrive at Kids.", es: "Selecciona a tus hijos y genera el código para mostrar al llegar a Kids." },
   "Liturgia do culto": {"en": "Service order", "es": "Liturgia del culto"},
   "Liturgia": {"en": "Service order", "es": "Liturgia"},
   "Ver liturgia do culto": {"en": "See the service order", "es": "Ver la liturgia del culto"},
