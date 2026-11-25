@@ -11,6 +11,7 @@ import { excluirRegistro, listarMeusRegistros, salvarRegistroPessoal, type Regis
 import { subirUmNivel } from "@/lib/hierarquia";
 import { useMembro } from "@/lib/useMembro";
 import { useT } from "@/lib/i18n";
+import { TrechoBiblico } from "@/components/devocional/TrechoBiblico";
 
 const DESTINO: Record<string, string> = { privado: "Só para mim", grupo: "Meu grupo", servir: "Quem serve comigo", igreja: "Toda a igreja" };
 const COR_FUNDO: Record<string, string> = { amarelo: "#FFF1A8", azul: "#CDE9F5", verde: "#D9EBCF", rosa: "#F5D3DD" };
@@ -42,7 +43,7 @@ export default function Registros() {
       {editando && <View style={s.composer}><Text style={s.composerTitle}>{t("Nova anotação para mim")}</Text><TextInput style={s.input} value={referencia} onChangeText={setReferencia} placeholder={t("Referência bíblica")} placeholderTextColor={c.textMuted} />{params.textoBiblico && <Text style={s.quote}>“{params.textoBiblico.trim()}”</Text>}<TextInput style={[s.input, s.area]} value={comentario} onChangeText={setComentario} placeholder={t("Escreva o que você quer guardar")} placeholderTextColor={c.textMuted} multiline /><Pressable style={s.cta} onPress={salvar} disabled={salvando}><Text style={s.ctaText}>{salvando ? t("Salvando...") : t("Salvar para mim")}</Text></Pressable></View>}
       {carregando ? <ActivityIndicator color={c.primary} /> : registros.length === 0 ? <View style={s.empty}><Ionicons name="bookmark-outline" size={30} color={c.primary} /><Text style={s.emptyTitle}>{t("Nada guardado ainda")}</Text><Text style={s.emptyText}>{t("Toque em um versículo para anotar ou marcar.")}</Text></View> : registros.map(r => <View key={r.fonte + r.id} style={s.card}>
         <View style={s.meta}><Text style={s.date}>{new Date(r.created_at).toLocaleDateString("pt-BR")}</Text><View style={s.destination}><Text style={s.destinationText}>{t(DESTINO[r.destino])}</Text></View></View>
-        <Text style={s.ref}>{r.referencia_biblica}</Text>{r.texto_biblico && <Text style={[s.quote, r.cor ? { backgroundColor: COR_FUNDO[r.cor], color: "#263234", padding: 10, borderRadius: 8 } : undefined]}>“{r.texto_biblico}”</Text>}{r.comentario && <Text style={s.body}>{r.comentario}</Text>}
+        <Text style={s.ref}>{r.referencia_biblica}</Text>{r.texto_biblico ? <TrechoBiblico texto={r.texto_biblico} corLink={c.primary} style={[s.quote, r.cor ? { backgroundColor: COR_FUNDO[r.cor], color: "#263234", padding: 10, borderRadius: 8 } : undefined]} /> : null}{r.comentario && <Text style={s.body}>{r.comentario}</Text>}
         <Pressable onPress={() => remover(r)} style={s.delete}><Ionicons name="trash-outline" size={16} color={c.danger ?? "#B45151"} /><Text style={s.deleteText}>{t("Excluir")}</Text></Pressable>
       </View>)}
     </ScrollView>
