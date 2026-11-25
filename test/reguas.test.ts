@@ -213,7 +213,8 @@ describe("hierarquia · a árvore do `cd ..`", () => {
       "/kids-filho", "/kids-aviso", "/kids-solicitar-vinculo", "/kids-certificados", "/jornada", "/generosidade",
       "/comprovante-doacoes", "/inscricoes", "/batismo", "/batismo-fotos", "/inscricao-batismo", "/next",
       "/next-turma", "/evento", "/videos", "/configuracoes", "/trocar-senha",
-      "/fale-conosco", "/sobre", "/notificacoes", "/mural", "/modo-culto", "/culto-detalhe",
+      "/fale-conosco", "/sobre", "/configuracoes-avancadas", "/creditos",
+      "/notificacoes", "/mural", "/modo-culto", "/culto-detalhe",
     ];
     for (const r of rotas) {
       const pai = rotaPai(r);

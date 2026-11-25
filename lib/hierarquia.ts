@@ -54,6 +54,7 @@ import { router, type Href } from "expo-router";
  *   │   │              └→ /next (membro OU gestão, decidido pelo servidor)
  *   │   ├── /videos
  *   │   └── /configuracoes → /trocar-senha, /fale-conosco, /sobre
+ *   │                        └→ /sobre → /configuracoes-avancadas → /creditos
  *   ├── /notificacoes      (o sino está na faixa em qualquer tela)
  *   │   └── /mural
  *   ├── /modo-culto        (card de ao vivo na Home)
@@ -155,6 +156,9 @@ const PAI: Record<string, string> = {
   "/fale-conosco": "/configuracoes",
   "/fale-conosco-chat": "/fale-conosco",
   "/sobre": "/configuracoes",
+  // Fim da tela Sobre → avançadas → créditos de quem fez o app (25/11/2026).
+  "/configuracoes-avancadas": "/sobre",
+  "/creditos": "/configuracoes-avancadas",
 
   // avisos e culto
   "/notificacoes": "/",
