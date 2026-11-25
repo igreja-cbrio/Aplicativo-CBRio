@@ -17,6 +17,8 @@ describe('link de repertório',()=>{
     expect(s).not.toContain('<Modal');
     expect(s).not.toContain('Alert.alert');
     expect(s).not.toContain('cleiton');
-    expect(readFileSync('app/(app)/(principal)/voluntariado.tsx','utf8')).toContain('<MusicasCulto />');
+    // 25/11/2026 · pedido do Marcos: o card ficou grande demais na aba Servir e saiu
+    // dela. As músicas do culto agora moram na liturgia (catálogo do Planning Center).
+    expect(readFileSync('app/(app)/(principal)/voluntariado.tsx','utf8')).not.toContain('<MusicasCulto');
   });
 });

@@ -37,6 +37,7 @@ export type Liturgia = {
   musicas_erro?: boolean;
   pode_editar: boolean;
   versao?: number; // trava contra salvamento cruzado com o sistema
+  faltas?: string[]; // o que falta (mesma régua do ponto vermelho do relógio)
 };
 
 export function rotaLiturgia(serviceId: string): string {
@@ -175,4 +176,21 @@ export function rotuloMusica(m: MusicaCatalogo | null | undefined): string {
 export function previstoAoEscolher(previstoAtual: string, musica: MusicaCatalogo | null): string {
   if (String(previstoAtual || "").trim()) return previstoAtual;
   return musica?.duracao_seg ? segParaMMSS(musica.duracao_seg) : previstoAtual;
+}
+
+// ── Ponto vermelho no relógio (25/11/2026) ───────────────────────────────────
+// { [service_id]: lista do que falta }. Culto fora da resposta = sem ponto.
+export type PendenciasLiturgia = Record<string, string[]>;
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Rota em lote (até 40 cultos, sem repetir, só ids válidos, ordem estável para
+// não refazer a busca à toa). Nenhum id = null (nada a buscar).
+export function rotaPendencias(ids: (string | null | undefined)[]): string | null {
+  const validos = [...new Set(ids.filter((x): x is string => typeof x === "string" && UUID.test(x)))].sort().slice(0, 40);
+  return validos.length ? `/app/voluntariado/liturgia-pendencias?ids=${validos.join(",")}` : null;
+}
+
+export function temPendencia(pendencias: PendenciasLiturgia, serviceId: string | null | undefined): boolean {
+  return !!serviceId && Array.isArray(pendencias[serviceId]) && pendencias[serviceId].length > 0;
 }

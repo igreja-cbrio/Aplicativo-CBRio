@@ -6,6 +6,7 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Ver liturgia do culto (falta completar)": {"en": "See the service order (needs completing)", "es": "Ver la liturgia del culto (falta completar)"},
   "Ver letra": {"en": "See lyrics", "es": "Ver letra"},
   "Esconder letra": {"en": "Hide lyrics", "es": "Ocultar letra"},
   "Ver cifra": {"en": "See chords", "es": "Ver cifrado"},
