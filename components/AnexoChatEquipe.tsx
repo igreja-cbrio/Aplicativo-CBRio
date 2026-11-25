@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, AppState, Linking, Pressable, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import WebView from "react-native-webview";
@@ -7,7 +7,7 @@ import { Text } from "@/components/ui/Typography";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { apiGet } from "@/lib/api";
-import { htmlAudioChat, urlAnexoChat } from "@/lib/chatAudio";
+import { alturasOnda, htmlAudioChat, urlAnexoChat } from "@/lib/chatAudio";
 
 export function AnexoChatEquipe({ conversa, mensagem, mime, ativo, ativar, meu = false }: { conversa: string; mensagem: string; mime: string; ativo: boolean; ativar: () => void; meu?: boolean }) {
   const player = useRef<WebView>(null);
@@ -36,12 +36,24 @@ export function AnexoChatEquipe({ conversa, mensagem, mime, ativo, ativar, meu =
     }).catch(() => { if (!cancelado) setFalhou(true); });
     return () => { cancelado = true; };
   }, [ativo, conversa, mensagem, mime, audio, tentativa]);
-  const html = url && audio ? htmlAudioChat(url, process.env.EXPO_PUBLIC_SUPABASE_URL, meu) : null;
+  const html = url && audio ? htmlAudioChat(url, process.env.EXPO_PUBLIC_SUPABASE_URL, meu, tinta) : null;
+  // Onda estável por mensagem (mesmo algoritmo do player): a prévia já mostra
+  // o layout novo antes de carregar o áudio.
+  const onda = useMemo(() => (audio ? alturasOnda(mensagem) : []), [audio, mensagem]);
   return <View style={{ width: 240, maxWidth: "100%", gap: 8 }}>
-    {!ativo || falhou || (!audio && url) ? <Pressable accessibilityRole="button" onPress={() => { if (ativo) setTentativa(n => n + 1); else ativar(); }} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 12 }}>
-      <Ionicons name={audio ? "play" : "document-outline"} size={28} color={tinta} />
-      <Text style={{ color: tinta, flex: 1 }}>{falhou ? t("Tentar novamente") : audio ? t("Ouvir áudio") : t("Abrir documento")}</Text>
-      {audio && !falhou && <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: tinta, opacity: 0.3 }} />}
+    {!ativo || falhou || (!audio && url) ? <Pressable accessibilityRole="button" accessibilityLabel={audio ? (falhou ? t("Tentar novamente") : t("Ouvir áudio")) : t("Abrir documento")} onPress={() => { if (ativo) setTentativa(n => n + 1); else ativar(); }} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 12 }}>
+      {audio ? <>
+        <View style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: tinta, alignItems: "center", justifyContent: "center", opacity: 0.9 }}>
+          <Ionicons name="play" size={18} color={tinta} style={{ marginLeft: 2 }} />
+        </View>
+        <View style={{ flex: 1, height: 28, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 1 }}>
+          {onda.map((h, i) => <View key={i} style={{ width: 3, height: h, borderRadius: 2, backgroundColor: tinta, opacity: 0.35 }} />)}
+        </View>
+        {falhou ? <Text style={{ color: tinta, fontSize: 12 }}>{t("Tentar novamente")}</Text> : null}
+      </> : <>
+        <Ionicons name="document-outline" size={28} color={tinta} />
+        <Text style={{ color: tinta, flex: 1 }}>{falhou ? t("Tentar novamente") : t("Abrir documento")}</Text>
+      </>}
     </Pressable> : !url ? <ActivityIndicator accessibilityLabel={t("Carregando")} color={colors.brandMid} style={{ padding: 14 }} /> : null}
     {ativo && html && !falhou && <WebView ref={player} source={{ html }} originWhitelist={["*"]}
       style={{ height: 64, backgroundColor: "transparent" }} containerStyle={{ height: 64, flex: 0 }}
