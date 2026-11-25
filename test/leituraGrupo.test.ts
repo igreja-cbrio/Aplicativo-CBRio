@@ -1,27 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { diaAtual, diaLiberado, dividirLeitura, normalizarCodigo, referenciaDoDia, somarDias, versiculosDoCapitulo, type DiaLeitura } from "../lib/leituraGrupo";
+import {
+  datasDosDias, diaLiberado, dividirLeitura, maxDias, montarDivisao, normalizarCodigo, proximaLeitura,
+  referenciaDoDia, resumoDosLivros, somarDias, totalCapitulos, versiculosDoCapitulo, type DiaLeitura, type LivroEscolhido,
+} from "../lib/leituraGrupo";
 import { VERSICULOS_POR_CAPITULO } from "../lib/versiculosPorCapitulo";
 
-const ROMANOS = 45, FILIPENSES = 50, SALMOS = 19, OBADIAS = 31;
-
-function versosDoDia(livro: number, dia: DiaLeitura): number {
-  return dia.trechos.reduce((s, t) => {
-    const ate = t.ate ?? versiculosDoCapitulo(livro, t.cap);
-    return s + ate - (t.de ?? 1) + 1;
-  }, 0);
-}
-/** Lista plana de (cap, verso) coberta, na ordem: prova que nada falta nem se repete. */
-function cobertura(livro: number, dias: DiaLeitura[]): string[] {
-  return dias.flatMap(d => d.trechos.flatMap(t => {
-    const ate = t.ate ?? versiculosDoCapitulo(livro, t.cap);
-    return Array.from({ length: ate - (t.de ?? 1) + 1 }, (_, i) => `${t.cap}:${(t.de ?? 1) + i}`);
-  }));
-}
-function esperado(livro: number, ini: number, fim: number): string[] {
-  const saida: string[] = [];
-  for (let c = ini; c <= fim; c++) for (let v = 1; v <= versiculosDoCapitulo(livro, c); v++) saida.push(`${c}:${v}`);
-  return saida;
-}
+const SALMOS = 19, ROMANOS = 45, FILIPENSES = 50, COLOSSENSES = 51, OBADIAS = 31;
+const livroTodo = (livro: number): LivroEscolhido => ({ livro, cap_inicio: 1, cap_fim: VERSICULOS_POR_CAPITULO[livro - 1].length });
+const cobertura = (dias: DiaLeitura[]) => dias.flatMap(d => d.trechos.map(t => `${t.livro}:${t.cap}`));
 
 describe("tabela de versículos", () => {
   it("66 livros, 1.189 capítulos, 31.103 versículos", () => {
@@ -32,83 +18,97 @@ describe("tabela de versículos", () => {
   });
 });
 
-describe("dividirLeitura · capítulos inteiros", () => {
-  it("Romanos (16) em 16 dias = um capítulo por dia", () => {
-    const d = dividirLeitura(ROMANOS, 1, 16, 16);
-    expect(d.map(x => x.trechos)).toEqual(Array.from({ length: 16 }, (_, i) => [{ cap: i + 1 }]));
+describe("máximo de dias = total de capítulos (capítulos sempre inteiros)", () => {
+  it("Filipenses = 4 dias no máximo; com Colossenses, 8", () => {
+    expect(maxDias([livroTodo(FILIPENSES)])).toBe(4);
+    expect(maxDias([livroTodo(FILIPENSES), livroTodo(COLOSSENSES)])).toBe(8);
+    expect(totalCapitulos([{ livro: ROMANOS, cap_inicio: 5, cap_fim: 8 }])).toBe(4);
   });
-  it("Romanos em 5 dias: só capítulos inteiros, contíguos, cobrindo tudo, sem dia vazio", () => {
-    const d = dividirLeitura(ROMANOS, 1, 16, 5);
-    expect(d).toHaveLength(5);
-    expect(d.every(x => x.trechos.length >= 1 && x.trechos.every(t => t.de === undefined))).toBe(true);
-    expect(cobertura(ROMANOS, d)).toEqual(esperado(ROMANOS, 1, 16));
+  it("⚠️ mais dias que capítulos é recusado (a v1 partia capítulo em versículos)", () => {
+    expect(() => dividirLeitura([livroTodo(FILIPENSES)], 5)).toThrow();
+    expect(() => dividirLeitura([livroTodo(OBADIAS)], 2)).toThrow();
   });
-  it("dias equilibrados: nenhum dia passa do dobro do ideal quando há capítulos de sobra", () => {
-    const d = dividirLeitura(SALMOS, 1, 150, 30);
-    const ideal = 2461 / 30;
-    for (const x of d) expect(versosDoDia(SALMOS, x)).toBeLessThan(ideal * 2 + 176);
-    expect(cobertura(SALMOS, d)).toEqual(esperado(SALMOS, 1, 150));
+  it("nenhum trecho tem versículos: só capítulos inteiros", () => {
+    const d = dividirLeitura([livroTodo(ROMANOS)], 16);
+    expect(d.every(x => x.trechos.every(t => t.de === undefined && t.ate === undefined))).toBe(true);
   });
-  it("intervalo de capítulos respeita o começo e o fim", () => {
-    const d = dividirLeitura(ROMANOS, 5, 8, 2);
-    expect(d[0].trechos[0].cap).toBe(5);
-    expect(d[1].trechos[d[1].trechos.length - 1].cap).toBe(8);
-  });
-  it("1 dia = tudo num dia", () => {
-    expect(dividirLeitura(FILIPENSES, 1, 4, 1)).toEqual([{ trechos: [{ cap: 1 }, { cap: 2 }, { cap: 3 }, { cap: 4 }] }]);
+  it("1 dia = tudo num dia; mínimo é 1", () => {
+    expect(dividirLeitura([livroTodo(FILIPENSES)], 1)[0].trechos).toHaveLength(4);
+    expect(() => dividirLeitura([livroTodo(FILIPENSES)], 0)).toThrow();
   });
 });
 
-describe("dividirLeitura · mais dias que capítulos", () => {
-  it("Filipenses (4 caps) em 10 dias: 10 blocos, sem buraco nem repetição", () => {
-    const d = dividirLeitura(FILIPENSES, 1, 4, 10);
-    expect(d).toHaveLength(10);
-    expect(cobertura(FILIPENSES, d)).toEqual(esperado(FILIPENSES, 1, 4));
+describe("vários livros, na ordem escolhida", () => {
+  it("Salmos 1–3 + Filipenses em 7 dias: 7 capítulos, um por dia, na ordem", () => {
+    const d = dividirLeitura([{ livro: SALMOS, cap_inicio: 1, cap_fim: 3 }, livroTodo(FILIPENSES)], 7);
+    expect(cobertura(d)).toEqual(["19:1", "19:2", "19:3", "50:1", "50:2", "50:3", "50:4"]);
   });
-  it("último bloco de cada capítulo vai até o fim (sem `ate`)", () => {
-    const d = dividirLeitura(FILIPENSES, 1, 4, 10);
-    const ultimos = d.filter((x, i) => i === d.length - 1 || d[i + 1].trechos[0].cap !== x.trechos[0].cap);
-    expect(ultimos.every(x => x.trechos[0].ate === undefined)).toBe(true);
+  it("cobre todos os capítulos uma vez, sem dia vazio", () => {
+    const livros = [livroTodo(ROMANOS), livroTodo(FILIPENSES)];
+    const d = dividirLeitura(livros, 7);
+    expect(d).toHaveLength(7);
+    expect(d.every(x => x.trechos.length > 0)).toBe(true);
+    expect(cobertura(d)).toEqual([...Array.from({ length: 16 }, (_, i) => `45:${i + 1}`), ...Array.from({ length: 4 }, (_, i) => `50:${i + 1}`)]);
   });
-  it("Obadias (1 cap, 21 versos) em 21 dias = um versículo por dia", () => {
-    const d = dividirLeitura(OBADIAS, 1, 1, 21);
-    expect(d.map(x => versosDoDia(OBADIAS, x))).toEqual(Array(21).fill(1));
-  });
-});
-
-describe("dividirLeitura · entradas inválidas", () => {
-  it("recusa livro, capítulos e dias fora da faixa", () => {
-    expect(() => dividirLeitura(0, 1, 1, 1)).toThrow();
-    expect(() => dividirLeitura(ROMANOS, 0, 16, 5)).toThrow();
-    expect(() => dividirLeitura(ROMANOS, 10, 5, 5)).toThrow();
-    expect(() => dividirLeitura(ROMANOS, 1, 17, 5)).toThrow();
-    expect(() => dividirLeitura(OBADIAS, 1, 1, 22)).toThrow();
-    expect(() => dividirLeitura(SALMOS, 1, 150, 366)).toThrow();
-    expect(() => dividirLeitura(ROMANOS, 1, 16, 0)).toThrow();
+  it("recusa livro ou capítulo inválido", () => {
+    expect(() => dividirLeitura([], 1)).toThrow();
+    expect(() => dividirLeitura([{ livro: 0, cap_inicio: 1, cap_fim: 1 }], 1)).toThrow();
+    expect(() => dividirLeitura([{ livro: ROMANOS, cap_inicio: 10, cap_fim: 5 }], 1)).toThrow();
+    expect(() => dividirLeitura([{ livro: ROMANOS, cap_inicio: 1, cap_fim: 17 }], 1)).toThrow();
   });
 });
 
-describe("referência, datas e código", () => {
-  it("referência do dia", () => {
-    expect(referenciaDoDia("Romanos", ROMANOS, { trechos: [{ cap: 1 }, { cap: 2 }, { cap: 3 }] })).toBe("Romanos 1–3");
-    expect(referenciaDoDia("Romanos", ROMANOS, { trechos: [{ cap: 8 }] })).toBe("Romanos 8");
-    expect(referenciaDoDia("Salmos", SALMOS, { trechos: [{ cap: 119, de: 89 }] })).toBe("Salmos 119:89–176");
-    expect(referenciaDoDia("Salmos", SALMOS, { trechos: [{ cap: 119, de: 1, ate: 88 }] })).toBe("Salmos 119:1–88");
+describe("datas: fim de semana opcional", () => {
+  // 2026-11-27 = sexta-feira
+  it("com fim de semana: dias corridos", () => {
+    expect(datasDosDias("2026-11-27", 4, true)).toEqual(["2026-11-27", "2026-11-28", "2026-11-29", "2026-11-30"]);
+  });
+  it("sem fim de semana: pula sábado e domingo", () => {
+    expect(datasDosDias("2026-11-27", 3, false)).toEqual(["2026-11-27", "2026-11-30", "2026-12-01"]);
+  });
+  it("sem fim de semana e começando num sábado: 1º dia vai pra segunda", () => {
+    expect(datasDosDias("2026-11-28", 2, false)).toEqual(["2026-11-30", "2026-12-01"]);
+  });
+  it("montarDivisao grava a data em cada dia", () => {
+    const d = montarDivisao([livroTodo(FILIPENSES)], 4, "2026-11-27", false);
+    expect(d.map(x => x.data)).toEqual(["2026-11-27", "2026-11-30", "2026-12-01", "2026-12-02"]);
   });
   it("somarDias atravessa mês e ano", () => {
-    expect(somarDias("2026-11-25", 6)).toBe("2026-12-01");
     expect(somarDias("2026-12-31", 1)).toBe("2027-01-01");
   });
-  it("diaAtual: antes, durante, depois", () => {
-    expect(diaAtual("2026-11-25", 10, "2026-11-24")).toBe(0);
-    expect(diaAtual("2026-11-25", 10, "2026-11-25")).toBe(1);
-    expect(diaAtual("2026-11-25", 10, "2026-12-04")).toBe(10);
-    expect(diaAtual("2026-11-25", 10, "2026-12-05")).toBe(11);
+});
+
+describe("sem pacto de data: liberado fica liberado, próxima leitura sem atraso", () => {
+  const div = montarDivisao([livroTodo(FILIPENSES)], 4, "2026-11-25", true);
+  it("dia liberado continua liberado meses depois; futuro não", () => {
+    expect(diaLiberado(div, "2026-11-25", 1, "2027-03-01")).toBe(true);
+    expect(diaLiberado(div, "2026-11-25", 2, "2026-11-25")).toBe(false);
   });
-  it("diaLiberado: hoje e passado sim, futuro não", () => {
-    expect(diaLiberado(1, "2026-11-25", "2026-11-25")).toBe(true);
-    expect(diaLiberado(2, "2026-11-25", "2026-11-25")).toBe(false);
-    expect(diaLiberado(2, "2026-11-25", "2026-11-30")).toBe(true);
+  it("próxima leitura = 1º dia liberado não lido, mesmo 3 meses depois", () => {
+    expect(proximaLeitura(div, "2026-11-25", [1, 2], "2027-03-01")).toEqual({ dia: 3, liberaEm: null });
+  });
+  it("leu tudo que liberou: informa quando libera o próximo", () => {
+    expect(proximaLeitura(div, "2026-11-25", [1], "2026-11-25")).toEqual({ dia: null, liberaEm: "2026-11-26" });
+  });
+  it("leu tudo: nada pendente", () => {
+    expect(proximaLeitura(div, "2026-11-25", [1, 2, 3, 4], "2027-01-01")).toEqual({ dia: null, liberaEm: null });
+  });
+  it("leituras v1 sem data usam início + dia − 1", () => {
+    const v1: DiaLeitura[] = [{ trechos: [{ cap: 1 }] }, { trechos: [{ cap: 2 }] }];
+    expect(diaLiberado(v1, "2026-11-25", 2, "2026-11-26")).toBe(true);
+    expect(diaLiberado(v1, "2026-11-25", 2, "2026-11-25")).toBe(false);
+  });
+});
+
+describe("referência e textos", () => {
+  it("referência agrupa capítulos seguidos e separa livros", () => {
+    expect(referenciaDoDia({ trechos: [{ livro: ROMANOS, cap: 1 }, { livro: ROMANOS, cap: 2 }, { livro: ROMANOS, cap: 3 }] }, ROMANOS)).toBe("Romanos 1–3");
+    expect(referenciaDoDia({ trechos: [{ livro: FILIPENSES, cap: 4 }, { livro: COLOSSENSES, cap: 1 }, { livro: COLOSSENSES, cap: 2 }] }, FILIPENSES)).toBe("Filipenses 4 · Colossenses 1–2");
+    expect(referenciaDoDia({ trechos: [{ cap: 8 }] }, ROMANOS)).toBe("Romanos 8");
+    expect(referenciaDoDia({ trechos: [{ cap: 119, de: 1, ate: 88 }] }, SALMOS)).toBe("Salmos 119:1–88");
+  });
+  it("resumo dos livros: livro inteiro só pelo nome", () => {
+    expect(resumoDosLivros([livroTodo(FILIPENSES), { livro: SALMOS, cap_inicio: 1, cap_fim: 10 }])).toBe("Filipenses · Salmos 1–10");
   });
   it("normalizarCodigo", () => {
     expect(normalizarCodigo(" ab-c 12x9 ")).toBe("ABC12X");

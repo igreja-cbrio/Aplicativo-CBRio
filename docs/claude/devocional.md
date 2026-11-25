@@ -7,6 +7,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 ## Índice de seções
 
 - ⚠️⚠️ DEVOCIONAL · INVESTIR conta toda leitura (25/11/2026)
+- ⚠️⚠️ DEVOCIONAL · LEITURA EM GRUPO v2: vários livros, capítulos inteiros, dias úteis, sem prazo (25/11/2026)
 - ⚠️⚠️ DEVOCIONAL · LEITURA EM GRUPO (25/11/2026)
 - ⚠️⚠️ DEVOCIONAL · UMA tela pra TODO plano + YouTube dentro do app (25/09/2026 · 2ª leva)
 - ⚠️⚠️ DEVOCIONAL · VÍDEO na leitura + SEMANAS no plano longo (25/09/2026)
@@ -275,3 +276,18 @@ gravam 1 linha/dia em `mem_devocionais` (a tabela que NSM/jornada/KPIs leem).
   `{fim:true}`; diário e dia do plano chamam `registrarConteudoVisto` (RPC
   `devocional_registrar_conteudo_visto`). Uma vez por vídeo montado.
 - Fora: Pense e pregações (abrem o YouTube fora do app) e PDF do Kids — não dá pra medir o fim.
+
+## ⚠️⚠️ DEVOCIONAL · LEITURA EM GRUPO v2: vários livros, capítulos inteiros, dias úteis, sem prazo (25/11/2026)
+
+Decisões do Marcos (ERP migration `20261125200000`, RPC `devocional_leitura_criar_v2`):
+- **Vários livros** na ordem escolhida ("Adicionar outro livro"); `livros` jsonb.
+- **Capítulos sempre inteiros**: dias = 1..total de capítulos. A tela diz isso ("N capítulos ·
+  de 1 a N dias") e mostra o ritmo ("2 capítulos por dia"). A divisão em versículos da v1 acabou.
+- **"Incluir sábado e domingo"** (Switch). A data de cada dia vai na `divisao` (`data`),
+  calculada por `datasDosDias`/`montarDivisao` (`lib/leituraGrupo.ts`).
+- ⚠️⚠️ **NÃO é pacto de data** ("não deve ficar aparecendo quantos dias atrasado a pessoa
+  está, isso gera uma cobrança"): a tela central mostra **"Sua próxima leitura"** (1º dia
+  liberado não lido, `proximaLeitura`), o progresso é **"lidos/total"** e os dias futuros só
+  dizem "Libera em dd/mm". Nada de "hoje é o dia X", "concluída" por data ou atraso. Dia
+  liberado continua liberado enquanto a leitura existir; entrar também não tem prazo.
+- Leituras v1 (sem `livros`/`data`) continuam funcionando: `livrosDaLeitura`, `dataDoDia`.

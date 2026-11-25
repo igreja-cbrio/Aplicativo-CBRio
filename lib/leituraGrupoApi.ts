@@ -6,21 +6,24 @@
  */
 import { supabase } from "@/lib/supabase";
 import { LIVROS_BIBLIA, carregarCapitulo, type VersiculoLivre } from "@/lib/bibliaLivre";
-import type { DiaLeitura, Trecho } from "@/lib/leituraGrupo";
+import type { DiaLeitura, LivroEscolhido, Trecho } from "@/lib/leituraGrupo";
 
 export type LeituraResumo = {
   id: string; titulo: string; livro_ordem: number; cap_inicio: number; cap_fim: number;
   data_inicio: string; dias: number; papel: "criador" | "participante"; participantes: number; meus_lidos: number;
+  livros?: LivroEscolhido[] | null; fim_de_semana?: boolean;
 };
 export type Participante = { membro_id: string; nome: string; foto_url: string | null; papel: "criador" | "participante"; lidos: number[] };
 export type LeituraDetalhe = {
   id: string; titulo: string; livro_ordem: number; cap_inicio: number; cap_fim: number;
   data_inicio: string; dias: number; divisao: DiaLeitura[]; codigo: string; hoje: string;
   eu: string; sou_criador: boolean; participantes: Participante[];
+  livros?: LivroEscolhido[] | null; fim_de_semana?: boolean;
 };
 export type ConviteLeitura = {
   id: string; titulo: string; livro_ordem: number; cap_inicio: number; cap_fim: number;
   data_inicio: string; dias: number; criador_nome: string; participantes: number; ja_participa: boolean;
+  livros?: LivroEscolhido[] | null; fim_de_semana?: boolean;
 };
 
 export function nomeDoLivro(ordem: number): string {
@@ -28,11 +31,11 @@ export function nomeDoLivro(ordem: number): string {
 }
 
 export async function criarLeitura(params: {
-  titulo: string; livroOrdem: number; capInicio: number; capFim: number; dataInicio: string; divisao: DiaLeitura[];
+  titulo: string; livros: LivroEscolhido[]; dataInicio: string; fimDeSemana: boolean; divisao: DiaLeitura[];
 }): Promise<{ id: string; codigo: string }> {
-  const { data, error } = await supabase.rpc("devocional_leitura_criar", {
-    p_titulo: params.titulo, p_livro: params.livroOrdem, p_cap_inicio: params.capInicio, p_cap_fim: params.capFim,
-    p_data_inicio: params.dataInicio, p_divisao: params.divisao,
+  const { data, error } = await supabase.rpc("devocional_leitura_criar_v2", {
+    p_titulo: params.titulo, p_livros: params.livros, p_data_inicio: params.dataInicio,
+    p_fim_de_semana: params.fimDeSemana, p_divisao: params.divisao,
   });
   if (error) throw error;
   const linha = Array.isArray(data) ? data[0] : data;
@@ -75,10 +78,10 @@ export async function sairDaLeitura(id: string): Promise<void> {
 }
 
 /** Texto do dia: busca cada capítulo na versão escolhida e recorta os versículos do trecho. */
-export async function textoDoDia(livroOrdem: number, dia: DiaLeitura, versao?: string): Promise<{ trecho: Trecho; versiculos: VersiculoLivre[] }[]> {
-  const livro = LIVROS_BIBLIA[livroOrdem - 1];
-  if (!livro) throw new Error("Livro inválido.");
+export async function textoDoDia(livroPadrao: number, dia: DiaLeitura, versao?: string): Promise<{ trecho: Trecho; versiculos: VersiculoLivre[] }[]> {
   return Promise.all(dia.trechos.map(async (trecho) => {
+    const livro = LIVROS_BIBLIA[(trecho.livro ?? livroPadrao) - 1];
+    if (!livro) throw new Error("Livro inválido.");
     const todos = await carregarCapitulo(livro, trecho.cap, versao);
     const de = trecho.de ?? 1, ate = trecho.ate ?? Number.MAX_SAFE_INTEGER;
     return { trecho, versiculos: todos.filter(v => v.verse >= de && v.verse <= ate) };
