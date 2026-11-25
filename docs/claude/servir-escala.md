@@ -539,3 +539,12 @@ A página HTTPS do ERP oferece abertura e lojas. Universal Links/App Links não
 estão configurados nos binários atuais: abertura automática pode exigir toque ou
 confirmação no navegador. Nenhuma nova dependência nativa ou runtimeVersion.
 ERP depende da migration `20261123190652_vol_supervisores_convites.sql`.
+
+## Músicas do culto de hoje, Louvor (2026-11-24, draft)
+
+- `components/voluntariado/MusicasCulto.tsx`, montado na aba Servir fora da condição de status da inscrição: um líder com acesso pelo módulo não precisa ser integrado no voluntariado. GET `/app/louvor/musicas` decide `acesso`, `cultos[]` e `pode_editar` por culto.
+- Exibe título, artista, tom e link, com listas separadas para cada culto do dia BRT. Dias sem culto e culto sem músicas têm estados explícitos. Nenhuma data escolhida pelo telefone; servidor manda hoje.
+- Formulário inline na rolagem existente (TecladoSeguro), sem modal aninhado. Remoção pede diálogo da casa. Ações serializadas com ref; erros não viram sucesso. Recarrega ao ganhar foco, inclusive após virada do dia/permissão alterada. Não autoriza por nome, área local ou flag de supervisor genérica.
+- Link validado também no cliente antes de `Linking.openURL`; só http(s), sem credenciais. Textos em useT e traduções EN/ES. Nenhuma dependência adicionada ao app.
+- Verificado: typecheck, 853 testes e portão i18n (239 faltantes/30 soltas, dívida preexistente não aumentada). Prévia do componente real com React Native Web a 390px, dados sintéticos, leitura e formulário de editor inspecionados. Ainda NÃO testado em aparelho/iOS/Android com teclado, nem contra API de produção (migration não aplicada).
+- Depende do PR ERP com migration `20261125140000_louvor_musicas.sql`. Merge e OTA ficam para aprovação posterior; este trabalho não publica nada.
