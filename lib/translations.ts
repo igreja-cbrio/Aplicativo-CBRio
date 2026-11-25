@@ -2508,4 +2508,20 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Não foi possível carregar todas as fotos do álbum. Verifique sua conexão e tente de novo.": { en: "Couldn't load all the album photos. Check your connection and try again.", es: "No se pudieron cargar todas las fotos del álbum. Revisa tu conexión e inténtalo de nuevo." },
   "A busca por selfie não está disponível agora. Você ainda pode ver e baixar todas as fotos do álbum.": { en: "Selfie search isn't available right now. You can still view and download all the album photos.", es: "La búsqueda por selfie no está disponible ahora. Aún puedes ver y descargar todas las fotos del álbum." },
   "Atualize o app para usar a busca por selfie. Você ainda pode ver e baixar todas as fotos do álbum.": { en: "Update the app to use selfie search. You can still view and download all the album photos.", es: "Actualiza la app para usar la búsqueda por selfie. Aún puedes ver y descargar todas las fotos del álbum." },
+
+  // ───────────────── Configurações avançadas + créditos (25/11/2026) ─────────────────
+  "Configurações avançadas": { en: "Advanced settings", es: "Ajustes avanzados" },
+  "Versão do aplicativo": { en: "App version", es: "Versión de la aplicación" },
+  "Limpar dados temporários": { en: "Clear temporary data", es: "Borrar datos temporales" },
+  "Apaga o que o app guardou para abrir mais rápido.": { en: "Deletes what the app saved to open faster.", es: "Borra lo que la app guardó para abrir más rápido." },
+  "Pronto. Nada da sua conta foi apagado.": { en: "Done. Nothing in your account was deleted.", es: "Listo. No se borró nada de tu cuenta." },
+  "Configurações muito avançadas": { en: "Very advanced settings", es: "Ajustes muy avanzados" },
+  "Tem certeza?": { en: "Are you sure?", es: "¿Estás seguro?" },
+  "Daqui pra frente é por sua conta.": { en: "From here on, you're on your own.", es: "De aquí en adelante, es por tu cuenta." },
+  "Créditos": { en: "Credits", es: "Créditos" },
+  "Marcos e Matheus, que fizeram o app": { en: "Marcos and Matheus, who built the app", es: "Marcos y Matheus, que hicieron la app" },
+  "Você achou a gente.": { en: "You found us.", es: "Nos encontraste." },
+  "Somos o Marcos e o Matheus. Fizemos este app para a CBRio.": { en: "We're Marcos and Matheus. We built this app for CBRio.", es: "Somos Marcos y Matheus. Hicimos esta app para CBRio." },
+  "Ele chegou à igreja toda em 25 de novembro de 2026.": { en: "It reached the whole church on November 25, 2026.", es: "Llegó a toda la iglesia el 25 de noviembre de 2026." },
+  "Se algo quebrar, foi o outro.": { en: "If something breaks, it was the other one.", es: "Si algo se rompe, fue el otro." },
 };

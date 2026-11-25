@@ -114,6 +114,15 @@ export default function SobreScreen() {
             {t("\"Novos convertidos engajados em ≥1 valor da CBRio em até 60 dias da decisão.\"")}
           </Text>
         </View>
+
+        <Pressable
+          onPress={() => router.navigate("/configuracoes-avancadas")}
+          style={({ pressed }) => [styles.avancadas, pressed && { opacity: 0.7 }]}
+        >
+          <Ionicons name="settings-outline" size={18} color={colors.textMuted} />
+          <Text style={styles.avancadasTxt}>{t("Configurações avançadas")}</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -193,6 +202,14 @@ const makeStyles = (colors: Palette) =>
     actionTxt: { flex: 1, color: colors.text, fontSize: font.size.sm, fontWeight: "700" },
     valor: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 4 },
     valorTxt: { color: colors.text, fontSize: font.size.sm },
+    avancadas: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+    },
+    avancadasTxt: { flex: 1, color: colors.textMuted, fontSize: font.size.sm, fontWeight: "700" },
     nsm: {
       marginTop: spacing.sm,
       color: colors.textMuted,
