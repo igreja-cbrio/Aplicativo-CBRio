@@ -4,7 +4,7 @@
 // ⚠️⚠️ POR QUE ISTO NÃO É UM REGEX. A primeira versão era
 // `src.replace(/(^|[^:])\/\/[^\n]*/g, ...)` — e ela **apagava o resto de
 // qualquer linha em que uma STRING contivesse `//`**. Caso vivo neste repo:
-// `app/(app)/completar-cadastro.tsx:218` (`!retorno.startsWith("//")`).
+// `app/(app)/(principal)/completar-cadastro.tsx:218` (`!retorno.startsWith("//")`).
 // Testado: numa linha com `startsWith("//")` seguida de `t("REAL")`, o `t()`
 // **sumia da varredura**. Ou seja: o modo de falha era **remover dívida de i18n
 // da contagem em silêncio** — o oposto do que o portão existe pra fazer.

@@ -15,12 +15,12 @@ export type AlertaNativo = { arquivo: string; porque: string };
 
 export const ALERTAS_QUE_FICAM_NATIVOS: readonly AlertaNativo[] = [
   {
-    arquivo: "app/(app)/cuidados.tsx",
+    arquivo: "app/(app)/(principal)/cuidados.tsx",
     porque:
       "SOS. É a única tela do app que pode salvar alguém em minuto zero: oferece CVV 188 e SAMU 192 ANTES de qualquer formulário, com 3 ações, `destructive`, `cancel` e discagem `tel:`. E um dos alertas é o CAMINHO DE FALHA DE REDE — diálogo que depende do estado e do render da tela é estruturalmente pior justamente quando algo já falhou. O nativo é janela do sistema e aparece mesmo com a tela em pane.",
   },
   {
-    arquivo: "app/(app)/trocar-senha.tsx",
+    arquivo: "app/(app)/(principal)/trocar-senha.tsx",
     porque:
       "A navegação roda na LINHA SEGUINTE ao alerta, sem esperar o OK. Isso só funciona porque o Alert nativo tem UIWindow própria e sobrevive à tela sair por baixo. Um diálogo montado pela tela desmonta junto com ela — a pessoa trocaria a senha e não veria confirmação nenhuma.",
   },
@@ -61,12 +61,12 @@ export type ConfirmacaoNativa = {
 
 export const CONFIRMACOES_NATIVAS_QUE_FICAM: readonly ConfirmacaoNativa[] = [
   {
-    arquivo: "app/(app)/grupo-membros.tsx",
+    arquivo: "app/(app)/(principal)/grupo-membros.tsx",
     titulos: ["Descartar a frequência?", "Descartar sua mensagem?"],
     porque: "Disparam com a folha da chamada / da ajuda ABERTA. O diálogo da casa nasceria atrás da folha no iPhone.",
   },
   {
-    arquivo: "app/(app)/grupo-visita.tsx",
+    arquivo: "app/(app)/(principal)/grupo-visita.tsx",
     titulos: ["Descartar o registro?"],
     porque: "Dispara com a folha do registro de visita aberta — o próprio arquivo documenta que o Modal irmão nascia ATRÁS no iPhone.",
   },
@@ -81,12 +81,12 @@ export const CONFIRMACOES_NATIVAS_QUE_FICAM: readonly ConfirmacaoNativa[] = [
     porque: "A gestão do batismo inteira vive dentro de um <Modal presentationStyle='pageSheet'>; qualquer diálogo irmão fica atrás dela.",
   },
   {
-    arquivo: "app/(app)/kids-filho.tsx",
+    arquivo: "app/(app)/(principal)/kids-filho.tsx",
     titulos: ["Foto da criança"],
     porque: "Três opções (tirar foto / escolher da galeria / cancelar). O diálogo da casa tem dois botões; um action sheet é outro componente.",
   },
   {
-    arquivo: "app/(app)/kids-solicitar-vinculo.tsx",
+    arquivo: "app/(app)/(principal)/kids-solicitar-vinculo.tsx",
     titulos: ["Foto da criança", "Foto da mãe", "Foto do pai"],
     porque: "Três opções (tirar foto / escolher da galeria / cancelar), nas fotos da criança e dos responsáveis. Mesmo caso do kids-filho.",
   },

@@ -14,7 +14,8 @@ import { ConfirmacaoAssistente } from "@/components/chat/AcaoAssistente";
 import { CABECALHO_CAPACIDADES, destinoDaAcao, lerAcaoAssistente, podeConfirmarAcao, type AcaoAssistente } from "@/lib/assistenteAcao";
 import { GravadorMensagem, PreviaAudio, apagarAudio, reterAudio } from "@/components/chat/GravadorMensagem";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
-import { useColors } from "@/contexts/ThemeContext";
+import { StatusBar } from "expo-status-bar";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { linkify } from "@/lib/linkify";
 import { subirUmNivel } from "@/lib/hierarquia";
@@ -53,7 +54,7 @@ type RespostaLista = { mensagens: MensagemChat[]; status?: string; tem_anteriore
  * Atualização por POLLING adaptativo só com a tela focada (nada de websocket).
  */
 export default function FaleConoscoChatScreen() {
-  const colors = useColors();
+  const { colors, mode } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
   const { user } = useAuth();
@@ -468,6 +469,7 @@ export default function FaleConoscoChatScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right", "bottom"]}>
       <Stack.Screen options={{ headerShown: false }} />
+      <StatusBar style={mode === "dark" ? "light" : "dark"} />
       <TecladoSeguro style={{ flex: 1 }}>
         <View style={styles.header}>
           <Pressable onPress={() => subirUmNivel()} hitSlop={8} style={styles.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}>

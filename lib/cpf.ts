@@ -1,7 +1,7 @@
 // ============================================================================
 // Máscara de CPF · fonte ÚNICA no app (25/08/2026)
 //
-// ⚠️⚠️ Extraída de `app/(app)/completar-cadastro.tsx`, onde era função local.
+// ⚠️⚠️ Extraída de `app/(app)/(principal)/completar-cadastro.tsx`, onde era função local.
 // Quando a tela de "Adicionar pessoa" do grupo passou a pedir CPF (Marcos ·
 // 25/08: *"queremos cadastro completo, os mesmos campos que solicitam a
 // inscrição de grupos"*), copiá-la seria a TERCEIRA cópia de máscara no

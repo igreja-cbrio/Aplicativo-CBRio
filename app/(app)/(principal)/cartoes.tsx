@@ -172,7 +172,7 @@ export default function CartoesScreen() {
                 frontSide={
                   <View style={styles.face}>
                     <Image
-                      source={require("../../assets/images/cbrio-wordmark.png")}
+                      source={require("../../../assets/images/cbrio-wordmark.png")}
                       style={styles.wordmark}
                       resizeMode="contain"
                     />

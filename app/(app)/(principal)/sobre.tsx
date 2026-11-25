@@ -16,7 +16,7 @@ import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
-const LOGO = require("../../assets/images/cbrio-wordmark.png");
+const LOGO = require("../../../assets/images/cbrio-wordmark.png");
 
 const VALORES = [
   { icon: "rocket-outline" as const, titulo: "Seguir a Jesus" },

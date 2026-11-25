@@ -15,7 +15,7 @@ vi.mock('@/components/ui/Dialogo',()=>({useDialogo:()=>({confirmar:m.confirmar,D
 vi.mock('@/components/kids/FilhosInscricao',()=>({FilhosInscricao:'FilhosInscricao',useFilhosInscricao:()=>({dados:{responsavel:{telefone:'21999998888',email:'pai@example.test'}},carregando:false,erro:false})}));
 vi.mock('@/lib/api',()=>({apiGet:m.get,apiPost:m.post}));
 vi.mock('@/lib/kidsFilhosInscricao',()=>({detalheFilhoInscricao:m.detalhe,nascimentoBR:(s:string)=>s?s.split('-').reverse().join('/'):''}));
-import Tela from '../app/(app)/kids-batismo';
+import Tela from '../app/(app)/(principal)/kids-batismo';
 let tree:ReactTestRenderer|undefined;
 const flush=async()=>{for(let i=0;i<8;i++)await Promise.resolve();};
 const filho={chave:'kids:1',nome:'Criança Exemplo',data_nascimento:'2020-03-10',sexo:'M',saude:{tem_limitacao_fisica:false},batismo:{cpf:'52998224725',telefone:'21999998888',email:'pai@example.test'}};

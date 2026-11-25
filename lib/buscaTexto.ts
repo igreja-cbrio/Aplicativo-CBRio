@@ -1,7 +1,7 @@
 // ============================================================================
 // BUSCA POR NOME · sem acento, sem caixa (10/08/2026)
 //
-// ⚠️ ESTAVA PRESA DENTRO DE `app/(app)/grupos.tsx` (uma `normalizar()` local,
+// ⚠️ ESTAVA PRESA DENTRO DE `app/(app)/(principal)/grupos.tsx` (uma `normalizar()` local,
 // num `.tsx` que importa react-native). Régua em `.tsx` não roda no portão —
 // é a lei da casa, e é a mesma razão por que `lib/ficha.ts` e `lib/teclado.ts`
 // existem. Aqui ela sai do arquivo de tela, ganha teste e passa a servir a

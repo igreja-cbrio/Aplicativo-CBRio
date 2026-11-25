@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme, useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { brand, radius, font, spacing } from "@/constants/theme";
-import { diaHorario } from "@/app/(app)/grupos";
+import { diaHorario } from "@/app/(app)/(principal)/grupos";
 
 const STYLE_URL = {
   dark: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",

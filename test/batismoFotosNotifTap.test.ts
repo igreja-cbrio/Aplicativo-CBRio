@@ -41,7 +41,7 @@ it("aviso do álbum abre a galeria daquele álbum; lembrete sem id continua em /
 
 it("⚠️ MUTATION GUARD · push e lista usam o mesmo destino para `batismo`", () => {
   const ler = (rel: string) => semComentarios(readFileSync(join(process.cwd(), rel), "utf8"));
-  for (const arq of ["lib/notifTap.ts", "app/(app)/notificacoes.tsx"]) {
+  for (const arq of ["lib/notifTap.ts", "app/(app)/(principal)/notificacoes.tsx"]) {
     const src = ler(arq);
     const caso = src.slice(src.indexOf('case "batismo":'), src.indexOf('case "batismo":') + 120);
     expect(caso, `${arq} não roteia "batismo" pelo destino do álbum`).toContain("destinoNotificacaoBatismo(data)");

@@ -11,7 +11,7 @@ describe("menu lateral e atalhos do app", () => {
     const destinations = items.map((item) => item.href);
     expect(new Set(destinations).size).toBe(destinations.length);
     for (const href of destinations) {
-      expect(existsSync(resolve("app/(app)", href === "/" ? "index.tsx" : `${href.slice(1)}.tsx`)), href).toBe(true);
+      expect(existsSync(resolve("app/(app)/(principal)", href === "/" ? "index.tsx" : `${href.slice(1)}.tsx`)), href).toBe(true);
     }
   });
   it("mantém acessíveis recursos retirados do antigo bloco da Home", () => {
@@ -25,6 +25,11 @@ describe("menu lateral e atalhos do app", () => {
     expect(destinations).not.toContain("/familia");
     expect(destinations.filter((href) => href === "/notificacoes")).toHaveLength(1);
     expect(rotaPai("/familia")).toBe("/perfil");
+    // 25/11/2026: a carta de transferência também saiu do menu e mora no perfil;
+    // quem entra por Cuidados volta pra Cuidados.
+    expect(destinations).not.toContain("/carta-transferencia");
+    expect(rotaPai("/carta-transferencia")).toBe("/perfil");
+    expect(rotaPai("/carta-transferencia", { origem: "cuidados" })).toBe("/cuidados");
     // Conteúdos mudou pra dentro do Devocional (porta própria), fora do menu.
     expect(destinations).not.toContain("/conteudos");
     expect(destinations).toContain("/videos");

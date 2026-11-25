@@ -12,7 +12,7 @@ import { font, radius, spacing, type Palette } from "@/constants/theme";
 
 // Créditos do app: a tela escondida atrás de "Configurações muito avançadas".
 // Entrou no dia do lançamento pra igreja toda (25/11/2026).
-const FOTO = require("../../assets/images/creditos-marcos-matheus.jpg");
+const FOTO = require("../../../assets/images/creditos-marcos-matheus.jpg");
 // Proporção real do arquivo (1200×1599). A foto aparece INTEIRA, sem rolagem:
 // o tamanho sai do espaço que sobrou na tela, nunca o contrário.
 const PROPORCAO = 1200 / 1599;

@@ -17,6 +17,6 @@ describe('link de repertório',()=>{
     expect(s).not.toContain('<Modal');
     expect(s).not.toContain('Alert.alert');
     expect(s).not.toContain('cleiton');
-    expect(readFileSync('app/(app)/voluntariado.tsx','utf8')).toContain('<MusicasCulto />');
+    expect(readFileSync('app/(app)/(principal)/voluntariado.tsx','utf8')).toContain('<MusicasCulto />');
   });
 });

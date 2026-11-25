@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Dock sob o chat durante a volta por gesto (25/11/2026)
+
 - Tutorial da Home no primeiro acesso (25/11/2026)
 
 - Menu enxuto: avisos + notificações numa tela, família no perfil, Censo condicional (25/11/2026)
@@ -674,3 +676,25 @@ Typecheck, i18n e 955 testes passaram; exportações iOS/Android concluídas.
 O usuário confirmou o fluxo manual Android. No iOS, solicitou foco arredondado
 por botão após o primeiro teste; a seleção nativa foi ajustada e aguarda nova
 conferência. Antes de OTA, validar também VoiceOver e rotação. Nenhum OTA foi publicado por esta mudança.
+
+
+## Dock sob o chat durante a volta por gesto (25/11/2026)
+
+O pathname continua sendo `/fale-conosco-chat` durante o arraste interativo.
+Esconder o dock global por esse pathname fazia a Home aparecer incompleta até
+terminar o gesto. O chat agora é irmão do grupo `(principal)` no Stack autenticado:
+a casca inteira, incluindo a única instância do dock, permanece na tela de baixo.
+UIKit revela e recobre essa tela naturalmente, sem listeners de progresso,
+temporizadores ou cópia da barra. O chat aberto não tem dock.
+
+As telas existentes foram movidas para `app/(app)/(principal)/`; são renomes,
+sem mudança das URLs públicas. `AppDockShell` usa o estado local desse Stack
+para casca, seleção do dock e FAB. Providers, CadastroGate, observação de rota,
+back Android e retorno de background permanecem no layout autenticado externo.
+O anchor `(principal)` e o `initialRouteName: index` preservam a Home sob um
+chat aberto por deep link. O chat define sua própria cor da barra de status.
+Formulários continuam sem dock. Não mudou módulo nativo nem runtime.
+
+Testes cobrem persistência da instância da barra com pathname do chat,
+seleção da tela de baixo, cadastro sem atalhos e disposição dos dois Stacks.
+Essa simulação de estado não equivale a uma validação visual do gesto UIKit.

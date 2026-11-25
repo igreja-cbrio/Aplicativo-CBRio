@@ -711,7 +711,7 @@ const MUTANTES = [
     // apertar" — Marcos, Android, 23/09). Este mutante é a AUSÊNCIA da folha,
     // byte a byte o que estava em produção — não um operador trocado.
     nome: "grupo-membros: botão Recusar sem folha (estado gravado e nunca lido)",
-    arq: "app/(app)/grupo-membros.tsx",
+    arq: "app/(app)/(principal)/grupo-membros.tsx",
     de: `      <Modal visible={!!recusaAlvo} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setRecusaAlvo(null)}>
         <TecladoSeguro style={styles.modalWrap}>
           <View style={[styles.sheet, { paddingBottom: fundoSeguro }]}>
@@ -846,7 +846,7 @@ const MUTANTES = [
     // devolver o Aprovar pro Alert.alert com botões — a lista de confirmações
     // nativas por título é o que pega.
     nome: "grupo-membros: Aprovar voltar pra Alert.alert (janela quadrada)",
-    arq: "app/(app)/grupo-membros.tsx",
+    arq: "app/(app)/(principal)/grupo-membros.tsx",
     de: "    const ok = await dlg.confirmar({\n      titulo: t(\"Aceitar inscrição\"),\n      mensagem: `${t(\"Aprovar\")} ${p.nome}?`,",
     para: "    Alert.alert(t(\"Aceitar inscrição\"), `${t(\"Aprovar\")} ${p.nome}?`, [{ text: t(\"Cancelar\"), style: \"cancel\" }]);\n    const ok = await dlg.confirmar({\n      titulo: t(\"Aceitar inscrição\"),\n      mensagem: `${t(\"Aprovar\")} ${p.nome}?`,",
   },
@@ -926,7 +926,7 @@ const MUTANTES = [
     // data assim mesmo — que era o defeito de antes de 25/09/2026, e ele é
     // silencioso: a tela diz novembro, o banco grava setembro, nada quebra.
     nome: "batismo: a data escolhida sumir do payload (o seletor vira enfeite)",
-    arq: "app/(app)/inscricao-batismo.tsx",
+    arq: "app/(app)/(principal)/inscricao-batismo.tsx",
     de: "          data_batismo: dataEscolhida,\n",
     para: "",
   },
@@ -934,7 +934,7 @@ const MUTANTES = [
     // ⚠️ Com UMA data o seletor é ruído (o banner "Próximo batismo: X" já diz
     // tudo). `> 0` mostraria um radio de um item em toda inscrição.
     nome: "batismo: seletor de data aparecer com uma data só",
-    arq: "app/(app)/inscricao-batismo.tsx",
+    arq: "app/(app)/(principal)/inscricao-batismo.tsx",
     de: "      {datas.length > 1 && (",
     para: "      {datas.length > 0 && (",
   },
@@ -1107,20 +1107,20 @@ const MUTANTES = [
   },
   {
     nome: "resultado guardado: sair da tela volta a apagar o resultado",
-    arq: "app/(app)/batismo-fotos.tsx",
+    arq: "app/(app)/(principal)/batismo-fotos.tsx",
     de: "      return () => {\n        setBuscaAberta(false);\n      };",
     para: "      return () => {\n        setBuscaAberta(false);\n        setResultadoBusca(null);\n      };",
   },
   {
     // Revisão de 24/11: puxar para atualizar durante o restauro trocava a lista inteira por 60 fotos.
     nome: "resultado guardado: carga completa sem geração nova (lista parcial sobrescreve)",
-    arq: "app/(app)/batismo-fotos.tsx",
+    arq: "app/(app)/(principal)/batismo-fotos.tsx",
     de: "      geracao.current += 1;\n    }\n    return r.fotos;",
     para: "    }\n    return r.fotos;",
   },
   {
     nome: "resultado guardado: restauro que falha deixa a galeria presa no carregando",
-    arq: "app/(app)/batismo-fotos.tsx",
+    arq: "app/(app)/(principal)/batismo-fotos.tsx",
     de: "        if (!inicial.carregou || inicial.fotos.length === 0) setPag((p) => ({ ...p, carregou: true, carregando: false, erro }));\n",
     para: "",
   },
@@ -1132,7 +1132,7 @@ const MUTANTES = [
   },
   {
     nome: "resultado guardado: puxar para atualizar volta a encolher a lista para a 1ª página",
-    arq: "app/(app)/batismo-fotos.tsx",
+    arq: "app/(app)/(principal)/batismo-fotos.tsx",
     de: '"não encontramos você").\n    await recarregarAlbum(pagRef.current.fotos.length);',
     para: '"não encontramos você").\n    await recarregarAlbum();',
   },

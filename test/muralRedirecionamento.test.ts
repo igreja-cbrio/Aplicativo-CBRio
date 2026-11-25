@@ -17,7 +17,7 @@ vi.mock('../lib/hierarquia', () => ({ subirUmNivel: vi.fn() }));
 vi.mock('../lib/telemetria', () => ({ trackEvento: vi.fn() }));
 vi.mock('../components/ui/ErrorState', () => ({ ErrorState: 'ErrorState' }));
 vi.mock('../components/ui/Dialogo', () => ({ useDialogo: () => ({ avisar: h.avisar, Dialogo: () => null }) }));
-import Mural from '../app/(app)/mural';
+import Mural from '../app/(app)/(principal)/mural';
 let tree: ReactTestRenderer;
 const aviso = (id = 'teste:1', link = '/inscricao-batismo') => ({ id, link_inscricao: link, titulo: 'Batismo', corpo: 'Convite', publicado_em: null });
 async function montar() { await act(async () => { tree = create(React.createElement(Mural)); }); }
