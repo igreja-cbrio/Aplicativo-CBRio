@@ -1,3 +1,4 @@
+import { HomeTutorial } from "@/components/onboarding/HomeTutorial";
 import { temConviteSupervisor } from '@/lib/supervisorConvitePendente';
 import { useIsFocused } from "@react-navigation/native";
 import { DockInsetContext } from "@/components/navigation/DockContent";
@@ -133,6 +134,7 @@ export default function AppLayout() {
           telefone + nascimento) é levado a /completar-cadastro. Não bloqueia
           render — só navega quando o servidor confirma que falta algo. */}
       <CadastroGate>
+        <HomeTutorial>
         <View style={{ flex: 1, backgroundColor: colors.background }}>
           {!semBarra && <StatusBar style={pathname === "/" || mode === "dark" ? "light" : "dark"} />}
 
@@ -175,6 +177,7 @@ export default function AppLayout() {
           {/* Uma única instância fora do Stack, inclusive na Home e durante o gesto de voltar. */}
           {!semBarra && <BottomBar onLayout={(event) => setDockHeight(event.nativeEvent.layout.height)} />}
         </View>
+      </HomeTutorial>
       </CadastroGate>
       </MenuProvider></KidsThemeProvider>
     </MembroProvider>

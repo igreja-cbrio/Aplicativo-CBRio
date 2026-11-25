@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Tutorial da Home no primeiro acesso (25/11/2026)
+
 - Menu enxuto: avisos + notificações numa tela, família no perfil, Censo condicional (25/11/2026)
 - Legendas completas no dock nativo (16/11/2026)
 - ⚠️ LETRA GRANDE · varredura de telas espremidas ou vazando em 360dp + regras de layout (2026-11-14)
@@ -629,3 +631,38 @@ régua `censoNoMenu` decide: aparece só com pesquisa aberta e `ja_respondeu`
 falso. Quem já respondeu, quem não tem censo aberto e quem não tem cadastro não
 veem o item. Sem resposta do servidor o item aparece (a tela `/censo` mostra o
 erro); enquanto carrega, fica fora pra não piscar. A rota `/censo` segue viva.
+
+
+## Tutorial da Home no primeiro acesso (25/11/2026)
+
+A apresentação antiga de slides foi substituída pelo convite opcional na Home,
+seguido de seis etapas manuais: Cuidados, Devocional, Grupos, Servir,
+Generosidade e Menu. Pular/concluir dispensam; Ajuda com o app → Rever tutorial
+reabre após confirmar o descarte de eventual rascunho, nunca durante envio.
+Não abre destinos nem executa ações no botão destacado.
+
+`TutorialProvider` é isolado por UID; progresso local em
+`cbrio:tutorial:v1:<uid>`. Instalação com a antiga marca global de onboarding
+migra somente a primeira conta identificada como já vista (marca legacy-owner);
+a chave histórica não identifica outras contas. Demais contas começam pendentes.
+Sem leitura local confiável, o app segue livre; falha de gravação ao concluir
+mantém supressão em memória. Reinstalação/outro aparelho pode reapresentar.
+
+`HomeTutorial` só monta na Home em foco/foreground, após resolver a permissão
+push e o CadastroGate (cadastro sabidamente incompleto/em andamento bloqueia;
+falha inicial de consulta segue a liberação já adotada pelo gate). Deep links,
+menu aberto e troca de conta não são interceptados. O overlay bloqueia toques
+por trás e oculta a Home do leitor de tela. Back Android e gesto de escape do
+leitor dispensam. Movimento reduzido elimina a animação do cartão.
+
+Alvos Android/fallback são Views reais; dock rolável traz o item à vista antes
+de medir. iOS UIKit não expõe os retângulos individuais no binário atual: os
+cinco passos destacam a barra inteira, com ícone e texto da função. **Não dividir
+a largura por cinco nem substituir o UITabBar por imitação.** O Menu é medido
+individualmente em ambas as plataformas. Sem medida válida, o texto permanece
+disponível sem recorte inventado. Nenhum módulo nativo/dependência foi adicionado.
+
+Validação automatizada cobre migração/contas, armazenamento indisponível,
+portões, recorte, passos/voltar/pular e background. A captura do iPhone de
+produção é referência; não comprova execução do código novo. Antes de OTA,
+validar visualmente em iOS e Android, inclusive fonte ampliada e rotação.

@@ -24,11 +24,14 @@ import { destinoSupervisor } from '@/lib/supervisorConvite';
 // Falha de rede/endpoint (deploy em 2 etapas, app offline) NÃO bloqueia o app —
 // preso na tela de cadastro sem internet seria pior que dado incompleto.
 // ============================================================================
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { statusIdentidade } from "@/lib/api";
 import { assinarCadastroNativo, lerCadastroNativo } from "@/lib/cadastroEmAndamento";
+
+const CadastroReadyContext = createContext(false);
+export const useCadastroReady = () => useContext(CadastroReadyContext);
 
 export function CadastroGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -38,6 +41,7 @@ export function CadastroGate({ children }: { children: React.ReactNode }) {
     const retorno = destinoSupervisor(await lerConviteSupervisor());
     router.replace(retorno ? { pathname: "/completar-cadastro", params: { retorno } } : "/completar-cadastro");
   };
+  const [liberadoTutorialPara, setLiberadoTutorialPara] = useState<string | null>(null);
   const [checado, setChecado] = useState(false);
   const [incompleto, setIncompleto] = useState(false);
   const redirecionou = useRef(false);
@@ -63,6 +67,7 @@ export function CadastroGate({ children }: { children: React.ReactNode }) {
         if (!vivo) return;
         setChecado(true);
         setIncompleto(!s.completo);
+        setLiberadoTutorialPara(s.completo ? user?.id ?? null : null);
         if (!s.completo && !redirecionou.current) {
           redirecionou.current = true;
           void abrirCadastro();
@@ -70,7 +75,7 @@ export function CadastroGate({ children }: { children: React.ReactNode }) {
       })
       .catch(() => {
         // Sem resposta = segue a vida (ver comentário do topo).
-        if (vivo) setChecado(true);
+        if (vivo) { setChecado(true); setLiberadoTutorialPara(user?.id ?? null); }
       });
     return () => { vivo = false; };
   }, [loading, user?.id, checado, router, cadastrando]);
@@ -102,7 +107,7 @@ export function CadastroGate({ children }: { children: React.ReactNode }) {
     statusIdentidade()
       .then((s) => {
         if (!vivo) return;
-        if (s.completo) { setIncompleto(false); return; }  // acabou de completar
+        if (s.completo) { setIncompleto(false); setLiberadoTutorialPara(user?.id ?? null); return; }  // acabou de completar
         void abrirCadastro();
       })
       .catch(() => { if (vivo) void abrirCadastro(); });
@@ -113,5 +118,5 @@ export function CadastroGate({ children }: { children: React.ReactNode }) {
   // navegação, o que mantém o Stack montado (a tela de cadastro é uma rota
   // dele). Some a barra de baixo e a faixa nessa rota, e o gesto de voltar
   // está desabilitado, então não há saída lateral.
-  return <>{children}</>;
+  return <CadastroReadyContext.Provider value={!!user?.id && liberadoTutorialPara === user.id && checado && !incompleto && !cadastrando}>{children}</CadastroReadyContext.Provider>;
 }
