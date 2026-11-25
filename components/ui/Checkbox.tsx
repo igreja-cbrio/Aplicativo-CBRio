@@ -9,17 +9,20 @@ type Props = {
   checked: boolean;
   onChange: (value: boolean) => void;
   label: string;
+  disabled?: boolean;
 };
 
-export function Checkbox({ checked, onChange, label }: Props) {
+export function Checkbox({ checked, onChange, label, disabled = false }: Props) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <Pressable
       style={styles.row}
+      disabled={disabled}
+      accessibilityLabel={label}
       onPress={() => onChange(!checked)}
       accessibilityRole="checkbox"
-      accessibilityState={{ checked }}
+      accessibilityState={{ checked, disabled }}
       hitSlop={6}
     >
       <View style={[styles.box, checked && styles.boxChecked]}>

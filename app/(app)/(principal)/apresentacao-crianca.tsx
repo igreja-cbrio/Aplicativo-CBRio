@@ -14,7 +14,7 @@ import { Text } from "@/components/ui/Typography";
 // rota no ERP e devolvia 200 só pelo catch-all do SPA. `apresentacao_bebes` tinha
 // 0 linhas — ninguém nunca conseguiu se inscrever.
 // ============================================================================
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from '@/contexts/AuthContext';
 import { FilhosInscricao, useFilhosInscricao } from '@/components/kids/FilhosInscricao';
 import { detalheFilhoInscricao, nascimentoBR, type FilhoDetalhe } from '@/lib/kidsFilhosInscricao';
@@ -29,6 +29,7 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { useDialogo } from "@/components/ui/Dialogo";
 import { subirUmNivel } from "@/lib/hierarquia";
+import { ConsentimentosCerimonia, useConsentimentosCerimonia } from '@/components/kids/ConsentimentosCerimonia';
 import { apiGet, apiPost } from "@/lib/api";
 import { maskCPF, maskDateBR } from "@/lib/validators";
 import { acaoAoFechar } from "@/lib/descartarRascunho";
@@ -139,8 +140,12 @@ function ApresentacaoCriancaForm() {
 
   useFocusEffect(useCallback(() => { carregar(); }, [carregar]));
 
+  const consentimentos = useConsentimentosCerimonia('apresentacao', JSON.stringify([quem, filhoSelecionado?.chave, crianca.nome, crianca.nascimento]));
+  const envioAtual = useRef(false);
+  const ativo = useRef(true);
+  useEffect(() => { ativo.current = true; return () => { ativo.current = false; }; }, []);
   const falta = quem ? faltaNoPedido(quem, crianca, resp, outro) : [];
-  const podeEnviar = !!quem && podeEnviarPedido(quem, crianca, resp, outro);
+  const podeEnviar = consentimentos.pronto && !!quem && podeEnviarPedido(quem, crianca, resp, outro);
   const aviso = quem ? avisoDoVinculo(quem, dados?.familia?.nome ?? null) : null;
 
   async function escolherFilho(chave: string) {
@@ -178,7 +183,8 @@ function ApresentacaoCriancaForm() {
   }
 
   async function enviar() {
-    if (!quem || !podeEnviar) return;
+    if (!quem || !podeEnviar || envioAtual.current) return;
+    envioAtual.current = true;
     setErro(null);
     setEnviando(true);
     try {
@@ -191,6 +197,7 @@ function ApresentacaoCriancaForm() {
         "/app/apresentacao-crianca",
         {
           ...(filhoSelecionado ? { filho: filhoSelecionado.chave } : {}),
+          consentimentos_kids: consentimentos.payload,
           propria: quem === "propria",
           crianca: {
             nome: crianca.nome.trim(),
@@ -220,15 +227,17 @@ function ApresentacaoCriancaForm() {
           observacoes: obs.trim() || null,
         },
       );
+      if (!ativo.current) return;
       setPronto({
         data: r.data_apresentacao, familia: r.familia ?? null, propria: quem === "propria",
         extra: r.responsavel_extra ?? null,
       });
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : t("Não foi possível registrar agora."));
+      if (ativo.current) { consentimentos.tratarErro(e); setErro(e instanceof Error ? e.message : t("Não foi possível registrar agora.")); }
     } finally {
-      setEnviando(false);
+      envioAtual.current = false;
+      if (ativo.current) setEnviando(false);
     }
   }
 
@@ -594,6 +603,8 @@ function ApresentacaoCriancaForm() {
                 multiline
               />
 
+              <ConsentimentosCerimonia consentimentos={consentimentos} disabled={enviando} />
+
               {!!falta.length && (
                 <Text style={styles.faltaTxt}>
                   {t("Falta preencher")}: {falta.map((f) => t(f)).join(" · ")}
@@ -605,7 +616,7 @@ function ApresentacaoCriancaForm() {
                 title={t("Registrar apresentação")}
                 onPress={enviar}
                 loading={enviando}
-                disabled={!podeEnviar}
+                disabled={!podeEnviar || enviando}
               />
             </>
           )}
