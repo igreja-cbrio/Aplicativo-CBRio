@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- ⚠️⚠️ DEVOCIONAL · casa ENXUTA, sem rolagem (25/11/2026)
 - ⚠️⚠️ DEVOCIONAL · INVESTIR conta toda leitura (25/11/2026)
 - ⚠️⚠️ DEVOCIONAL · LEITURA EM GRUPO v2: vários livros, capítulos inteiros, dias úteis, sem prazo (25/11/2026)
 - ⚠️ DEVOCIONAL · COMENTÁRIO sempre com o TEXTO + "Ver mais" (25/11/2026)
@@ -309,3 +310,17 @@ Decisões do Marcos (ERP migration `20261125200000`, RPC `devocional_leitura_cri
   dizem "Libera em dd/mm". Nada de "hoje é o dia X", "concluída" por data ou atraso. Dia
   liberado continua liberado enquanto a leitura existir; entrar também não tem prazo.
 - Leituras v1 (sem `livros`/`data`) continuam funcionando: `livrosDaLeitura`, `dataDoDia`.
+
+## ⚠️⚠️ DEVOCIONAL · casa ENXUTA, sem rolagem (25/11/2026)
+
+Pedido do Marcos: "estamos achando muitas opções"; a aba Devocional não rola, tudo na tela.
+- Home (`devocional.tsx`): SEM ScrollView. Bíblia + Planos de leitura (destaque) e
+  Comentários + Vídeos e séries; as linhas dividem a altura por `flex`. Não acrescentar
+  quadro sem tirar outro.
+- Minhas anotações e Meu histórico foram para o TOPO da Bíblia (tela de escolher livro);
+  na `hierarquia`, `/devocional-registros` e `/devocional-leituras` voltam para `/biblia`.
+- Planos de leitura: só **Pense Pedrão · Quarta com Deus · Devocional em família** (o Kids,
+  `/devocional-kids`, que agora volta para `/devocional-planos`) + as leituras em grupo.
+  Saíram "Devocional da semana" (sem conteúdo) e "Planos sugeridos".
+- Plano "Valores de Cristo" (teste do Marcos) DESATIVADO no banco (`ativo/destaque/
+  inscricao_habilitada = false`, 5 inscrições preservadas).

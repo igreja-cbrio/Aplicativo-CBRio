@@ -8,7 +8,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
 import { apiGet } from "@/lib/api";
-import { listarPlanos, planosSugeridos, type PlanoDevocional, type PlanoSugerido } from "@/lib/devocional";
+import { listarPlanos, type PlanoDevocional } from "@/lib/devocional";
 import { minhasLeituras, type LeituraResumo } from "@/lib/leituraGrupoApi";
 import { livrosDaLeitura, resumoDosLivros } from "@/lib/leituraGrupo";
 import { useMembro } from "@/lib/useMembro";
@@ -23,22 +23,13 @@ export default function Planos() {
     listarPlanos(null).then(setPlanos).catch(e => Alert.alert(t("Erro"), e.message));
     apiGet<{ video: Pense | null }>("/app/pense-ultimo").then(r => setPense(r.video)).catch(() => undefined);
   }, [t]);
-  const { membro } = useMembro();
-  // "Sugeridos" (movido da home do Devocional em 10/11/2026 — um único ponto de
-  // "planos"). `null` = ainda não carregou · `falhou` = erro (nunca vira lista
-  // vazia: "não há plano" e "não carregou" levam a leituras opostas).
-  const [sugeridos, setSugeridos] = useState<PlanoSugerido[] | null>(null), [falhou, setFalhou] = useState(false);
-  const carregarSugeridos = useCallback(() => {
-    planosSugeridos(membro?.membroId ?? null).then((p) => { setSugeridos(p); setFalhou(false); }).catch(() => setFalhou(true));
-  }, [membro?.membroId]);
   // Leituras em grupo (25/11/2026). `null` = carregando · erro vira aviso, nunca lista vazia.
   const [leituras, setLeituras] = useState<LeituraResumo[] | null>(null), [falhouLeituras, setFalhouLeituras] = useState(false);
   const carregarLeituras = useCallback(() => {
     minhasLeituras().then((l) => { setLeituras(l); setFalhouLeituras(false); }).catch(() => setFalhouLeituras(true));
   }, []);
-  useFocusEffect(useCallback(() => { carregarSugeridos(); carregarLeituras(); }, [carregarSugeridos, carregarLeituras]));
+  useFocusEffect(useCallback(() => { carregarLeituras(); }, [carregarLeituras]));
   const quarta = planos.find(p => p.slug === "quarta-com-deus");
-  const semana = planos.find(p => !p.slug && p.titulo.toLowerCase().includes("semana"));
   function abrirPlano(plano?: PlanoDevocional) {
     if (!plano) return Alert.alert(t("Plano indisponível"), t("Este plano ainda não tem uma leitura publicada."));
     router.navigate({ pathname: "/devocional-plano", params: { planoId: plano.id } });
@@ -52,7 +43,9 @@ export default function Planos() {
     <ScrollView contentContainerStyle={s.content}><Text style={s.eyebrow}>{t("ESCOLHA SUA JORNADA")}</Text><Text style={s.title}>{t("Um caminho para cada ritmo")}</Text><Text style={s.subtitle}>{t("Abra uma opção e siga uma leitura por dia.")}</Text>
       <Card icon="play" numero="01" titulo="Pense Pedrão" texto={pense?.titulo ?? t("Uma mensagem breve para o seu dia")} onPress={abrirPense} s={s} c={c} />
       <Card icon="flame-outline" numero="02" titulo="Quarta com Deus" texto={t("Sete leituras, de quinta a quarta")} onPress={() => abrirPlano(quarta)} s={s} c={c} />
-      <Card icon="calendar-outline" numero="03" titulo={t("Devocional da semana")} texto={t("A leitura preparada para esta semana")} onPress={() => abrirPlano(semana)} s={s} c={c} />
+      {/* 25/11/2026 · Marcos: o "Devocional da semana" saiu (não tinha conteúdo) e o Kids entrou como
+          "Devocional em família". Os planos são estes 3 + as leituras em grupo; "Planos sugeridos" saiu. */}
+      <Card icon="people-outline" numero="03" titulo={t("Devocional em família")} texto={t("Uma semana, uma conversa em família")} onPress={() => router.navigate("/devocional-kids")} s={s} c={c} />
       <Text style={s.secao}>{t("LEITURA EM GRUPO")}</Text>
       <Text style={s.vazioTxt}>{t("Escolha um ou mais livros, convide quem quiser e leiam juntos, no seu ritmo.")}</Text>
       <View style={s.grupoAcoes}>
@@ -68,30 +61,8 @@ export default function Planos() {
             <Ionicons name="chevron-forward" size={20} color={c.textMuted} />
           </Pressable>;
         })}
-      <Text style={s.secao}>{t("PLANOS SUGERIDOS")}</Text>
-      {falhou && !sugeridos
-        ? <Pressable onPress={carregarSugeridos} style={s.erroBox} accessibilityRole="button"><Ionicons name="cloud-offline-outline" size={18} color={c.textMuted} /><Text style={s.erroTxt}>{t("Não foi possível carregar os planos.")}</Text><Text style={s.erroRetry}>{t("Tentar de novo")}</Text></Pressable>
-        : !sugeridos
-          ? <ActivityIndicator color={c.primary} style={{ marginVertical: 24 }} />
-          : sugeridos.length === 0
-            ? <Text style={s.vazioTxt}>{t("Nenhum plano aberto para inscrição no momento.")}</Text>
-            : <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.carrossel} style={s.carrosselWrap}>
-              {sugeridos.map((p) => <PlanoCard key={p.id} plano={p} onPress={() => router.navigate({ pathname: "/devocional-plano", params: { planoId: p.id } })} styles={s} colors={c} t={t} />)}
-            </ScrollView>}
     </ScrollView>
   </SafeAreaView>;
-}
-function PlanoCard({ plano, onPress, styles, colors, t }: { plano: PlanoSugerido; onPress: () => void; styles: any; colors: any; t: (s: string) => string }) {
-  const ritmo = plano.continuo ? t("Contínuo") : plano.total_dias ? `${plano.total_dias} ${plano.total_dias === 1 ? t("dia") : t("dias")}` : t("Em breve");
-  return <Pressable onPress={onPress} style={({ pressed }) => [styles.plano, plano.destaque && styles.planoDestaque, pressed && styles.pressed]} accessibilityRole="button">
-    <View style={styles.planoTopo}>
-      <View style={[styles.planoIcone, plano.destaque && styles.planoIconeDestaque]}><Ionicons name={plano.continuo ? "calendar-outline" : "flag-outline"} size={20} color={plano.destaque ? "#fff" : colors.primary} /></View>
-      {plano.inscrito && <View style={[styles.badge, plano.destaque && styles.badgeDestaque]}><Ionicons name="checkmark-circle" size={12} color={plano.destaque ? "#fff" : colors.primary} /><Text style={[styles.badgeTxt, plano.destaque && styles.badgeTxtDestaque]}>{t("Inscrito")}</Text></View>}
-    </View>
-    <Text style={[styles.planoTitulo, plano.destaque && styles.planoTituloDestaque]} numberOfLines={2}>{plano.titulo}</Text>
-    {!!plano.descricao && <Text style={[styles.planoDesc, plano.destaque && styles.planoDescDestaque]} numberOfLines={3}>{plano.descricao}</Text>}
-    <View style={styles.planoRodape}><Text style={[styles.planoRitmo, plano.destaque && styles.planoRitmoDestaque]}>{ritmo}</Text><Ionicons name="arrow-forward" size={16} color={plano.destaque ? "#fff" : colors.primary} /></View>
-  </Pressable>;
 }
 function Card({ icon, numero, titulo, texto, onPress, s, c }: any) { return <Pressable onPress={onPress} style={({ pressed }) => [s.card, pressed && s.pressed]}><View style={s.number}><Text style={s.numberText}>{numero}</Text></View><View style={s.icon}><Ionicons name={icon} size={23} color={c.primary} /></View><View style={s.flex}><Text style={s.cardTitle}>{titulo}</Text><Text style={s.cardText} numberOfLines={2}>{texto}</Text></View><Ionicons name="chevron-forward" size={20} color={c.textMuted} /></Pressable>; }
 const css = (c: any) => StyleSheet.create({
