@@ -27,6 +27,7 @@ import { type MinhaEscala } from "@/lib/escalas";
 
 type EscalaApi = {
   id: string;
+  service_id?: string | null;
   team_name: string | null;
   position_name: string | null;
   confirmation_status: string | null;
@@ -129,7 +130,9 @@ export default function VoluntariadoScreen() {
       setEscalas(
         (r.escalas || []).map((e) => ({
           id: e.id,
-          service_id: null,
+          // O servidor já mandava o culto da escala; antes ficava null aqui.
+          // É ele que abre a liturgia (25/11/2026).
+          service_id: e.service_id ?? null,
           team_name: e.team_name,
           position_name: e.position_name,
           confirmation_status: e.confirmation_status,
@@ -439,6 +442,20 @@ export default function VoluntariadoScreen() {
                       <View style={empilhada ? styles.escalaInfoEmpilhada : styles.escalaInfo}>
                         <Text style={styles.escalaMin}>{titulo}</Text>
                         {!!detalhes && <Text style={styles.escalaMeta}>{detalhes}</Text>}
+                        {!!e.service_id && (
+                          // Liturgia do culto, só leitura (25/11/2026). Quem
+                          // decide se a pessoa vê é o servidor.
+                          <Pressable
+                            onPress={() => router.push({ pathname: "/liturgia", params: { id: e.service_id as string } } as any)}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel={t("Ver liturgia do culto")}
+                            style={({ pressed }) => [styles.liturgiaBtn, pressed && { opacity: 0.6 }]}
+                          >
+                            <Ionicons name="time-outline" size={15} color={colors.primary} />
+                            <Text style={styles.liturgiaTxt}>{t("Liturgia")}</Text>
+                          </Pressable>
+                        )}
                       </View>
                       {passou ? (
                         // Culto já passou: sem ações (não dá pra recusar depois).
@@ -798,6 +815,8 @@ const makeStyles = (colors: Palette) =>
       padding: spacing.lg,
     },
     escalaInfo: { flex: 1, gap: 2 },
+    liturgiaBtn: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", marginTop: 6, paddingVertical: 2 },
+    liturgiaTxt: { color: colors.primary, fontSize: font.size.sm, fontWeight: "700" },
     // Escala com ação (aguardando resposta ou confirmada): empilhada, texto em
     // cima e botões embaixo.
     // Sem `flex: 1` no texto: numa coluna de altura livre ele encolheria a zero.

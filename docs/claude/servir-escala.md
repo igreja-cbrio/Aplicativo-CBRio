@@ -548,3 +548,12 @@ ERP depende da migration `20261123190652_vol_supervisores_convites.sql`.
 - Link validado também no cliente antes de `Linking.openURL`; só http(s), sem credenciais. Textos em useT e traduções EN/ES. Nenhuma dependência adicionada ao app.
 - Verificado: typecheck, 853 testes e portão i18n (239 faltantes/30 soltas, dívida preexistente não aumentada). Prévia do componente real com React Native Web a 390px, dados sintéticos, leitura e formulário de editor inspecionados. Ainda NÃO testado em aparelho/iOS/Android com teclado, nem contra API de produção (migration não aplicada).
 - Depende do PR ERP com migration `20261125140000_louvor_musicas.sql`. Merge e OTA ficam para aprovação posterior; este trabalho não publica nada.
+
+
+## Liturgia do culto · fase 1, só leitura (2026-11-25)
+
+- Tela `app/(app)/liturgia.tsx` (`/liturgia?id=<service_id>`), helper puro `lib/liturgia.ts`, teste `test/liturgia.test.ts`. Pai no `cd ..` = `/voluntariado`.
+- Abre por dois caminhos: link "Liturgia" (relógio) em cada card de **Minhas escalas** e relógio no cabeçalho de **Montar escala** quando há culto escolhido. O card passou a usar o `service_id` que o servidor já mandava (antes era mapeado como `null`).
+- Dados e permissão vêm do ERP: `GET /app/voluntariado/liturgia/:serviceId` (cronograma da Produção, ou roteiro padrão; régua `backend/utils/liturgiaCulto.js` lá). Vê quem está escalado no culto, quem monta escala com o culto no escopo, ou quem lê Produção. 403 mostra a frase do servidor.
+- Sem nenhum botão de escrita (o teste reprova `apiPost/Patch/Put/Delete` na tela). Fase 2 = editar em Montar escala; fase 3 = chave por pessoa em Pessoas do Servir. As músicas do Louvor (`MusicasCulto`, do Matheus) seguem no card próprio até combinar com ele.
+- ⚠️ Depende do ERP no ar antes do OTA: sem a rota, o link abre a tela com "Não foi possível carregar a liturgia agora."
