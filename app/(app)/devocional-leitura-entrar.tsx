@@ -9,8 +9,8 @@ import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { mensagemDoErro } from "@/lib/erroMensagem";
-import { normalizarCodigo } from "@/lib/leituraGrupo";
-import { conviteLeitura, entrarNaLeitura, nomeDoLivro, type ConviteLeitura } from "@/lib/leituraGrupoApi";
+import { livrosDaLeitura, normalizarCodigo, resumoDosLivros } from "@/lib/leituraGrupo";
+import { conviteLeitura, entrarNaLeitura, type ConviteLeitura } from "@/lib/leituraGrupoApi";
 
 /**
  * Entrar numa leitura em grupo pelo CÓDIGO. Também é o destino do link
@@ -45,7 +45,6 @@ export default function EntrarLeitura() {
     finally { setEntrando(false); }
   }
 
-  const livro = convite ? nomeDoLivro(convite.livro_ordem) : "";
   return <SafeAreaView style={s.safe} edges={["left", "right"]}><Stack.Screen options={{ headerShown: false }} />
     <View style={s.header}><Pressable onPress={() => subirUmNivel()} hitSlop={12} style={s.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}><Ionicons name="chevron-back" size={24} color={c.text} /></Pressable><Text style={s.headerTitle}>{t("Entrar com código")}</Text><View style={s.back} /></View>
     <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
@@ -56,7 +55,7 @@ export default function EntrarLeitura() {
       {convite && <View style={s.card}>
         <Text style={s.eyebrow}>{convite.criador_nome} {t("te chamou pra ler junto")}</Text>
         <Text style={s.cardTitle}>{convite.titulo}</Text>
-        <Text style={s.muted}>{convite.cap_inicio === convite.cap_fim ? `${livro} ${convite.cap_inicio}` : `${livro} ${convite.cap_inicio}–${convite.cap_fim}`} · {convite.dias} {convite.dias === 1 ? t("dia") : t("dias")} · {t("começa em")} {convite.data_inicio.split("-").reverse().join("/")}</Text>
+        <Text style={s.muted}>{resumoDosLivros(livrosDaLeitura(convite))} · {convite.dias} {convite.dias === 1 ? t("dia") : t("dias")}{convite.fim_de_semana === false ? ` (${t("de segunda a sexta")})` : ""}</Text>
         <Text style={s.muted}>{convite.participantes} {convite.participantes === 1 ? t("pessoa") : t("pessoas")}</Text>
         <Pressable onPress={entrar} disabled={entrando} style={[s.cta, entrando && s.disabled]}><Text style={s.ctaTxt}>{convite.ja_participa ? t("Abrir leitura") : entrando ? t("Entrando...") : t("Entrar na leitura")}</Text></Pressable>
       </View>}
