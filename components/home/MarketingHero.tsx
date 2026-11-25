@@ -1,3 +1,4 @@
+import { TutorialTarget } from "@/contexts/TutorialContext";
 import { Text } from "@/components/ui/Typography";
 import { useContext, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, RefreshControl, Image, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type ImageSourcePropType } from "react-native";
@@ -74,9 +75,9 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
               <Ionicons name="notifications-outline" size={23} color="#fff" />
               {unreadCount > 0 ? <View style={styles.badge}><Text style={styles.badgeText}>{unreadCount > 9 ? "9+" : unreadCount}</Text></View> : null}
             </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel={t("Menu")} onPress={openMenu} style={styles.headerButton}>
+            <TutorialTarget id="menu"><Pressable accessibilityRole="button" accessibilityLabel={t("Menu")} onPress={openMenu} style={styles.headerButton}>
               <Ionicons name="menu-outline" size={32} color="#fff" />
-            </Pressable>
+            </Pressable></TutorialTarget>
           </View>
         </View>
         <View style={styles.welcome}>

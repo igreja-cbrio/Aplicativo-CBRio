@@ -1,3 +1,4 @@
+import { useTutorial } from "@/contexts/TutorialContext";
 import { ScrollView } from "@/components/navigation/DockContent";
 import { Text, TextInput } from "@/components/ui/Typography";
 // ════════════════════════════════════════════════════════════════════════════
@@ -18,7 +19,7 @@ import { Text, TextInput } from "@/components/ui/Typography";
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Platform } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/ui/Button";
@@ -46,6 +47,8 @@ function mascara(d: string) {
 }
 
 export default function AjudaAppScreen() {
+  const tutorial = useTutorial();
+  const router = useRouter();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
@@ -70,6 +73,17 @@ export default function AjudaAppScreen() {
       perigo: true,
     });
     if (descartar) subirUmNivel();
+  }
+
+  async function reverTutorial() {
+    const acao = acaoAoFechar({ campos: [mensagem], salvando: enviando });
+    if (acao === "aguardar") return;
+    if (acao === "perguntar" && !await dlg.confirmar({
+      titulo: t("Descartar sua mensagem?"), mensagem: t("O que você escreveu não foi enviado."),
+      cancelar: t("Continuar escrevendo"), acao: t("Descartar"), perigo: true,
+    })) return;
+    tutorial?.replay();
+    router.replace("/");
   }
 
   async function enviar() {
@@ -108,6 +122,8 @@ export default function AjudaAppScreen() {
             <Text style={styles.title}>{t("Ajuda com o app")}</Text>
             <View style={{ width: 24 }} />
           </View>
+
+          <Button title={t("Rever tutorial")} onPress={reverTutorial} disabled={enviando} />
 
           {enviado ? (
             <View style={styles.ok}>

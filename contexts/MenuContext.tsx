@@ -7,7 +7,7 @@ import { MenuContent } from "@/components/navigation/MenuContent";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/lib/i18n";
 
-const MenuContext = createContext<{ openMenu: () => void } | null>(null);
+const MenuContext = createContext<{ openMenu: () => void; visible: boolean } | null>(null);
 export function useMenu() {
   const value = useContext(MenuContext);
   if (!value) throw new Error("useMenu precisa de MenuProvider");
@@ -61,7 +61,7 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
     pendingRoute.current = target;
     router.navigate(href);
   };
-  return <MenuContext.Provider value={{ openMenu }}>
+  return <MenuContext.Provider value={{ openMenu, visible }}>
     <View style={{ flex: 1 }} accessibilityElementsHidden={visible} importantForAccessibility={visible ? "no-hide-descendants" : "auto"}>{children}</View>
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={() => close()} onShow={() => Animated.timing(progress, { toValue: 1, duration: reduceMotion.current ? 0 : 220, useNativeDriver: true }).start()}>
       <View style={styles.overlay}>
