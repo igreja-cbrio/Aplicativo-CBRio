@@ -1,0 +1,42 @@
+import React from 'react';
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { afterEach, expect, it, vi } from 'vitest';
+const m = vi.hoisted(() => ({ target: null as string | null, route: '/', navigate: vi.fn() }));
+vi.mock('react-native', () => ({ View: 'View', ScrollView: 'ScrollView', Pressable: 'Pressable', StyleSheet: { create: (s: unknown) => s }, useWindowDimensions: () => ({ width: 390, fontScale: 1 }) }));
+vi.mock('@/contexts/TutorialContext', () => ({ useTutorial: () => ({ highlightedTarget: m.target }), TutorialTarget: 'Target' }));
+vi.mock('@/contexts/ThemeContext', () => ({ useTheme: () => ({ fontMultiplier: 1 }) }));
+vi.mock('@/lib/i18n', () => ({ useT: () => (s: string) => s }));
+vi.mock('expo-router', () => ({ usePathname: () => m.route }));
+vi.mock('@/lib/nav', () => ({ irParaBarra: m.navigate }));
+vi.mock('@/modules/native-shortcuts/src/NativeShortcuts', () => ({ NativeShortcuts: 'NativeDock' }));
+vi.mock('@/components/ui/Typography', () => ({ Text: 'Text' }));
+vi.mock('@/components/navigation/DockSurface', () => ({ DockSurface: 'Surface' }));
+vi.mock('@expo/vector-icons', () => ({ Ionicons: 'Icon' }));
+import { QuickLinks } from '../components/navigation/QuickLinks';
+import { QUICK_LINKS } from '../lib/appNavigation';
+let tree: ReactTestRenderer;
+afterEach(async () => { await act(async () => tree?.unmount()); m.target = null; m.route = '/'; vi.clearAllMocks(); });
+it('UIKit destaca cada etapa real sem navegar e restaura a seleção da rota', async () => {
+  (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+  await act(async () => { tree = create(React.createElement(QuickLinks)); });
+  const dock = () => tree.root.findByType('NativeDock' as any);
+  expect(dock().props.selectedIndex).toBe(-1);
+  const targets = ['care', 'devotional', 'groups', 'serve', 'giving'];
+  const expectedLabels = ['Cuidados', 'Devocional', 'Grupos', 'Servir', 'Generosidade'];
+  for (const [index, target] of targets.entries()) {
+    m.target = target;
+    await act(async () => tree.update(React.createElement(QuickLinks)));
+    expect(dock().props.selectedIndex).toBe(index);
+    expect(dock().props.labels[index]).toBe(expectedLabels[index]);
+    await act(async () => dock().props.onShortcutSelect({ nativeEvent: { index } }));
+    expect(m.navigate).not.toHaveBeenCalled();
+  }
+  m.target = 'menu';
+  await act(async () => tree.update(React.createElement(QuickLinks)));
+  expect(dock().props.selectedIndex).toBe(-1);
+  m.target = null; m.route = QUICK_LINKS[1].href;
+  await act(async () => tree.update(React.createElement(QuickLinks)));
+  expect(dock().props.selectedIndex).toBe(1);
+  await act(async () => dock().props.onShortcutSelect({ nativeEvent: { index: 2 } }));
+  expect(m.navigate).toHaveBeenCalledWith(m.route, QUICK_LINKS[2].href);
+});

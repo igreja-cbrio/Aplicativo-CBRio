@@ -8,11 +8,11 @@ import { acaoPermissaoPush } from '@/lib/permissaoPush';
 import { registerForPush } from '@/lib/push';
 
 const apresentados = new Set<string>();
-export function ConviteNotificacoes({ userId }: { userId: string }) {
+export function ConviteNotificacoes({ userId, onSettled }: { userId: string; onSettled?: () => void }) {
   const { confirmar, Dialogo } = useDialogo();
   const t = useT();
   useEffect(() => {
-    if (Platform.OS === 'web') return;
+    if (Platform.OS === 'web') { onSettled?.(); return; }
     let cancelado = false;
     let ocupado = false;
     const chave = `cbrio:convite-notificacoes:v1:${userId}`;
@@ -41,11 +41,11 @@ export function ConviteNotificacoes({ userId }: { userId: string }) {
         if (acao === 'configuracoes') await Linking.openSettings();
         else await registerForPush(userId, { solicitarPermissao: true });
       } catch { /* não impede usar o aplicativo; Configurações continua disponível */ }
-      finally { ocupado = false; }
+      finally { ocupado = false; if (!cancelado) onSettled?.(); }
     }
     void conferir();
     const sub = AppState.addEventListener('change', state => { if (state === 'active') void conferir(); });
     return () => { cancelado = true; sub.remove(); };
-  }, [userId, confirmar, t]);
+  }, [userId, confirmar, t, onSettled]);
   return <Dialogo />;
 }

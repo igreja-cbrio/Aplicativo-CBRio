@@ -14,9 +14,9 @@ import { SplashPulse } from "@/components/brand/SplashPulse";
 import { BiometriaLock } from "@/components/auth/BiometriaLock";
 import { PortaoAtualizacao } from "@/components/app/PortaoAtualizacao";
 import { ErrorBoundary } from "@/components/app/ErrorBoundary";
-import { Onboarding } from "@/components/onboarding/Onboarding";
+import { TutorialProvider, useTutorial } from "@/contexts/TutorialContext";
 import { biometriaAtiva } from "@/lib/biometria";
-import { onboardingVisto, marcarOnboardingVisto } from "@/lib/onboarding";
+
 import { ConviteNotificacoes } from "@/components/notificacoes/ConviteNotificacoes";
 import { registerForPush } from "@/lib/push";
 import { initTelemetria, trackTela } from "@/lib/telemetria";
@@ -86,9 +86,7 @@ function RootNavigator() {
   const [precisaBiometria, setPrecisaBiometria] = useState<boolean | null>(null);
   const [desbloqueado, setDesbloqueado] = useState(false);
   const [biometriaResolvidaPara, setBiometriaResolvidaPara] = useState<string | null>(null);
-  // Onboarding: mostra 1x pra quem nunca viu (após logar). null = decidindo.
-  const [mostrarOnboarding, setMostrarOnboarding] = useState<boolean | null>(null);
-  const [onboardingResolvidoPara, setOnboardingResolvidoPara] = useState<string | null>(null);
+  const tutorial = useTutorial()!;
 
   useEffect(() => {
     if (loading) return;
@@ -107,22 +105,6 @@ function RootNavigator() {
     return () => { cancelado = true; };
   }, [loading, session?.user?.id, preview]);
 
-  useEffect(() => {
-    if (loading) return;
-    if (!authed) {
-      setMostrarOnboarding(false);
-      return;
-    }
-    let cancelado = false;
-    const identidade = session?.user?.id ?? null;
-    setOnboardingResolvidoPara(null);
-    onboardingVisto().then((visto) => {
-      if (cancelado) return;
-      setMostrarOnboarding(!visto);
-      setOnboardingResolvidoPara(identidade);
-    });
-    return () => { cancelado = true; };
-  }, [loading, authed, session?.user?.id]);
 
   useEffect(() => {
     if (loading) return;
@@ -167,8 +149,8 @@ function RootNavigator() {
   // Só consome o toque quando a navegação existe e os portões terminaram.
   // Antes disso, a resposta nativa fica pendente para a abertura após login/desbloqueio.
   const podeAbrirNotificacao = !!uid && !loading && !preview && !recoveryScreen
-    && segments[0] !== "(auth)" && mostrarOnboarding === false
-    && onboardingResolvidoPara === uid && biometriaResolvidaPara === uid
+    && segments[0] !== "(auth)" && tutorial.ready
+    && biometriaResolvidaPara === uid
     && precisaBiometria !== null && (!precisaBiometria || desbloqueado);
   useEffect(() => {
     if (!podeAbrirNotificacao) return;
@@ -196,24 +178,9 @@ function RootNavigator() {
     );
   }
 
-  // Onboarding 1x pra novos usuários (depois da biometria, antes do app).
-  if (authed && mostrarOnboarding && !recoveryScreen) {
-    return (
-      <>
-        <StatusBar style={mode === "light" ? "dark" : "light"} />
-        <Onboarding
-          onConcluir={() => {
-            marcarOnboardingVisto();
-            setMostrarOnboarding(false);
-          }}
-        />
-      </>
-    );
-  }
-
   return (
     <>
-      {!!uid && !preview && !recoveryScreen && mostrarOnboarding === false && onboardingResolvidoPara === uid && biometriaResolvidaPara === uid && <ConviteNotificacoes key={uid} userId={uid} />}
+      {!!uid && !preview && !recoveryScreen && tutorial.ready && biometriaResolvidaPara === uid && <ConviteNotificacoes key={uid} userId={uid} onSettled={tutorial.releasePush} />}
       <StatusBar style={mode === "light" ? "dark" : "light"} />
       <Stack
         screenOptions={{
@@ -254,7 +221,7 @@ export default function RootLayout() {
                 update JÁ está baixado (ver o arquivo do componente). */}
             <PortaoAtualizacao>
               <AuthProvider>
-                <RootNavigator />
+                <TutorialProvider><RootNavigator /></TutorialProvider>
               </AuthProvider>
             </PortaoAtualizacao>
           </ThemeProvider>
