@@ -12,9 +12,8 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
-import { destaquesAtivos, type Destaque } from "@/lib/destaques";
 import { proximosCultos, cultoAoVivo, type CultoUpcoming, type CultoAoVivo } from "@/lib/cultos";
-import { Carrossel } from "@/components/home/Carrossel";
+import { Calendario } from "@/components/agenda/Calendario";
 import { CardKidsCheckin } from "@/components/home/CardKidsCheckin";
 import { ProximosCultos } from "@/components/home/ProximosCultos";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
@@ -24,21 +23,19 @@ export default function AgendaScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const t = useT();
-  const [destaques, setDestaques] = useState<Destaque[]>([]);
+  const [revisao, setRevisao] = useState(0);
   const [cultos, setCultos] = useState<CultoUpcoming[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [aoVivo, setAoVivo] = useState<CultoAoVivo | null>(null);
 
   const carregar = useCallback(async (forcar = false) => {
-    const [d, c, v] = await Promise.all([
-      destaquesAtivos(forcar).catch(() => []),
+    const [c, v] = await Promise.all([
       proximosCultos(7, forcar).catch(() => []),
       // ⚠️ SEM cache: "está ao vivo agora?" é a pergunta mais perecível da
       // tela — servir do cache mostraria o card depois do culto acabar.
       cultoAoVivo().catch(() => null),
     ]);
-    setDestaques(d);
     setCultos(c);
     setAoVivo(v);
   }, []);
@@ -58,6 +55,7 @@ export default function AgendaScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    setRevisao(n => n + 1);
     await carregar(true); // pull-to-refresh ignora o cache
     setRefreshing(false);
   }, [carregar]);
@@ -70,7 +68,7 @@ export default function AgendaScreen() {
         contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={<HeartRefresh refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <Text accessibilityRole="header" style={[styles.sectionTitle, { paddingHorizontal: 24, paddingTop: 24 }]}>{t("Agenda e destaques")}</Text>
+        <Text accessibilityRole="header" style={[styles.sectionTitle, { paddingHorizontal: 24, paddingTop: 24 }]}>{t("Agenda")}</Text>
         <SafeAreaView edges={["left", "right"]} style={styles.content}>
 
         {/* AO VIVO — só durante o culto (ponto 2 do Marcos: o "No culto" saiu
@@ -99,11 +97,7 @@ export default function AgendaScreen() {
             sai de `cultos`, que esta tela já carregou. */}
         <CardKidsCheckin cultos={cultos} />
 
-        {carregando ? (
-          <Skeleton width="100%" height={180} borderRadius={20} />
-        ) : (
-          destaques.length > 0 && <Carrossel itens={destaques} />
-        )}
+        <Calendario revisao={revisao} />
 
         {carregando ? (
           <View style={{ gap: spacing.sm }}>

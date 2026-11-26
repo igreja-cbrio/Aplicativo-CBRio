@@ -22,7 +22,9 @@ import { AcoesNotificacao } from "@/components/notificacoes/AcoesNotificacao";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ListaAvisos } from "@/components/comunicados/ListaAvisos";
 import { abaInicial, type AbaAvisos } from "@/lib/menuRegras";
-import { useT } from "@/lib/i18n";
+import { useLang, useT } from "@/lib/i18n";
+import { rotuloDataAviso } from "@/lib/dataAvisos";
+import { useDiaAvisos } from "@/lib/useDiaAvisos";
 import { subirUmNivel } from "@/lib/hierarquia";
 import { irPara } from "@/lib/nav";
 import { destinoNotificacaoEvento } from "@/lib/eventoDestino";
@@ -84,23 +86,13 @@ function formatTempo(iso: string, t: (s: string) => string) {
   return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
-/** Rótulo da seção por dia: Hoje / Ontem / data. */
-function rotuloDia(iso: string, t: (s: string) => string): string {
-  const d = new Date(iso);
-  d.setHours(0, 0, 0, 0);
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  const dias = Math.round((hoje.getTime() - d.getTime()) / 86400000);
-  if (dias <= 0) return t("Hoje");
-  if (dias === 1) return t("Ontem");
-  return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "long" });
-}
-
 export default function NotificacoesScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const t = useT();
+  const { lang } = useLang();
+  const hoje = useDiaAvisos();
   const { itens, loading, carregar, marcarLida, marcarTodasLidas } = useNotificacoes();
   const [filtro, setFiltro] = useState<string>("Todas");
   // Avisos e notificações são UMA tela com duas tags (25/11/2026 · pedido do
@@ -130,12 +122,12 @@ export default function NotificacoesScreen() {
     });
     const grupos = new Map<string, AppNotificacao[]>();
     for (const n of filtrados) {
-      const r = rotuloDia(n.criada_em, t);
+      const r = rotuloDataAviso(n.criada_em, hoje, t, lang, false) || t("Data indisponível");
       if (!grupos.has(r)) grupos.set(r, []);
       grupos.get(r)!.push(n);
     }
     return Array.from(grupos.entries()).map(([title, data]) => ({ title, data }));
-  }, [itens, filtro, t]);
+  }, [itens, filtro, t, hoje, lang]);
 
   function abrir(n: AppNotificacao) {
     if (!n.lida_em) marcarLida(n.id);
