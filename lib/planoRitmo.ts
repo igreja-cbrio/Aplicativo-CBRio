@@ -120,7 +120,8 @@ function segundaDe(iso: string): string {
  * ⚠️ `hoje` é YYYY-MM-DD e a comparação é de STRING — `new Date(data)` é
  * meia-noite UTC e no Rio vira o dia anterior.
  */
-export function edicoesDoCalendario<T extends ItemCalendario>(itens: T[], lidos: Iterable<string>, hoje: string): EdicaoDoPlano<T>[] {
+/** `abrirTodos`: sem trava por data (Quarta com Deus, 26/11/2026): todo dia não lido fica aberto. */
+export function edicoesDoCalendario<T extends ItemCalendario>(itens: T[], lidos: Iterable<string>, hoje: string, abrirTodos = false): EdicaoDoPlano<T>[] {
   const set = new Set(lidos);
   const grupos = new Map<string, T[]>();
   for (const it of itens) {
@@ -133,7 +134,7 @@ export function edicoesDoCalendario<T extends ItemCalendario>(itens: T[], lidos:
     const ord = [...lista].sort((a, b) => a.data.localeCompare(b.data));
     const dias = ord.map((item, i) => ({
       item, numero: i + 1,
-      estado: (set.has(item.id) ? "lido" : item.data <= hoje ? "atual" : "bloqueado") as EstadoDia,
+      estado: (set.has(item.id) ? "lido" : abrirTodos || item.data <= hoje ? "atual" : "bloqueado") as EstadoDia,
     }));
     const lidosN = dias.filter((d) => d.estado === "lido").length;
     edicoes.push({

@@ -81,7 +81,7 @@ export default function PlanoScreen() {
   // As abas dos dois ritmos, no mesmo formato.
   const { abas, foco } = useMemo(() => {
     if (ritmo === "calendario") {
-      const eds = edicoesDoCalendario(itens, lidos, hoje);
+      const eds = edicoesDoCalendario(itens, lidos, hoje, plano?.slug === "quarta-com-deus");
       const lista: Aba[] = eds.map((e) => ({
         chave: e.chave, rotulo: e.titulo ?? `${t("Semana de")} ${ddmm(e.inicio)}`,
         lidos: e.lidos, total: e.dias.length, completa: e.completa, dias: e.dias, inicio: e.inicio, fim: e.fim,
@@ -94,7 +94,7 @@ export default function PlanoScreen() {
       lidos: x.lidos, total: x.dias.length, completa: x.completa, dias: x.dias,
     }));
     return { abas: lista, foco: sems.length ? String(semanaEmFoco(sems)) : null };
-  }, [ritmo, itens, lidos, hoje, dias, t]);
+  }, [ritmo, itens, lidos, hoje, dias, t, plano?.slug]);
 
   // A tela abre na aba em foco; quando o foco muda (fechou a semana, virou a
   // edição), a escolha manual é descartada — é isso que leva o leitor "pro

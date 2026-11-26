@@ -2,7 +2,7 @@
 // abre depois do N-1 lido. Sem isso a tela deixaria ler o dia 5 antes do 1 —
 // ou, pior, travaria todo mundo no dia 1 pra sempre.
 import { describe, it, expect } from "vitest";
-import { ordenarItensDoPlano, diasDoPlano, progressoDoPlano, podeAbrirDia } from "../lib/planoRitmo";
+import { ordenarItensDoPlano, diasDoPlano, progressoDoPlano, podeAbrirDia, edicoesDoCalendario } from "../lib/planoRitmo";
 
 const item = (id: string, ordem: number | null, data = "2000-01-01") => ({ id, ordem_no_ciclo: ordem, data });
 const VALORES = [item("e", 5, "2000-01-05"), item("c", 3, "2000-01-03"), item("a", 1, "2000-01-01"), item("d", 4, "2000-01-04"), item("b", 2, "2000-01-02")];
@@ -61,5 +61,31 @@ describe("planoRitmo · progresso e abertura", () => {
     expect(podeAbrirDia("lido")).toBe(true);
     expect(podeAbrirDia("atual")).toBe(true);
     expect(podeAbrirDia("bloqueado")).toBe(false);
+  });
+});
+
+describe("planoRitmo · edições do calendário (abrirTodos)", () => {
+  // Quarta com Deus (26/11/2026): a edição atravessa a virada da semana e
+  // todos os dias não lidos abrem, sem trava por data.
+  const EDICAO = [
+    { id: "d1", ordem_no_ciclo: 1, data: "2026-11-26", edicao_slug: "quarta-com-deus-2026-11-26", edicao_titulo: "Sofonias" },
+    { id: "d2", ordem_no_ciclo: 2, data: "2026-12-02", edicao_slug: "quarta-com-deus-2026-11-26", edicao_titulo: "Sofonias" },
+  ];
+  it("o slug agrupa dias de semanas diferentes numa edição só", () => {
+    const eds = edicoesDoCalendario(EDICAO, [], "2026-11-26");
+    expect(eds).toHaveLength(1);
+    expect(eds[0].dias.map((d) => d.item.id)).toEqual(["d1", "d2"]);
+  });
+  it("padrão: data futura continua bloqueada", () => {
+    const eds = edicoesDoCalendario(EDICAO, [], "2026-11-26");
+    expect(eds[0].dias.map((d) => d.estado)).toEqual(["atual", "bloqueado"]);
+  });
+  it("abrirTodos: dia futuro abre como atual", () => {
+    const eds = edicoesDoCalendario(EDICAO, [], "2026-11-26", true);
+    expect(eds[0].dias.map((d) => d.estado)).toEqual(["atual", "atual"]);
+  });
+  it("abrirTodos não muda o que já foi lido", () => {
+    const eds = edicoesDoCalendario(EDICAO, ["d2"], "2026-11-26", true);
+    expect(eds[0].dias.map((d) => d.estado)).toEqual(["atual", "lido"]);
   });
 });
