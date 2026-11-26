@@ -21,6 +21,7 @@ import {
 import { limparCache } from "@/lib/cache";
 import { apagarTodosResultados } from "@/lib/resultadoBuscaMemoria";
 import { trackEvento } from "@/lib/telemetria";
+import { erroProprio } from "@/lib/erroAuth";
 import { definirBiometriaAtiva } from "@/lib/biometria";
 import { unregisterPush } from "@/lib/push";
 
@@ -199,7 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           options: { redirectTo, skipBrowserRedirect: true },
         });
         if (error) throw error;
-        if (!data.url) throw new Error("Não foi possível iniciar o login.");
+        if (!data.url) throw erroProprio("Não foi possível iniciar o login.");
 
         const result = await WebBrowser.openAuthSessionAsync(
           data.url,
@@ -223,7 +224,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // acontece a pessoa fica sem nenhuma informação.
         if (result.type !== "success") {
           trackEvento("login_provider_sem_retorno", { label: result.type });
-          throw new Error(
+          throw erroProprio(
             "O login não foi concluído. Se você fechou a janela do Google, tente de novo; se ela fechou sozinha, avise a equipe."
           );
         }
@@ -238,7 +239,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const erroProvedor = pega("error_description") || pega("error");
         if (erroProvedor) {
           trackEvento("login_provider_recusou", { label: pega("error") || "erro" });
-          throw new Error(decodeURIComponent(erroProvedor).replace(/[+]/g, " "));
+          // ⚠️ O texto do provedor vem em inglês e não vai para a tela
+          // (26/11/2026): o motivo já foi para a telemetria na linha de cima.
+          throw erroProprio("O Google não concluiu o login. Tente de novo ou entre com e-mail e senha.");
         }
 
         const access_token = pega("access_token");
@@ -262,13 +265,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         trackEvento("login_provider_sem_sessao", { label: "sem_token" });
-        throw new Error(
+        throw erroProprio(
           "O Google respondeu, mas o aplicativo não recebeu a sessão. Tente de novo; se persistir, avise a equipe."
         );
       },
       async signInWithApple() {
         if (Platform.OS !== "ios") {
-          throw new Error("Login com Apple disponível apenas no iOS.");
+          throw erroProprio("Login com Apple disponível apenas no iOS.");
         }
         const credential = await AppleAuthentication.signInAsync({
           requestedScopes: [
@@ -277,7 +280,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           ],
         });
         if (!credential.identityToken) {
-          throw new Error("Não foi possível obter o token da Apple.");
+          throw erroProprio("Não foi possível obter o token da Apple.");
         }
         const { error } = await supabase.auth.signInWithIdToken({
           provider: "apple",

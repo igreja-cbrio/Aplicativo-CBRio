@@ -238,6 +238,42 @@ const MUTANTES = [
     de: "  }, TETO_MS);",
     para: "  }, 100000000);",
   },
+  // ── Entrada · Fase 1 (26/11) · quem não conseguiu entrar no lançamento ──
+  {
+    // Mutante fiel = a AUSÊNCIA da guarda: sem ela, a inicial abreviada passa
+    // no app, a conta é criada e o servidor recusa a ficha depois.
+    nome: "nome completo: deixar passar inicial abreviada",
+    arq: "lib/nomeCompleto.ts",
+    de: "  if (temAbreviacaoNome(limpo)) return ERRO_NOME_ABREVIADO;",
+    para: "",
+  },
+  {
+    // Falha de rede guardada como recusa mostraria "o servidor recusou" a quem
+    // teve a ficha salva.
+    nome: "recusa do cadastro: tratar erro 5xx/rede como recusa",
+    arq: "lib/recusaCadastro.ts",
+    de: "  if (status < 400 || status >= 500) return null;",
+    para: "",
+  },
+  {
+    nome: "login: mostrar o texto cru do provedor",
+    arq: "lib/erroAuth.ts",
+    de: "  if (err.propria === true && typeof err.message === \"string\" && err.message) return err.message;",
+    para: "  if (typeof err.message === \"string\" && err.message) return err.message;",
+  },
+  {
+    nome: "login: cancelamento da Apple virar erro na tela",
+    arq: "lib/erroAuth.ts",
+    de: "  if (ehCancelamentoLogin(e)) return null;",
+    para: "",
+  },
+  {
+    // 83 eventos falsos no Android, um a cada partida a frio.
+    nome: "notifTap: resposta vazia volta a contar como toque",
+    arq: "lib/notifTap.ts",
+    de: "    if (!id && !date) return;\n    if (processadas.has(memo)) return;",
+    para: "    if (processadas.has(memo)) return;",
+  },
   // ── Capa do grupo (07/08) · a capa nunca gravou pra ninguém: 0 de 278 ──
   {
     nome: "capa: CHUTAR image/jpeg quando o formato e desconhecido",

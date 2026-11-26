@@ -42,7 +42,9 @@ import { useMembro } from "@/lib/useMembro";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { completarCadastroApp, confirmarCodigoIdentidade, identidadePorCpf, statusIdentidade, type IdentidadePorCpf } from "@/lib/api";
-import { trackEvento } from "@/lib/telemetria";
+import { trackEvento, trackEventoJa } from "@/lib/telemetria";
+import { erroNomeCompleto } from "@/lib/nomeCompleto";
+import { consumirRecusaCadastro, recusaDoErro } from "@/lib/recusaCadastro";
 // Réguas de campo do app (as MESMAS das outras telas) — esta tela
 // reimplementava versões mais fracas, que só o servidor recusava.
 import { isValidCPF, mascaraDataBR, nascimentoBRParaISO } from "@/lib/validators";
@@ -113,6 +115,17 @@ export default function CompletarCadastroScreen() {
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+
+  // ⚠️ RECUSA QUE VEIO DO CADASTRO (26/11/2026). Quem criou a conta por e-mail e
+  // teve a ficha recusada pelo servidor chega aqui com o motivo guardado
+  // (lib/recusaCadastro). Abre direto no formulário, com o motivo no aviso, em
+  // vez da tela de CPF sem explicação. Consome uma vez só.
+  useEffect(() => {
+    const recusa = consumirRecusaCadastro();
+    if (!recusa) return;
+    setPasso("form");
+    setAviso(recusa.mensagem);
+  }, []);
 
   // caminho rápido
   const [cpf, setCpf] = useState("");
@@ -276,7 +289,9 @@ export default function CompletarCadastroScreen() {
   async function salvarForm() {
     setErro(null);
     const iso = dataParaIso(nascimento);
-    if (nome.trim().split(/\s+/).length < 2) { setErro(t("Escreva seu nome completo.")); return; }
+    // Mesma régua do servidor (lib/nomeCompleto.ts): 2 palavras, sem abreviação.
+    const erroNome = erroNomeCompleto(nome);
+    if (erroNome) { setErro(t(erroNome)); return; }
     if (soDigitos(telefone).length < 10) { setErro(t("Informe seu telefone com DDD.")); return; }
     if (!iso) { setErro(t("Informe sua data de nascimento (dd/mm/aaaa).")); return; }
     const cpfDig = soDigitos(cpfForm);
@@ -307,7 +322,7 @@ export default function CompletarCadastroScreen() {
     setEnviando(true);
     try {
       const r = await completarCadastroApp({
-        nome_completo: nome.trim(),
+        nome_completo: nome.trim().replace(/\s+/g, " "),
         telefone: soDigitos(telefone),
         data_nascimento: iso,
         email: user?.email || undefined,
@@ -317,6 +332,10 @@ export default function CompletarCadastroScreen() {
       trackEvento("identidade_completada", { reason: r.criado ? "criado" : "vinculado" });
       await concluir();
     } catch (e) {
+      const recusa = recusaDoErro(e);
+      trackEventoJa("ficha_recusada", recusa
+        ? { reason: recusa.codigo, label: recusa.campo ?? "sem_campo", status_code: recusa.status }
+        : { reason: "sem_resposta" });
       setErro(e instanceof Error ? e.message : t("Não foi possível salvar agora."));
     } finally {
       setEnviando(false);

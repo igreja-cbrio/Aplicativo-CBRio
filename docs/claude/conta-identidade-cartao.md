@@ -10,6 +10,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 - Módulo 1 — Autenticação (detalhes)
 - ⚠️ App · entrada de PESSOA sob o Contrato de porta (2026-08-04)
 - Recuperação com confirmação do e-mail (2026-10-26)
+- ⚠️⚠️ ENTRADA · Fase 1: recusa que viaja, login em português, telemetria da porta (2026-11-26)
 
 ---
 
@@ -234,3 +235,39 @@ contas vinculadas e não escolhe um destino automaticamente. Envia o seletor
 `email` opcional ao endpoint já existente; o servidor é quem exige vínculo
 canônico único e envia para Auth.email. Publicar o backend compatível antes
 deste cliente, pois o antigo ignoraria o novo campo. Limites de envio mantidos.
+
+## ⚠️⚠️ ENTRADA · Fase 1: recusa que viaja, login em português, telemetria da porta (2026-11-26)
+
+Medido no lançamento (25-26/11): 48 pessoas não entraram. O que era do app:
+
+- **Nome completo antes do signUp** (`lib/nomeCompleto.ts`, régua gêmea de
+  `validarCamposPadrao` + `temAbreviacaoNome` do ERP): 2 palavras, 5 letras, sem
+  inicial abreviada. Antes a conta era criada e o servidor recusava a ficha depois.
+- **A recusa do servidor viaja** (`lib/recusaCadastro.ts`): o `catch` do
+  `cadastro.tsx` só fazia `console.warn` e 7 de 84 contas caíram na tela de CPF sem
+  explicação. A tela já está desmontando quando a recusa chega, então ela fica em
+  memória (2 min, lida uma vez) e o `completar-cadastro.tsx` abre direto no
+  formulário com o motivo no aviso. ⚠️ Só resposta 4xx com corpo é recusa; rede e
+  5xx não guardam nada. ⚠️ Não guarda o que a pessoa digitou (ela redigita).
+- **Login em português** (`mensagemErroLogin` em `lib/erroAuth.ts`): 72 tentativas
+  de senha no lançamento viam "Invalid login credentials". Mensagem própria do
+  `AuthContext` nasce por `erroProprio(...)` e é a única que vai à tela como está;
+  texto do provedor (Google `error_description`) nunca vai. Cancelar a janela da
+  Apple não mostra erro.
+- **Telemetria da porta** (`trackEventoJa`: enfileira e envia na hora, porque quem é
+  recusado costuma fechar o app): `login_recusado` (`label` = senha/google/apple,
+  `reason` = enum de `motivoErroLogin`), `senha_fraca`, `cadastro_recusado`
+  (`reason` = código do servidor ou do Supabase, `label` = campo ou `signup`) e
+  `ficha_recusada`. ⚠️ Nunca a mensagem crua (pode ter e-mail).
+- **`notif_tap_sem_destino` falso no Android**: resposta sem identificador e sem data
+  (toda partida a frio devolve uma) sai antes de contar. Eram 83 em um dia.
+
+Do lado do servidor (ERP #3968): trava de nascimento com cadastro marcado, mesmo
+código reenviado ao pedir de novo, `semConta` no esqueci a senha, e
+`nascimento_suspeito` no `/identidade/status`. ⏳ **Fase 3 (telas)** usa isso:
+"Primeiro acesso" como botão principal, esqueci a senha sem conta levando ao
+cadastro (`recuperar-senha.tsx` ainda ignora `semConta` e mostra `e.message` cru),
+aviso de confirmar nascimento por cima da Home (`POST /app/identidade/nascimento`),
+e o passo do código que sobrevive a sair do app (persistir `verificacao_id`).
+
+Testes: `test/entradaF1.test.ts` + 5 mutantes em `scripts/mutantes.mjs`.

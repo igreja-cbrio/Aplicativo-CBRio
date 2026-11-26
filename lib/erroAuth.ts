@@ -59,3 +59,44 @@ export function mensagemErroAuth(e: unknown, padrao: string): string {
   const c = codigoErroAuth(e);
   return c === "outro" ? padrao : MENSAGENS_ERRO_AUTH[c];
 }
+
+// ── LOGIN (26/11/2026) ───────────────────────────────────────────────────────
+// No lançamento, 72 tentativas de senha no login e 1 certa: a tela mostrava o
+// inglês do Supabase ("Invalid login credentials"), o erro de rede cru e o
+// cancelamento da Apple como se fosse falha. Agora o login usa a mesma régua do
+// cadastro, com duas diferenças:
+//   1. mensagem PRÓPRIA (as que o AuthContext escreve em português para o fluxo
+//      do Google e da Apple) é mostrada como está;
+//   2. cancelar a janela da Apple não é erro: não mostra nada.
+
+/** Erro com mensagem nossa, em português, pronta para ir à tela por `t()`. */
+export function erroProprio(mensagem: string): Error & { propria: true } {
+  const e = new Error(mensagem) as Error & { propria: true };
+  e.propria = true;
+  return e;
+}
+
+/** A pessoa fechou a janela do provedor (Apple devolve ERR_REQUEST_CANCELED). */
+export function ehCancelamentoLogin(e: unknown): boolean {
+  const code = (e && typeof e === "object" ? (e as { code?: unknown }).code : "") as unknown;
+  return code === "ERR_REQUEST_CANCELED" || code === "ERR_CANCELED";
+}
+
+/**
+ * Chave de tradução do erro de login, ou null quando não há o que mostrar
+ * (cancelamento). Nunca devolve texto cru do provedor.
+ */
+export function mensagemErroLogin(e: unknown, padrao: string): string | null {
+  if (ehCancelamentoLogin(e)) return null;
+  const err = (e && typeof e === "object" ? e : {}) as { propria?: unknown; message?: unknown };
+  if (err.propria === true && typeof err.message === "string" && err.message) return err.message;
+  return mensagemErroAuth(e, padrao);
+}
+
+/** Motivo para a telemetria (enum nosso, nunca a mensagem). */
+export function motivoErroLogin(e: unknown): string {
+  if (ehCancelamentoLogin(e)) return "cancelou";
+  const err = (e && typeof e === "object" ? e : {}) as { propria?: unknown };
+  if (err.propria === true) return "provedor";
+  return codigoErroAuth(e);
+}

@@ -269,3 +269,13 @@ export function initTelemetria() {
     if (AppState.currentState === "active") enfileirar({ tipo: "ping", nome: "heartbeat" });
   }, 60000);
 }
+
+/**
+ * Evento que não pode esperar a fila (26/11/2026): recusa na ENTRADA (login,
+ * senha fraca, cadastro, ficha). A fila vive em memória e some se o processo
+ * morrer, e quem é recusado na porta costuma fechar o app em seguida.
+ */
+export function trackEventoJa(nome: string, props?: Record<string, unknown>) {
+  enfileirar({ tipo: "acao", nome, props });
+  flushTelemetria();
+}
