@@ -13,7 +13,7 @@ export const QUICK_LINKS = [
 export const MENU_SECTIONS = [
   { title: "Comunidade", items: [
     { label: "Início", icon: "home-outline", href: "/" },
-    { label: "Agenda e destaques", icon: "calendar-outline", href: "/agenda" },
+    { label: "Agenda", icon: "calendar-outline", href: "/agenda" },
     { label: "Avisos e notificações", icon: "notifications-outline", href: "/notificacoes" },
   ] },
   { title: "Viver a CBRio", items: QUICK_LINKS },

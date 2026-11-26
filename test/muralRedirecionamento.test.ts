@@ -1,18 +1,18 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
-const h = vi.hoisted(() => ({ params: { comunicado_id: 'teste:1', abrir_inscricao: '1' } as Record<string, string>, uid: 'pessoal', get: vi.fn(), replace: vi.fn(), setParams: vi.fn(), open: vi.fn(), avisar: vi.fn() }));
-vi.mock('react-native', () => ({ AppState: { addEventListener: () => ({ remove: vi.fn() }) }, ActivityIndicator: 'Loading', Image: 'Image', Pressable: 'Button', RefreshControl: 'Refresh', View: 'View', Linking: { openURL: h.open }, StyleSheet: { create: (s: any) => s } }));
+const h = vi.hoisted(() => ({ params: { comunicado_id: 'teste:1', abrir_inscricao: '1' } as Record<string, string>, uid: 'pessoal', estados: new Set<(estado: string) => void>(), get: vi.fn(), replace: vi.fn(), setParams: vi.fn(), open: vi.fn(), avisar: vi.fn() }));
+vi.mock('react-native', () => ({ AppState: { currentState: 'active', addEventListener: (_tipo: string, fn: (estado: string) => void) => { h.estados.add(fn); return { remove: () => h.estados.delete(fn) }; } }, ActivityIndicator: 'Loading', Image: 'Image', Pressable: 'Button', RefreshControl: 'Refresh', View: 'View', Linking: { openURL: h.open }, StyleSheet: { create: (s: any) => s } }));
 vi.mock('../components/navigation/DockContent', () => ({ ScrollView: 'Scroll' }));
 vi.mock('../components/ui/Typography', () => ({ Text: 'Text' }));
 vi.mock('react-native-safe-area-context', () => ({ SafeAreaView: 'Safe' }));
-vi.mock('@react-navigation/native', () => ({ useIsFocused: () => true }));
+vi.mock('@react-navigation/native', async () => { const React = await import('react'); return { useIsFocused: () => true, useFocusEffect: (fn: any) => React.useEffect(fn, [fn]) }; });
 vi.mock('react-native-webview', () => ({ WebView: 'WebView' }));
 vi.mock('@expo/vector-icons', () => ({ Ionicons: 'Icon' }));
 vi.mock('expo-router', async () => { const React = await import('react'); return { Stack: { Screen: () => null }, router: { replace: h.replace, setParams: h.setParams }, usePathname: () => '/mural', useLocalSearchParams: () => h.params, useFocusEffect: (fn: any) => React.useEffect(fn, [fn]) }; });
 vi.mock('../contexts/ThemeContext', () => ({ useColors: () => ({}) }));
 vi.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ session: { user: { id: h.uid } } }) }));
-vi.mock('../lib/i18n', () => ({ useT: () => (s: string) => s }));
+vi.mock('../lib/i18n', () => ({ useLang: () => ({ lang: 'pt-BR' }), useT: () => (s: string) => s }));
 vi.mock('../lib/api', () => ({ apiGet: h.get }));
 vi.mock('../lib/hierarquia', () => ({ subirUmNivel: vi.fn() }));
 vi.mock('../lib/telemetria', () => ({ trackEvento: vi.fn() }));
@@ -22,8 +22,8 @@ import Mural from '../app/(app)/(principal)/mural';
 let tree: ReactTestRenderer;
 const aviso = (id = 'teste:1', link = '/inscricao-batismo') => ({ id, link_inscricao: link, titulo: 'Batismo', corpo: 'Convite', publicado_em: null });
 async function montar() { await act(async () => { tree = create(React.createElement(Mural)); }); }
-beforeEach(() => { vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.stubGlobal('React', React); vi.resetAllMocks(); h.uid = 'pessoal'; h.params = { comunicado_id: 'teste:1', abrir_inscricao: '1' }; h.open.mockResolvedValue(undefined); h.get.mockResolvedValue({ comunicados: [aviso()] }); });
-afterEach(async () => { if (tree) await act(async () => tree.unmount()); vi.unstubAllGlobals(); });
+beforeEach(() => { vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.stubGlobal('React', React); vi.resetAllMocks(); h.estados.clear(); h.uid = 'pessoal'; h.params = { comunicado_id: 'teste:1', abrir_inscricao: '1' }; h.open.mockResolvedValue(undefined); h.get.mockResolvedValue({ comunicados: [aviso()] }); });
+afterEach(async () => { if (tree) await act(async () => tree.unmount()); vi.unstubAllGlobals(); vi.useRealTimers(); });
 it('abre diretamente batismo após ler o teste da conta autenticada', async () => {
  await montar(); expect(h.get).toHaveBeenCalledWith('/app/comunicados?comunicado_id=teste%3A1', { expectedUserId: 'pessoal' }); expect(h.replace).toHaveBeenCalledExactlyOnceWith('/inscricao-batismo'); expect(h.setParams).toHaveBeenCalledWith({ abrir_inscricao: undefined });
 });
@@ -49,4 +49,26 @@ it('falha do vídeo oferece nova tentativa e troca de URL limpa o erro', async (
  h.params = { comunicado_id: 'novo' }; h.get.mockResolvedValue({ comunicados: [{ ...aviso('novo'), video_url: 'https://example.com/novo.mp4' }] });
  await act(async () => tree.update(React.createElement(Mural)));
  expect(tree.root.findByType('WebView' as any).props.source.html).toContain('https://example.com/novo.mp4');
+});
+
+
+it('o texto acima do título muda para Ontem na meia-noite sem outra consulta', async () => {
+ vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-26T02:59:59Z')); h.params = {};
+ h.get.mockResolvedValue({ comunicados: [{ ...aviso(), publicado_em: '2026-11-25T18:00:00Z' }] });
+ await montar();
+ const textos = () => tree.root.findAllByType('Text' as any).map(n => n.props.children);
+ expect(textos()).toContain('Hoje');
+ await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+ expect(textos()).toContain('Ontem'); expect(textos()).not.toContain('Hoje');
+ expect(h.get).toHaveBeenCalledOnce();
+});
+it('voltar do segundo plano atualiza a data do aviso já carregado', async () => {
+ vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-25T20:00:00Z')); h.params = {};
+ h.get.mockResolvedValue({ comunicados: [{ ...aviso(), publicado_em: '2026-11-25T18:00:00Z' }] });
+ await montar();
+ await act(async () => { h.estados.forEach(fn => fn('background')); });
+ vi.setSystemTime(new Date('2026-11-26T12:00:00Z'));
+ await act(async () => { h.estados.forEach(fn => fn('active')); });
+ expect(tree.root.findAllByType('Text' as any).map(n => n.props.children)).toContain('Ontem');
+ expect(h.get).toHaveBeenCalledOnce();
 });

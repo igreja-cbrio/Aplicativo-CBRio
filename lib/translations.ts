@@ -6,6 +6,22 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "Há {dias} dias": { en: "{dias} days ago", es: "Hace {dias} días" },
+  "Data indisponível": { en: "Date unavailable", es: "Fecha no disponible" },
+  "Agenda": {"en": "Calendar", "es": "Agenda"},
+  "Calendário": {"en": "Calendar", "es": "Calendario"},
+  "Voltar ao mês atual": {"en": "Back to this month", "es": "Volver al mes actual"},
+  "Carregando agenda…": {"en": "Loading calendar…", "es": "Cargando agenda…"},
+  "Não foi possível carregar a agenda.": {"en": "Could not load the calendar.", "es": "No se pudo cargar la agenda."},
+  "Eventos do mês": {"en": "Events this month", "es": "Eventos del mes"},
+  "Ver mês inteiro": {"en": "View full month", "es": "Ver todo el mes"},
+  "Nenhum evento cadastrado para este dia.": {"en": "No events scheduled for this day.", "es": "No hay eventos para este día."},
+  "Nenhum evento cadastrado para este mês.": {"en": "No events scheduled for this month.", "es": "No hay eventos para este mes."},
+  "Horários de Brasília": {"en": "Brasília time", "es": "Hora de Brasilia"},
+  "Calendários para consultar": {"en": "Calendar files", "es": "Archivos del calendario"},
+  "Abrir calendário": {"en": "Open calendar", "es": "Abrir calendario"},
+  "Imagem": {"en": "Image", "es": "Imagen"},
+  "Não foi possível abrir o calendário. Tente novamente.": {"en": "Could not open the calendar. Please try again.", "es": "No se pudo abrir el calendario. Inténtalo de nuevo."},
   "Apenas alguns grupos ainda estão abertos para inscrição. As inscrições para a nova temporada de grupos abrirão em 2027.": { en: "Only a few groups are still open for registration. Registration for the new group season will open in 2027.", es: "Solo algunos grupos siguen abiertos para inscripción. Las inscripciones para la nueva temporada de grupos abrirán en 2027." },
   "Este grupo não está recebendo inscrições no momento.": { en: "This group is not accepting registrations at the moment.", es: "Este grupo no está recibiendo inscripciones en este momento." },
   "Nenhum grupo aberto para inscrição encontrado.": { en: "No groups open for registration found.", es: "No se encontraron grupos abiertos para inscripción." },
