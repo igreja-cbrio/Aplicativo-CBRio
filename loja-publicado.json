@@ -1,7 +1,7 @@
 {
   "_leia": "Qual BINÁRIO está PUBLICADO em cada loja (não o último build do EAS). É a fonte da verdade da catraca em scripts/driftLoja.js. ATUALIZE ESTE ARQUIVO no mesmo PR/commit em que uma release chegar à loja — foi justamente o descompasso entre 'build feito' e 'build publicado' que causou o incidente de 03/09/2026: o iOS 41 e as vc 6 e 7 existiam no EAS enquanto as lojas serviam binários de junho e julho.",
   "_como_conferir": {
-    "ios": "npx eas-cli submit:status -p ios  → a linha 'App Store  Live: 1.0 (NN)'",
+    "ios": "App Store Connect → app → versão Ready for Distribution → seção Build. Não confundir com o último build do EAS.",
     "android": "Play Console → Produção → release ativa (o CLI não responde isso; a conta de serviço só tem 'testing tracks')"
   },
   "_campos": {
@@ -11,17 +11,17 @@
     "runtime": "valor de `runtimeVersion` cozido NESTE binario. Desde 16/09/2026 ele e string literal e NAO acompanha a `version` (ver o teste em test/reguas.test.ts). Registrar aqui e o que permite saber se o OTA que vamos publicar alcanca o binario da loja."
   },
   "ios": {
-    "rotulo": "build 53",
-    "publicado_em": "2026-11-24",
-    "commit": "f88c6d8",
+    "rotulo": "build 54",
+    "publicado_em": "2026-11-25",
+    "commit": "e45a90ab81608ef259a04edb3513c7a73c92d66d",
     "runtime": "1.0.0",
-    "nota": "Versao 1.0.5 'Ready for Distribution' no App Store Connect, visto em 24/11/2026 15:00 BRT (print do Matheus). Enviada a revisao pelo Codex em 23/11 17:38 BRT, no lugar da 1.0.4 (build 52), que saiu da fila. O build 53 (EAS 38d17c22) foi compilado de 3deea69, commit da branch codex/som-gota-suave antes do squash; app.json, package.json, package-lock.json, eas.json, assets e targets de 3deea69 sao IDENTICOS aos de f88c6d8 (o squash do #252 no main), por isso o ledger usa f88c6d8. Nativo novo em relacao ao build 48: expo-audio (mensagem de audio no chat) e o som de notificacao 'Gota suave' (assets/sounds/cbrio_chime.*). NAO tem expo-media-library (#255). Ate 24/11 15h a telemetria ainda nao mostrava o build 53 no publico (a liberacao da Apple leva horas)."
+    "nota": "Versão 1.0.6 Ready for Distribution, build 54 associado, conferida no App Store Connect em 26/11/2026. Consulta pública Apple informa lançamento em 25/11/2026. EAS 387b8762-5a52-40de-a4bf-987a2cbab88f: versão 1.0.6, build 54, runtime 1.0.0, commit e45a90a. Inclui expo-media-library. Configuração nativa coincide com a correção de vídeo validada na PR 293."
   },
   "android": {
-    "rotulo": "versionCode 15",
-    "publicado_em": "2026-11-23",
-    "commit": "64ef7a9",
+    "rotulo": "versionCode 17",
+    "publicado_em": "2026-11-24",
+    "commit": "e45a90ab81608ef259a04edb3513c7a73c92d66d",
     "runtime": "1.0.0",
-    "nota": "Versao 1.0.4 em producao no Play Console, 'Available on Google Play', full rollout, conferido em 24/11/2026 (Latest releases and bundles). Enviada pelo Codex em 23/11 com o perfil de submit padrao (track production). A vc 15 (EAS d19df69e) foi compilada de 3a1759b, commit da branch codex/membros-audio-20261123 antes do squash; app.json, package.json, package-lock.json, eas.json, assets e targets de 3a1759b sao IDENTICOS aos de 64ef7a9 (o squash do #247 no main), por isso o ledger usa 64ef7a9. Nativo novo em relacao a vc 12: expo-audio (mensagem de audio no chat). NAO tem o som 'Gota suave' nem expo-media-library. A vc 16 (1.0.5, EAS 08f1a073, de 3deea69) foi gerada mas nunca enviada a Play. Telemetria: build_number 15 em 3 contas ate 24/11 15h."
+    "nota": "Versão 1.0.6 Available on Google Play, produção, versionCode 17, conferida no Play Console em 26/11/2026. Console registra lançamento em 24/11/2026. EAS 38857151-b05d-4101-ba8d-49e56768867b: versão 1.0.6, versionCode 17, runtime 1.0.0, commit e45a90a. Inclui expo-media-library e som Gota suave. Configuração nativa coincide com a correção de vídeo validada na PR 293."
   }
 }
