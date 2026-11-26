@@ -35,7 +35,7 @@ está no ERP, em `docs/mapa/APPS.md`.
 | `servir-escala.md` | Servir e escala: montar escala por time, Pessoas do Servir, leitor/líder/admin, preferência de domingo, check-in do supervisor |
 | `grupos.md` | Grupos: gerenciar grupo (abas, editar, recusar), ajustes dos líderes, tela do supervisor, inscrição, NEW HEART |
 | `kids-criancas.md` | Kids e crianças: card do Kids, apresentação de criança (porta nativa, saúde), atalho, Kids arquivado |
-| `batismo.md` | Batismo: escolha da data e do horário (régua de OTA de worktree limpa também está aqui) |
+| `batismo.md` | Batismo: data/horário, busca por selfie e halo suave (régua de OTA de worktree limpa também está aqui) |
 | `next.md` | Next: gestão pelo app (turmas, presença, abrir direto na gestão) |
 | `publicacao-ota-auditorias.md` | Loja e OTA: porta de entrada da loja, versão antiga na 1ª abertura, `version` 1.0.0, auditorias do app (ondas 0, 2, 2b, 3) |
 | `ui-navegacao.md` | Interface: diálogo da casa, navegação, teclado/KeyboardAvoidingView, relatos do Android, portão de i18n |

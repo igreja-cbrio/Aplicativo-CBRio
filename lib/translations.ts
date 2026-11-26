@@ -6,6 +6,23 @@
 export type Traducao = { en: string; es: string };
 
 export const TRANSLATIONS: Record<string, Traducao> = {
+  "FOTOS DO BATISMO": {"en": "BAPTISM PHOTOS", "es": "FOTOS DEL BAUTISMO"},
+  "fotos processadas": {"en": "photos processed", "es": "fotos procesadas"},
+  "Busca no álbum": {"en": "Album search", "es": "Búsqueda en el álbum"},
+  "Seu rosto fica apenas neste aparelho.": {"en": "Your face stays on this device.", "es": "Tu rostro permanece solo en este dispositivo."},
+  "Capturando sua selfie…": {"en": "Taking your selfie…", "es": "Tomando tu selfie…"},
+  "Um rosto. Muitas lembranças.": {"en": "One face. Many memories.", "es": "Un rostro. Muchos recuerdos."},
+  "Posicione seu rosto no centro, em um lugar bem iluminado.": {"en": "Center your face in a well-lit place.", "es": "Coloca tu rostro en el centro, en un lugar bien iluminado."},
+  "Câmera pausada": {"en": "Camera paused", "es": "Cámara en pausa"},
+  "Só um instante…": {"en": "Just a moment…", "es": "Solo un momento…"},
+  "Quando estiver pronto, toque para começar.": {"en": "When you are ready, tap to begin.", "es": "Cuando estés listo, toca para comenzar."},
+  "Capturando…": {"en": "Capturing…", "es": "Capturando…"},
+  "Preparando sua busca": {"en": "Preparing your search", "es": "Preparando tu búsqueda"},
+  "Estamos abrindo seu álbum para encontrar suas lembranças.": {"en": "Opening your album to find your memories.", "es": "Estamos abriendo tu álbum para encontrar tus recuerdos."},
+  "Procurando no seu álbum": {"en": "Searching your album", "es": "Buscando en tu álbum"},
+  "Lendo seu rosto": {"en": "Reading your face", "es": "Leyendo tu rostro"},
+  "Você já pode baixar o celular. Estamos comparando as fotos.": {"en": "You can lower your phone now. We are comparing the photos.", "es": "Ya puedes bajar el teléfono. Estamos comparando las fotos."},
+  "Só um instante. Sua busca está começando.": {"en": "Just a moment. Your search is starting.", "es": "Solo un momento. Tu búsqueda está comenzando."},
   "Há {dias} dias": { en: "{dias} days ago", es: "Hace {dias} días" },
   "Data indisponível": { en: "Date unavailable", es: "Fecha no disponible" },
   "Agenda": {"en": "Calendar", "es": "Agenda"},
