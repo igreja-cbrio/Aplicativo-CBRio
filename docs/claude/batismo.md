@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Halo suave: câmera frontal e publicação compatível por OTA (26/11/2026)
+
 - ⚠️⚠️ "Encontrar minhas fotos" · busca por selfie no álbum (24/11/2026)
 - ⚠️⚠️ Álbum do batismo · galeria privada e download (24/11/2026 · par do ERP #3884)
 - Endereço nos convites (16/11/2026)
@@ -232,3 +234,76 @@ ou servidor; o servidor só registra o ACEITE.
   `ok: true` (em `scripts/mutantes.mjs`).
 - Mutantes do resultado guardado: interruptor não apaga, nunca vence, busca vazia apaga o
   bom, troca de conta não apaga, sair da tela volta a apagar.
+
+## Halo suave na busca por selfie · 26/11/2026 (preparado, não publicado)
+
+Matheus escolheu a opção Halo suave na prévia e autorizou implementar. A captura
+agora pode acontecer dentro do app, com o rosto no centro de um contorno que pulsa.
+O toque em “Encontrar minhas fotos” tira a selfie; não há captura automática nem
+promessa de alinhamento/escaneamento 3D. O consentimento e os dois aceites anteriores
+continuam obrigatórios, antes de pedir permissão e abrir a câmera.
+
+- `CameraSelfieHalo.tsx`: câmera frontal `expo-camera ~17.0.10` (SDK 54), foto com
+  qualidade 0,5/base64, sem EXIF, sem gravação de áudio. Desmonta no segundo plano;
+  captura que chega depois de fechar/pausar é descartada. Toque duplo é bloqueado.
+- `cameraSelfieNativa.ts`: consulta `requireOptionalNativeModule("ExpoCamera")`
+  ANTES do `require("expo-camera")`. Os binários antigos continuam usando o
+  ImagePicker e recebem o halo somente depois da selfie. A câmera embutida exige
+  nova instalação; uma OTA sozinha não acrescenta o módulo nativo. O runtime
+  existente permanece literal `1.0.0`, seguindo a regra dos módulos opcionais.
+- `capturaSelfie.ts`: só entrega o base64 depois de apagar o JPEG temporário;
+  falha de limpeza impede prosseguir. `selfieImagem.ts` contém a validação pura,
+  reexportada por `buscaFacial.ts` para manter compatibilidade. Higiene de sobras
+  cobre `Camera/` e `ImagePicker/`, de forma independente se uma pasta falhar.
+- `HaloBuscaFacial.tsx`: apresentação compartilhável, animação nativa de escala e
+  opacidade. Respeita “Reduzir movimento” e pausa fora do primeiro plano. A leitura
+  não exibe percentual fictício; a comparação usa as contagens reais recebidas do
+  motor existente. Fotos que falharam contam como “processadas”, não “verificadas”.
+- A selfie continua apenas na memória do fluxo (incluindo sua prévia), sem upload,
+  persistência, logs ou telemetria. Motor, limiares, resultados e permissões de
+  álbuns não mudaram. A permissão de microfone do chat foi preservada na composição
+  dos plugins; o novo fluxo não pede nem utiliza microfone.
+- CBRio Testes tem uma demonstração isolada com os mesmos componentes e câmera,
+  sem álbuns reais e sem reconhecimento. A comparação de exemplo é identificada
+  como demonstração. Validar câmera frontal, enquadramento, captura, saída e volta
+  em aparelhos iOS/Android antes de liberar a nova experiência à comunidade.
+
+O simulador iOS não monta a prévia nativa (ExpoCamera 17 a exclui com
+`#if !targetEnvironment(simulator)`); pode não emitir `onCameraReady` nem erro.
+A abertura agora tem prazo de 12 segundos, suspenso em segundo plano e cancelado
+quando pronta. O laboratório oferece “Ver animação” em caso de câmera indisponível.
+Callbacks antigos não destravam a nova câmera, inclusive na remontagem de efeitos
+em StrictMode. Relato reproduzido no Device Hub pelo Matheus durante o teste.
+
+Validação desta implementação: `npm run verificar` passou com 1.070 testes,
+TypeScript e limite de i18n; exportação iOS/Android concluída. Build Release do
+CBRio Testes 1.4.0 (5) compilado e instalado no simulador iPhone 17 Pro iOS 26.2.
+Conferidos pela interface: saída da espera da câmera em 12 s, “Câmera indisponível”
+→ “Ver animação”, etapa de comparação com contagens e retorno, temas claro/escuro.
+O ensaio de captura real e a validação em Android físico continuam pendentes.
+Nenhuma publicação em produção foi feita neste trabalho.
+
+CBRio Testes 1.4.0 (5) foi também gerado por EAS local, assinado, instalado e
+confirmado no iPhone cadastrado. O usuário ainda precisa conferir a captura nesse
+aparelho. O pacote separado está em `~/Downloads/CBRio-Testes-Halo-1.4.0.ipa`;
+procedimento e SHA-256 estão no README do repositório CBRio-Testes.
+
+
+## Halo suave · entrega compatível por OTA · 26/11/2026
+
+Matheus confirmou o teste no iPhone e autorizou publicar. Após escolher inicialmente
+a experiência completa pela loja e ser informado da cota iOS esgotada (15/15),
+determinou expressamente: “suba o ota agora”. A entrega atual é a animação após
+a selfie nos binários sem ExpoCamera; a câmera integrada fica para uma versão
+nativa futura. Mantidos version 1.0.6 e runtime literal 1.0.0.
+
+O laboratório 1.4.0 (5) apresentou crash ao iniciar no iOS 27 por ser compilado com
+Xcode 27 sem UIScene. O laboratório 1.4.1 (6) corrigiu esse bootstrap, abriu três
+vezes sem novo crash e foi aprovado pelo usuário com câmera. O adaptador UIScene
+é exclusivo do laboratório e não integra a OTA. Novos builds de loja devem seguir
+o Xcode 26.2 fixado no perfil ou uma migração completa de inicialização validada.
+
+A demonstração isolada usa os mesmos componentes de câmera e halo, mas não
+executa reconhecimento nem consulta álbuns reais. No app, o motor existente e
+as contagens reais são preservados. Os binários atuais mantêm a captura pelo
+ImagePicker: o pacote expo-camera só é carregado se o módulo nativo existir.
