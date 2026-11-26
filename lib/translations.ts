@@ -232,6 +232,7 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Sou o Pedrinho, assistente virtual da CBRio.": { en: "I’m Pedrinho, CBRio’s virtual assistant.", es: "Soy Pedrinho, el asistente virtual de CBRio." },
   "Pedrinho": { en: "Pedrinho", es: "Pedrinho" },
   "Assistente": { en: "Assistant", es: "Asistente" },
+  "Reproduzir vídeo": { en: "Play video", es: "Reproducir vídeo" },
   "Carregando": { en: "Loading", es: "Cargando" },
   "Não foi possível carregar as mensagens. Tente novamente.": { en: "Unable to load messages. Try again.", es: "No se pudieron cargar los mensajes. Inténtalo de nuevo." },
   "Carregar mais": {"en": "Load more", "es": "Cargar más"},
