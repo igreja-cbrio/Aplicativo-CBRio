@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Halo suave: câmera frontal e preparação da versão de loja 1.0.7 (26/11/2026)
+
 - ⚠️⚠️ "Encontrar minhas fotos" · busca por selfie no álbum (24/11/2026)
 - ⚠️⚠️ Álbum do batismo · galeria privada e download (24/11/2026 · par do ERP #3884)
 - Endereço nos convites (16/11/2026)
@@ -285,3 +287,22 @@ CBRio Testes 1.4.0 (5) foi também gerado por EAS local, assinado, instalado e
 confirmado no iPhone cadastrado. O usuário ainda precisa conferir a captura nesse
 aparelho. O pacote separado está em `~/Downloads/CBRio-Testes-Halo-1.4.0.ipa`;
 procedimento e SHA-256 estão no README do repositório CBRio-Testes.
+
+
+## Halo suave · preparação da versão de loja 1.0.7 · 26/11/2026
+
+Matheus confirmou que o teste no iPhone funcionou e autorizou a publicação.
+Escolheu expressamente a experiência completa pela loja, não apenas a animação
+após a selfie por OTA. A versão pública candidata é 1.0.7; runtime continua 1.0.0.
+
+O laboratório 1.4.0 (5) apresentou crash ao iniciar no iOS 27, causado pela
+compilação local com Xcode 27 sem UIScene. O laboratório 1.4.1 (6) corrigiu esse
+bootstrap, foi reinstalado, abriu três vezes sem novo crash e foi aprovado pelo
+usuário com câmera. O adaptador de UIScene é exclusivo do laboratório. A versão
+de loja permanece no Xcode 26.2 fixado no perfil de produção; não usar o Xcode 27
+local para gerar esta versão sem uma migração completa e verificada do app.
+
+A aprovação confirma a experiência de câmera do iPhone. A demonstração isolada
+não executa reconhecimento nem consulta álbuns reais. Validação Android e
+conferência do binário de loja permanecem etapas da preparação; não registrar
+build enviado como versão disponível ao público. Nenhuma OTA faz parte desta entrega.
