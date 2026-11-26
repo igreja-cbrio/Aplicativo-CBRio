@@ -2,10 +2,11 @@ import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 const h = vi.hoisted(() => ({ params: { comunicado_id: 'teste:1', abrir_inscricao: '1' } as Record<string, string>, uid: 'pessoal', get: vi.fn(), replace: vi.fn(), setParams: vi.fn(), open: vi.fn(), avisar: vi.fn() }));
-vi.mock('react-native', () => ({ ActivityIndicator: 'Loading', Image: 'Image', Pressable: 'Button', RefreshControl: 'Refresh', View: 'View', Linking: { openURL: h.open }, StyleSheet: { create: (s: any) => s } }));
+vi.mock('react-native', () => ({ AppState: { addEventListener: () => ({ remove: vi.fn() }) }, ActivityIndicator: 'Loading', Image: 'Image', Pressable: 'Button', RefreshControl: 'Refresh', View: 'View', Linking: { openURL: h.open }, StyleSheet: { create: (s: any) => s } }));
 vi.mock('../components/navigation/DockContent', () => ({ ScrollView: 'Scroll' }));
 vi.mock('../components/ui/Typography', () => ({ Text: 'Text' }));
 vi.mock('react-native-safe-area-context', () => ({ SafeAreaView: 'Safe' }));
+vi.mock('@react-navigation/native', () => ({ useIsFocused: () => true }));
 vi.mock('react-native-webview', () => ({ WebView: 'WebView' }));
 vi.mock('@expo/vector-icons', () => ({ Ionicons: 'Icon' }));
 vi.mock('expo-router', async () => { const React = await import('react'); return { Stack: { Screen: () => null }, router: { replace: h.replace, setParams: h.setParams }, usePathname: () => '/mural', useLocalSearchParams: () => h.params, useFocusEffect: (fn: any) => React.useEffect(fn, [fn]) }; });
@@ -35,4 +36,17 @@ it('troca de conta descarta a consulta anterior', async () => { let resolve!: (v
 it('link inválido não abre navegador nem outra rota', async () => { h.get.mockResolvedValue({ comunicados: [aviso('teste:1', 'javascript:alert(1)')] }); await montar(); expect(h.replace).not.toHaveBeenCalled(); expect(h.open).not.toHaveBeenCalled(); });
 it('outro comunicado aberto na mesma tela resolve somente a nova inscrição', async () => { h.params = { comunicado_id: 'primeiro' }; h.get.mockResolvedValue({ comunicados: [aviso('primeiro', '/next')] }); await montar(); h.params = { comunicado_id: 'teste:1', abrir_inscricao: '1' }; h.get.mockResolvedValue({ comunicados: [aviso()] }); await act(async () => tree.update(React.createElement(Mural))); expect(h.replace).toHaveBeenCalledExactlyOnceWith('/inscricao-batismo'); });
 
-it('renderiza vídeo opcional sem bloquear o link de inscrição', async () => { h.params = {}; h.get.mockResolvedValue({ comunicados: [{ ...aviso(), video_url: 'https://example.com/aviso.mp4' }] }); await montar(); const player = tree.root.findByType('WebView' as any); expect(player.props.source.html).toContain('https://example.com/aviso.mp4'); expect(player.props.javaScriptEnabled).toBe(false); expect(player.props.mediaPlaybackRequiresUserAction).toBe(true); });
+it('renderiza vídeo opcional sem bloquear o link de inscrição', async () => { h.params = {}; h.get.mockResolvedValue({ comunicados: [{ ...aviso(), video_url: 'https://example.com/aviso.mp4' }] }); await montar(); const player = tree.root.findByType('WebView' as any); expect(player.props.source.html).toContain('https://example.com/aviso.mp4'); expect(player.props.javaScriptEnabled).toBe(true); expect(player.props.mediaPlaybackRequiresUserAction).toBe(true); });
+
+it('falha do vídeo oferece nova tentativa e troca de URL limpa o erro', async () => {
+ h.params = {}; h.get.mockResolvedValue({ comunicados: [{ ...aviso(), video_url: 'https://example.com/aviso.mp4' }] }); await montar();
+ await act(async () => tree.root.findByType('WebView' as any).props.onMessage({ nativeEvent: { data: JSON.stringify({ tipo: 'erro' }) } }));
+ expect(tree.root.findAllByType('WebView' as any)).toHaveLength(0);
+ const retry = tree.root.findAllByType('Button' as any).find(b => b.findAllByType('Text' as any).some(t => t.props.children === 'Tentar novamente'))!;
+ await act(async () => retry.props.onPress());
+ expect(tree.root.findAllByType('WebView' as any)).toHaveLength(1);
+ await act(async () => tree.root.findByType('WebView' as any).props.onError());
+ h.params = { comunicado_id: 'novo' }; h.get.mockResolvedValue({ comunicados: [{ ...aviso('novo'), video_url: 'https://example.com/novo.mp4' }] });
+ await act(async () => tree.update(React.createElement(Mural)));
+ expect(tree.root.findByType('WebView' as any).props.source.html).toContain('https://example.com/novo.mp4');
+});
