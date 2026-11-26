@@ -5,7 +5,7 @@ const escapar = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").
 export function htmlVideoAviso(uri: string, titulo: string, reproduzir: string): string {
   const url = videoSeguro(uri);
   if (!url) return "";
-  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>html,body{margin:0;height:100%;overflow:hidden;background:#000}video{display:block;width:100%;height:100%;object-fit:contain;background:#000}button{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1px solid #fff;border-radius:28px;padding:14px 22px;background:#222;color:#fff;font:600 16px system-ui}button[hidden]{display:none}</style></head>
 <body><video id="v" data-src="${escapar(url)}" controls playsinline webkit-playsinline preload="auto" aria-label="${escapar(titulo)}"></video><button id="play" type="button">&#9654; ${escapar(reproduzir)}</button>
 <script>(function(){
