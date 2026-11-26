@@ -280,3 +280,8 @@ Conferidos pela interface: saída da espera da câmera em 12 s, “Câmera indis
 → “Ver animação”, etapa de comparação com contagens e retorno, temas claro/escuro.
 O ensaio de captura real e a validação em Android físico continuam pendentes.
 Nenhuma publicação em produção foi feita neste trabalho.
+
+CBRio Testes 1.4.0 (5) foi também gerado por EAS local, assinado, instalado e
+confirmado no iPhone cadastrado. O usuário ainda precisa conferir a captura nesse
+aparelho. O pacote separado está em `~/Downloads/CBRio-Testes-Halo-1.4.0.ipa`;
+procedimento e SHA-256 estão no README do repositório CBRio-Testes.
