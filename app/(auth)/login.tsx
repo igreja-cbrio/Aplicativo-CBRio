@@ -20,7 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
 import { mensagemErroLogin, motivoErroLogin } from "@/lib/erroAuth";
-import { trackEventoJa } from "@/lib/telemetria";
+import { trackEvento, trackEventoJa } from "@/lib/telemetria";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { FormularioRolavel } from "@/components/ui/FormularioRolavel";
@@ -114,6 +114,26 @@ export default function LoginScreen() {
           <View style={styles.body} onLayout={(event) => setAlturaFormulario(event.nativeEvent.layout.height)}>
           <View style={styles.card}>
             <View style={styles.form}>
+              {/* Primeiro acesso em cima e como botão principal (27/11/2026 · Fase 3
+                  da entrada): no lançamento, 72 tentativas de senha nesta tela e 1
+                  certa. Quase ninguém ali tinha conta; a pessoa digitava e-mail e
+                  senha que nunca tinha criado. */}
+              <Text style={styles.primeiroTexto}>
+                {t("Nunca entrou no app? Toque em Primeiro acesso para criar sua senha.")}
+              </Text>
+              <Button
+                title={t("Primeiro acesso")}
+                onPress={() => {
+                  trackEvento("primeiro_acesso_toque", { source: "login" });
+                  router.push("/(auth)/cadastro");
+                }}
+              />
+              <View style={styles.dividerRow}>
+                <View style={styles.divider} />
+                <Text style={styles.dividerText}>{t("já tenho conta")}</Text>
+                <View style={styles.divider} />
+              </View>
+
               <Input
                 label={t("E-mail")}
                 value={email}
@@ -146,16 +166,9 @@ export default function LoginScreen() {
 
               <Button
                 title={t("Entrar")}
+                variant="ghost"
                 onPress={handleLogin}
                 loading={loading === "email"}
-              />
-
-              {/* Primeiro acesso (01/11): quem baixou o app e nunca entrou não tem
-                  senha — o "Criar conta" do rodapé ficava fora da vista. */}
-              <Button
-                title={t("Primeiro acesso")}
-                variant="ghost"
-                onPress={() => router.push("/(auth)/cadastro")}
               />
               <View style={styles.dividerRow}>
                 <View style={styles.divider} />
@@ -221,6 +234,7 @@ const makeStyles = (colors: Palette) =>
   },
   forgot: { color: colors.brandMid, fontSize: font.size.sm, fontWeight: "600", paddingVertical: 12 },
   error: { color: colors.danger, fontSize: font.size.sm },
+  primeiroTexto: { color: colors.text, fontSize: font.size.md, lineHeight: 21, textAlign: "center" },
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",
