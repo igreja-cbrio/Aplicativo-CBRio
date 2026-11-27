@@ -6,6 +6,7 @@ import { AppState, BackHandler, Platform } from "react-native";
 import { KidsThemeProvider } from "@/contexts/KidsThemeContext";
 import { MembroProvider } from "@/contexts/MembroContext";
 import { CadastroGate } from "@/components/auth/CadastroGate";
+import { AvisoNascimento } from "@/components/auth/AvisoNascimento";
 import { MenuProvider } from "@/contexts/MenuContext";
 import { ehRaiz, registrarRotaAtual, subirUmNivel } from "@/lib/hierarquia";
 import { toqueDeNotificacaoRecente } from "@/lib/notifTap";
@@ -117,6 +118,8 @@ export default function AppLayout() {
             <Stack.Screen name="(principal)" options={{ animation: "none" }} />
             <Stack.Screen name="fale-conosco-chat" />
           </Stack>
+          {/* Aviso "confirme seu nascimento" por cima da Home (27/11/2026). */}
+          <AvisoNascimento />
         </CadastroGate>
       </MenuProvider></KidsThemeProvider>
     </MembroProvider>
