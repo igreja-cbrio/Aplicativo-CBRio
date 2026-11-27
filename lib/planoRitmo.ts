@@ -146,6 +146,23 @@ export function edicoesDoCalendario<T extends ItemCalendario>(itens: T[], lidos:
   return edicoes.sort((a, b) => b.inicio.localeCompare(a.inicio));
 }
 
+/**
+ * Plano de UMA edição por vez (Quarta com Deus · 27/11/2026): só aparece a
+ * edição que está valendo — a mais recente que já começou.
+ *  · A semana que o autor adiantou (início no futuro) fica guardada até a
+ *    quinta-feira dela: ele publica na segunda e ninguém lê antes da hora.
+ *  · A semana que passou sai sozinha quando a seguinte começa (antes isso era
+ *    feito à mão, movendo os itens para um plano inativo).
+ * Se nenhuma começou ainda (plano recém-criado), mostra a primeira que vem,
+ * para a tela não abrir vazia. Espera `edicoes` da mais nova para a mais antiga,
+ * como `edicoesDoCalendario` devolve.
+ */
+export function edicaoVigente<E extends { inicio: string }>(edicoes: E[], hoje: string): E[] {
+  if (edicoes.length === 0) return [];
+  const comecou = edicoes.find((e) => e.inicio <= hoje);
+  return [comecou ?? edicoes[edicoes.length - 1]];
+}
+
 /** A edição que a tela abre: a que contém hoje → a mais recente que já começou → a primeira. */
 export function edicaoEmFoco(edicoes: { chave: string; inicio: string; fim: string }[], hoje: string): string | null {
   if (edicoes.length === 0) return null;

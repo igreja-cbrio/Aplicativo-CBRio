@@ -441,6 +441,8 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Tela cheia": { en: "Full screen", es: "Pantalla completa" },
   "Não foi possível carregar o vídeo. Confira sua internet e tente de novo.": { en: "Couldn't load the video. Check your connection and try again.", es: "No se pudo cargar el video. Revisa tu conexión e inténtalo de nuevo." },
   "Semana de": { en: "Week of", es: "Semana del" },
+  "Compartilhar a semana": { en: "Share this week", es: "Compartir la semana" },
+  "As 7 leituras da semana, uma por dia até o culto de quarta": { en: "This week's 7 readings, one a day until Wednesday's service", es: "Las 7 lecturas de la semana, una por día hasta el culto del miércoles" },
   "Você leu toda esta edição 🎉": { en: "You read this whole edition 🎉", es: "Leíste toda esta edición 🎉" },
   "leituras nesta edição": { en: "readings in this edition", es: "lecturas en esta edición" },
   "Ler a leitura de hoje": { en: "Read today's reading", es: "Leer la lectura de hoy" },

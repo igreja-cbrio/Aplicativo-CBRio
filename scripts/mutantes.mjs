@@ -956,6 +956,18 @@ const MUTANTES = [
     para: '      estado: (set.has(item.id) ? "lido" : item.data <= hoje ? "atual" : "bloqueado") as EstadoDia,',
   },
   {
+    nome: "planoRitmo: a semana que o autor adiantou aparece antes da hora",
+    arq: "lib/planoRitmo.ts",
+    de: '  const comecou = edicoes.find((e) => e.inicio <= hoje);',
+    para: '  const comecou = edicoes[0];',
+  },
+  {
+    nome: "compartilharSemana: edição sem página vira link quebrado",
+    arq: "lib/compartilharSemana.ts",
+    de: '  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 90) return null;',
+    para: '  if (!slug) return null;',
+  },
+  {
     nome: "videoDevocional: o player deixa o frame principal navegar pro YouTube (sai do app)",
     arq: "lib/videoDevocional.ts",
     de: '  if (isTopFrame === false) return true;',

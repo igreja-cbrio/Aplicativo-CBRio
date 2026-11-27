@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- ⚠️⚠️ QUARTA COM DEUS · compartilhar a SEMANA + só a edição que está valendo (27/11/2026)
 - Devocional · Kids na home e cards compactos (25/11/2026)
 - ⚠️⚠️ DEVOCIONAL · casa ENXUTA, sem rolagem (25/11/2026)
 - ⚠️⚠️ DEVOCIONAL · INVESTIR conta toda leitura (25/11/2026)
@@ -339,3 +340,30 @@ Pedido do Marcos: "estamos achando muitas opções"; a aba Devocional não rola,
   Scroll com reserva do dock garante acesso em telas pequenas/fontes ampliadas.
 - Anotações/histórico continuam na Bíblia; rotas e conteúdo das leituras
   permanecem iguais. Mudança visual e de navegação, sem dependência nativa.
+
+## ⚠️⚠️ QUARTA COM DEUS · compartilhar a SEMANA + só a edição que está valendo (27/11/2026)
+
+Pedido do Marcos: *"dentro do app ter uma opção de compartilhar essa página do
+quarta com Deus, não um dia específico, mas a semana inteira"*. Par no ERP: o
+autor passa a subir o Word da semana por um link próprio (ERP
+`docs/claude/devocional.md`, seção de 27/11/2026).
+
+- **Botão no cabeçalho de `/devocional-plano`** (ícone `share-outline`, só no
+  plano de slug `quarta-com-deus`): manda texto + link da página pública da
+  edição, `https://www.cbrio.org/quarta-com-deus/<edicao_slug>`. Régua pura em
+  `lib/compartilharSemana.ts`; edição sem slug de verdade não tem página e o
+  botão some. Telemetria `devocional_compartilhar_semana` (só `entity_id` do plano).
+- ⚠️ O caminho é montado no bundle (a tela lê as edições direto do banco, não há
+  chamada ao servidor de onde tirar a URL). O ERP tem guarda de texto para a rota
+  não mudar de nome. O link abre no navegador: o app não tem universal links.
+- **Só a edição que está valendo** (`edicaoVigente`, `lib/planoRitmo.ts`): no
+  Quarta com Deus aparece apenas a edição mais recente que já começou. A semana
+  que o autor adiantou fica guardada até a quinta-feira dela, e a que passou sai
+  sozinha quando a seguinte começa (antes isso era feito à mão no banco). Os
+  outros planos de calendário seguem mostrando todas as edições em abas.
+- ⚠️ É apresentação, não segurança: os itens futuros continuam legíveis para
+  quem consulta a tabela. A página pública do ERP, essa sim, recusa edição que
+  não começou.
+- Testes: `test/compartilharSemana.test.ts` (10 casos) + 2 mutantes.
+- ⚠️ Publicar o OTA só DEPOIS do deploy do ERP, senão o link compartilhado abre
+  uma página que ainda não existe.
