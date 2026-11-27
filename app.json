@@ -108,14 +108,6 @@
           "isAccessMediaLocationEnabled": false,
           "granularPermissions": []
         }
-      ],
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "O CBRio usa a câmera para você tirar fotos no app: a do seu perfil, a das crianças no Kids, as que você envia no chat e a selfie que encontra as suas fotos do batismo.",
-          "recordAudioAndroid": false,
-          "microphonePermission": "O CBRio usa o microfone para gravar as mensagens de áudio que você escolhe enviar no chat e para transformar sua fala em texto quando você dita uma mensagem."
-        }
       ]
     ],
     "experiments": {

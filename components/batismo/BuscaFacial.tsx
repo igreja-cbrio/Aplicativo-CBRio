@@ -70,15 +70,12 @@ import {
 } from "@/lib/buscaFacial";
 
 import { HaloBuscaFacial } from "./HaloBuscaFacial";
-import { CameraSelfieHalo } from "./CameraSelfieHalo";
-import { cameraSelfieDisponivel } from "@/lib/cameraSelfieNativa";
 
 const TAG_TELA = "cbrio-busca-facial";
 
 type Fase =
   | { tipo: "aceite" }
   | { tipo: "preparando"; etapa: "consentimento" | "camera" | "lista" }
-  | { tipo: "camera" }
   | { tipo: "buscando" }
   /** Terminou com fotos que valem "Tentar de novo" (a selfie ainda está na memória). */
   | { tipo: "revisao" }
@@ -484,12 +481,7 @@ export function BuscaFacial({
         return;
       }
 
-      if (cameraSelfieDisponivel()) {
-        setFase({ tipo: "camera" });
-        return;
-      }
-
-      // Compatibilidade: a frota anterior não tem a câmera embutida.
+      // A captura usa o módulo já presente nas lojas; o halo começa após a selfie.
       let res: ImagePicker.ImagePickerResult;
       try {
         // SÓ câmera frontal, nunca a galeria: a busca é pelo rosto de quem está com o celular.
@@ -636,14 +628,6 @@ export function BuscaFacial({
             <Text style={styles.nota}>{t("Deixe o app aberto nesta tela até a busca terminar.")}</Text>
           </ScrollView>
         );
-
-      case "camera":
-        return <CameraSelfieHalo colors={colors} t={t} TextComponent={Text} bottomInset={insets.bottom}
-          onSelfie={selfie => {
-            if (!ativa.current) return;
-            selfieRef.current = selfie;
-            prepararEComecar();
-          }} onErro={() => { if (ativa.current) falhar("camera"); }} />;
 
       case "preparando":
         if (fase.etapa === "lista" && selfieRef.current) {
