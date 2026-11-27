@@ -307,3 +307,31 @@ A demonstração isolada usa os mesmos componentes de câmera e halo, mas não
 executa reconhecimento nem consulta álbuns reais. No app, o motor existente e
 as contagens reais são preservados. Os binários atuais mantêm a captura pelo
 ImagePicker: o pacote expo-camera só é carregado se o módulo nativo existir.
+
+## Separação da câmera nativa para OTA de Sofonias · 26/11/2026
+
+A linha de produção volta a depender somente dos módulos presentes no iOS 54 e
+Android 17. Retirados o pacote/plugin expo-camera, a câmera integrada e seus
+helpers exclusivos. A implementação futura permanece no commit 180ba757d9733f7cf31eec32c566be27f788e1fd
+da branch codex/batismo-halo-suave; reintroduzi-la exige build de loja e validação.
+
+A captura atual continua pelo ImagePicker frontal, com consentimento, limpeza do
+JPEG temporário e descarte de retorno após fechar. HaloBuscaFacial, selfie em
+memória, progresso real do motor e resultados permanecem iguais à OTA do halo.
+Esta separação não altera runtime, versão de loja, loja-publicado.json nem as
+guardas de publicação. Sofonias mantém a lista única e acesso sem trava por data.
+
+Validação local da separação: TypeScript, i18n e 1.056 testes em 93 arquivos
+aprovados. Testes de fluxo cobrem consentimento/permissão, cancelamento, limpeza
+da selfie tardia, halo e contagens reais; teste da tela de Sofonias renderiza as
+sete leituras e abre a última futura, preservando a trava de outros planos.
+A catraca original acusa zero diferenças nativas nos dois binários e apenas aviso
+de cadência. Não foi repetido ensaio físico nesta separação: o caminho ImagePicker
+executado pelos binários das lojas, o componente de halo e o motor não mudaram.
+A aprovação anterior do iPhone não equivale a uma nova validação em Android físico.
+
+Na validação do PR #298, o CI identificou uma âncora de mutação antiga deixada
+pelo PR #297 em planoRitmo. Atualizada a âncora sem remover a proteção dos outros
+calendários e acrescentado o mutante que reintroduz a trava em Sofonias. As 148
+âncoras foram conferidas previamente; ambas as regressões foram provocadas e
+detectadas pelos testes da régua e da tela. Scripts de OTA/catraca inalterados.
