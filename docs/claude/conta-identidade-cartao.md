@@ -271,3 +271,13 @@ aviso de confirmar nascimento por cima da Home (`POST /app/identidade/nascimento
 e o passo do código que sobrevive a sair do app (persistir `verificacao_id`).
 
 Testes: `test/entradaF1.test.ts` + 5 mutantes em `scripts/mutantes.mjs`.
+
+**Código por e-mail OU WhatsApp (27/11/2026 · decisão do Marcos).** "Já sou cadastrado" agora
+consulta primeiro por onde dá para confirmar (`identidadePorCpf(cpf, { consultar: true })`,
+nada é enviado) e a régua `lib/canalCodigo.ts` escolhe a tela: um canal só pede o código
+direto; dois canais abrem o passo `canal` para a pessoa escolher. Quem decide os canais é
+o SERVIDOR (`canais` na resposta): ele sabe se o cadastro tem e-mail, se o celular é só
+daquela pessoa e se o template de autenticação do WhatsApp já foi aprovado pela Meta.
+⚠️ Enquanto não for, a lista vem só com o e-mail e nada muda na tela. ⚠️ O app nunca
+manda destino: só o CPF e o canal. Servidor antigo ignora o `consultar` e já devolve
+`verificacao_id`; a régua trata esse caso primeiro. Teste: `test/canalCodigo.test.ts`.
