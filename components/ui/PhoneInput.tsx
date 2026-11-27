@@ -24,6 +24,8 @@ type Props = {
   onChangeCountry: (c: Country) => void;
   number: string;
   onChangeNumber: (v: string) => void;
+  /** Avisa que a pessoa tocou no campo (medição de abandono do cadastro). */
+  onFocus?: () => void;
 };
 
 export function PhoneInput({
@@ -32,6 +34,7 @@ export function PhoneInput({
   onChangeCountry,
   number,
   onChangeNumber,
+  onFocus,
 }: Props) {
   const t = useT();
   const colors = useColors();
@@ -70,7 +73,7 @@ export function PhoneInput({
         */}
         <TextInput
           style={styles.input}
-          onFocus={() => rolar?.(raiz.current)}
+          onFocus={() => { rolar?.(raiz.current); onFocus?.(); }}
           value={exibirTelefone(number, country.dial)}
           onChangeText={(v) => onChangeNumber(digitosTelefone(v, country.dial))}
           placeholder={country.dial === "55" ? "(21) 99999-8888" : t("DDD + número")}

@@ -43,6 +43,7 @@ import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { completarCadastroApp, confirmarCodigoIdentidade, identidadePorCpf, statusIdentidade, type IdentidadePorCpf } from "@/lib/api";
 import { trackEvento, trackEventoJa } from "@/lib/telemetria";
+import { useAbandonoCadastro } from "@/lib/useAbandonoCadastro";
 import { erroNomeCompleto } from "@/lib/nomeCompleto";
 import { consumirFichaPendente, consumirRecusaCadastro, pedeConfirmacaoPorCodigo, recusaDoErro, type FichaPendente } from "@/lib/recusaCadastro";
 import { guardarCodigoAberto, lerCodigoAberto, limparCodigoAberto, montarCodigoAberto } from "@/lib/codigoAberto";
@@ -114,6 +115,9 @@ export default function CompletarCadastroScreen() {
   }, []);
 
   const [passo, setPasso] = useState<Passo>("escolha");
+  // Em que campo a pessoa parou quando largou o formulário (27/11/2026). Só
+  // conta enquanto o passo do formulário está na tela.
+  const abandono = useAbandonoCadastro("completar", passo === "form");
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -379,9 +383,9 @@ export default function CompletarCadastroScreen() {
     const iso = dataParaIso(nascimento);
     // Mesma régua do servidor (lib/nomeCompleto.ts): 2 palavras, sem abreviação.
     const erroNome = erroNomeCompleto(nome);
-    if (erroNome) { setErro(t(erroNome)); return; }
-    if (soDigitos(telefone).length < 10) { setErro(t("Informe seu telefone com DDD.")); return; }
-    if (!iso) { setErro(t("Informe sua data de nascimento (dd/mm/aaaa).")); return; }
+    if (erroNome) { abandono.invalido("nome"); setErro(t(erroNome)); return; }
+    if (soDigitos(telefone).length < 10) { abandono.invalido("telefone"); setErro(t("Informe seu telefone com DDD.")); return; }
+    if (!iso) { abandono.invalido("nascimento"); setErro(t("Informe sua data de nascimento (dd/mm/aaaa).")); return; }
     const cpfDig = soDigitos(cpfForm);
     // ⚠️⚠️ CPF OBRIGATÓRIO (decisão do Marcos · 05/08/2026): "todas as pessoas
     // que entrarem no sistema devem completar o cadastro antes; após completar
@@ -395,6 +399,7 @@ export default function CompletarCadastroScreen() {
     // pessoa só descobria o dígito errado depois de enviar, num 400 seco. É a
     // MESMA régua do resto do app (`lib/validators.ts`).
     if (exigeCpf && !isValidCPF(cpfDig)) {
+      abandono.invalido("cpf");
       setErro(
         cpfDig.length !== 11
           ? t("Informe seu CPF (11 números) para continuar.")
@@ -403,11 +408,13 @@ export default function CompletarCadastroScreen() {
       return;
     }
     if (!exigeCpf && cpfDig && !isValidCPF(cpfDig)) {
+      abandono.invalido("cpf");
       setErro(t("Esse CPF não é válido (ou deixe em branco)."));
       return;
     }
-    if (!sexo) { setErro(t("Selecione masculino ou feminino.")); return; }
+    if (!sexo) { abandono.invalido("sexo"); setErro(t("Selecione masculino ou feminino.")); return; }
     setEnviando(true);
+    abandono.enviar();
     const ficha: FichaPendente = {
       nome_completo: nome.trim().replace(/\s+/g, " "),
       telefone: soDigitos(telefone),
@@ -435,6 +442,7 @@ export default function CompletarCadastroScreen() {
         return;
       }
       setErro(e instanceof Error ? e.message : t("Não foi possível salvar agora."));
+      abandono.reabrir();
     } finally {
       setEnviando(false);
     }
@@ -573,6 +581,7 @@ export default function CompletarCadastroScreen() {
               label={t("Nome completo")}
               value={nome}
               onChangeText={setNome}
+              onFocus={() => abandono.tocar("nome")}
               autoCapitalize="words"
               placeholder={t("Como está no seu documento")}
             />
@@ -580,6 +589,7 @@ export default function CompletarCadastroScreen() {
               label={t("Celular com DDD")}
               value={telefone}
               onChangeText={(v: string) => setTelefone(mascaraTelefone(v))}
+              onFocus={() => abandono.tocar("telefone")}
               keyboardType="phone-pad"
               placeholder="(21) 99999-9999"
             />
@@ -587,6 +597,7 @@ export default function CompletarCadastroScreen() {
               label={t("Data de nascimento")}
               value={nascimento}
               onChangeText={(v: string) => setNascimento(mascaraData(v))}
+              onFocus={() => abandono.tocar("nascimento")}
               keyboardType="number-pad"
               placeholder="dd/mm/aaaa"
             />
@@ -594,6 +605,7 @@ export default function CompletarCadastroScreen() {
               label={exigeCpf ? t("CPF *") : t("CPF (recomendado)")}
               value={cpfForm}
               onChangeText={(v: string) => setCpfForm(mascaraCpf(v))}
+              onFocus={() => abandono.tocar("cpf")}
               keyboardType="number-pad"
               placeholder="000.000.000-00"
             />
@@ -613,7 +625,7 @@ export default function CompletarCadastroScreen() {
                   return (
                     <Pressable
                       key={v}
-                      onPress={() => setSexo(v)}
+                      onPress={() => { abandono.tocar("sexo"); setSexo(v); }}
                       style={[styles.sexoPill, sel && styles.sexoPillSel]}
                       accessibilityRole="button"
                       accessibilityState={{ selected: sel }}
