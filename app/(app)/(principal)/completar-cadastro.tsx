@@ -44,7 +44,8 @@ import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { completarCadastroApp, confirmarCodigoIdentidade, identidadePorCpf, statusIdentidade, type IdentidadePorCpf } from "@/lib/api";
 import { trackEvento, trackEventoJa } from "@/lib/telemetria";
 import { erroNomeCompleto } from "@/lib/nomeCompleto";
-import { consumirRecusaCadastro, recusaDoErro } from "@/lib/recusaCadastro";
+import { consumirFichaPendente, consumirRecusaCadastro, pedeConfirmacaoPorCodigo, recusaDoErro, type FichaPendente } from "@/lib/recusaCadastro";
+import { guardarCodigoAberto, lerCodigoAberto, limparCodigoAberto, montarCodigoAberto } from "@/lib/codigoAberto";
 import { passoDepoisDoCpf, type CanalCodigo, type OpcaoCanal } from "@/lib/canalCodigo";
 // Réguas de campo do app (as MESMAS das outras telas) — esta tela
 // reimplementava versões mais fracas, que só o servidor recusava.
@@ -121,12 +122,49 @@ export default function CompletarCadastroScreen() {
   // teve a ficha recusada pelo servidor chega aqui com o motivo guardado
   // (lib/recusaCadastro). Abre direto no formulário, com o motivo no aviso, em
   // vez da tela de CPF sem explicação. Consome uma vez só.
+  //
+  // ⚠️ QUEM JÁ TEM CADASTRO CONFIRMA POR CÓDIGO (27/11/2026). Quando a recusa é
+  // `confirmar_por_codigo`, a pessoa não volta ao formulário: vai direto para o
+  // código, com o CPF que ela acabou de digitar. A ficha preenchida espera em
+  // `fichaRef` e é reenviada depois da confirmação.
+  const fichaRef = useRef<FichaPendente | null>(null);
   useEffect(() => {
     const recusa = consumirRecusaCadastro();
     if (!recusa) return;
+    if (pedeConfirmacaoPorCodigo(recusa)) {
+      const ficha = consumirFichaPendente();
+      fichaRef.current = ficha;
+      setAviso(t("Você já tem cadastro na igreja. Para entrar, confirme com o código que enviamos para o contato desse cadastro."));
+      const cpfDaFicha = soDigitos(ficha?.cpf || "");
+      if (cpfDaFicha.length === 11) {
+        setCpf(mascaraCpf(cpfDaFicha));
+        void buscarPorCpf(cpfDaFicha);
+      } else {
+        setPasso("cpf");
+      }
+      return;
+    }
     setPasso("form");
     setAviso(recusa.mensagem);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ⚠️ O PASSO DO CÓDIGO SOBREVIVE A SAIR DO APP (27/11/2026). No Android, ler
+  // o código no e-mail ou no WhatsApp mata o processo; a tela voltava ao CPF e
+  // o código recebido não tinha onde ser digitado (lib/codigoAberto.ts).
+  useEffect(() => {
+    let vivo = true;
+    lerCodigoAberto(user?.id).then((aberto) => {
+      if (!vivo || !aberto) return;
+      setCpf(mascaraCpf(aberto.cpf));
+      setAchado({
+        encontrado: true, pode_confirmar: true, verificacao_id: aberto.verificacaoId,
+        canal: aberto.canal, destino_mascarado: aberto.destino, nome_mascarado: aberto.nome,
+      });
+      setPasso((atual) => (atual === "escolha" ? "codigo" : atual));
+    });
+    return () => { vivo = false; };
+  }, [user?.id]);
 
   // caminho rápido
   const [cpf, setCpf] = useState("");
@@ -237,15 +275,19 @@ export default function CompletarCadastroScreen() {
     router.replace("/");
   }, [reload, router, retorno, t]);
 
-  async function buscarPorCpf() {
-    setErro(null); setAviso(null);
-    if (soDigitos(cpf).length !== 11) { setErro(t("Digite os 11 números do CPF.")); return; }
+  // `cpfDireto`: o CPF veio do formulário (a pessoa não passou pela tela do
+  // CPF). Nesse caso o aviso que explica o código fica na tela.
+  async function buscarPorCpf(cpfDireto?: string) {
+    const cpfUsado = cpfDireto ?? soDigitos(cpf);
+    setErro(null);
+    if (!cpfDireto) setAviso(null);
+    if (cpfUsado.length !== 11) { setErro(t("Digite os 11 números do CPF.")); return; }
     setEnviando(true);
     try {
       // ⚠️ `consultar`: o servidor lista por onde dá para confirmar (e-mail,
       // WhatsApp) SEM enviar nada. A régua do próximo passo mora em
       // lib/canalCodigo.ts. Servidor antigo ignora o `consultar` e já envia.
-      const r = await identidadePorCpf(soDigitos(cpf), { consultar: true });
+      const r = await identidadePorCpf(cpfUsado, { consultar: true });
       trackEvento("identidade_cpf", {
         // `reason` está na whitelist do backend; `encontrado`/`pode` não estavam
         // e iam pro lixo em silêncio.
@@ -254,9 +296,10 @@ export default function CompletarCadastroScreen() {
       const proximo = passoDepoisDoCpf(r);
       if (proximo.tipo === "codigo") {
         setAchado(r); setCanais([]); setPasso("codigo");
+        void guardarCodigoAberto(user?.id, montarCodigoAberto(r, cpfUsado));
       } else if (proximo.tipo === "pedir") {
         setAchado(r); setCanais([]);
-        await pedirCodigo(proximo.canal);
+        await pedirCodigo(proximo.canal, cpfUsado);
       } else if (proximo.tipo === "escolher") {
         setAchado(r); setCanais(proximo.canais); setPasso("canal");
       } else if (r.encontrado && r.motivo === "telefone_compartilhado") {
@@ -288,14 +331,16 @@ export default function CompletarCadastroScreen() {
 
   // Pede o código pelo canal escolhido. Chamar de novo com o mesmo canal
   // reenvia o MESMO código (o servidor não invalida o anterior).
-  async function pedirCodigo(canal: CanalCodigo) {
+  async function pedirCodigo(canal: CanalCodigo, cpfDireto?: string) {
+    const cpfUsado = cpfDireto ?? soDigitos(cpf);
     setErro(null);
     setEnviando(true);
     try {
-      const r = await identidadePorCpf(soDigitos(cpf), { canal });
+      const r = await identidadePorCpf(cpfUsado, { canal });
       trackEvento("identidade_codigo_pedido", { label: canal });
       if (r.encontrado && r.pode_confirmar && r.verificacao_id) {
         setAchado(r); setCodigo(""); setPasso("codigo");
+        void guardarCodigoAberto(user?.id, montarCodigoAberto(r, cpfUsado));
       } else {
         setErro(t("Não conseguimos enviar o código agora. Tente de novo ou preencha seus dados."));
       }
@@ -313,6 +358,14 @@ export default function CompletarCadastroScreen() {
     try {
       await confirmarCodigoIdentidade(achado?.verificacao_id || "", soDigitos(codigo));
       trackEvento("identidade_confirmada", {});
+      await limparCodigoAberto(user?.id);
+      // A ficha que a pessoa preencheu antes do código completa o cadastro
+      // agora que a posse está provada. Se falhar, o portão pede o que faltar.
+      const ficha = fichaRef.current;
+      fichaRef.current = null;
+      if (ficha) {
+        try { await completarCadastroApp(ficha); } catch { /* o portão confere */ }
+      }
       await concluir();
     } catch (e) {
       setErro(e instanceof Error ? e.message : t("Não foi possível confirmar agora."));
@@ -355,15 +408,16 @@ export default function CompletarCadastroScreen() {
     }
     if (!sexo) { setErro(t("Selecione masculino ou feminino.")); return; }
     setEnviando(true);
+    const ficha: FichaPendente = {
+      nome_completo: nome.trim().replace(/\s+/g, " "),
+      telefone: soDigitos(telefone),
+      data_nascimento: iso,
+      email: user?.email || undefined,
+      cpf: cpfDig || undefined,
+      sexo,
+    };
     try {
-      const r = await completarCadastroApp({
-        nome_completo: nome.trim().replace(/\s+/g, " "),
-        telefone: soDigitos(telefone),
-        data_nascimento: iso,
-        email: user?.email || undefined,
-        cpf: cpfDig || undefined,
-        sexo,
-      });
+      const r = await completarCadastroApp(ficha);
       trackEvento("identidade_completada", { reason: r.criado ? "criado" : "vinculado" });
       await concluir();
     } catch (e) {
@@ -371,6 +425,15 @@ export default function CompletarCadastroScreen() {
       trackEventoJa("ficha_recusada", recusa
         ? { reason: recusa.codigo, label: recusa.campo ?? "sem_campo", status_code: recusa.status }
         : { reason: "sem_resposta" });
+      // CPF que já tem cadastro: em vez de erro, o passo do código. A ficha
+      // espera e é reenviada depois da confirmação.
+      if (pedeConfirmacaoPorCodigo(recusa) && cpfDig.length === 11) {
+        fichaRef.current = ficha;
+        setCpf(mascaraCpf(cpfDig));
+        setAviso(t("Você já tem cadastro na igreja. Para entrar, confirme com o código que enviamos para o contato desse cadastro."));
+        await buscarPorCpf(cpfDig);
+        return;
+      }
       setErro(e instanceof Error ? e.message : t("Não foi possível salvar agora."));
     } finally {
       setEnviando(false);
@@ -440,7 +503,7 @@ export default function CompletarCadastroScreen() {
               {t("Vamos enviar um código pro e-mail ou pro WhatsApp que já está no seu cadastro — é assim que confirmamos que é você.")}
             </Text>
             {!!erro && <Text style={styles.erro}>{erro}</Text>}
-            <Button title={t("Continuar")} onPress={buscarPorCpf} disabled={enviando} />
+            <Button title={t("Continuar")} onPress={() => buscarPorCpf()} disabled={enviando} />
             <Pressable onPress={() => { setPasso("form"); setErro(null); }}>
               <Text style={styles.link}>{t("Prefiro preencher meus dados")}</Text>
             </Pressable>
@@ -493,7 +556,7 @@ export default function CompletarCadastroScreen() {
             />
             {!!erro && <Text style={styles.erro}>{erro}</Text>}
             <Button title={t("Confirmar")} onPress={confirmar} disabled={enviando} />
-            <Pressable onPress={() => { setPasso(canais.length > 1 ? "canal" : "cpf"); setCodigo(""); setErro(null); }}>
+            <Pressable onPress={() => { void limparCodigoAberto(user?.id); setPasso(canais.length > 1 ? "canal" : "cpf"); setCodigo(""); setErro(null); }}>
               <Text style={styles.link}>{canais.length > 1 ? t("Não recebi o código (escolher outro jeito)") : t("Não recebi o código")}</Text>
             </Pressable>
             <Text style={styles.nota}>

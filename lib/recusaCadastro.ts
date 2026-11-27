@@ -52,4 +52,44 @@ export function consumirRecusaCadastro(agora: number = Date.now()): RecusaCadast
 /** Sair da conta apaga a recusa: ela é de quem estava logado. */
 export function limparRecusaCadastro() {
   guardada = null;
+  fichaPendente = null;
+}
+
+// ── QUEM JÁ TEM CADASTRO CONFIRMA POR CÓDIGO (27/11/2026 · Fase 2) ───────────
+// Decisão do Marcos: se o CPF digitado no "Primeiro acesso" já tem cadastro na
+// igreja, a pessoa SEMPRE confirma com o código enviado ao contato que já
+// estava no cadastro. O servidor responde 409 `confirmar_por_codigo`.
+export const CODIGO_CONFIRMAR_POR_CODIGO = "confirmar_por_codigo";
+
+/** O servidor mandou confirmar por código? */
+export function pedeConfirmacaoPorCodigo(recusa: RecusaCadastro | null): boolean {
+  return !!recusa && recusa.codigo === CODIGO_CONFIRMAR_POR_CODIGO;
+}
+
+// A ficha que a pessoa acabou de preencher espera aqui enquanto ela confirma o
+// código, e é reenviada depois: assim ela não digita tudo de novo e o que ela
+// informou completa o cadastro. Só em MEMÓRIA (some se o app fechar) e com o
+// mesmo prazo curto da recusa, porque é dado da pessoa.
+export type FichaPendente = {
+  nome_completo: string;
+  telefone: string;
+  data_nascimento: string;
+  email?: string;
+  cpf?: string;
+  sexo: "masculino" | "feminino";
+};
+
+const VALIDADE_FICHA_MS = 20 * 60 * 1000;
+let fichaPendente: { ficha: FichaPendente; em: number } | null = null;
+
+export function guardarFichaPendente(ficha: FichaPendente, agora: number = Date.now()) {
+  fichaPendente = { ficha, em: agora };
+}
+
+/** Devolve a ficha guardada UMA vez (e a apaga). Vencida, devolve null. */
+export function consumirFichaPendente(agora: number = Date.now()): FichaPendente | null {
+  const atual = fichaPendente;
+  fichaPendente = null;
+  if (!atual || agora - atual.em > VALIDADE_FICHA_MS) return null;
+  return atual.ficha;
 }

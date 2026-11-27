@@ -31,7 +31,7 @@ import { FormularioRolavel } from "@/components/ui/FormularioRolavel";
 import { useDialogo } from "@/components/ui/Dialogo";
 import { codigoErroAuth, mensagemErroAuth } from "@/lib/erroAuth";
 import { erroNomeCompleto } from "@/lib/nomeCompleto";
-import { guardarRecusaCadastro, recusaDoErro } from "@/lib/recusaCadastro";
+import { guardarFichaPendente, guardarRecusaCadastro, pedeConfirmacaoPorCodigo, recusaDoErro, type FichaPendente } from "@/lib/recusaCadastro";
 import { trackEventoJa } from "@/lib/telemetria";
 import { abrirFichaCadastro, fecharFichaCadastro } from "@/lib/cadastroAberto";
 
@@ -144,15 +144,16 @@ export default function CadastroScreen() {
         // pedindo a ficha. Zero regressão no pior caso.
         // ⚠️ E NÃO relaxa nada no servidor: `completo` continua exigindo
         // `falta: []`, então o carimbo nunca vira atalho de acesso.
+        const ficha: FichaPendente = {
+          nome_completo: nome.trim().replace(/\s+/g, " "),
+          telefone: `+${country.dial}${onlyDigits(phone)}`,
+          data_nascimento: dateBRToISO(nascimento)!,
+          email,
+          cpf: onlyDigits(cpf),
+          sexo,
+        };
         try {
-          await completarCadastroApp({
-            nome_completo: nome.trim().replace(/\s+/g, " "),
-            telefone: `+${country.dial}${onlyDigits(phone)}`,
-            data_nascimento: dateBRToISO(nascimento)!,
-            email,
-            cpf: onlyDigits(cpf),
-            sexo,
-          });
+          await completarCadastroApp(ficha);
         } catch (err) {
           // ⚠️ A RECUSA VIAJA (26/11/2026). Esta tela já está desmontando (a
           // sessão nasceu), então mostrar o erro aqui não adianta: ele fica
@@ -161,6 +162,9 @@ export default function CadastroScreen() {
           // saber por quê. Falha de rede NÃO é recusa (não guarda nada).
           const recusa = recusaDoErro(err);
           if (recusa) {
+            // CPF que já tem cadastro (27/11/2026): a próxima tela pede o código
+            // e reenvia esta ficha depois, sem a pessoa digitar tudo de novo.
+            if (pedeConfirmacaoPorCodigo(recusa)) guardarFichaPendente(ficha);
             guardarRecusaCadastro(recusa);
             trackEventoJa("cadastro_recusado", {
               reason: recusa.codigo,
