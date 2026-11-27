@@ -2693,4 +2693,5 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Daqui pra frente é por sua conta.": { en: "From here on, you're on your own.", es: "De aquí en adelante, es por tu cuenta." },
   "Créditos do sistema": { en: "System credits", es: "Créditos del sistema" },
   "Marcos e Matheus, que fizeram o app": { en: "Marcos and Matheus, who built the app", es: "Marcos y Matheus, que hicieron la app" },
+  "Você já tem cadastro na igreja. Para entrar, confirme com o código que enviamos para o contato desse cadastro.": { en: "You already have a record at the church. To get in, confirm with the code we sent to the contact on that record.", es: "Ya tienes un registro en la iglesia. Para entrar, confirma con el código que enviamos al contacto de ese registro." },
 };

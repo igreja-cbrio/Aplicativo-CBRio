@@ -69,7 +69,10 @@ describe("recusa do cadastro viaja até a tela seguinte", () => {
     expect(cadastro.indexOf("erroNomeCompleto(nome)")).toBeGreaterThan(0);
     expect(cadastro.indexOf("erroNomeCompleto(nome)")).toBeLessThan(cadastro.indexOf("await signUp("));
     const completar = ler("app/(app)/(principal)/completar-cadastro.tsx");
-    expect(completar).toMatch(/consumirRecusaCadastro\(\);\s*if \(!recusa\) return;\s*setPasso\("form"\);\s*setAviso\(recusa\.mensagem\);/);
+    // Desde 27/11 há um desvio no meio (recusa que pede código vai ao código);
+    // as outras recusas seguem abrindo o formulário com o motivo.
+    expect(completar).toMatch(/consumirRecusaCadastro\(\);\s*if \(!recusa\) return;/);
+    expect(completar).toMatch(/setPasso\("form"\);\s*setAviso\(recusa\.mensagem\);/);
     expect(completar).toContain("erroNomeCompleto(nome)");
   });
 });
