@@ -930,6 +930,12 @@ export const TRANSLATIONS: Record<string, Traducao> = {
   "Já tem conta?": { en: "Already have an account?", es: "¿Ya tienes cuenta?" },
   "Informe seu e-mail.": { en: "Enter your email.", es: "Ingresa tu correo." },
   "Não foi possível enviar o e-mail.": { en: "Couldn't send the email.", es: "No se pudo enviar el correo." },
+  // Aviso de nascimento por cima da Home (27/11/2026 · Fase 3 da entrada)
+  "Confirme sua data de nascimento": { en: "Confirm your date of birth", es: "Confirma tu fecha de nacimiento" },
+  "A data que está no seu cadastro da igreja parece errada. Digite a data certa para a gente corrigir.": { en: "The date in your church record looks wrong. Enter the right date so we can fix it.", es: "La fecha que está en tu registro de la iglesia parece incorrecta. Escribe la fecha correcta para que la corrijamos." },
+  "Confira a data de nascimento (dia, mês e ano com 4 números).": { en: "Check the date of birth (day, month and 4-digit year).", es: "Revisa la fecha de nacimiento (día, mes y año con 4 números)." },
+  "Informe a sua data de nascimento, não a de um filho.": { en: "Enter your own date of birth, not a child's.", es: "Escribe tu fecha de nacimiento, no la de un hijo." },
+  "Não foi possível salvar agora. Tente de novo mais tarde.": { en: "Couldn't save right now. Try again later.", es: "No se pudo guardar ahora. Inténtalo de nuevo más tarde." },
   "Recuperar senha": { en: "Reset password", es: "Recuperar contraseña" },
   "Enviaremos um link para redefinir sua senha.": { en: "We'll send a link to reset your password.", es: "Te enviaremos un enlace para restablecer tu contraseña." },
   "Pronto! Se houver uma conta com esse e-mail, o link de recuperação foi enviado.": { en: "Done! If an account exists for this email, the reset link has been sent.", es: "¡Listo! Si existe una cuenta con ese correo, el enlace de recuperación fue enviado." },

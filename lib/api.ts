@@ -1677,10 +1677,21 @@ export type IdentidadeStatus = {
    */
   pode_preencher_com_vinculo?: boolean;
   nome?: string | null;
+  /**
+   * `true` = a data de nascimento do cadastro está marcada como suspeita (ano
+   * 2000 do calendário antigo, ou data impossível) e ESTA conta já confirmou a
+   * ficha. O app mostra o aviso por cima da Home (27/11/2026). Ausente = false.
+   */
+  nascimento_suspeito?: boolean;
 };
 
 export function statusIdentidade(): Promise<IdentidadeStatus> {
   return apiGet<IdentidadeStatus>("/app/identidade/status");
+}
+
+/** Quem já está dentro confirma a própria data. Só cadastro marcado aceita. */
+export function confirmarNascimentoApp(dataNascimentoISO: string): Promise<{ ok: boolean; data_nascimento: string }> {
+  return apiPost("/app/identidade/nascimento", { data_nascimento: dataNascimentoISO });
 }
 
 export type IdentidadePorCpf = {
