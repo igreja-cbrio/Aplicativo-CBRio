@@ -13,6 +13,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 - ⚠️⚠️ ENTRADA · Fase 1: recusa que viaja, login em português, telemetria da porta (2026-11-26)
 - ⚠️⚠️ ENTRADA · Fase 3: telas (Primeiro acesso, esqueci a senha sem conta, regra da senha) (2026-11-27)
 - ⚠️⚠️ ENTRADA · Fase 3: aviso "confirme seu nascimento" por cima da Home (2026-11-27)
+- ⚠️⚠️ ENTRADA · Fase 3: abandono do formulário de cadastro por campo (2026-11-27)
 
 ---
 
@@ -335,3 +336,37 @@ aviso; a pessoa pode tocar "Agora não", e ele volta até ela preencher.
   `app_entrada_ocorrencias` (etapa `nascimento`).
 
 Teste: `test/avisoNascimento.test.ts`.
+
+## ⚠️⚠️ ENTRADA · Fase 3: abandono do formulário de cadastro por campo (2026-11-27)
+
+No lançamento (25-26/11), 13 pessoas largaram o formulário de cadastro e não havia como
+saber em que campo. Agora as duas telas (`cadastro.tsx` e o passo `form` do
+`completar-cadastro.tsx`) contam onde a pessoa parou.
+
+- **Régua** `lib/abandonoCadastro.ts` (pura) + gancho `lib/useAbandonoCadastro.ts`.
+- **Eventos** (tipo `acao`, sem mudança no servidor):
+  - `cadastro_abandono`: `source` = `cadastro` | `completar`; `label` = último campo
+    tocado (ou `nenhum`); `action` = campos tocados, na ordem, separados por vírgula;
+    `reason` = `saiu` (a tela desmontou sem envio) | `pausa` (o app foi para segundo plano
+    com o formulário aberto; uma por saída).
+  - `cadastro_campo_invalido`: `source` + `label` = campo em que a validação da tela parou.
+- ⚠️ **Só o NOME do campo** (`nome`, `cpf`, `nascimento`, `telefone`, `email`, `senha`,
+  `sexo`, `area`). Nunca o valor nem o tamanho dele. O teste cobra argumento fixo.
+- ⚠️ No `cadastro.tsx` o envio é marcado ANTES do `signUp`: com a sessão criada a tela
+  desmonta sozinha, e sem isso todo cadastro que deu certo contaria como abandono.
+- ⚠️ **Limite**: se o sistema mata o app em segundo plano, só a `pausa` tem chance de
+  chegar. Leia como "a última pausa ou saída de cada aparelho sem conta criada depois",
+  não como contagem crua. `cadastro` é antes do login: sai sem `user_id`, só com
+  `installation_id` e `session_id`.
+
+Consulta (por aparelho, o último retrato do dia):
+
+```sql
+select distinct on (installation_id) installation_id, props->>'source' formulario,
+       props->>'label' parou_em, props->>'action' tocou, props->>'reason' como, created_at
+  from app_eventos
+ where nome = 'cadastro_abandono' and created_at >= current_date - 7
+ order by installation_id, created_at desc;
+```
+
+Teste: `test/abandonoCadastro.test.ts`.
