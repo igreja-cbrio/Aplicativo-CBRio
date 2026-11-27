@@ -81,3 +81,18 @@ describe("abertura do app", () => {
     expect(fs.readDirectoryAsync).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('câmera embutida', () => {
+  it('também apaga sobras em Camera/, mesmo se ImagePicker estiver inacessível', async () => {
+    fs.cacheDirectory = 'file:///cache/';
+    fs.deleteAsync.mockClear();
+    fs.getInfoAsync.mockImplementation(async (uri: string) => {
+      if (uri.includes('ImagePicker')) throw new Error('io');
+      if (uri === 'file:///cache/Camera/') return {exists:true,isDirectory:true};
+      return {exists:true,isDirectory:false,modificationTime:s(uri.endsWith('nova.jpg') ? AGORA - 1000 : AGORA - 2*IDADE_MINIMA_MS)};
+    });
+    fs.readDirectoryAsync.mockResolvedValue(['velha.jpg','nova.jpg']);
+    await limparSobrasDaCamera({agoraMs:AGORA});
+    expect(fs.deleteAsync).toHaveBeenCalledExactlyOnceWith('file:///cache/Camera/velha.jpg',{idempotent:true});
+  });
+});

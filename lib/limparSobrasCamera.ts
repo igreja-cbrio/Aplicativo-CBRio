@@ -8,6 +8,9 @@
 // CBRio com a câmera na frente (aparelho com pouca memória), nenhum dos dois
 // `finally` roda e a selfie em resolução cheia fica no cache.
 //
+// ExpoCamera também usa <cache>/Camera/: a mesma higiene cobre captura
+// interrompida pelo encerramento do processo na câmera embutida.
+//
 // Três limpezas, nenhuma lança erro (limpeza que falha não trava nada):
 //  1. ABERTURA DO APP (`limparSobrasNaAbertura`, uma vez por início do JS, no
 //     layout raiz): é ela que resolve o caso acima, porque o app morto reabre.
@@ -39,25 +42,27 @@ export async function limparSobrasDaCamera({
   idadeMinimaMs = IDADE_MINIMA_MS,
 }: { agoraMs?: number; idadeMinimaMs?: number } = {}): Promise<void> {
   if (Platform.OS === "web") return;
-  try {
-    const raiz = FileSystem.cacheDirectory;
-    if (!raiz) return;
-    const pasta = `${raiz}${PASTA_DO_PICKER}`;
-    const info = await FileSystem.getInfoAsync(pasta);
-    if (!info.exists || !info.isDirectory) return;
-    const nomes = await FileSystem.readDirectoryAsync(pasta);
-    for (const nome of nomes.slice(0, 200)) {
-      try {
-        const arq = await FileSystem.getInfoAsync(pasta + nome);
-        if (!arq.exists || arq.isDirectory) continue;
-        if (!ehSobraDaCamera(nome, arq.modificationTime, agoraMs, idadeMinimaMs)) continue;
-        await FileSystem.deleteAsync(pasta + nome, { idempotent: true });
-      } catch {
-        /* um arquivo que não deu não impede os outros */
+  const raiz = FileSystem.cacheDirectory;
+  if (!raiz) return;
+  for (const nomePasta of [PASTA_DO_PICKER, "Camera/"]) {
+    try {
+      const pasta = `${raiz}${nomePasta}`;
+      const info = await FileSystem.getInfoAsync(pasta);
+      if (!info.exists || !info.isDirectory) continue;
+      const nomes = await FileSystem.readDirectoryAsync(pasta);
+      for (const nome of nomes.slice(0, 200)) {
+        try {
+          const arq = await FileSystem.getInfoAsync(pasta + nome);
+          if (!arq.exists || arq.isDirectory) continue;
+          if (!ehSobraDaCamera(nome, arq.modificationTime, agoraMs, idadeMinimaMs)) continue;
+          await FileSystem.deleteAsync(pasta + nome, { idempotent: true });
+        } catch {
+          /* um arquivo que não deu não impede os outros */
+        }
       }
+    } catch {
+      /* uma pasta inacessível não impede a limpeza da outra */
     }
-  } catch {
-    /* limpeza é só higiene: nunca derruba a busca */
   }
 }
 

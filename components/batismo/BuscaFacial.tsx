@@ -69,6 +69,8 @@ import {
   type ResultadoBusca,
 } from "@/lib/buscaFacial";
 
+import { HaloBuscaFacial } from "./HaloBuscaFacial";
+
 const TAG_TELA = "cbrio-busca-facial";
 
 type Fase =
@@ -138,6 +140,7 @@ export function BuscaFacial({
   }
 
   function descartar() {
+    ativa.current = false;
     limparVigia();
     selfieRef.current = null;
     resultadosRef.current = new Map();
@@ -151,15 +154,18 @@ export function BuscaFacial({
   }
 
   useEffect(
-    () => () => {
-      ativa.current = false;
-      try {
-        webRef.current?.injectJavaScript(SCRIPT_PARAR);
-      } catch {
-        /* a WebView já foi embora */
-      }
-      descartar();
-      liberarTela(TAG_TELA);
+    () => {
+      ativa.current = true;
+      return () => {
+        ativa.current = false;
+        try {
+          webRef.current?.injectJavaScript(SCRIPT_PARAR);
+        } catch {
+          /* a WebView já foi embora */
+        }
+        descartar();
+        liberarTela(TAG_TELA);
+      };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
@@ -475,6 +481,7 @@ export function BuscaFacial({
         return;
       }
 
+      // A captura usa o módulo já presente nas lojas; o halo começa após a selfie.
       let res: ImagePicker.ImagePickerResult;
       try {
         // SÓ câmera frontal, nunca a galeria: a busca é pelo rosto de quem está com o celular.
@@ -623,6 +630,12 @@ export function BuscaFacial({
         );
 
       case "preparando":
+        if (fase.etapa === "lista" && selfieRef.current) {
+          return <HaloBuscaFacial colors={colors} t={t} TextComponent={Text} bottomInset={insets.bottom}
+            titulo={t("Preparando sua busca")}
+            detalhe={t("Estamos abrindo seu álbum para encontrar suas lembranças.")}
+            status={t("Carregando as fotos do álbum…")} selfie={selfieRef.current} />;
+        }
         return (
           <View style={styles.centro}>
             <ActivityIndicator color={colors.brandMid} size="large" />
@@ -638,31 +651,18 @@ export function BuscaFacial({
 
       case "buscando": {
         const naFoto = etapa === "fotos";
-        const pct = total > 0 ? Math.round((Math.min(feitas, total) / total) * 100) : 0;
         return (
-          <View style={styles.centro} accessibilityLiveRegion="polite">
-            <ActivityIndicator color={colors.brandMid} size="large" />
-            <Text style={styles.tituloBusca}>
-              {naFoto
-                ? `${t("Procurando você…")} ${Math.min(feitas, total)} ${t("de")} ${total}`
-                : etapa === "lendo_selfie"
-                  ? t("Lendo a selfie…")
-                  : etapa === "retomando"
-                    ? t("Retomando a busca…")
-                    : t("Preparando a busca…")}
-            </Text>
-            <View style={styles.trilho}>
-              <View style={[styles.trilhoCheio, { width: `${pct}%` }]} />
-            </View>
-            {naFoto && <Text style={styles.texto}>{`${fotosEncontradas(encontradas)} ${t("até agora")}`}</Text>}
-            <Text style={styles.nota}>
-              {t("Deixe o app aberto nesta tela. Se ele for para o segundo plano, a busca continua de onde parou quando você voltar.")}
-            </Text>
+          <HaloBuscaFacial colors={colors} t={t} TextComponent={Text} bottomInset={insets.bottom}
+            titulo={naFoto ? t("Procurando no seu álbum") : etapa === "lendo_selfie" ? t("Lendo seu rosto") : etapa === "retomando" ? t("Retomando a busca…") : t("Preparando sua busca")}
+            detalhe={naFoto ? t("Você já pode baixar o celular. Estamos comparando as fotos.") : t("Só um instante. Sua busca está começando.")}
+            status={naFoto ? `${fotosEncontradas(encontradas)} ${t("até agora")}` : t("Deixe o app aberto nesta tela até a busca terminar.")}
+            selfie={selfieRef.current} lendo={!naFoto} progresso={naFoto ? { feitas, total } : undefined}>
+            <Text style={styles.nota}>{t("Deixe o app aberto nesta tela. Se ele for para o segundo plano, a busca continua de onde parou quando você voltar.")}</Text>
             <Pressable onPress={parar} style={({ pressed }) => [styles.botaoParar, pressed && { opacity: 0.7 }]} accessibilityRole="button">
               <Ionicons name="stop-circle-outline" size={20} color={colors.danger} />
               <Text style={styles.botaoPararTxt}>{t("Parar")}</Text>
             </Pressable>
-          </View>
+          </HaloBuscaFacial>
         );
       }
 
@@ -789,8 +789,6 @@ const makeStyles = (colors: Palette) =>
     nota: { color: colors.textMuted, fontSize: 12, lineHeight: 17, textAlign: "center" },
     centro: { flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.md, paddingHorizontal: spacing.xl },
     tituloBusca: { color: colors.text, fontSize: font.size.lg, fontWeight: "800", textAlign: "center" },
-    trilho: { alignSelf: "stretch", height: 6, borderRadius: 3, backgroundColor: colors.surfaceAlt, overflow: "hidden" },
-    trilhoCheio: { height: 6, borderRadius: 3, backgroundColor: colors.primary },
     botaoParar: {
       flexDirection: "row",
       alignItems: "center",

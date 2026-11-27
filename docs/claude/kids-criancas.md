@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- Player dos vídeos de avisos e diagnóstico do vídeo da Mari (26/11/2026)
+
 - Autorizações de imagem e declaração dos genitores nas cerimônias do app (25/11/2026)
 
 - Check-in explícito na aba Kids (2026-11-25)
@@ -434,3 +436,28 @@ Não reclassificar inscrições antigas como se contivessem os novos aceites.
 Escopo: formulários infantis autenticados do aplicativo. Os formulários públicos
 genéricos e seus termos não foram substituídos. Sem migration, alteração de
 RLS ou dependência nativa. Publicar backend antes da OTA.
+
+
+## Player dos vídeos de avisos e diagnóstico do vídeo da Mari (26/11/2026)
+
+`KidsAvisoVideo` atende o mural Kids e os comunicados nas notificações. O player
+anterior desligava JavaScript, não mostrava erro de mídia e considerava o fim
+do carregamento do HTML como fim do carregamento do vídeo. Agora usa HTML local
+com JavaScript, botão explícito de reprodução por toque, eventos reais da mídia,
+limite de espera de 20 segundos e nova tentativa remontando o player. A proporção
+vem dos metadados (altura visual limitada a 520), sem cortar o conteúdo. Ao trocar
+URL, o estado é reiniciado; saída da tela/segundo plano pausa a mídia. Não usa
+módulo nativo novo. Traduções PT/EN/ES; URL HTTPS validada e escapada em atributo,
+sem interpolar URL/título em JavaScript, navegação limitada à página local.
+
+Diagnóstico: o arquivo original da Mari é H.264 Baseline/yuv420p + AAC, 464 × 832,
+30 fps, 49,46 segundos, 7.600.472 bytes, com `moov` no início e decodificação
+completa sem erros. A leitura por URL assinada do arquivo armazenado retornou
+HTTP 206 para Range e HTTP 200 para o download completo, idêntico byte a byte
+ao original. O comunicado foi publicado e depois arquivado/excluído em 26/11.
+Nenhum comunicado foi restaurado ou notificação reenviada nesta investigação.
+
+Testes cobrem toque, erro de mídia/play, timeout, proporção, nova tentativa e
+nova URL. Isso não reproduz o defeito no aparelho: validar reprodução e áudio
+em iOS/Android antes da publicação. Não afirmar que o codec ou o tamanho eram
+a causa, nem que JavaScript desativado foi provado como causa única.

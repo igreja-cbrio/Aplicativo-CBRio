@@ -441,7 +441,7 @@ Fontes continuam iBrand/Gotham e a foto limpa continua pendente.
 A seção Participar contém somente Inscrições (ajuste solicitado em 26/10).
 Batismo, NEXT e apresentação de crianças permanecem dentro de Inscrições,
 sem atalhos redundantes na gaveta. Check-in Kids segue em Minha família e
-Agenda e destaques.
+Agenda.
 
 Ainda em 26/10, Matheus forneceu a foto limpa original
 `kseniia-lobko-FR9iwdBmwgw-unsplash.jpg`. Ela está em
@@ -698,3 +698,42 @@ Formulários continuam sem dock. Não mudou módulo nativo nem runtime.
 Testes cobrem persistência da instância da barra com pathname do chat,
 seleção da tela de baixo, cadastro sem atalhos e disposição dos dois Stacks.
 Essa simulação de estado não equivale a uma validação visual do gesto UIKit.
+
+
+## Agenda por data (26/11/2026 · candidata à publicação)
+
+O menu e o título passam a “Agenda”. O carrossel antigo deixa de ser consultado
+nesta tela. Culto ao vivo, Kids e próximos cultos continuam disponíveis.
+`components/agenda/Calendario.tsx` consulta `/app/agenda?mes=YYYY-MM`, com sessão.
+Calendário mensal e eventos por dia/período inclusivo, cadastrados pelo Marketing.
+PDF/DOCX servem apenas para importar eventos no Marketing, com revisão e rascunhos. Datas civis do Rio; não converter datas sem hora para o fuso do aparelho.
+
+Não há seção nem botões de arquivos no aplicativo. Rascunhos e arquivados não vêm na resposta.
+Mudança de mês/foco ignora resposta antiga; erro tem nova tentativa e não é
+confundido com mês vazio. Pull-to-refresh atualiza também a agenda.
+
+Depende da migration e do backend Agenda no ERP. Validar ponta a ponta em ambiente
+isolado e CBRio Testes antes de publicar. Nenhuma dependência nativa foi adicionada.
+
+
+## Datas dos avisos (26/11/2026 · preparada, não publicada)
+
+O rótulo acima do título usava `floor((agora - publicado_em) / 24h)`: um
+comunicado de ontem à tarde continuava como “Hoje” na manhã seguinte.
+`lib/dataAvisos.ts` compara dias civis em America/Sao_Paulo, usando a data de
+publicação recebida. Ausência/data inválida não vira “Hoje”; anos anteriores
+são identificados. Rótulos e mês respeitam o idioma escolhido.
+
+`useDiaAvisos` recalcula ao focar a tela, ao retornar do segundo plano e na
+virada do dia (timer alinhado ao minuto). Não mantém timer em segundo plano;
+o estado só muda quando muda o dia. A atualização não recarrega a lista nem
+reinicia a mídia por renderizações a cada minuto.
+
+A régua é compartilhada pelo mural/aba Avisos e pelos cabeçalhos de dias da
+aba Notificações. Os cabeçalhos incluem o dia atual nas dependências, evitando
+que “Hoje” fique congelado numa tela montada de um dia para outro.
+
+Regressões: menos de 24h entre ontem e hoje, meia-noite no Rio versus UTC,
+viradas de mês/ano, ano bissexto, ausências, datas futuras, traduções, limpeza
+de timers e retorno ao app. O teste renderizado do mural comprova a troca de
+“Hoje” para “Ontem” sem outra consulta de comunicados.

@@ -13,7 +13,9 @@ import {
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/contexts/ThemeContext";
-import { useT } from "@/lib/i18n";
+import { useLang, useT } from "@/lib/i18n";
+import { rotuloDataAviso } from "@/lib/dataAvisos";
+import { useDiaAvisos } from "@/lib/useDiaAvisos";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiGet } from "@/lib/api";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -34,17 +36,6 @@ type Comunicado = {
   link_inscricao?: string | null;
 };
 
-function quando(iso: string | null): string {
-  if (!iso) return "";
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return ""; // data inválida no banco → não renderiza "Há NaN dias"
-  const dias = Math.floor((Date.now() - t) / 86400000);
-  if (dias <= 0) return "Hoje";
-  if (dias === 1) return "Ontem";
-  if (dias < 7) return `Há ${dias} dias`;
-  return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
-}
-
 /**
  * Lista de comunicados da igreja. Mora aqui (e não numa rota) porque aparece em
  * dois lugares: na tag "Avisos" de /notificacoes e em /mural, que continua
@@ -58,6 +49,8 @@ export function ListaAvisos({ comunicado_id, abrir_inscricao, topo }: { comunica
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
+  const { lang } = useLang();
+  const hoje = useDiaAvisos();
   const dlg = useDialogo();
   async function abrirInscricao(c: Comunicado) {
     const destino = destinoComunicado(c.link_inscricao);
@@ -142,7 +135,7 @@ export function ListaAvisos({ comunicado_id, abrir_inscricao, topo }: { comunica
               {c.foto_url ? <Image source={{ uri: c.foto_url }} style={styles.foto} resizeMode="cover" /> : null}
               {c.video_url ? <KidsAvisoVideo uri={c.video_url} titulo={c.titulo} /> : null}
               <View style={styles.cardBody}>
-                <Text style={styles.data}>{quando(c.publicado_em)}</Text>
+                <Text style={styles.data}>{rotuloDataAviso(c.publicado_em, hoje, t, lang)}</Text>
                 <Text style={styles.cardTitulo}>{c.titulo}</Text>
                 <Text style={styles.cardCorpo}>{c.corpo}</Text>
                 {destinoComunicado(c.link_inscricao) && <Pressable accessibilityRole="button" onPress={() => void abrirInscricao(c)} style={{ minHeight: 48, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primary, borderRadius: radius.md, marginTop: spacing.sm }}><Text style={{ color: '#fff', fontWeight: '700' }}>{t("Ver inscrição")}</Text></Pressable>}
