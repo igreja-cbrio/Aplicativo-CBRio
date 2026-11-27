@@ -34,6 +34,8 @@ import { erroNomeCompleto } from "@/lib/nomeCompleto";
 import { guardarFichaPendente, guardarRecusaCadastro, pedeConfirmacaoPorCodigo, recusaDoErro, type FichaPendente } from "@/lib/recusaCadastro";
 import { trackEventoJa } from "@/lib/telemetria";
 import { consumirCpfSemConta } from "@/lib/recuperarSenhaRegra";
+import { primeiroCampoVazio } from "@/lib/abandonoCadastro";
+import { useAbandonoCadastro } from "@/lib/useAbandonoCadastro";
 import { abrirFichaCadastro, fecharFichaCadastro } from "@/lib/cadastroAberto";
 
 export default function CadastroScreen() {
@@ -48,6 +50,10 @@ export default function CadastroScreen() {
     abrirFichaCadastro();
     return () => { fecharFichaCadastro(); };
   }, []);
+
+  // Em que campo a pessoa parou quando largou o formulário (27/11/2026): no
+  // lançamento, 13 largaram e não havia como saber onde. Só o nome do campo.
+  const abandono = useAbandonoCadastro("cadastro");
 
   const dlg = useDialogo();
   const colors = useColors();
@@ -80,6 +86,9 @@ export default function CadastroScreen() {
   async function handleSignUp() {
     setError(null);
     if (!nome || !cpf || !nascimento || !phone || !email || !password) {
+      abandono.invalido(primeiroCampoVazio([
+        ["nome", nome], ["cpf", cpf], ["nascimento", nascimento], ["telefone", phone], ["email", email], ["senha", password],
+      ]));
       setError(t("Preencha todos os campos."));
       return;
     }
@@ -88,22 +97,27 @@ export default function CadastroScreen() {
     // do ERP (lib/nomeCompleto.ts).
     const erroNome = erroNomeCompleto(nome);
     if (erroNome) {
+      abandono.invalido("nome");
       setError(t(erroNome));
       return;
     }
     if (!sexo) {
+      abandono.invalido("sexo");
       setError(t("Selecione o sexo."));
       return;
     }
     if (!isValidCPF(cpf)) {
+      abandono.invalido("cpf");
       setError(t("CPF inválido."));
       return;
     }
     if (!isValidDateBR(nascimento)) {
+      abandono.invalido("nascimento");
       setError(t("Data de nascimento inválida (use DD/MM/AAAA)."));
       return;
     }
     if (password.length < 6) {
+      abandono.invalido("senha");
       setError(t("A senha deve ter pelo menos 6 caracteres."));
       return;
     }
@@ -113,6 +127,9 @@ export default function CadastroScreen() {
     // enquanto o carimbo ainda está sendo gravado e rebate a pessoa pra tela de
     // cadastro — foi o que aconteceu no 2º teste (ver lib/cadastroEmAndamento).
     iniciarCadastroNativo();
+    // ⚠️ ANTES do signUp: com a sessão criada esta tela desmonta sozinha, e sem
+    // isto todo cadastro que deu certo contaria como abandono.
+    abandono.enviar();
     try {
       const { needsEmailConfirmation } = await signUp(email, password, {
         nome,
@@ -200,6 +217,8 @@ export default function CadastroScreen() {
         label: "signup",
       });
       setError(t(mensagemErroAuth(e, "Não foi possível criar a conta.")));
+      // A conta não foi criada: a pessoa continua no formulário.
+      abandono.reabrir();
     } finally {
       // Baixa a bandeira SEMPRE — inclusive quando deu erro. Aí o portão volta
       // a decidir normalmente (e é ele quem manda pra tela de cadastro, com
@@ -234,6 +253,7 @@ export default function CadastroScreen() {
                 label={t("Nome completo")}
                 value={nome}
                 onChangeText={setNome}
+                onFocus={() => abandono.tocar("nome")}
                 placeholder={t("Seu nome completo")}
                 autoCapitalize="words"
               />
@@ -241,6 +261,7 @@ export default function CadastroScreen() {
                 label="CPF"
                 value={cpf}
                 onChangeText={(v) => setCpf(maskCPF(v))}
+                onFocus={() => abandono.tocar("cpf")}
                 placeholder="000.000.000-00"
                 keyboardType="number-pad"
                 maxLength={14}
@@ -249,6 +270,7 @@ export default function CadastroScreen() {
                 label={t("Data de nascimento")}
                 value={nascimento}
                 onChangeText={(v) => setNascimento(maskDateBR(v))}
+                onFocus={() => abandono.tocar("nascimento")}
                 placeholder="DD/MM/AAAA"
                 keyboardType="number-pad"
                 maxLength={10}
@@ -259,11 +281,13 @@ export default function CadastroScreen() {
                 onChangeCountry={setCountry}
                 number={phone}
                 onChangeNumber={setPhone}
+                onFocus={() => abandono.tocar("telefone")}
               />
               <Input
                 label={t("E-mail")}
                 value={email}
                 onChangeText={setEmail}
+                onFocus={() => abandono.tocar("email")}
                 placeholder="voce@exemplo.com"
                 keyboardType="email-address"
               />
@@ -271,6 +295,7 @@ export default function CadastroScreen() {
                 label={t("Senha")}
                 value={password}
                 onChangeText={setPassword}
+                onFocus={() => abandono.tocar("senha")}
                 placeholder={t("Crie sua senha")}
                 ajuda={t("Pelo menos 6 caracteres. Senhas fáceis, como 123456, são recusadas.")}
                 secure
@@ -287,7 +312,7 @@ export default function CadastroScreen() {
                     return (
                       <Pressable
                         key={opt.v}
-                        onPress={() => setSexo(opt.v)}
+                        onPress={() => { abandono.tocar("sexo"); setSexo(opt.v); }}
                         style={[styles.areaPill, ativo && styles.areaPillOn]}
                         accessibilityRole="button"
                         accessibilityState={{ selected: ativo }}
@@ -311,7 +336,7 @@ export default function CadastroScreen() {
                     return (
                       <Pressable
                         key={opt.label}
-                        onPress={() => setFrequentaArea(opt.v)}
+                        onPress={() => { abandono.tocar("area"); setFrequentaArea(opt.v); }}
                         style={[styles.areaPill, ativo && styles.areaPillOn]}
                         accessibilityRole="button"
                         accessibilityState={{ selected: ativo }}
