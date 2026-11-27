@@ -52,7 +52,7 @@ import {
   estadoDoEncontro, ultimaOcorrencia, proximaOcorrencia,
   dataLonga, quandoCurto, distanciaEmTexto, dataComHora, horaCurta,
 } from "@/lib/proximoEncontro";
-import { navegacoes } from "./stubs/expo-router";
+import { metodos, navegacoes } from "./stubs/expo-router";
 import { topicoVoluntariado, canaisObsoletos } from "@/lib/canalRealtime";
 import {
   mascararTelefoneBR, digitosTelefone, exibirTelefone, limiteDigitos,
@@ -254,6 +254,15 @@ describe("hierarquia · a árvore do `cd ..`", () => {
   // ⚠️ MUTATION GUARD: se alguém trocar `navigate` por `back()`, isto quebra —
   // e `back()` é justamente o comportamento de histórico que o Marcos pediu pra
   // abandonar ("que esse voltar fosse um comando cd .. no terminal").
+  // ⚠️ MUTATION GUARD (27/11/2026): `navigate` no expo-router 6 EMPILHA uma cópia
+  // nova do pai em vez de voltar a ele (lib/abas.ts). A seta é `dismissTo`.
+  it("a seta VOLTA para o pai vivo (dismissTo), não empilha outro (navigate)", () => {
+    metodos.length = 0;
+    subirUmNivel("/escala-supervisor");
+    expect(navegacoes).toEqual(["/voluntariado"]);
+    expect(metodos).toEqual(["dismissTo"]);
+  });
+
   it("NÃO usa histórico: da tela de barra vai direto pra Home", () => {
     subirUmNivel("/devocional");
     expect(navegacoes).toEqual(["/"]);

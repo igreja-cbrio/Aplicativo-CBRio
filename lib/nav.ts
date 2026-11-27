@@ -20,6 +20,13 @@ export function irPara(rota: Href) {
 // ============================================================================
 //  O TOQUE NA BARRA DE BAIXO (11/08/2026 · "a navegação tá travada")
 //
+//  ⚠️⚠️ CORREÇÃO DE 27/11/2026: o raciocínio abaixo partia de uma premissa que
+//  NÃO vale no expo-router 6: `navigate` para tela que não é a do topo EMPILHA
+//  cópia nova (medido no StackRouter; ver lib/abas.ts). Nas telas principais a
+//  barra agora troca de aba por `components/navigation/TrocaDeAba` (memória por
+//  aba, sobe o galho vivo). `irParaBarra` fica como caminho de reserva, fora
+//  daquela pilha. O texto original segue como histórico.
+//
 //  ⚠️⚠️ É `navigate`, e NUNCA `replace` — considerei trocar e a troca seria uma
 //  REGRESSÃO. `navigate` reaproveita a tela quando ela já está na pilha: indo
 //  Grupos → Servir → Grupos, o expo-router VOLTA pra instância viva de Grupos

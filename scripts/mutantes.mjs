@@ -49,8 +49,24 @@ const MUTANTES = [
   {
     nome: "hierarquia: voltar no histórico (router.back) em vez de subir",
     arq: "lib/hierarquia.ts",
-    de: '  router.navigate((Object.keys(params).length ? { pathname: pai, params } : pai) as Href);',
+    de: '  router.dismissTo((Object.keys(params).length ? { pathname: pai, params } : pai) as Href);',
     para: "  router.back();",
+  },
+  {
+    // ⚠️ 27/11/2026: no expo-router 6, `navigate` EMPILHA uma cópia nova do pai
+    // (a seta criava um Devocional novo por cima da Bíblia). `dismissTo` volta.
+    nome: "hierarquia: seta volta a empilhar o pai (navigate) em vez de voltar a ele",
+    arq: "lib/hierarquia.ts",
+    de: '  router.dismissTo((Object.keys(params).length ? { pathname: pai, params } : pai) as Href);',
+    para: '  router.navigate((Object.keys(params).length ? { pathname: pai, params } : pai) as Href);',
+  },
+  {
+    // Memória por aba: sem subir o galho vivo, a aba "recomeça" a cada toque
+    // (o relato do Marcos: escalando, olha Grupos, volta e perdeu a escala).
+    nome: "abas: troca de aba abre a raiz nova em vez do galho vivo",
+    arq: "lib/abas.ts",
+    de: '  return { tipo: "pilha", rotas: [...outras, ...(doGalho.length ? doGalho : [{ name: nomeRaiz }])] };',
+    para: '  return { tipo: "pilha", rotas: [...outras, { name: nomeRaiz }] };',
   },
   {
     nome: "dataBRT: usar o dia UTC em vez do dia da igreja",

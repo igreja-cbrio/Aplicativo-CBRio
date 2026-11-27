@@ -15,9 +15,11 @@ export function TopBar({ mostrarVoltar = false, rota }: { mostrarVoltar?: boolea
   const colors = useColors();
   const insets = useSafeAreaInsets(), pathname = usePathname(), router = useRouter(), t = useT();
   const { openMenu } = useMenu(), { count } = useNotificacoesNaoLidas();
+  // Logo = Home pela pilha (27/11/2026): `dismissTo` desce até a Home que já está no fundo;
+  // `navigate` empilharia outra Home por cima (lib/abas.ts).
   return <View style={[styles.header, { paddingTop: insets.top, minHeight: insets.top + TOPBAR_H }]}>
     {mostrarVoltar ? <Pressable accessibilityRole="button" accessibilityLabel={t("Voltar")} onPress={() => subirUmNivel(rota ?? pathname)} style={styles.button}><Ionicons name="chevron-back" size={24} color={colors.text} /></Pressable> : null}
-    <Pressable accessibilityRole="button" accessibilityLabel={t("Início")} onPress={() => router.navigate("/")} style={styles.brand}>
+    <Pressable accessibilityRole="button" accessibilityLabel={t("Início")} onPress={() => router.dismissTo("/")} style={styles.brand}>
       <View style={styles.logoFrame}><Image source={require("@/assets/images/cbrio-wordmark.png")} resizeMode="contain" tintColor={colors.text} style={styles.logo} /></View>
     </Pressable>
     <AnimatedBell count={count}><Pressable accessibilityRole="button" accessibilityLabel={t("Notificações")} onPress={() => router.navigate("/notificacoes")} style={styles.button}><Ionicons name="notifications-outline" size={23} color={colors.text} />{count > 0 ? <View style={[styles.dot, { backgroundColor: colors.text }]} /> : null}</Pressable></AnimatedBell>

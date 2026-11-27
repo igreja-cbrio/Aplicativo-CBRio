@@ -9,6 +9,8 @@ import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useT } from "@/lib/i18n";
 import { irParaBarra } from "@/lib/nav";
 import { QUICK_LINKS } from "@/lib/appNavigation";
+import { abaDaRota } from "@/lib/abas";
+import { useTrocaDeAba } from "@/components/navigation/TrocaDeAba";
 
 const TARGETS: TutorialTargetId[] = ["care", "devotional", "groups", "serve", "giving"];
 
@@ -34,22 +36,28 @@ export function QuickLinks({ rota }: { rota?: string } = {}) {
   const globalPathname = usePathname(), t = useT();
   const pathname = rota ?? globalPathname;
   const labels = useMemo(() => QUICK_LINKS.map(item => t(item.label)), [t]);
+  // Memória por aba (27/11/2026): a troca sobe o galho vivo da aba (lib/abas.ts).
+  // Fora das telas principais não há pilha para reordenar e vale o caminho antigo.
+  const trocaDeAba = useTrocaDeAba();
+  const ir = (href: string) => trocaDeAba ? trocaDeAba(href) : irParaBarra(pathname, href);
+  // A aba fica acesa também nas telas de dentro dela (Montar escala acende Servir).
+  const abaAtual = abaDaRota(pathname);
   // Só a versão que contém o controle UIKit usa a interação nativa. A OTA é
   // segura em binários antigos: nenhum gesto/lupa customizado é simulado.
   if (NativeShortcuts && !estreita) return <TutorialTarget id="dock"><NativeShortcuts
     labels={labels}
-    selectedIndex={tutorialIndex >= 0 ? tutorialIndex : QUICK_LINKS.findIndex(item => pathname === item.href)}
+    selectedIndex={tutorialIndex >= 0 ? tutorialIndex : QUICK_LINKS.findIndex(item => abaAtual === item.href)}
     style={{ height: 74, width: "100%" }}
     onShortcutSelect={({ nativeEvent }) => {
       if (tutorial?.highlightedTarget) return;
       const item = QUICK_LINKS[nativeEvent.index];
-      if (item) irParaBarra(pathname, item.href);
+      if (item) ir(item.href);
     }}
   /></TutorialTarget>;
   // UITabBar já aplica o próprio recuo. Só o fallback precisa dessa margem.
   return <View style={estreita ? styles.fallbackMarginEstreita : styles.fallbackMargin}><DockSurface><View style={styles.dock}>
     {QUICK_LINKS.map((item, i) => <TutorialTarget key={item.href} id={TARGETS[i]} style={{ flex: i === 4 ? 1.4 : 1, minWidth: 0 }}>
-      <Pressable accessibilityRole="button" accessibilityLabel={labels[i]} accessibilityState={{ selected: pathname === item.href }} onPress={() => irParaBarra(pathname, item.href)} style={({ pressed }) => [styles.item, i > 0 && styles.divider, (pressed || pathname === item.href) && styles.selected]}>
+      <Pressable accessibilityRole="button" accessibilityLabel={labels[i]} accessibilityState={{ selected: abaAtual === item.href }} onPress={() => ir(item.href)} style={({ pressed }) => [styles.item, i > 0 && styles.divider, (pressed || abaAtual === item.href) && styles.selected]}>
         <Icone name={item.icon} size={21} color="#29434a" />
         <Text allowFontScaling={false} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.label}>{labels[i]}</Text>
       </Pressable>
