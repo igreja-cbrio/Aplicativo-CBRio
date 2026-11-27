@@ -1,7 +1,7 @@
 import { ScrollView } from "@/components/navigation/DockContent";
 import { Text } from "@/components/ui/Typography";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, Share, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
@@ -16,9 +16,10 @@ import { subirUmNivel } from "@/lib/hierarquia";
 import { trackEvento } from "@/lib/telemetria";
 import { hojeISO, inscreverNoPlano, itensDoPlano, leiturasDoPlano, planoPorId, type ItemEdicao, type PlanoDevocional } from "@/lib/devocional";
 import {
-  diasDoPlano, edicaoEmFoco, edicoesDoCalendario, podeAbrirDia, progressoDoPlano, ritmoDoPlano,
+  diasDoPlano, edicaoEmFoco, edicaoVigente, edicoesDoCalendario, podeAbrirDia, progressoDoPlano, ritmoDoPlano,
   semanaEmFoco, semanasDoPlano, type DiaDoPlano,
 } from "@/lib/planoRitmo";
+import { mensagemDaSemana } from "@/lib/compartilharSemana";
 
 /**
  * A tela de TODO plano de leitura (24/09 · "Valores de Cristo"; universal desde
@@ -81,7 +82,10 @@ export default function PlanoScreen() {
   // As abas dos dois ritmos, no mesmo formato.
   const { abas, foco } = useMemo(() => {
     if (ritmo === "calendario") {
-      const eds = edicoesDoCalendario(itens, lidos, hoje, plano?.slug === "quarta-com-deus");
+      const qcd = plano?.slug === "quarta-com-deus";
+      const todas = edicoesDoCalendario(itens, lidos, hoje, qcd);
+      // Quarta com Deus mostra só a edição que está valendo (lib/planoRitmo.ts).
+      const eds = qcd ? edicaoVigente(todas, hoje) : todas;
       const lista: Aba[] = eds.map((e) => ({
         chave: e.chave, rotulo: e.titulo ?? `${t("Semana de")} ${ddmm(e.inicio)}`,
         lidos: e.lidos, total: e.dias.length, completa: e.completa, dias: e.dias, inicio: e.inicio, fim: e.fim,
@@ -105,6 +109,15 @@ export default function PlanoScreen() {
   const diasVisiveis = abaAberta ? abaAberta.dias : dias;
 
   const calendario = ritmo === "calendario";
+  // Compartilhar a SEMANA inteira (só o Quarta com Deus tem página pública).
+  const textoDaSemana = plano?.slug === "quarta-com-deus" && abaAberta
+    ? mensagemDaSemana({ chave: abaAberta.chave, titulo: abaAberta.rotulo, inicio: abaAberta.inicio, fim: abaAberta.fim }, t)
+    : null;
+  const compartilharSemana = () => {
+    if (!textoDaSemana || !plano) return;
+    trackEvento("devocional_compartilhar_semana", { entity_id: plano.id });
+    Share.share({ message: textoDaSemana }).catch(() => undefined);
+  };
   // Quem abre os dias: no calendário, todo mundo; no ritmo, o inscrito.
   const podeLer = calendario || !!plano?.inscrito;
   const atual = calendario
@@ -154,7 +167,9 @@ export default function PlanoScreen() {
     <View style={s.header}>
       <Pressable onPress={() => subirUmNivel()} hitSlop={12} style={s.back} accessibilityRole="button" accessibilityLabel={t("Voltar")}><Ionicons name="chevron-back" size={24} color={c.text} /></Pressable>
       <Text style={s.headerTitle} numberOfLines={1}>{t("Plano de leitura")}</Text>
-      <View style={s.back} />
+      {textoDaSemana
+        ? <Pressable onPress={compartilharSemana} hitSlop={12} style={[s.back, { alignItems: "flex-end" }]} accessibilityRole="button" accessibilityLabel={t("Compartilhar a semana")}><Ionicons name="share-outline" size={22} color={c.text} /></Pressable>
+        : <View style={s.back} />}
     </View>
     {loading ? <ActivityIndicator color={c.primary} style={{ marginTop: 40 }} />
       : falhou ? <ErrorState onRetry={load} />
