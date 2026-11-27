@@ -255,8 +255,9 @@ aparelho, e continua sendo passo humano antes de release.
   voltar fosse um comando cd .. no terminal").** `router.back()` anda no
   HISTÓRICO: quem tocava Grupos → Servir → Cuidados → Devocional na barra
   precisava de 4 toques repassando telas já vistas. O mapa da árvore vive em
-  **`lib/hierarquia.ts`** (`subirUmNivel()` · `router.navigate(pai)`, que VOLTA
-  pro pai quando ele já está na pilha e descarta o que estava em cima) e as **~29
+  **`lib/hierarquia.ts`** (`subirUmNivel()` · `router.dismissTo(pai)` desde
+  27/11/2026, que VOLTA pro pai vivo e descarta o que estava em cima; o
+  `navigate` do expo-router 6 empilhava cópia nova · `docs/claude/ui-navegacao.md`) e as **~29
   telas com seta própria chamam a MESMA função** — regra única, não 29 cópias.
   ⚠️ A rota atual é registrada pelo `(app)/_layout.tsx` (`registrarRotaAtual`),
   que já observa o pathname: as telas antigas usam `router.back()` do objeto

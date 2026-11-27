@@ -9,10 +9,16 @@
 // repassando por telas que já viu. Com hierarquia, UM toque leva ao PAI — e da
 // tela de barra o pai é a Home.
 //
-// ⚠️ `navigate` (e não push/replace): quando o pai já está na pilha, o
-// expo-router VOLTA pra ele e descarta o que estava em cima — que é justamente
-// o `cd ..`. Se não estiver na pilha (app aberto direto numa tela por push ou
-// deep link), ele entra normalmente e a pilha fica coerente.
+// ⚠️⚠️ `dismissTo` (27/11/2026), NÃO `navigate`. Este bloco dizia que o
+// `navigate` "volta pro pai quando ele já está na pilha"; no expo-router 6 isso
+// não acontece: ele EMPILHA uma cópia nova do pai (medido simulando o
+// StackRouter · ver lib/abas.ts). A seta criava um Devocional novo em cima da
+// Bíblia, com animação de ida, e a pilha crescia sem limite. `dismissTo` é o
+// `cd ..` de verdade: com o pai na pilha, VOLTA para a instância viva e
+// descarta o que estava em cima; sem o pai (app aberto direto numa tela por
+// deep link), troca a tela atual pelo pai.
+// ⚠️ Consequência assumida: voltar à Home pela seta desce a pilha inteira e
+// limpa a memória das abas (lib/abas.ts). A memória vale entre abas pela barra.
 //
 // ⚠️ Rota que não estiver no mapa cai na Home. É proposital: preferimos um
 // destino previsível a adivinhar. Tela nova = uma linha aqui.
@@ -266,5 +272,5 @@ export function subirUmNivel(rota?: string) {
   const origem = rota ?? rotaAtual;
   const pai = rotaPai(origem, paramsAtuais);
   const params = paramsDoPai(origem, paramsAtuais);
-  router.navigate((Object.keys(params).length ? { pathname: pai, params } : pai) as Href);
+  router.dismissTo((Object.keys(params).length ? { pathname: pai, params } : pai) as Href);
 }

@@ -6,6 +6,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- ⚠️⚠️ Memória por aba · `navigate` empilha cópia nova · seta com `dismissTo` · Bíblia reabre onde parou (27/11/2026)
 - ⚠️⚠️ Barra sempre com 5, teto da letra, Bíblia sem casca, capacete em Servir (27/11/2026)
 
 - Dock sob o chat durante a volta por gesto (25/11/2026)
@@ -769,3 +770,44 @@ barra com 3 atalhos (Servir e Generosidade sumiam) e textos deformados.
 Testes: `test/quickLinksLetraGrande.test.ts`, teto em `test/fontScale.test.ts`,
 casca da Bíblia e ícone em `test/appNavigation.test.ts`. A TELA ainda precisa de
 conferência em aparelho com a fonte do sistema no máximo (Android e iPhone).
+
+
+## ⚠️⚠️ Memória por aba · `navigate` empilha cópia nova · seta com `dismissTo` · Bíblia reabre onde parou (27/11/2026)
+
+Pedido do Marcos: quem está montando a escala, olha Grupos rapidinho e toca em
+Servir de novo deve encontrar a escala como deixou.
+
+**A descoberta que mudou o desenho.** No expo-router 6 / React Navigation 7,
+`router.navigate` para uma tela que já está na pilha mas NÃO no topo empilha uma
+CÓPIA NOVA (só reaproveita a do topo). Conferido lendo `StackRouter` e o
+override do `StackClient` do expo-router, e simulado em `test/abas.test.ts`. Os
+comentários de `lib/nav.ts` (11/08) e `lib/hierarquia.ts` (05/08) diziam o
+contrário. Efeitos que existiam: cada toque na barra criava uma aba nova (o
+Servir "recomeçava"), a seta empilhava o pai com animação de ida, e as telas
+antigas ficavam congeladas na memória sem limite. O app já estava no Router 6
+desde 03/06 (`6a1e248`), então a premissa nunca valeu aqui.
+
+- **Barra = galhos** (`lib/abas.ts`, régua pura; `components/navigation/TrocaDeAba.tsx`
+  aplica). Galho de uma aba = a raiz dela e as telas de dentro (pela árvore de
+  `hierarquia.ts`). O toque faz `reset` com as MESMAS rotas (mesma `key`),
+  reordenadas: o galho da aba sobe ao topo vivo. iOS: `setViewControllers` sem
+  animação; Android: a tela que sobe é reanexada como num "voltar". Tocar na aba
+  acesa numa tela de dentro volta ao início dela. A pilha fica limitada: Home + um
+  galho por aba.
+- A aba fica acesa nas telas de dentro dela (`abaDaRota`): Montar escala acende Servir.
+- **Seta = `dismissTo(pai)`**: volta ao pai vivo; sem o pai na pilha (deep link),
+  troca a tela atual por ele. O logo da faixa de cima também desce até a Home.
+  **Consequência assumida:** voltar à Home desce a pilha inteira e limpa a
+  memória das abas. A memória vale entre abas pela barra, que é o caso pedido.
+- **Bíblia** (sem menu desde a mesma data, então sair dela é fechar a tela):
+  `lib/bibliaPosicao.ts` guarda livro, capítulo, versão e rolagem em memória do
+  processo. Reabrir em até 10 min (contados da saída) volta ao mesmo ponto;
+  depois disso, ou com o app fechado, abre na lista (decisão de 25/11).
+- **Não usar** `navigate` para trocar de aba nem `POP_TO` (ele DESTRÓI o que está
+  acima do destino e, sem o destino na pilha, substitui a tela do topo).
+
+Testes: `test/abas.test.ts` (exemplo do Marcos, pilha limitada, prova no
+StackRouter real), `test/bibliaPosicao.test.ts`, seta com `dismissTo` em
+`test/reguas.test.ts`, barra em `test/quickLinksLetraGrande.test.ts`. Mutantes
+novos: seta voltando a `navigate` e troca de aba sem o galho vivo. A reordenação
+nativa precisa de conferência em aparelho (iOS e Android).

@@ -2,10 +2,12 @@
 // Só o que o código puro toca: `router.navigate`. As chamadas ficam
 // registradas em `navegacoes` pra o teste conferir PARA ONDE a seta levaria.
 export const navegacoes: string[] = [];
+export const metodos: string[] = [];
 
 export const router = {
   navigate: (destino: unknown) => {
     navegacoes.push(String(destino));
+    metodos.push("navigate");
   },
   push: (destino: unknown) => {
     navegacoes.push(String(destino));
@@ -18,6 +20,13 @@ export const router = {
   },
   back: () => {
     navegacoes.push("(back)");
+  },
+  // A seta (`subirUmNivel`) volta com `dismissTo` desde 27/11/2026: o destino
+  // entra em `navegacoes` igual (é o PAI que os testes conferem) e o método fica
+  // em `metodos`, para provar que não é `navigate` (que empilha cópia nova).
+  dismissTo: (destino: unknown) => {
+    navegacoes.push(String(destino));
+    metodos.push("dismissTo");
   },
   canGoBack: () => false,
   dismissAll: () => {},

@@ -8,6 +8,7 @@ vi.mock('@/contexts/ThemeContext', () => ({ useTheme: () => ({ fontMultiplier: 1
 vi.mock('@/lib/i18n', () => ({ useT: () => (s: string) => s }));
 vi.mock('expo-router', () => ({ usePathname: () => m.route }));
 vi.mock('@/lib/nav', () => ({ irParaBarra: m.navigate }));
+vi.mock('@/components/navigation/TrocaDeAba', () => ({ useTrocaDeAba: () => null }));
 vi.mock('@/modules/native-shortcuts/src/NativeShortcuts', () => ({ NativeShortcuts: 'NativeDock' }));
 vi.mock('@/components/ui/Typography', () => ({ Text: 'Text' }));
 vi.mock('@/components/navigation/DockSurface', () => ({ DockSurface: 'Surface' }));

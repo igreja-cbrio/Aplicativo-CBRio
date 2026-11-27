@@ -19,6 +19,7 @@ import { escalar } from "@/lib/fonteLeitura";
 import { FONTE_SERIF } from "@/lib/fonteSerif";
 import { ControleFonte } from "@/components/devocional/ControleFonte";
 import { chegouAoFim } from "@/lib/fimDeLeitura";
+import { guardarPosicaoBiblia, posicaoBibliaRecente, type PosicaoBiblia } from "@/lib/bibliaPosicao";
 
 const CORES = [{ nome: "amarelo" as const, cor: "#F8E59A" }, { nome: "azul" as const, cor: "#BFDDEA" }, { nome: "verde" as const, cor: "#CDE2C2" }, { nome: "rosa" as const, cor: "#EAC6D2" }];
 export default function Biblia() {
@@ -45,6 +46,22 @@ export default function Biblia() {
   // Minhas anotações e Meu histórico. Agora abre na lista, com um atalho para continuar.
   const [ultima, setUltima] = useState<{ livro: LivroBiblico; numero: number } | null>(null);
   const buscouUltima = useRef(false);
+  // Onde a pessoa parou (27/11/2026 · lib/bibliaPosicao.ts): quem sai e volta em
+  // poucos minutos reabre no mesmo capítulo e no mesmo ponto da rolagem.
+  const [restaurando, setRestaurando] = useState(() => posicaoBibliaRecente(Date.now()) != null);
+  const rolagemPendente = useRef<number | null>(null), posicaoAtual = useRef<PosicaoBiblia | null>(null);
+  function guardar(posicao: PosicaoBiblia) { posicaoAtual.current = posicao; guardarPosicaoBiblia(posicao); }
+  useEffect(() => {
+    const p = posicaoBibliaRecente(Date.now());
+    const l = p && LIVROS_BIBLIA.find(x => x.nome === p.livro), v = p && VERSOES_BIBLIA.find(x => x.id === p.versao);
+    if (!p || !l || !v) { setRestaurando(false); return; }
+    rolagemPendente.current = p.y;
+    setVersao(v);
+    abrirCapitulo(p.numero, l, v).finally(() => setRestaurando(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // A janela conta a partir de quando a pessoa SAIU, não da última rolagem.
+  useEffect(() => () => { if (posicaoAtual.current) guardarPosicaoBiblia({ ...posicaoAtual.current, em: Date.now() }); }, []);
   const normalizar = (v: string) => v.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
   const livrosFiltrados = LIVROS_BIBLIA.filter(l => normalizar(l.nome).includes(normalizar(busca)));
   useEffect(() => {
@@ -79,8 +96,9 @@ export default function Biblia() {
       }));
       setMarcacoes(mapa);
       setLivro(livroAlvo); setVersiculos(versos); setCapitulo(numero); setSelecionados([]); setUltima({ livro: livroAlvo, numero });
-      scrollRef.current?.scrollTo({ y: 0, animated: false });
+      if (rolagemPendente.current == null) scrollRef.current?.scrollTo({ y: 0, animated: false });
       contado.current = null; alturaConteudo.current = 0;
+      guardar({ livro: livroAlvo.nome, numero, versao: versaoAlvo.id, y: rolagemPendente.current ?? 0, em: Date.now() });
     } catch { Alert.alert(t("Erro"), t("Não foi possível carregar este capítulo. Confira a internet e tente de novo, ou escolha outra versão.")); }
     finally { setCarregando(false); }
   }
@@ -140,10 +158,23 @@ export default function Biblia() {
     </View>
     <ScrollView ref={scrollRef}
       onLayout={e => { alturaVisivel.current = e.nativeEvent.layout.height; }}
-      onContentSizeChange={(_, h) => { alturaConteudo.current = h; conferirFim(0); }}
-      onScroll={e => conferirFim(e.nativeEvent.contentOffset.y)} scrollEventThrottle={250}
+      onContentSizeChange={(_, h) => {
+        alturaConteudo.current = h; conferirFim(0);
+        // Volta ao ponto da leitura assim que os versículos ocupam a tela.
+        const alvo = rolagemPendente.current;
+        if (alvo != null && capitulo && versiculos.length) {
+          scrollRef.current?.scrollTo({ y: alvo, animated: false });
+          if (h >= alvo + alturaVisivel.current) rolagemPendente.current = null;
+        }
+      }}
+      onScrollBeginDrag={() => { rolagemPendente.current = null; }}
+      onScroll={e => {
+        const y = e.nativeEvent.contentOffset.y;
+        conferirFim(y);
+        if (livro && capitulo && rolagemPendente.current == null) guardar({ livro: livro.nome, numero: capitulo, versao: versao.id, y, em: Date.now() });
+      }} scrollEventThrottle={250}
       contentContainerStyle={[styles.content, Boolean(capitulo) && [styles.readerContent, { paddingBottom: rodape + 220 }]]} showsVerticalScrollIndicator={!capitulo}>
-      {!livro && <BookList busca={busca} setBusca={setBusca} livros={livrosFiltrados} abrir={setLivro} ultima={ultima} continuar={() => ultima && abrirCapitulo(ultima.numero, ultima.livro)} s={styles} c={colors} t={t} />}
+      {!livro && !restaurando && <BookList busca={busca} setBusca={setBusca} livros={livrosFiltrados} abrir={setLivro} ultima={ultima} continuar={() => ultima && abrirCapitulo(ultima.numero, ultima.livro)} s={styles} c={colors} t={t} />}
       {livro && !capitulo && <><Text style={styles.eyebrow}>{t("CAPÍTULOS")}</Text><Text style={styles.title}>{livro.nome}</Text><View style={styles.chapters}>{Array.from({ length: livro.capitulos }, (_, i) => <Pressable key={i + 1} style={styles.chapter} onPress={() => abrirCapitulo(i + 1)}><Text style={styles.chapterText}>{i + 1}</Text></Pressable>)}</View></>}
       {carregando && <ActivityIndicator color={colors.primary} size="large" />}
       {capitulo && !carregando && <View style={styles.reading}><Text style={styles.chapterNumber}>{capitulo}</Text>{versiculos.map(v => {

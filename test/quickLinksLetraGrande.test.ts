@@ -4,11 +4,12 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 // Relato de 27/11/2026: celulares com a letra do sistema aumentada viam só 3
 // atalhos (Servir e Generosidade escondidos numa faixa rolável).
-const m = vi.hoisted(() => ({ width: 390, fontScale: 1, native: null as unknown }));
+const m = vi.hoisted(() => ({ width: 390, fontScale: 1, native: null as unknown, route: '/', trocar: null as null | ((d: string) => void) }));
 vi.mock('react-native', () => ({ View: 'View', Pressable: 'Pressable', StyleSheet: { create: (s: unknown) => s, hairlineWidth: 1 }, useWindowDimensions: () => ({ width: m.width, fontScale: m.fontScale }) }));
 vi.mock('@/contexts/TutorialContext', () => ({ useTutorial: () => ({ highlightedTarget: null }), TutorialTarget: 'Target' }));
 vi.mock('@/lib/i18n', () => ({ useT: () => (s: string) => s }));
-vi.mock('expo-router', () => ({ usePathname: () => '/' }));
+vi.mock('expo-router', () => ({ usePathname: () => m.route }));
+vi.mock('@/components/navigation/TrocaDeAba', () => ({ useTrocaDeAba: () => m.trocar }));
 vi.mock('@/lib/nav', () => ({ irParaBarra: vi.fn() }));
 vi.mock('@/modules/native-shortcuts/src/NativeShortcuts', () => ({ get NativeShortcuts() { return m.native; } }));
 vi.mock('@/components/ui/Typography', () => ({ Text: 'Text' }));
@@ -17,7 +18,7 @@ vi.mock('@/components/navigation/DockSurface', () => ({ DockSurface: 'Surface' }
 import { QuickLinks } from '../components/navigation/QuickLinks';
 
 let tree: ReactTestRenderer;
-afterEach(async () => { await act(async () => tree?.unmount()); m.width = 390; m.fontScale = 1; m.native = null; });
+afterEach(async () => { await act(async () => tree?.unmount()); m.width = 390; m.fontScale = 1; m.native = null; m.route = '/'; m.trocar = null; });
 async function montar() {
   (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
   await act(async () => { tree = create(React.createElement(QuickLinks)); });
@@ -48,4 +49,21 @@ it('iPhone com a barra nativa continua nela mesmo com letra grande', async () =>
   await montar();
   expect(tree.root.findAllByType('NativeDock' as any)).toHaveLength(1);
   expect(tree.root.findAllByType('Pressable' as any)).toHaveLength(0);
+});
+
+// Memória por aba (27/11/2026): a barra troca pela pilha e acende a aba do galho.
+it('toque na barra usa a troca de aba das telas principais', async () => {
+  const destinos: string[] = [];
+  m.trocar = (d) => destinos.push(d);
+  await montar();
+  const servir = tree.root.findAllByType('Pressable' as any).find((b) => b.props.accessibilityLabel === 'Servir')!;
+  await act(async () => servir.props.onPress());
+  expect(destinos).toEqual(['/voluntariado']);
+});
+
+it('dentro de Montar escala, Servir fica aceso', async () => {
+  m.route = '/escala-supervisor';
+  await montar();
+  const acesas = tree.root.findAllByType('Pressable' as any).filter((b) => b.props.accessibilityState?.selected);
+  expect(acesas.map((b) => b.props.accessibilityLabel)).toEqual(['Servir']);
 });
