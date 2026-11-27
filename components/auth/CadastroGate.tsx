@@ -32,6 +32,11 @@ import { assinarCadastroNativo, lerCadastroNativo } from "@/lib/cadastroEmAndame
 
 const CadastroReadyContext = createContext(false);
 export const useCadastroReady = () => useContext(CadastroReadyContext);
+// O mesmo GET do portão já traz a marca do nascimento suspeito (27/11/2026):
+// o aviso da Home lê daqui, sem uma segunda chamada. O valor é o id da conta
+// para a qual o servidor respondeu `true` (trocar de conta não herda o aviso).
+const NascimentoSuspeitoContext = createContext<string | null>(null);
+export const useNascimentoSuspeitoDe = () => useContext(NascimentoSuspeitoContext);
 
 export function CadastroGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -44,6 +49,7 @@ export function CadastroGate({ children }: { children: React.ReactNode }) {
   const [liberadoTutorialPara, setLiberadoTutorialPara] = useState<string | null>(null);
   const [checado, setChecado] = useState(false);
   const [incompleto, setIncompleto] = useState(false);
+  const [suspeitoDe, setSuspeitoDe] = useState<string | null>(null);
   const redirecionou = useRef(false);
 
   // ⚠️⚠️ NÃO DECIDIR ENQUANTO O CADASTRO NATIVO ESTÁ SENDO CONCLUÍDO (07/08).
@@ -67,6 +73,7 @@ export function CadastroGate({ children }: { children: React.ReactNode }) {
         if (!vivo) return;
         setChecado(true);
         setIncompleto(!s.completo);
+        setSuspeitoDe(s.completo && s.nascimento_suspeito === true ? user?.id ?? null : null);
         setLiberadoTutorialPara(s.completo ? user?.id ?? null : null);
         if (!s.completo && !redirecionou.current) {
           redirecionou.current = true;
@@ -82,7 +89,7 @@ export function CadastroGate({ children }: { children: React.ReactNode }) {
 
   // Trocou de conta → checa de novo na próxima montagem.
   useEffect(() => {
-    if (!user?.id) { setChecado(false); setIncompleto(false); redirecionou.current = false; }
+    if (!user?.id) { setChecado(false); setIncompleto(false); setSuspeitoDe(null); redirecionou.current = false; }
   }, [user?.id]);
 
   // Enquanto a ficha não fecha, toda rota volta pra tela de cadastro —
@@ -107,7 +114,7 @@ export function CadastroGate({ children }: { children: React.ReactNode }) {
     statusIdentidade()
       .then((s) => {
         if (!vivo) return;
-        if (s.completo) { setIncompleto(false); setLiberadoTutorialPara(user?.id ?? null); return; }  // acabou de completar
+        if (s.completo) { setIncompleto(false); setSuspeitoDe(s.nascimento_suspeito === true ? user?.id ?? null : null); setLiberadoTutorialPara(user?.id ?? null); return; }  // acabou de completar
         void abrirCadastro();
       })
       .catch(() => { if (vivo) void abrirCadastro(); });
@@ -118,5 +125,5 @@ export function CadastroGate({ children }: { children: React.ReactNode }) {
   // navegação, o que mantém o Stack montado (a tela de cadastro é uma rota
   // dele). Some a barra de baixo e a faixa nessa rota, e o gesto de voltar
   // está desabilitado, então não há saída lateral.
-  return <CadastroReadyContext.Provider value={!!user?.id && liberadoTutorialPara === user.id && checado && !incompleto && !cadastrando}>{children}</CadastroReadyContext.Provider>;
+  return <CadastroReadyContext.Provider value={!!user?.id && liberadoTutorialPara === user.id && checado && !incompleto && !cadastrando}><NascimentoSuspeitoContext.Provider value={suspeitoDe}>{children}</NascimentoSuspeitoContext.Provider></CadastroReadyContext.Provider>;
 }

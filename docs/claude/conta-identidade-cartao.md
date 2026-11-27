@@ -11,6 +11,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 - ⚠️ App · entrada de PESSOA sob o Contrato de porta (2026-08-04)
 - Recuperação com confirmação do e-mail (2026-10-26)
 - ⚠️⚠️ ENTRADA · Fase 1: recusa que viaja, login em português, telemetria da porta (2026-11-26)
+- ⚠️⚠️ ENTRADA · Fase 3: aviso "confirme seu nascimento" por cima da Home (2026-11-27)
 
 ---
 
@@ -281,3 +282,33 @@ daquela pessoa e se o template de autenticação do WhatsApp já foi aprovado pe
 ⚠️ Enquanto não for, a lista vem só com o e-mail e nada muda na tela. ⚠️ O app nunca
 manda destino: só o CPF e o canal. Servidor antigo ignora o `consultar` e já devolve
 `verificacao_id`; a régua trata esse caso primeiro. Teste: `test/canalCodigo.test.ts`.
+
+## ⚠️⚠️ ENTRADA · Fase 3: aviso "confirme seu nascimento" por cima da Home (2026-11-27)
+
+Decisão do Marcos (26/11): quem JÁ está dentro do app com a data de nascimento marcada
+como suspeita no cadastro da igreja não é bloqueado. A Home aparece e por cima vem o
+aviso; a pessoa pode tocar "Agora não", e ele volta até ela preencher.
+
+- **Quem decide é o servidor**: `nascimento_suspeito` (booleano) no
+  `GET /app/identidade/status`, só para ficha já confirmada. O `CadastroGate` já faz esse
+  GET; ele entrega a marca por `useNascimentoSuspeitoDe()` (o id da conta para a qual o
+  servidor respondeu `true`), sem segunda chamada.
+- **Componente** `components/auth/AvisoNascimento.tsx`, montado UMA vez em
+  `app/(app)/_layout.tsx`, dentro do `CadastroGate`. Envia
+  `POST /app/identidade/nascimento` com `{ data_nascimento: "AAAA-MM-DD" }`.
+- **Régua** `lib/avisoNascimentoRegra.ts`:
+  - só aparece na Home, com o app ativo, menu fechado, cadastro liberado e DEPOIS do
+    convite de notificações e do tutorial (nunca dois avisos juntos);
+  - "Agora não" vale 12 h e fica só em MEMÓRIA: fechar e abrir o app traz o aviso de volta;
+  - a data é conferida antes de enviar: calendário real, ano a partir de 1920 e 13 anos
+    feitos (mesmos limites de `conferirConfirmacaoNascimento` no ERP). ⚠️ Data que não
+    existe (31/02) tem de parar no app: o servidor só confere formato e idade, e o banco
+    devolveria erro 500.
+- `409 nascimento_ja_confirmado` faz o aviso sumir sem erro (a marca já caiu).
+- Depois de confirmar, o aviso some na hora (estado local) e o `MembroContext` recarrega.
+  ⚠️ A marca do portão só é relida na próxima abertura do app.
+- Telemetria `nascimento_aviso` com `reason` = `mostrado` | `agora_nao` | `confirmado` |
+  código do servidor | `rede` | `erro`. Nunca a data. No servidor, a trilha é
+  `app_entrada_ocorrencias` (etapa `nascimento`).
+
+Teste: `test/avisoNascimento.test.ts`.
