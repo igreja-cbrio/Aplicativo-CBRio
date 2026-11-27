@@ -33,6 +33,7 @@ import { codigoErroAuth, mensagemErroAuth } from "@/lib/erroAuth";
 import { erroNomeCompleto } from "@/lib/nomeCompleto";
 import { guardarFichaPendente, guardarRecusaCadastro, pedeConfirmacaoPorCodigo, recusaDoErro, type FichaPendente } from "@/lib/recusaCadastro";
 import { trackEventoJa } from "@/lib/telemetria";
+import { consumirCpfSemConta } from "@/lib/recuperarSenhaRegra";
 import { abrirFichaCadastro, fecharFichaCadastro } from "@/lib/cadastroAberto";
 
 export default function CadastroScreen() {
@@ -65,6 +66,16 @@ export default function CadastroScreen() {
   const [frequentaArea, setFrequentaArea] = useState<"ami" | "bridge" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Veio do "Esqueci a senha" com CPF que nunca teve conta (27/11/2026): o CPF
+  // chega preenchido e a tela diz por que a pessoa está aqui.
+  const [veioSemConta, setVeioSemConta] = useState(false);
+  useEffect(() => {
+    const cpfSemConta = consumirCpfSemConta();
+    if (cpfSemConta) {
+      setCpf(maskCPF(cpfSemConta));
+      setVeioSemConta(true);
+    }
+  }, []);
 
   async function handleSignUp() {
     setError(null);
@@ -212,6 +223,11 @@ export default function CadastroScreen() {
             </View>
             <Text style={styles.title}>{t("Criar conta")}</Text>
             <Text style={styles.subtitle}>{t("Faça parte da comunidade CBRio")}</Text>
+            {veioSemConta && (
+              <Text style={styles.aviso}>
+                {t("Este CPF ainda não tem conta no app. Preencha seus dados e crie sua senha aqui.")}
+              </Text>
+            )}
 
             <View style={styles.form}>
               <Input
@@ -255,7 +271,8 @@ export default function CadastroScreen() {
                 label={t("Senha")}
                 value={password}
                 onChangeText={setPassword}
-                placeholder={t("Mínimo 6 caracteres. Evite senhas comuns como 123456.")}
+                placeholder={t("Crie sua senha")}
+                ajuda={t("Pelo menos 6 caracteres. Senhas fáceis, como 123456, são recusadas.")}
                 secure
               />
 
@@ -363,6 +380,18 @@ const makeStyles = (colors: Palette) =>
     fontSize: font.size.md,
     marginTop: spacing.xs,
     marginBottom: spacing.lg,
+  },
+  aviso: {
+    color: colors.text,
+    fontSize: font.size.md,
+    lineHeight: 21,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    width: "100%",
   },
   form: { width: "100%", gap: spacing.md },
   areaBlock: { gap: spacing.xs },

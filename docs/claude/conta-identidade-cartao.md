@@ -11,6 +11,7 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 - ⚠️ App · entrada de PESSOA sob o Contrato de porta (2026-08-04)
 - Recuperação com confirmação do e-mail (2026-10-26)
 - ⚠️⚠️ ENTRADA · Fase 1: recusa que viaja, login em português, telemetria da porta (2026-11-26)
+- ⚠️⚠️ ENTRADA · Fase 3: telas (Primeiro acesso, esqueci a senha sem conta, regra da senha) (2026-11-27)
 
 ---
 
@@ -281,3 +282,26 @@ daquela pessoa e se o template de autenticação do WhatsApp já foi aprovado pe
 ⚠️ Enquanto não for, a lista vem só com o e-mail e nada muda na tela. ⚠️ O app nunca
 manda destino: só o CPF e o canal. Servidor antigo ignora o `consultar` e já devolve
 `verificacao_id`; a régua trata esse caso primeiro. Teste: `test/canalCodigo.test.ts`.
+
+## ⚠️⚠️ ENTRADA · Fase 3: telas (Primeiro acesso, esqueci a senha sem conta, regra da senha) (2026-11-27)
+
+Medido no lançamento (25-26/11): 72 tentativas de senha no login e 1 certa; 18 CPFs
+pediram "esqueci a senha" sem ter conta; 61 cadastros recusados por senha fraca.
+
+- **Login**: "Primeiro acesso" é o primeiro elemento do cartão e o botão principal, com
+  a frase "Nunca entrou no app? ..." em cima. "Entrar" virou `ghost`, embaixo dos campos
+  de e-mail e senha, depois do divisor "já tenho conta". Evento `primeiro_acesso_toque`.
+- **Esqueci a senha** (`recuperar-senha.tsx` + `lib/recuperarSenhaRegra.ts`): resposta
+  com `semConta` leva à tela de criar conta com o CPF preenchido e um aviso em cima.
+  ⚠️ O CPF viaja só em MEMÓRIA (5 min, lido uma vez): nunca em parâmetro de rota (a rota
+  vai para a telemetria) nem em armazenamento. ⚠️ Quem abriu a tela por Configurações já
+  está dentro do app: só vê o aviso, sem navegar (o guard devolveria da área de auth).
+  O erro nunca vai cru: `mensagemErroRecuperar` (429, 400, rede, resto). Evento
+  `recuperar_senha` com `reason` = `sem_conta` | `enviado` | `generico` | `limite` |
+  `rede` | `erro` e `source` = `login` | `configuracoes`.
+- **Regra da senha**: `Input` ganhou a prop `ajuda` (texto fixo embaixo do campo, não some
+  ao digitar). Cadastro mostra a regra de 6; redefinir e trocar senha, a de 8. ⚠️ Os dois
+  números são os que cada tela já cobrava; o teste amarra o texto ao número. A recusa
+  por senha vazada continua sendo do Supabase (`senha_fraca`).
+
+Teste: `test/entradaF3.test.ts`.

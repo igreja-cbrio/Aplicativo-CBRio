@@ -124,6 +124,7 @@ export default function RedefinirSenha() {
                 label={t("Nova senha")}
                 value={senha}
                 onChangeText={setSenha}
+                ajuda={t("Pelo menos 8 caracteres. Senhas fáceis, como 12345678, são recusadas.")}
                 secureTextEntry
                 autoCapitalize="none"
                 textContentType="newPassword"

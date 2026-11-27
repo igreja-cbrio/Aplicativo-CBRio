@@ -14,9 +14,11 @@ import { useRolarAteCampo } from "@/components/ui/FormularioRolavel";
 type Props = TextInputProps & {
   label: string;
   secure?: boolean;
+  /** Texto fixo embaixo do campo (ex.: a regra da senha). Não some ao digitar. */
+  ajuda?: string;
 };
 
-export function Input({ label, secure, ...rest }: Props) {
+export function Input({ label, secure, ajuda, ...rest }: Props) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const t = useT();
@@ -57,6 +59,7 @@ export function Input({ label, secure, ...rest }: Props) {
           </Pressable>
         )}
       </View>
+      {ajuda ? <Text style={styles.ajuda}>{ajuda}</Text> : null}
     </View>
   );
 }
@@ -88,6 +91,7 @@ const makeStyles = (colors: Palette) =>
     // `minHeight` em vez de `height`: a caixa nasce com ~4 linhas e cresce com
     // o texto, em vez de travar em 52px.
     inputMultiline: { height: undefined, minHeight: 96, paddingTop: 0 },
+    ajuda: { color: colors.textMuted, fontSize: font.size.sm, lineHeight: 18 },
     toggle: {
       color: colors.primary,
       fontSize: font.size.sm,
