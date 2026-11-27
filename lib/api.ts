@@ -1689,7 +1689,12 @@ export type IdentidadePorCpf = {
   // 'sem_email' = cadastro achado, mas sem e-mail pra provar posse ·
   // 'email_compartilhado' = e-mail em 2+ cadastros (família) — não serve de
   // prova · 'sem_canal' = canal de envio indisponível no servidor.
-  motivo?: "nao_encontrado" | "sem_email" | "email_compartilhado" | "sem_telefone" | "sem_canal";
+  motivo?: "nao_encontrado" | "sem_email" | "email_compartilhado" | "telefone_compartilhado" | "sem_telefone" | "sem_canal";
+  // Canais que servem de prova para este cadastro (27/11/2026): o servidor
+  // decide; o app só mostra. `enviado: false` = só consultou, nada saiu ainda.
+  canais?: { canal: "email" | "whatsapp"; destino_mascarado: string | null }[];
+  enviado?: boolean;
+  destino_mascarado?: string | null;
   verificacao_id?: string;
   nome_mascarado?: string | null;
   telefone_mascarado?: string | null;
@@ -1699,8 +1704,15 @@ export type IdentidadePorCpf = {
 };
 
 /** CPF IDENTIFICA (não autentica): o código vai pro telefone JÁ CADASTRADO. */
-export function identidadePorCpf(cpf: string): Promise<IdentidadePorCpf> {
-  return apiPost<IdentidadePorCpf>("/app/identidade/por-cpf", { cpf });
+export function identidadePorCpf(
+  cpf: string,
+  opcoes: { canal?: "email" | "whatsapp"; consultar?: boolean } = {},
+): Promise<IdentidadePorCpf> {
+  return apiPost<IdentidadePorCpf>("/app/identidade/por-cpf", {
+    cpf,
+    ...(opcoes.canal ? { canal: opcoes.canal } : {}),
+    ...(opcoes.consultar ? { consultar: true } : {}),
+  });
 }
 
 export function confirmarCodigoIdentidade(

@@ -42,7 +42,10 @@ import { useMembro } from "@/lib/useMembro";
 import { useT } from "@/lib/i18n";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { completarCadastroApp, confirmarCodigoIdentidade, identidadePorCpf, statusIdentidade, type IdentidadePorCpf } from "@/lib/api";
-import { trackEvento } from "@/lib/telemetria";
+import { trackEvento, trackEventoJa } from "@/lib/telemetria";
+import { erroNomeCompleto } from "@/lib/nomeCompleto";
+import { consumirRecusaCadastro, recusaDoErro } from "@/lib/recusaCadastro";
+import { passoDepoisDoCpf, type CanalCodigo, type OpcaoCanal } from "@/lib/canalCodigo";
 // Réguas de campo do app (as MESMAS das outras telas) — esta tela
 // reimplementava versões mais fracas, que só o servidor recusava.
 import { isValidCPF, mascaraDataBR, nascimentoBRParaISO } from "@/lib/validators";
@@ -78,7 +81,7 @@ const mascaraData = mascaraDataBR;
 // servidor, na porta que todo mundo atravessa pra entrar no app.
 const dataParaIso = (br: string) => nascimentoBRParaISO(br);
 
-type Passo = "escolha" | "cpf" | "codigo" | "form";
+type Passo = "escolha" | "cpf" | "canal" | "codigo" | "form";
 
 /** O servidor manda CHAVES em `falta` ('nascimento', 'sexo'…). Mostrar a chave
  *  crua faria a tela dizer "falta sexo" com cara de erro de sistema. */
@@ -114,9 +117,22 @@ export default function CompletarCadastroScreen() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
+  // ⚠️ RECUSA QUE VEIO DO CADASTRO (26/11/2026). Quem criou a conta por e-mail e
+  // teve a ficha recusada pelo servidor chega aqui com o motivo guardado
+  // (lib/recusaCadastro). Abre direto no formulário, com o motivo no aviso, em
+  // vez da tela de CPF sem explicação. Consome uma vez só.
+  useEffect(() => {
+    const recusa = consumirRecusaCadastro();
+    if (!recusa) return;
+    setPasso("form");
+    setAviso(recusa.mensagem);
+  }, []);
+
   // caminho rápido
   const [cpf, setCpf] = useState("");
   const [achado, setAchado] = useState<IdentidadePorCpf | null>(null);
+  // Canais que o servidor disse que servem para este cadastro (e-mail, WhatsApp).
+  const [canais, setCanais] = useState<OpcaoCanal[]>([]);
   const [codigo, setCodigo] = useState("");
 
   // formulário completo
@@ -226,14 +242,26 @@ export default function CompletarCadastroScreen() {
     if (soDigitos(cpf).length !== 11) { setErro(t("Digite os 11 números do CPF.")); return; }
     setEnviando(true);
     try {
-      const r = await identidadePorCpf(soDigitos(cpf));
+      // ⚠️ `consultar`: o servidor lista por onde dá para confirmar (e-mail,
+      // WhatsApp) SEM enviar nada. A régua do próximo passo mora em
+      // lib/canalCodigo.ts. Servidor antigo ignora o `consultar` e já envia.
+      const r = await identidadePorCpf(soDigitos(cpf), { consultar: true });
       trackEvento("identidade_cpf", {
         // `reason` está na whitelist do backend; `encontrado`/`pode` não estavam
         // e iam pro lixo em silêncio.
         reason: r.encontrado ? (r.pode_confirmar ? "encontrado" : `encontrado_${r.motivo || "sem_canal"}`) : "nao_encontrado",
       });
-      if (r.encontrado && r.pode_confirmar) {
-        setAchado(r); setPasso("codigo");
+      const proximo = passoDepoisDoCpf(r);
+      if (proximo.tipo === "codigo") {
+        setAchado(r); setCanais([]); setPasso("codigo");
+      } else if (proximo.tipo === "pedir") {
+        setAchado(r); setCanais([]);
+        await pedirCodigo(proximo.canal);
+      } else if (proximo.tipo === "escolher") {
+        setAchado(r); setCanais(proximo.canais); setPasso("canal");
+      } else if (r.encontrado && r.motivo === "telefone_compartilhado") {
+        setAviso(t("Esse celular é usado por mais de uma pessoa da família, então não dá pra confirmar por ele. Preencha seus dados — leva um minuto."));
+        setPasso("form");
       } else if (r.encontrado && (r.motivo === "sem_email" || r.motivo === "sem_telefone")) {
         // Achamos a pessoa, mas o cadastro não tem contato pra provar posse.
         setAviso(t("Achamos seu cadastro, mas ele está sem e-mail. Preencha seus dados que a gente completa."));
@@ -250,6 +278,26 @@ export default function CompletarCadastroScreen() {
         setAviso(t("Não encontramos esse CPF. Preencha seus dados — é rápido."));
         setCpfForm(mascaraCpf(cpf));
         setPasso("form");
+      }
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : t("Não foi possível verificar agora."));
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  // Pede o código pelo canal escolhido. Chamar de novo com o mesmo canal
+  // reenvia o MESMO código (o servidor não invalida o anterior).
+  async function pedirCodigo(canal: CanalCodigo) {
+    setErro(null);
+    setEnviando(true);
+    try {
+      const r = await identidadePorCpf(soDigitos(cpf), { canal });
+      trackEvento("identidade_codigo_pedido", { label: canal });
+      if (r.encontrado && r.pode_confirmar && r.verificacao_id) {
+        setAchado(r); setCodigo(""); setPasso("codigo");
+      } else {
+        setErro(t("Não conseguimos enviar o código agora. Tente de novo ou preencha seus dados."));
       }
     } catch (e) {
       setErro(e instanceof Error ? e.message : t("Não foi possível verificar agora."));
@@ -276,7 +324,9 @@ export default function CompletarCadastroScreen() {
   async function salvarForm() {
     setErro(null);
     const iso = dataParaIso(nascimento);
-    if (nome.trim().split(/\s+/).length < 2) { setErro(t("Escreva seu nome completo.")); return; }
+    // Mesma régua do servidor (lib/nomeCompleto.ts): 2 palavras, sem abreviação.
+    const erroNome = erroNomeCompleto(nome);
+    if (erroNome) { setErro(t(erroNome)); return; }
     if (soDigitos(telefone).length < 10) { setErro(t("Informe seu telefone com DDD.")); return; }
     if (!iso) { setErro(t("Informe sua data de nascimento (dd/mm/aaaa).")); return; }
     const cpfDig = soDigitos(cpfForm);
@@ -307,7 +357,7 @@ export default function CompletarCadastroScreen() {
     setEnviando(true);
     try {
       const r = await completarCadastroApp({
-        nome_completo: nome.trim(),
+        nome_completo: nome.trim().replace(/\s+/g, " "),
         telefone: soDigitos(telefone),
         data_nascimento: iso,
         email: user?.email || undefined,
@@ -317,6 +367,10 @@ export default function CompletarCadastroScreen() {
       trackEvento("identidade_completada", { reason: r.criado ? "criado" : "vinculado" });
       await concluir();
     } catch (e) {
+      const recusa = recusaDoErro(e);
+      trackEventoJa("ficha_recusada", recusa
+        ? { reason: recusa.codigo, label: recusa.campo ?? "sem_campo", status_code: recusa.status }
+        : { reason: "sem_resposta" });
       setErro(e instanceof Error ? e.message : t("Não foi possível salvar agora."));
     } finally {
       setEnviando(false);
@@ -357,7 +411,7 @@ export default function CompletarCadastroScreen() {
               <Ionicons name="flash-outline" size={22} color={colors.brandMid} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.opcaoTitulo}>{t("Já sou cadastrado")}</Text>
-                <Text style={styles.opcaoSub}>{t("Digite seu CPF — a gente acha seus dados e confirma pelo seu e-mail.")}</Text>
+                <Text style={styles.opcaoSub}>{t("Digite seu CPF — a gente acha seus dados e confirma com um código.")}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </Pressable>
@@ -383,10 +437,40 @@ export default function CompletarCadastroScreen() {
               placeholder="000.000.000-00"
             />
             <Text style={styles.nota}>
-              {t("Vamos enviar um código pro e-mail que já está no seu cadastro — é assim que confirmamos que é você.")}
+              {t("Vamos enviar um código pro e-mail ou pro WhatsApp que já está no seu cadastro — é assim que confirmamos que é você.")}
             </Text>
             {!!erro && <Text style={styles.erro}>{erro}</Text>}
             <Button title={t("Continuar")} onPress={buscarPorCpf} disabled={enviando} />
+            <Pressable onPress={() => { setPasso("form"); setErro(null); }}>
+              <Text style={styles.link}>{t("Prefiro preencher meus dados")}</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {passo === "canal" && (
+          <View style={styles.bloco}>
+            <Text style={styles.confereTxt}>
+              {t("Achamos o cadastro de")} <Text style={styles.forte}>{achado?.nome_mascarado}</Text>.{"\n"}
+              {t("Por onde você quer receber o código?")}
+            </Text>
+            {canais.map((op) => (
+              <Pressable
+                key={op.canal}
+                style={styles.opcao}
+                onPress={() => pedirCodigo(op.canal)}
+                disabled={enviando}
+                accessibilityRole="button"
+              >
+                <Ionicons name={op.canal === "email" ? "mail-outline" : "logo-whatsapp"} size={22} color={colors.brandMid} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.opcaoTitulo}>{op.canal === "email" ? t("Por e-mail") : t("Pelo WhatsApp")}</Text>
+                  {!!op.destino_mascarado && <Text style={styles.opcaoSub}>{op.destino_mascarado}</Text>}
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </Pressable>
+            ))}
+            {enviando && <ActivityIndicator color={colors.brandMid} />}
+            {!!erro && <Text style={styles.erro}>{erro}</Text>}
             <Pressable onPress={() => { setPasso("form"); setErro(null); }}>
               <Text style={styles.link}>{t("Prefiro preencher meus dados")}</Text>
             </Pressable>
@@ -397,8 +481,8 @@ export default function CompletarCadastroScreen() {
           <View style={styles.bloco}>
             <Text style={styles.confereTxt}>
               {t("Achamos o cadastro de")} <Text style={styles.forte}>{achado?.nome_mascarado}</Text>.{"\n"}
-              {t("Enviamos um código pro e-mail")}{" "}
-              <Text style={styles.forte}>{achado?.email_mascarado || achado?.telefone_mascarado}</Text>.
+              {achado?.canal === "whatsapp" ? t("Enviamos um código pro WhatsApp") : t("Enviamos um código pro e-mail")}{" "}
+              <Text style={styles.forte}>{achado?.destino_mascarado || achado?.email_mascarado || achado?.telefone_mascarado}</Text>.
             </Text>
             <Input
               label={t("Código de 6 números")}
@@ -409,11 +493,13 @@ export default function CompletarCadastroScreen() {
             />
             {!!erro && <Text style={styles.erro}>{erro}</Text>}
             <Button title={t("Confirmar")} onPress={confirmar} disabled={enviando} />
-            <Pressable onPress={() => { setPasso("cpf"); setCodigo(""); setErro(null); }}>
-              <Text style={styles.link}>{t("Não recebi o código")}</Text>
+            <Pressable onPress={() => { setPasso(canais.length > 1 ? "canal" : "cpf"); setCodigo(""); setErro(null); }}>
+              <Text style={styles.link}>{canais.length > 1 ? t("Não recebi o código (escolher outro jeito)") : t("Não recebi o código")}</Text>
             </Pressable>
             <Text style={styles.nota}>
-              {t("Esse e-mail não é seu? Fale com a coordenação — a gente atualiza seu cadastro.")}
+              {achado?.canal === "whatsapp"
+                ? t("Esse número não é seu? Fale com a coordenação — a gente atualiza seu cadastro.")
+                : t("Esse e-mail não é seu? Fale com a coordenação — a gente atualiza seu cadastro.")}
             </Text>
           </View>
         )}

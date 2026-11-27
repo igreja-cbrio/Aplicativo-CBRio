@@ -29,7 +29,10 @@ import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { FormularioRolavel } from "@/components/ui/FormularioRolavel";
 import { useDialogo } from "@/components/ui/Dialogo";
-import { mensagemErroAuth } from "@/lib/erroAuth";
+import { codigoErroAuth, mensagemErroAuth } from "@/lib/erroAuth";
+import { erroNomeCompleto } from "@/lib/nomeCompleto";
+import { guardarRecusaCadastro, recusaDoErro } from "@/lib/recusaCadastro";
+import { trackEventoJa } from "@/lib/telemetria";
 import { abrirFichaCadastro, fecharFichaCadastro } from "@/lib/cadastroAberto";
 
 export default function CadastroScreen() {
@@ -67,6 +70,14 @@ export default function CadastroScreen() {
     setError(null);
     if (!nome || !cpf || !nascimento || !phone || !email || !password) {
       setError(t("Preencha todos os campos."));
+      return;
+    }
+    // ⚠️ ANTES do signUp (26/11/2026): o servidor recusa nome de uma palavra só
+    // ou abreviado, e a recusa chegava DEPOIS de a conta existir. Mesma régua
+    // do ERP (lib/nomeCompleto.ts).
+    const erroNome = erroNomeCompleto(nome);
+    if (erroNome) {
+      setError(t(erroNome));
       return;
     }
     if (!sexo) {
@@ -135,7 +146,7 @@ export default function CadastroScreen() {
         // `falta: []`, então o carimbo nunca vira atalho de acesso.
         try {
           await completarCadastroApp({
-            nome_completo: nome,
+            nome_completo: nome.trim().replace(/\s+/g, " "),
             telefone: `+${country.dial}${onlyDigits(phone)}`,
             data_nascimento: dateBRToISO(nascimento)!,
             email,
@@ -143,7 +154,22 @@ export default function CadastroScreen() {
             sexo,
           });
         } catch (err) {
-          console.warn("[cadastro] não foi possível confirmar a ficha agora:", err);
+          // ⚠️ A RECUSA VIAJA (26/11/2026). Esta tela já está desmontando (a
+          // sessão nasceu), então mostrar o erro aqui não adianta: ele fica
+          // guardado e a tela de completar cadastro o mostra ao abrir. Antes
+          // era só `console.warn` e 7 de 84 contas caíram na tela de CPF sem
+          // saber por quê. Falha de rede NÃO é recusa (não guarda nada).
+          const recusa = recusaDoErro(err);
+          if (recusa) {
+            guardarRecusaCadastro(recusa);
+            trackEventoJa("cadastro_recusado", {
+              reason: recusa.codigo,
+              label: recusa.campo ?? "sem_campo",
+              status_code: recusa.status,
+            });
+          } else {
+            console.warn("[cadastro] não foi possível confirmar a ficha agora:", err);
+          }
         }
       }
       // Com a sessão criada, o guard de rotas leva direto para a área logada.
@@ -152,6 +178,12 @@ export default function CadastroScreen() {
       // entra sozinho: família divide e-mail e repete senha, e entrar calado
       // colocaria a mãe na própria conta achando que criou a do filho. A
       // mensagem aponta Entrar / Esqueci minha senha (revisão de 24/11).
+      const motivo = codigoErroAuth(e);
+      // Sem a mensagem do Supabase: só o enum (pode vir e-mail no texto).
+      trackEventoJa(motivo === "senha_fraca" ? "senha_fraca" : "cadastro_recusado", {
+        reason: motivo,
+        label: "signup",
+      });
       setError(t(mensagemErroAuth(e, "Não foi possível criar a conta.")));
     } finally {
       // Baixa a bandeira SEMPRE — inclusive quando deu erro. Aí o portão volta

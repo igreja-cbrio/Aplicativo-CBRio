@@ -80,7 +80,13 @@ export function attachNotifTapListener(): () => void {
 
   function go(resp: Notifications.NotificationResponse | null) {
     if (!ativo || !resp) return;
-    const { memo } = chavesDaResposta(resp);
+    const { id, date, memo } = chavesDaResposta(resp);
+    // ⚠️ RESPOSTA SEM IDENTIFICADOR E SEM DATA NÃO É TOQUE (26/11/2026). No
+    // Android, toda partida a frio devolve uma "última resposta" vazia; ela
+    // nunca era reconhecida como replay nem persistida, e caía no evento
+    // `notif_tap_sem_destino`: 83 eventos falsos no lançamento, todos
+    // "(sem tipo)". Toque de verdade sempre traz um dos dois.
+    if (!id && !date) return;
     if (processadas.has(memo)) return;
 
     const data = resp.notification.request.content.data;

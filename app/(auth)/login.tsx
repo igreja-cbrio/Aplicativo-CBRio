@@ -19,6 +19,8 @@ import { alturaVideoLogin } from "@/lib/loginLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
+import { mensagemErroLogin, motivoErroLogin } from "@/lib/erroAuth";
+import { trackEventoJa } from "@/lib/telemetria";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 import { TecladoSeguro } from "@/components/ui/TecladoSeguro";
 import { FormularioRolavel } from "@/components/ui/FormularioRolavel";
@@ -57,7 +59,10 @@ export default function LoginScreen() {
     try {
       await signIn(email, password, remember);
     } catch (e) {
-      setError(e instanceof Error ? t(traduzErro(e.message)) : t("Não foi possível entrar."));
+      // ⚠️ Nunca o inglês do Supabase nem o erro de rede cru (lib/erroAuth.ts).
+      trackEventoJa("login_recusado", { label: "senha", reason: motivoErroLogin(e) });
+      const msg = mensagemErroLogin(e, "Não foi possível entrar.");
+      setError(msg ? t(msg) : null);
     } finally {
       setLoading(null);
     }
@@ -70,7 +75,11 @@ export default function LoginScreen() {
       if (provider === "google") await signInWithGoogle();
       else await signInWithApple();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("Não foi possível entrar."));
+      // Cancelar a janela da Apple não é erro (mensagem null): conta na
+      // telemetria como "cancelou" e a tela fica como estava.
+      trackEventoJa("login_recusado", { label: provider, reason: motivoErroLogin(e) });
+      const msg = mensagemErroLogin(e, "Não foi possível entrar.");
+      setError(msg ? t(msg) : null);
     } finally {
       setLoading(null);
     }
@@ -182,16 +191,6 @@ export default function LoginScreen() {
       </TecladoSeguro>
     </SafeAreaView>
   );
-}
-
-function traduzErro(msg: string) {
-  if (msg.includes("Invalid login credentials"))
-    return "E-mail ou senha incorretos.";
-  if (msg.includes("Email not confirmed"))
-    return "Confirme sua conta antes de entrar.";
-  if (/rate limit|too many requests/i.test(msg))
-    return "Muitos acessos agora. Tente de novo em instantes.";
-  return msg;
 }
 
 const makeStyles = (colors: Palette) =>
