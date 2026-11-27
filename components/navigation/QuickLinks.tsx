@@ -1,32 +1,42 @@
 import { useTutorial, TutorialTarget, type TutorialTargetId } from "@/contexts/TutorialContext";
-import React, { useCallback, useMemo, useRef } from "react";
+import React, { useMemo } from "react";
 import { Text } from "@/components/ui/Typography";
 import { DockSurface } from "@/components/navigation/DockSurface";
 import { NativeShortcuts } from "@/modules/native-shortcuts/src/NativeShortcuts";
-import { Ionicons } from "@expo/vector-icons";
+import { Icone } from "@/components/ui/Icone";
 import { usePathname } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useT } from "@/lib/i18n";
 import { irParaBarra } from "@/lib/nav";
 import { QUICK_LINKS } from "@/lib/appNavigation";
-import { useTheme } from "@/contexts/ThemeContext";
 
 const TARGETS: TutorialTargetId[] = ["care", "devotional", "groups", "serve", "giving"];
 
+/**
+ * ⚠️⚠️ OS CINCO ATALHOS SEMPRE À VISTA (27/11/2026).
+ *
+ * Até aqui, letra do sistema acima de 1,2× (ou tela < 360) virava a barra numa
+ * faixa ROLÁVEL com itens de 120 px: cabiam 3 e Servir/Generosidade ficavam
+ * escondidos à direita, sem sinal de que dava para rolar. O Marcos viu isso em
+ * vários celulares na quarta e pediu que a formatação do telefone não quebre o
+ * app. Agora:
+ * - fallback (Android, binário sem o módulo, tela estreita): 5 colunas fixas,
+ *   legenda de TAMANHO FIXO (`allowFontScaling={false}`) que encolhe para caber;
+ * - iPhone com o módulo: UITabBar nativa também com letra grande (o UIKit não
+ *   amplia a legenda da barra; oferece a lupa de acessibilidade do sistema).
+ * ⚠️ Não voltar à rolagem horizontal: esconder destino é pior que legenda menor.
+ */
 export function QuickLinks({ rota }: { rota?: string } = {}) {
   const tutorial = useTutorial();
   const tutorialIndex = tutorial?.highlightedTarget ? TARGETS.indexOf(tutorial.highlightedTarget) : -1;
-  const scrollRef = useRef<ScrollView>(null);
-  const { width, fontScale } = useWindowDimensions();
-  const { fontMultiplier } = useTheme();
-  const scroll = width < 360 || fontScale * fontMultiplier > 1.2;
+  const { width } = useWindowDimensions();
+  const estreita = width < 360;
   const globalPathname = usePathname(), t = useT();
   const pathname = rota ?? globalPathname;
   const labels = useMemo(() => QUICK_LINKS.map(item => t(item.label)), [t]);
   // Só a versão que contém o controle UIKit usa a interação nativa. A OTA é
   // segura em binários antigos: nenhum gesto/lupa customizado é simulado.
-  const reveal = useCallback((index: number) => { if (scroll) scrollRef.current?.scrollTo({ x: Math.max(0, index * 120 - 12), animated: false }); }, [scroll]);
-  if (NativeShortcuts && !scroll) return <TutorialTarget id="dock"><NativeShortcuts
+  if (NativeShortcuts && !estreita) return <TutorialTarget id="dock"><NativeShortcuts
     labels={labels}
     selectedIndex={tutorialIndex >= 0 ? tutorialIndex : QUICK_LINKS.findIndex(item => pathname === item.href)}
     style={{ height: 74, width: "100%" }}
@@ -37,23 +47,19 @@ export function QuickLinks({ rota }: { rota?: string } = {}) {
     }}
   /></TutorialTarget>;
   // UITabBar já aplica o próprio recuo. Só o fallback precisa dessa margem.
-  return <View style={styles.fallbackMargin}><DockSurface><ScrollView ref={scrollRef} horizontal scrollEnabled={scroll} showsHorizontalScrollIndicator={false} style={styles.dock} contentContainerStyle={styles.content}>
-    {QUICK_LINKS.map((item, i) => <QuickLinkTarget key={item.href} id={TARGETS[i]} index={i} reveal={reveal} style={scroll ? { width: 120, flexBasis: 120, flexGrow: 0, flexShrink: 0 } : { flex: i === 4 ? 1.4 : 1 }}>
+  return <View style={estreita ? styles.fallbackMarginEstreita : styles.fallbackMargin}><DockSurface><View style={styles.dock}>
+    {QUICK_LINKS.map((item, i) => <TutorialTarget key={item.href} id={TARGETS[i]} style={{ flex: i === 4 ? 1.4 : 1, minWidth: 0 }}>
       <Pressable accessibilityRole="button" accessibilityLabel={labels[i]} accessibilityState={{ selected: pathname === item.href }} onPress={() => irParaBarra(pathname, item.href)} style={({ pressed }) => [styles.item, i > 0 && styles.divider, (pressed || pathname === item.href) && styles.selected]}>
-        <Ionicons name={item.icon} size={21} color="#29434a" />
-        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.label, scroll && { fontSize: 12 }]}>{labels[i]}</Text>
+        <Icone name={item.icon} size={21} color="#29434a" />
+        <Text allowFontScaling={false} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.label}>{labels[i]}</Text>
       </Pressable>
-    </QuickLinkTarget>)}
-  </ScrollView></DockSurface></View>;
-}
-function QuickLinkTarget({ id, index, reveal, ...props }: Omit<React.ComponentProps<typeof TutorialTarget>, "reveal"> & { index: number; reveal: (index: number) => void }) {
-  const show = useCallback(() => reveal(index), [reveal, index]);
-  return <TutorialTarget {...props} id={id} reveal={show} />;
+    </TutorialTarget>)}
+  </View></DockSurface></View>;
 }
 const styles = StyleSheet.create({
   fallbackMargin: { paddingHorizontal: 20 },
-  dock: { flexGrow: 0, borderRadius: 28 },
-  content: { flexGrow: 1, paddingVertical: 10, paddingHorizontal: 3 },
+  fallbackMarginEstreita: { paddingHorizontal: 10 },
+  dock: { flexDirection: "row", borderRadius: 28, paddingVertical: 10, paddingHorizontal: 3 },
   item: { minHeight: 48, alignItems: "center", justifyContent: "center", paddingHorizontal: 2, gap: 7 },
   label: { fontSize: 10, fontWeight: "700", color: "#29434a", textAlign: "center", width: "100%" },
   divider: { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: "#c9d1cf" },

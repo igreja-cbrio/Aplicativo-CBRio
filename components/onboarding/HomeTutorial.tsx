@@ -5,6 +5,7 @@ import { usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
+import { Icone, ICONE_SERVIR, type NomeIcone } from '@/components/ui/Icone';
 import { Text } from '@/components/ui/Typography';
 import { useTutorial, type TutorialTargetId } from '@/contexts/TutorialContext';
 import { useCadastroReady } from '@/components/auth/CadastroGate';
@@ -37,11 +38,11 @@ function TutorialOverlay({ host }: { host: React.RefObject<View | null> }) {
   const dark = mode === 'dark';
   const paper = dark ? '#21383e' : '#f5f5ef', ink = dark ? '#f2f5f3' : '#233e45', muted = dark ? '#c3d2d3' : '#52666a';
   const action = dark ? '#c7e1df' : '#294b53', onAction = dark ? '#183038' : '#ffffff';
-  const steps: { id: TutorialTargetId; icon: React.ComponentProps<typeof Ionicons>['name']; title: string; body: string }[] = [
+  const steps: { id: TutorialTargetId; icon: NomeIcone; title: string; body: string }[] = [
     { id: 'care', icon: 'heart-outline', title: t('Você não está sozinho.'), body: t('Peça oração ou converse com um pastor quando precisar de cuidado.') },
     { id: 'devotional', icon: 'book-outline', title: t('Um tempo com Deus.'), body: t('Encontre a Bíblia, os planos de leitura e o devocional por aqui.') },
     { id: 'groups', icon: 'people-outline', title: t('Viva em comunidade.'), body: t('Encontre um grupo para caminhar com você e acompanhe seus encontros.') },
-    { id: 'serve', icon: 'hand-left-outline', title: t('Seus dons fazem diferença.'), body: t('Conheça as oportunidades de servir. Se já é voluntário, veja suas escalas.') },
+    { id: 'serve', icon: ICONE_SERVIR, title: t('Seus dons fazem diferença.'), body: t('Conheça as oportunidades de servir. Se já é voluntário, veja suas escalas.') },
     { id: 'giving', icon: 'gift-outline', title: t('Generosidade, com liberdade.'), body: t('Quando quiser contribuir, este é o seu atalho. A escolha é sempre sua.') },
     { id: 'menu', icon: 'menu-outline', title: t('Tem mais para descobrir.'), body: t('Abra o menu para encontrar Inscrições, Pregações, Kids e seu perfil.') },
   ];
@@ -106,7 +107,7 @@ function TutorialOverlay({ host }: { host: React.RefObject<View | null> }) {
         <Pressable accessibilityRole="button" onPress={tutorial.finish} style={styles.skip}><Text style={{ color: muted }}>{t('Pular')}</Text></Pressable>
       </View>
       <ScrollView style={styles.copy} contentContainerStyle={styles.copyContent} bounces={false}>
-        {step >= 0 ? <Ionicons name={steps[step].icon} size={28} color={ink} accessible={false} /> : null}
+        {step >= 0 ? <Icone name={steps[step].icon} size={28} color={ink} accessible={false} /> : null}
         <Text ref={heading} accessibilityRole="header" accessibilityLabel={`${label}. ${step < 0 ? t('Sua igreja, mais perto.') : steps[step].title}`} style={[styles.title, { color: ink }]}>{step < 0 ? t('Sua igreja, mais perto.') : steps[step].title}</Text>
         <Text style={[styles.body, { color: muted }]}>{step < 0 ? t('Vamos conhecer os principais atalhos do app? É rápido, e você pode pular quando quiser.') : steps[step].body}</Text>
       </ScrollView>

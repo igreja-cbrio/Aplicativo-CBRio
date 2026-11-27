@@ -19,7 +19,7 @@ vi.mock('@react-navigation/native', () => ({ useIsFocused: () => true }));
 vi.mock('expo-router', () => ({ usePathname: () => state.route }));
 vi.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 44, bottom: 34, left: 0, right: 0 }) }));
 vi.mock('react-native-svg', () => ({ default: 'Svg', Path: 'Path' }));
-vi.mock('@expo/vector-icons', () => ({ Ionicons: 'Icon' }));
+vi.mock('@expo/vector-icons', () => ({ Ionicons: 'Icon', MaterialCommunityIcons: 'Icon' }));
 vi.mock('@/components/ui/Typography', () => ({ Text: 'Text' }));
 vi.mock('@/contexts/TutorialContext', () => ({ useTutorial: () => ({ ready: true, pending: true, pushReady: state.push, revision: 0, highlight: state.highlight, finish: state.finish, targets: state.targets }) }));
 vi.mock('@/components/auth/CadastroGate', () => ({ useCadastroReady: () => state.cadastro }));

@@ -4,10 +4,11 @@ import { Modal, ScrollView } from "@/components/navigation/DockContent";
 import { Text, TextInput } from "@/components/ui/Typography";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import { Stack, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useColors } from "@/contexts/ThemeContext";
+import { useColors, useTheme } from "@/contexts/ThemeContext";
 import { carregarCapitulo, LIVROS_BIBLIA, VERSOES_BIBLIA, type LivroBiblico, type VersaoBiblica, type VersiculoLivre } from "@/lib/bibliaLivre";
 import { listarMarcacoesBiblia, registrarLeituraBiblia, removerMarcacoesBiblia, salvarRegistroPessoal, ultimaLeituraBiblia } from "@/lib/devocional";
 import { subirUmNivel } from "@/lib/hierarquia";
@@ -22,6 +23,11 @@ import { chegouAoFim } from "@/lib/fimDeLeitura";
 const CORES = [{ nome: "amarelo" as const, cor: "#F8E59A" }, { nome: "azul" as const, cor: "#BFDDEA" }, { nome: "verde" as const, cor: "#CDE2C2" }, { nome: "rosa" as const, cor: "#EAC6D2" }];
 export default function Biblia() {
   const dockInset = useContext(DockInsetContext);
+  // Bíblia SEM casca (27/11/2026 · lib/appNavigation ROTAS_DE_LEITURA): sem a faixa de cima
+  // e sem a barra de baixo, quem respeita o notch e o gesto do sistema é esta tela.
+  // `dockInset` continua valendo se um dia a casca voltar.
+  const insets = useSafeAreaInsets(), { mode } = useTheme();
+  const rodape = dockInset > 0 ? dockInset : Math.max(insets.bottom, 8);
   const colors = useColors(), styles = useMemo(() => css(colors), [colors]), t = useT(), { membro } = useMembro();
   // A−/A+ da leitura (24/09/2026): compartilhado com o devocional, persistido no aparelho.
   const fonte = useFonteLeitura();
@@ -86,7 +92,7 @@ export default function Biblia() {
     if (!livro || !capitulo || !versiculos.length || !membro?.membroId) return;
     const chave = livro.nome + " " + capitulo;
     if (contado.current === chave) return;
-    if (!chegouAoFim({ rolagem, alturaVisivel: alturaVisivel.current, alturaConteudo: alturaConteudo.current, folgaFinal: dockInset + 220 })) return;
+    if (!chegouAoFim({ rolagem, alturaVisivel: alturaVisivel.current, alturaConteudo: alturaConteudo.current, folgaFinal: rodape + 220 })) return;
     contado.current = chave;
     registrarLeituraBiblia(membro.membroId, chave).catch(() => { contado.current = null; });
   }
@@ -123,7 +129,8 @@ export default function Biblia() {
   const temMarcacaoSelecionada = selecionados.some(v => Boolean(marcacoes[v]));
   const titulo = capitulo ? livro?.nome + " " + capitulo : livro?.nome ?? t("Bíblia");
   return <SafeAreaView style={[styles.safe, Boolean(capitulo) && styles.readerSafe]} edges={["left", "right"]}><Stack.Screen options={{ headerShown: false }} />
-    <View style={[styles.header, Boolean(capitulo) && styles.readerHeader]}>
+    <StatusBar style={capitulo || mode !== "dark" ? "dark" : "light"} />
+    <View style={[styles.header, Boolean(capitulo) && styles.readerHeader, { paddingTop: insets.top + 14 }]}>
       <Pressable onPress={voltar} hitSlop={12} style={styles.back}><Ionicons name="chevron-back" size={24} color={capitulo ? "#263234" : colors.text} /></Pressable>
       {capitulo ? <View style={styles.readerNav}>
         <Pressable style={styles.locationButton} onPress={() => { setCapitulo(null); setVersiculos([]); setSelecionados([]); }}><Text style={styles.locationText} numberOfLines={1}>{livro?.nome} {capitulo}</Text><Ionicons name="chevron-down" size={15} color="#263234" /></Pressable>
@@ -135,7 +142,7 @@ export default function Biblia() {
       onLayout={e => { alturaVisivel.current = e.nativeEvent.layout.height; }}
       onContentSizeChange={(_, h) => { alturaConteudo.current = h; conferirFim(0); }}
       onScroll={e => conferirFim(e.nativeEvent.contentOffset.y)} scrollEventThrottle={250}
-      contentContainerStyle={[styles.content, Boolean(capitulo) && [styles.readerContent, { paddingBottom: dockInset + 220 }]]} showsVerticalScrollIndicator={!capitulo}>
+      contentContainerStyle={[styles.content, Boolean(capitulo) && [styles.readerContent, { paddingBottom: rodape + 220 }]]} showsVerticalScrollIndicator={!capitulo}>
       {!livro && <BookList busca={busca} setBusca={setBusca} livros={livrosFiltrados} abrir={setLivro} ultima={ultima} continuar={() => ultima && abrirCapitulo(ultima.numero, ultima.livro)} s={styles} c={colors} t={t} />}
       {livro && !capitulo && <><Text style={styles.eyebrow}>{t("CAPÍTULOS")}</Text><Text style={styles.title}>{livro.nome}</Text><View style={styles.chapters}>{Array.from({ length: livro.capitulos }, (_, i) => <Pressable key={i + 1} style={styles.chapter} onPress={() => abrirCapitulo(i + 1)}><Text style={styles.chapterText}>{i + 1}</Text></Pressable>)}</View></>}
       {carregando && <ActivityIndicator color={colors.primary} size="large" />}
@@ -145,13 +152,13 @@ export default function Biblia() {
         return <Pressable key={v.verse} onPress={() => alternar(v.verse)} style={[styles.verse, marcada ? { backgroundColor: marcada } : undefined, ativo && styles.verseSelected]}><Text style={[styles.verseText, { fontSize: tamVerso.fontSize, lineHeight: tamVerso.lineHeight }]}><Text style={[styles.verseNumber, ativo && styles.verseNumberSelected]}>{v.verse} </Text>{v.text.trim()}</Text></Pressable>;
       })}<Text style={styles.translation}>{versao.nome} · {versao.licenca === "domínio público" ? t("domínio público") : versao.licenca}</Text></View>}
     </ScrollView>
-    {selecionados.length > 0 && <View style={[styles.actions, { bottom: dockInset + 78 }]}>
+    {selecionados.length > 0 && <View style={[styles.actions, { bottom: rodape + 78 }]}>
       {temMarcacaoSelecionada
         ? <Pressable style={styles.removeMark} onPress={removerMarcacao}><Ionicons name="close-circle-outline" size={20} color="#A44343" /><Text style={styles.removeMarkText}>{t("Remover marcação")}</Text></Pressable>
         : <View style={styles.colors}>{CORES.map(x => <Pressable key={x.nome} onPress={() => marcar(x.nome)} style={[styles.color, { backgroundColor: x.cor }]} accessibilityLabel={t("Marcar versículo")} />)}</View>}
       <View style={styles.actionRule} /><Pressable style={styles.action} onPress={() => comentar(true)}><Ionicons name="bookmark-outline" size={20} color="#263234" /><Text style={styles.actionText}>{t("Salvar")}</Text></Pressable><Pressable style={styles.action} onPress={() => comentar(false)}><Ionicons name="chatbubble-outline" size={20} color="#263234" /><Text style={styles.actionText}>{t("Comentários")}</Text></Pressable>
     </View>}
-    {capitulo && <View style={[styles.chapterNav, { bottom: dockInset + 12 }]}>
+    {capitulo && <View style={[styles.chapterNav, { bottom: rodape + 12 }]}>
       <Pressable disabled={carregando || capitulo <= 1} onPress={() => abrirCapitulo(capitulo - 1)} style={[styles.chapterArrow, capitulo <= 1 && styles.chapterArrowDisabled]}><Ionicons name="chevron-back" size={22} color="#263234" /><Text style={styles.chapterArrowText}>{t("Anterior")}</Text></Pressable>
       <Text style={styles.chapterPosition} numberOfLines={1}>{livro?.nome} {capitulo}</Text>
       <Pressable disabled={carregando || capitulo >= (livro?.capitulos ?? 0)} onPress={() => abrirCapitulo(capitulo + 1)} style={[styles.chapterArrow, capitulo >= (livro?.capitulos ?? 0) && styles.chapterArrowDisabled]}><Text style={styles.chapterArrowText}>{t("Próximo")}</Text><Ionicons name="chevron-forward" size={22} color="#263234" /></Pressable>

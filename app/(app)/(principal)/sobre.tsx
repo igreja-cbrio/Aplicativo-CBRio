@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { Icone, ICONE_SERVIR } from "@/components/ui/Icone";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors, useTheme } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
@@ -22,7 +23,7 @@ const VALORES = [
   { icon: "rocket-outline" as const, titulo: "Seguir a Jesus" },
   { icon: "people-outline" as const, titulo: "Conectar (grupos)" },
   { icon: "book-outline" as const, titulo: "Investir tempo com Deus" },
-  { icon: "hand-left-outline" as const, titulo: "Servir (voluntariado)" },
+  { icon: ICONE_SERVIR, titulo: "Servir (voluntariado)" },
   { icon: "gift-outline" as const, titulo: "Generosidade" },
 ];
 
@@ -92,7 +93,7 @@ export default function SobreScreen() {
           <Text style={styles.cardTitle}>{t("Os 5 valores da jornada")}</Text>
           {VALORES.map((v) => (
             <View key={v.titulo} style={styles.valor}>
-              <Ionicons name={v.icon} size={20} color={colors.brandMid} />
+              <Icone name={v.icon} size={20} color={colors.brandMid} />
               <Text style={styles.valorTxt}>{t(v.titulo)}</Text>
             </View>
           ))}

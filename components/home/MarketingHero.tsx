@@ -12,6 +12,7 @@ import { DockInsetContext } from "@/components/navigation/DockContent";
 import { useMenu } from "@/contexts/MenuContext";
 import { DESTINO_AVISOS } from "@/lib/menuRegras";
 import { useTheme } from "@/contexts/ThemeContext";
+import { escalaEfetiva, tetoDoSistema } from "@/lib/fontScale";
 
 export type HomeNotice = { id: string; title: string; body?: string; count?: number; href: "/devocional" | "/batismo" | typeof DESTINO_AVISOS };
 
@@ -42,7 +43,8 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
     setPage(0);
     carousel.current?.scrollTo({ x: 0, animated: false });
   }, [cardWidth, noticeIds]);
-  const largeText = fontScale * fontMultiplier > 1.2;
+  // Com o teto da letra (lib/fontScale), o fontScale cru do sistema não é o que chega à tela.
+  const largeText = escalaEfetiva(fontScale, fontMultiplier) > 1.2;
   const titleSize = Math.min(76, (width - 40) * 0.18);
   const selectNotice = (next: number) => {
     const index = (next + notices.length) % notices.length;
@@ -82,7 +84,7 @@ export function MarketingHero({ notices, unreadCount = 0, background = HOME_BACK
         </View>
         <View style={styles.welcome}>
           <Text style={[styles.eyebrow, { fontSize: titleSize * 0.5, lineHeight: titleSize * 0.55 }]}>{t("seja muito")}</Text>
-          <Text accessibilityRole="header" style={[styles.title, { fontSize: titleSize, lineHeight: titleSize * 1.05, marginTop: -8 * fontScale }]}>{t("bem-vindo!")}</Text>
+          <Text accessibilityRole="header" style={[styles.title, { fontSize: titleSize, lineHeight: titleSize * 1.05, marginTop: -8 * Math.min(fontScale, tetoDoSistema(fontMultiplier)) }]}>{t("bem-vindo!")}</Text>
           <Pressable onPress={() => router.navigate(DESTINO_AVISOS)} accessibilityRole="button" style={({ pressed }) => [styles.news, pressed && styles.pressed]}>
             <Text style={styles.newsLabel}>{t("veja o que está acontecendo")}</Text>
             <Ionicons name="arrow-forward" size={18} color="#fff" />
