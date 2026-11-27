@@ -329,3 +329,9 @@ A catraca original acusa zero diferenças nativas nos dois binários e apenas av
 de cadência. Não foi repetido ensaio físico nesta separação: o caminho ImagePicker
 executado pelos binários das lojas, o componente de halo e o motor não mudaram.
 A aprovação anterior do iPhone não equivale a uma nova validação em Android físico.
+
+Na validação do PR #298, o CI identificou uma âncora de mutação antiga deixada
+pelo PR #297 em planoRitmo. Atualizada a âncora sem remover a proteção dos outros
+calendários e acrescentado o mutante que reintroduz a trava em Sofonias. As 148
+âncoras foram conferidas previamente; ambas as regressões foram provocadas e
+detectadas pelos testes da régua e da tela. Scripts de OTA/catraca inalterados.

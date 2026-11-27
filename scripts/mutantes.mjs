@@ -908,10 +908,16 @@ const MUTANTES = [
     para: '  return !!e;',
   },
   {
-    nome: "planoRitmo: calendário deixa de trancar o futuro (leitura de amanhã abre hoje)",
+    nome: "planoRitmo: outros calendários deixam de trancar o futuro",
     arq: "lib/planoRitmo.ts",
-    de: '      estado: (set.has(item.id) ? "lido" : item.data <= hoje ? "atual" : "bloqueado") as EstadoDia,',
+    de: '      estado: (set.has(item.id) ? "lido" : abrirTodos || item.data <= hoje ? "atual" : "bloqueado") as EstadoDia,',
     para: '      estado: (set.has(item.id) ? "lido" : "atual") as EstadoDia,',
+  },
+  {
+    nome: "planoRitmo: Sofonias volta a trancar as leituras futuras",
+    arq: "lib/planoRitmo.ts",
+    de: '      estado: (set.has(item.id) ? "lido" : abrirTodos || item.data <= hoje ? "atual" : "bloqueado") as EstadoDia,',
+    para: '      estado: (set.has(item.id) ? "lido" : item.data <= hoje ? "atual" : "bloqueado") as EstadoDia,',
   },
   {
     nome: "videoDevocional: o player deixa o frame principal navegar pro YouTube (sai do app)",
