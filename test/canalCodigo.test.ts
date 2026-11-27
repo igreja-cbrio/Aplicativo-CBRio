@@ -40,8 +40,8 @@ describe("lista de canais do servidor", () => {
 describe("a tela", () => {
   const fonte = ler("app/(app)/(principal)/completar-cadastro.tsx");
   it("consulta os canais antes de enviar e nunca manda destino digitado", () => {
-    expect(fonte).toContain("identidadePorCpf(soDigitos(cpf), { consultar: true })");
-    expect(fonte).toContain("identidadePorCpf(soDigitos(cpf), { canal })");
+    expect(fonte).toContain("identidadePorCpf(cpfUsado, { consultar: true })");
+    expect(fonte).toContain("identidadePorCpf(cpfUsado, { canal })");
     const api = ler("lib/api.ts");
     const corpo = api.slice(api.indexOf("export function identidadePorCpf("), api.indexOf("export function confirmarCodigoIdentidade("));
     expect(corpo).not.toMatch(/telefone|email:/);
