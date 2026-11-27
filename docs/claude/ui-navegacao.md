@@ -6,6 +6,8 @@ Movido **na íntegra** do `CLAUDE.md` em 2026-10-01 (o arquivo tinha 268 KB e er
 
 ## Índice de seções
 
+- ⚠️⚠️ Barra sempre com 5, teto da letra, Bíblia sem casca, capacete em Servir (27/11/2026)
+
 - Dock sob o chat durante a volta por gesto (25/11/2026)
 
 - Tutorial da Home no primeiro acesso (25/11/2026)
@@ -737,3 +739,33 @@ Regressões: menos de 24h entre ontem e hoje, meia-noite no Rio versus UTC,
 viradas de mês/ano, ano bissexto, ausências, datas futuras, traduções, limpeza
 de timers e retorno ao app. O teste renderizado do mural comprova a troca de
 “Hoje” para “Ontem” sem outra consulta de comunicados.
+
+
+## ⚠️⚠️ Barra sempre com 5, teto da letra, Bíblia sem casca, capacete em Servir (27/11/2026)
+
+Relato do Marcos na quarta: celulares com a letra do sistema aumentada viam a
+barra com 3 atalhos (Servir e Generosidade sumiam) e textos deformados.
+
+- **Causa da barra:** o fallback do `QuickLinks` virava faixa ROLÁVEL (itens de
+  120 px) com letra efetiva > 1,2× ou tela < 360; nada indicava que rolava.
+  Agora são sempre 5 colunas, legenda `allowFontScaling={false}` com
+  `adjustsFontSizeToFit`. iPhone com o módulo fica na UITabBar também com letra
+  grande (só a tela < 360 pt usa o fallback). **Não voltar à rolagem.**
+- **Causa da deformação:** preferência do app (até 1,28×) × fonte do sistema
+  (até 2× no Android) sem teto. `TETO_FONTE = 1,3` em `lib/fontScale.ts`;
+  `Typography` passa `maxFontSizeMultiplier = tetoDoSistema(preferência)` a todo
+  `Text`/`TextInput` (quem passar o próprio valor decide). Layout que reage a
+  "letra grande" usa `escalaEfetiva`, não o `fontScale` cru. Ícones não escalam.
+  Leitura (Bíblia/devocional) segue com o A−/A+ próprio.
+- **Bíblia sem casca** (pedido: "a única tela sem menu"): `ROTAS_DE_LEITURA` em
+  `lib/appNavigation.ts` tira faixa de cima e barra de baixo de `/biblia`. A tela
+  aplica o próprio notch/gesto (`useSafeAreaInsets`) e a cor da barra de status.
+- **Capacete em Servir** (a mão era igual à de Cuidados): `components/ui/Icone.tsx`
+  (`ICONE_SERVIR`, `hard-hat` do MaterialCommunityIcons) em barra, menu, tutorial,
+  inscrições, jornada, notificação de escala, sobre, onboarding e topo do Servir.
+  Cuidados mantém a mão. ⚠️ A UITabBar do iPhone usa SF Symbol fixo no Swift
+  (`hand.raised`): lá o capacete só chega com binário novo.
+
+Testes: `test/quickLinksLetraGrande.test.ts`, teto em `test/fontScale.test.ts`,
+casca da Bíblia e ícone em `test/appNavigation.test.ts`. A TELA ainda precisa de
+conferência em aparelho com a fonte do sistema no máximo (Android e iPhone).

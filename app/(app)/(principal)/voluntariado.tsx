@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { Icone, ICONE_SERVIR } from "@/components/ui/Icone";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -327,7 +328,7 @@ export default function VoluntariadoScreen() {
           <ValorHeader />
           <View style={styles.header}>
             <View style={styles.badge}>
-              <Ionicons name="hand-left" size={28} color={colors.brandPale} />
+              <Icone name={ICONE_SERVIR} size={28} color={colors.brandPale} />
             </View>
           </View>
 

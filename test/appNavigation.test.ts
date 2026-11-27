@@ -98,3 +98,22 @@ describe("chat do assistente", () => {
     expect(chromeDaTela("/fale-conosco-chat")).toMatchObject({ dock: false, header: false });
   });
 });
+
+describe("Bíblia sem menu (27/11/2026)", () => {
+  it("é a tela de leitura: sem barra de baixo nem faixa de cima", () => {
+    expect(chromeDaTela("biblia")).toMatchObject({ dock: false, header: false });
+    expect(chromeDaTela("/biblia")).toEqual(chromeDaTela("biblia"));
+  });
+  it("o resto do Devocional continua com a casca", () => {
+    for (const rota of ["devocional", "devocional-registros", "devocional-leituras", "devocional-mural"]) {
+      expect(chromeDaTela(rota)).toMatchObject({ dock: true, header: true });
+    }
+  });
+});
+
+describe("ícone de Servir", () => {
+  it("é o capacete, e a mão fica só para Cuidados", () => {
+    expect(QUICK_LINKS.find((i) => i.href === "/voluntariado")?.icon).toBe("capacete");
+    expect(QUICK_LINKS.map((i) => i.icon)).not.toContain("hand-left-outline");
+  });
+});

@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { Stack, useLocalSearchParams, usePathname, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { Icone, ICONE_SERVIR, type NomeIcone } from "@/components/ui/Icone";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors } from "@/contexts/ThemeContext";
 import { useNotificacoes, type AppNotificacao } from "@/lib/useNotificacoes";
@@ -30,12 +31,12 @@ import { irPara } from "@/lib/nav";
 import { destinoNotificacaoEvento } from "@/lib/eventoDestino";
 import { font, radius, spacing, type Palette } from "@/constants/theme";
 
-const ICONES: Record<string, keyof typeof Ionicons.glyphMap> = {
+const ICONES: Record<string, NomeIcone> = {
   kids_devocional: "book",
   kids_mural: "megaphone",
   kids_certificado_apresentacao: "ribbon",
   carta_transferencia_pronta: "document-text",
-  escala: "hand-left",
+  escala: ICONE_SERVIR,
   sos: "alert-circle",
   cuidado: "heart",
   grupo_pedido: "people",
@@ -71,7 +72,7 @@ const CATEGORIA: Record<string, string> = {
   comunicado: "Avisos",
 };
 
-function iconePorTipo(tipo: string): keyof typeof Ionicons.glyphMap {
+function iconePorTipo(tipo: string): NomeIcone {
   return ICONES[tipo] ?? "notifications";
 }
 
@@ -193,7 +194,7 @@ export default function NotificacoesScreen() {
         style={({ pressed }) => [styles.item, naoLida && styles.itemNaoLida, pressed && { opacity: 0.7 }]}
       >
         <View style={[styles.icone, naoLida && styles.iconeNaoLida]}>
-          <Ionicons name={iconePorTipo(item.tipo)} size={20} color={naoLida ? "#fff" : colors.brandMid} />
+          <Icone name={iconePorTipo(item.tipo)} size={20} color={naoLida ? "#fff" : colors.brandMid} />
         </View>
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={styles.titulo} numberOfLines={1}>{item.titulo}</Text>

@@ -6,7 +6,8 @@ export const QUICK_LINKS = [
   { label: "Cuidados", icon: "heart-outline", href: "/cuidados" },
   { label: "Devocional", icon: "book-outline", href: "/devocional" },
   { label: "Grupos", icon: "people-outline", href: "/meu-grupo" },
-  { label: "Servir", icon: "hand-left-outline", href: "/voluntariado" },
+  // Capacete desde 27/11/2026 (a mão era igual à de Cuidados) · components/ui/Icone.tsx
+  { label: "Servir", icon: "capacete", href: "/voluntariado" },
   { label: "Generosidade", icon: "gift-outline", href: "/generosidade" },
 ] as const;
 
@@ -35,10 +36,18 @@ export const MENU_SECTIONS = [
   ] },
 ] as const;
 
+/**
+ * Telas de LEITURA sem casca nenhuma (27/11/2026 · pedido do Marcos: "o menu não
+ * aparece dentro da Bíblia, a ideia é não distrair e nem fazer pessoas errarem
+ * clique; essa será a única tela sem menu"). Sai-se pela seta da própria tela.
+ */
+export const ROTAS_DE_LEITURA = ["/biblia"] as const;
+
 /** A casca é definida pela própria tela, nunca pela rota que está por cima dela. */
 export function chromeDaTela(rota: string) {
   const caminho = rota === "index" ? "/" : rota.startsWith("/") ? rota : `/${rota}`;
-  const semBarra = caminho.startsWith("/completar-cadastro") || caminho === "/inscricao-formulario" || caminho === "/fale-conosco-chat";
+  const semBarra = caminho.startsWith("/completar-cadastro") || caminho === "/inscricao-formulario" || caminho === "/fale-conosco-chat"
+    || (ROTAS_DE_LEITURA as readonly string[]).includes(caminho);
   return {
     caminho,
     dock: !semBarra,

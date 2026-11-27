@@ -1,5 +1,6 @@
 import { Text } from "@/components/ui/Typography";
 import { Ionicons } from "@expo/vector-icons";
+import { Icone } from "@/components/ui/Icone";
 import { usePathname, type Href } from "expo-router";
 import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,7 +21,7 @@ export function MenuContent({ onNavigate, onSignOut }: { onNavigate: (href: Href
     {MENU_SECTIONS.map((section) => <View key={section.title} style={styles.section}>
       <Text accessibilityRole="header" style={styles.sectionTitle}>{t(section.title)}</Text>
       {section.items.filter((item) => item.href !== ROTA_CENSO || mostrarCenso).map((item) => <Pressable key={item.href} accessibilityRole="button" accessibilityState={{ selected: pathname === item.href }} onPress={() => onNavigate(item.href)} style={({ pressed }) => [styles.row, (pressed || pathname === item.href) && styles.selected]}>
-        <Ionicons name={item.icon} size={21} color="#fff" /><Text style={styles.label}>{t(item.label)}</Text><Ionicons name="chevron-forward" size={15} color="#cfdbdc" />
+        <Icone name={item.icon} size={21} color="#fff" /><Text style={styles.label}>{t(item.label)}</Text><Ionicons name="chevron-forward" size={15} color="#cfdbdc" />
       </Pressable>)}
     </View>)}
     <Pressable accessibilityRole="button" onPress={onSignOut} style={styles.row}><Ionicons name="log-out-outline" size={21} color="#fff" /><Text style={styles.label}>{t("Sair")}</Text></Pressable>

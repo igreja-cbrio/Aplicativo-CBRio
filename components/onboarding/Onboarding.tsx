@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { Dimensions, Pressable, StyleSheet, View, type ViewToken } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { Icone, ICONE_SERVIR, type NomeIcone } from "@/components/ui/Icone";
 import { CbrioHeart } from "@/components/brand/CbrioHeart";
 import { useColors } from "@/contexts/ThemeContext";
 import { useT } from "@/lib/i18n";
@@ -12,7 +13,7 @@ import { font, radius, spacing, type Palette } from "@/constants/theme";
 const { width: W } = Dimensions.get("window");
 
 type Slide = {
-  icon: React.ComponentProps<typeof Ionicons>["name"] | "heart-brand";
+  icon: NomeIcone | "heart-brand";
   titulo: string;
   texto: string;
 };
@@ -20,7 +21,7 @@ type Slide = {
 const SLIDES: Slide[] = [
   { icon: "heart-brand", titulo: "Bem-vindo à CBRio", texto: "Sua igreja no bolso. Tudo que você vive na CBRio, num só lugar." },
   { icon: "card", titulo: "Seu cartão e os cultos", texto: "Cartão de membro com QR, próximos cultos e o devocional do dia na tela inicial." },
-  { icon: "hand-left", titulo: "Sirva e participe", texto: "Voluntariado, grupos, batismo e mais — dê os próximos passos da sua jornada." },
+  { icon: ICONE_SERVIR, titulo: "Sirva e participe", texto: "Voluntariado, grupos, batismo e mais — dê os próximos passos da sua jornada." },
   { icon: "heart", titulo: "A gente cuida de você", texto: "Peça oração, fale com um pastor e acompanhe tudo pelo app. Você não está sozinho. 💙" },
 ];
 
@@ -64,7 +65,7 @@ export function Onboarding({ onConcluir }: { onConcluir: () => void }) {
               {item.icon === "heart-brand" ? (
                 <CbrioHeart size={64} color={colors.brandPale} />
               ) : (
-                <Ionicons name={item.icon} size={60} color={colors.brandMid} />
+                <Icone name={item.icon} size={60} color={colors.brandMid} />
               )}
             </View>
             <Text style={styles.titulo}>{t(item.titulo)}</Text>

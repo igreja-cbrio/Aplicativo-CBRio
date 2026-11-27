@@ -7,6 +7,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { Icone, ICONE_SERVIR, type NomeIcone } from "@/components/ui/Icone";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
 import { carregarJornada, type Jornada } from "@/lib/jornada";
@@ -61,7 +62,7 @@ type Passo = {
   status: string;
   on: boolean;
   rota: "/devocional" | "/grupos" | "/meu-grupo" | "/voluntariado" | "/batismo" | "/generosidade";
-  icon: React.ComponentProps<typeof Ionicons>["name"];
+  icon: NomeIcone;
 };
 
 
@@ -128,7 +129,7 @@ export default function JornadaScreen() {
       {
         key: "servir", valor: "Servir", titulo: "Voluntariado",
         status: dados.serveVoluntariado ? "Servindo 💙" : "Comece a servir num ministério",
-        on: dados.serveVoluntariado, rota: "/voluntariado", icon: "hand-left",
+        on: dados.serveVoluntariado, rota: "/voluntariado", icon: ICONE_SERVIR,
       },
     ];
     // Generosidade é sempre o 5º passo. Com pagamento no app (FEATURES) usa o
@@ -220,7 +221,7 @@ export default function JornadaScreen() {
                         {p.on ? (
                           <Ionicons name="checkmark" size={22} color="#fff" />
                         ) : (
-                          <Ionicons name={p.icon} size={20} color={isNext ? colors.primary : colors.textMuted} />
+                          <Icone name={p.icon} size={20} color={isNext ? colors.primary : colors.textMuted} />
                         )}
                       </View>
                     </View>

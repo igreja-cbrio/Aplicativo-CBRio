@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import { Stack, useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { Icone, ICONE_SERVIR, type NomeIcone } from "@/components/ui/Icone";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors } from "@/contexts/ThemeContext";
 import { useMembro } from "@/lib/useMembro";
@@ -44,7 +45,7 @@ type Chave = keyof InscricoesStatus;
 type Item = {
   label: string;
   desc: string;
-  icon: React.ComponentProps<typeof Ionicons>["name"];
+  icon: NomeIcone;
   /** Tela do app. Ausente quando a porta é web (ver `url`). */
   href?: "/batismo" | "/grupos" | "/next" | "/voluntariado" | "/apresentacao-crianca";
   /** Porta PÚBLICA do sistema, aberta no navegador in-app. */
@@ -63,7 +64,7 @@ const ITENS: Item[] = [
   // ⚠️ "Quero servir" e não "Voluntariado": a barra de baixo já tem "Servir"
   // (a ÁREA). Aqui é a PORTA de inscrição — rótulos iguais em dois lugares
   // faziam parecer duas coisas (05/08/2026).
-  { label: "Quero servir", desc: "Sirva na CBRio", icon: "hand-left", href: "/voluntariado", chave: "voluntariado", porta: "voluntariado" },
+  { label: "Quero servir", desc: "Sirva na CBRio", icon: ICONE_SERVIR, href: "/voluntariado", chave: "voluntariado", porta: "voluntariado" },
   // ⚠⚠ ERA UM LINK MORTO, e isso foi MEDIDO (11/08/2026): a URL
   // `cbrio.org/apresentacao-criancas` **não tem rota no ERP** (0 referências em
   // `src/`) e devolvia HTTP 200 só pelo catch-all do SPA da Vercel — parecia
@@ -204,7 +205,7 @@ export default function InscricoesScreen() {
               accessibilityLabel={`${t(it.label)}. ${st === "ativo" ? t("Inscrito") : st === "pendente" ? t("Pendente") : (outraPessoa ? t("Inscrever outra pessoa") : t(it.desc))}`}
             >
               <View style={styles.icon}>
-                <Ionicons name={it.icon} size={22} color={colors.brandMid} />
+                <Icone name={it.icon} size={22} color={colors.brandMid} />
               </View>
               <View style={{ flex: 1, gap: 3 }}>
                 <Text style={styles.rowLabel}>{t(it.label)}</Text>
